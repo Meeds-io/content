@@ -1,23 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-
- Copyright (C) 2019 eXo Platform SAS.
-
- This is free software; you can redistribute it and/or modify it
- under the terms of the GNU Lesser General Public License as
- published by the Free Software Foundation; either version 2.1 of
- the License, or (at your option) any later version.
-
- This software is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
- Lesser General Public License for more details.
-
- You should have received a copy of the GNU Lesser General Public
- License along with this software; if not, write to the Free
- Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
- 02110-1301 USA, or see the FSF site: http://www.fsf.org.
-
+	This file is part of the Meeds project (https://meeds.io/).
+  Copyright (C) 2020 - 2024 Meeds Association contact@meeds.io
+	This program is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3 of the License, or (at your option) any later version.
+  This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
+  You should have received a copy of the GNU Lesser General Public License
+	along with this program; if not, write to the Free Software Foundation,
+	Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
@@ -26,51 +21,51 @@
     <groupId>org.exoplatform.addons</groupId>
     <version>18-M02</version>
   </parent>
-  <groupId>org.exoplatform.addons.news</groupId>
-  <artifactId>news</artifactId>
-  <version>2.6.x-SNAPSHOT</version>
+  <groupId>io.meeds.content</groupId>
+  <artifactId>content</artifactId>
+  <version>1.0.x-SNAPSHOT</version>
   <packaging>pom</packaging>
-  <name>eXo Add-on:: News</name>
-  <description>News</description>
+  <name>Meeds - Content Addon - Parent POM</name>
+  <description>Content</description>
 
   <modules>
-    <module>services</module>
-    <module>webapp</module>
-    <module>packaging</module>
+    <module>content-service</module>
+    <module>content-webapp</module>
+    <module>content-packaging</module>
   </modules>
 
   <properties>
-    <addon.exo.ecms.version>6.6.x-SNAPSHOT</addon.exo.ecms.version>
+    <addon.exo.notes.version>1.4.x-SNAPSHOT</addon.exo.notes.version>
     <pitest.version>1.4.10</pitest.version>
-
-    <sonar.organization>exoplatform</sonar.organization>
+    <sonar.organization>meeds-io</sonar.organization>
+    <exo.snapshots.repo.url>https://repository.exoplatform.org/content/repositories/meeds-snapshots</exo.snapshots.repo.url>
   </properties>
 
   <dependencyManagement>
     <dependencies>
-      <!-- Import versions from ecms project -->
+      <!-- Import versions from notes project -->
       <dependency>
-        <groupId>org.exoplatform.ecms</groupId>
-        <artifactId>ecms</artifactId>
-        <version>${addon.exo.ecms.version}</version>
+        <groupId>org.exoplatform.addons.notes</groupId>
+        <artifactId>notes</artifactId>
+        <version>${addon.exo.notes.version}</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
       <!-- Current project artifacts -->
       <dependency>
         <groupId>${project.groupId}</groupId>
-        <artifactId>news-services</artifactId>
+        <artifactId>content-service</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>${project.groupId}</groupId>
-        <artifactId>news-webapp</artifactId>
+        <artifactId>content-webapp</artifactId>
         <version>${project.version}</version>
         <type>war</type>
       </dependency>
       <dependency>
         <groupId>${project.groupId}</groupId>
-        <artifactId>news-packaging</artifactId>
+        <artifactId>content-packaging</artifactId>
         <version>${project.version}</version>
         <type>zip</type>
       </dependency>
@@ -97,10 +92,10 @@
 
           <configuration>
             <targetClasses>
-              <param>org.exoplatform.news.*</param>
+              <param>io.meeds.news.*</param>
             </targetClasses>
             <targetTests>
-              <param>org.exoplatform.news.*</param>
+              <param>io.meeds.news.*</param>
             </targetTests>
           </configuration>
         </plugin>
