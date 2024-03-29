@@ -1,0 +1,143 @@
+<!--
+
+	This file is part of the Meeds project (https://meeds.io/).
+
+  Copyright (C) 2020 - 2024 Meeds Association contact@meeds.io
+	This program is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3 of the License, or (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
+
+  You should have received a copy of the GNU Lesser General Public License
+	along with this program; if not, write to the Free Software Foundation,
+	Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
+-->
+<configuration
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.exoplatform.org/xml/ns/kernel_1_2.xsd http://www.exoplatform.org/xml/ns/kernel_1_2.xsd"
+        xmlns="http://www.exoplatform.org/xml/ns/kernel_1_2.xsd">
+
+
+  <external-component-plugins>
+    <target-component>org.exoplatform.social.metadata.MetadataService</target-component>
+    <component-plugin>
+      <name>NewsTargetMetadataPlugin</name>
+      <set-method>addMetadataTypePlugin</set-method>
+      <type>org.exoplatform.social.metadata.MetadataTypePlugin</type>
+      <init-params>
+        <value-param>
+          <name>shareable</name>
+          <description>Whether to share metadatas when an associated object has been shared to a different space or to a user</description>
+          <value>false</value>
+        </value-param>
+        <value-param>
+          <name>allowMultipleItemsPerObject</name>
+          <description>Whether to allow adding the same object to the same Metadata or not</description>
+          <value>false</value>
+        </value-param>
+        <object-param>
+          <name>metadataType</name>
+          <object type="org.exoplatform.social.metadata.model.MetadataType">
+            <field name="id">
+              <int>4</int>
+            </field>
+            <field name="name">
+              <string>newsTarget</string>
+            </field>
+          </object>
+        </object-param>
+      </init-params>
+    </component-plugin>
+    <component-plugin>
+      <name>NewsMetadataTypePlugin</name>
+      <set-method>addMetadataTypePlugin</set-method>
+      <type>org.exoplatform.social.metadata.MetadataTypePlugin</type>
+      <init-params>
+        <value-param>
+          <name>shareable</name>
+          <value>true</value>
+        </value-param>
+        <value-param>
+          <name>allowMultipleItemsPerObject</name>
+          <value>true</value>
+        </value-param>
+        <object-param>
+          <name>metadataType</name>
+          <object type="org.exoplatform.social.metadata.model.MetadataType">
+            <field name="id">
+              <int>1000</int>
+            </field>
+            <field name="name">
+              <string>news</string>
+            </field>
+          </object>
+        </object-param>
+      </init-params>
+    </component-plugin>
+    <component-plugin>
+      <name>NewsMetadataPlugin</name>
+      <set-method>addMetadataPlugin</set-method>
+      <type>org.exoplatform.social.metadata.MetadataInitPlugin</type>
+      <init-params>
+        <object-param>
+          <name>metadata</name>
+          <object type="org.exoplatform.social.metadata.model.Metadata">
+            <field name="type">
+              <object type="org.exoplatform.social.metadata.model.MetadataType">
+                <field name="id">
+                  <int>1000</int>
+                </field>
+                <field name="name">
+                  <string>news</string>
+                </field>
+              </object>
+            </field>
+            <field name="name">
+              <string>news</string>
+            </field>
+          </object>
+        </object-param>
+      </init-params>
+    </component-plugin>
+  </external-component-plugins>
+
+  <external-component-plugins>
+    <target-component>org.exoplatform.services.listener.ListenerService</target-component>
+    <component-plugin>
+      <name>exo.news.postArticle</name>
+      <set-method>addListener</set-method>
+      <type>io.meeds.news.listener.NewsMetadataListener</type>
+    </component-plugin>
+    <component-plugin>
+      <name>exo.news.updateArticle</name>
+      <set-method>addListener</set-method>
+      <type>io.meeds.news.listener.NewsMetadataListener</type>
+    </component-plugin>
+    <component-plugin>
+      <name>exo.news.shareArticle</name>
+      <set-method>addListener</set-method>
+      <type>io.meeds.news.listener.NewsMetadataListener</type>
+    </component-plugin>
+    <component-plugin>
+      <name>social.metadataItem.deleted</name>
+      <set-method>addListener</set-method>
+      <type>io.meeds.news.listener.MetadataItemModified</type>
+    </component-plugin>
+    <component-plugin>
+      <name>social.metadataItem.updated</name>
+      <set-method>addListener</set-method>
+      <type>io.meeds.news.listener.MetadataItemModified</type>
+    </component-plugin>
+    <component-plugin>
+      <name>social.metadataItem.created</name>
+      <set-method>addListener</set-method>
+      <type>io.meeds.news.listener.MetadataItemModified</type>
+    </component-plugin>
+  </external-component-plugins>
+</configuration>

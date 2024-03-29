@@ -1,0 +1,148 @@
+<!--
+
+    This file is part of the Meeds project (https://meeds.io/).
+
+  Copyright (C) 2020 - 2024 Meeds Association contact@meeds.io
+    This program is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 3 of the License, or (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+  You should have received a copy of the GNU Lesser General Public License
+    along with this program; if not, write to the Free Software Foundation,
+    Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
+-->
+<template>
+  <div
+    id="article-list-view"
+    class="py-0"
+    ref="articleListView">
+    <v-row>
+      <v-col
+        class="flex-grow-0"
+        :cols="numberOfColumns"
+        v-for="(item, index) of newsInfo"
+        :key="item">
+        <div
+          :id="`article-item-${index}`">
+          <news-list-template-view-item
+            :item="item"
+            :selected-option="selectedOption"
+            :key="index" />
+        </div>
+      </v-col>
+    </v-row>
+  </div>
+</template>
+
+<script>
+export default {
+  props: {
+    newsTarget: {
+      type: Object,
+      required: false,
+      default: null
+    },
+  },
+  data: () => ({
+    initialized: false,
+    newsInfo: null,
+    limit: 4,
+    offset: 0,
+    space: null,
+    seeAllUrl: '',
+    selectedOption: null,
+    showHeader: true,
+    showSeeAll: true,
+    showArticleTitle: true,
+    showArticleSummary: true,
+    showArticleImage: true,
+    showArticleAuthor: true,
+    showArticleSpace: true,
+    showArticleDate: true,
+    showArticleReactions: true,
+    canPublishNews: false,
+    parentWidth: 0
+  }),
+  computed: {
+    numberOfColumns(){
+      const thresholds = this.$vuetify.breakpoint?.thresholds;
+      return this.parentWidth < thresholds.sm ? 12 : this.parentWidth < thresholds.md ? 6 : this.parentWidth < thresholds.lg ? 4 : 3;
+    }
+  },
+  created() {
+    this.$newsServices.canPublishNews().then(canPublishNews => {
+      this.canPublishNews = canPublishNews;
+    });
+    this.reset();
+    this.$root.$on('saved-news-settings', this.refreshNewsViews);
+    this.getNewsList();
+  },
+  mounted() {
+    // get the initial width of the parent element
+    this.parentWidth = this.$refs.articleListView.offsetWidth;
+
+    // add a resize event listener to update the parent width
+    window.addEventListener('resize', () => {
+      this.parentWidth = this.$refs.articleListView.offsetWidth;
+    });
+    this.$nextTick().then(() => this.$root.$emit('application-loaded'));
+  },
+  methods: {
+    getNewsList() {
+      if (!this.initialized) {
+        this.$newsListService.getNewsList(this.newsTarget, this.offset, this.limit, true)
+          .then(newsList => {
+            this.newsInfo = newsList.news.filter(news => !!news);
+            this.initialized = true;
+          })
+          .finally(() => this.initialized = false);
+      }
+    },
+    refreshNewsViews(selectedTarget, selectedOption) {
+      this.showArticleSummary = selectedOption.showArticleSummary;
+      this.showArticleTitle = selectedOption.showArticleTitle;
+      this.showArticleImage = selectedOption.showArticleImage;
+      this.selectedOption = selectedOption;
+      this.newsHeader = selectedOption.header;
+      this.seeAllUrl = selectedOption.seeAllUrl;
+      this.limit = selectedOption.limit;
+      this.newsTarget = selectedTarget;
+      this.getNewsList();
+    },
+    reset() {
+      this.limit = this.$root.limit;
+      this.showHeader = this.$root.showHeader;
+      this.newsHeader = this.$root.header;
+      this.showSeeAll = this.$root.showSeeAll;
+      this.showArticleTitle = this.$root.showArticleTitle;
+      this.showArticleImage = this.$root.showArticleImage;
+      this.showArticleSummary = this.$root.showArticleSummary;
+      this.showArticleAuthor = this.$root.showArticleAuthor;
+      this.showArticleSpace = this.$root.showArticleSpace;
+      this.showArticleDate = this.$root.showArticleDate;
+      this.showArticleReactions = this.$root.showArticleReactions;
+      this.seeAllUrl = this.$root.seeAllUrl;
+      this.selectedOption = {
+        limit: this.limit,
+        showHeader: this.showHeader,
+        showSeeAll: this.showSeeAll,
+        showArticleTitle: this.showArticleTitle,
+        showArticleSummary: this.showArticleSummary,
+        showArticleAuthor: this.showArticleAuthor,
+        showArticleSpace: this.showArticleSpace,
+        showArticleDate: this.showArticleDate,
+        showArticleReactions: this.showArticleReactions,
+        showArticleImage: this.showArticleImage,
+        seeAllUrl: this.seeAllUrl,
+      };
+    },
+  }
+};
+</script>

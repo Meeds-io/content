@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+	This file is part of the Meeds project (https://meeds.io/).
+
+  Copyright (C) 2020 - 2024 Meeds Association contact@meeds.io
+	This program is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3 of the License, or (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
+
+  You should have received a copy of the GNU Lesser General Public License
+	along with this program; if not, write to the Free Software Foundation,
+	Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
+-->
+<configuration
+   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+   xsi:schemaLocation="http://www.exoplatform.org/xml/ns/kernel_1_2.xsd http://www.exoplatform.org/xml/ns/kernel_1_2.xsd"
+   xmlns="http://www.exoplatform.org/xml/ns/kernel_1_2.xsd">
+  
+  <component>
+    <key>io.meeds.news.service.NewsService</key>
+    <type>io.meeds.news.service.impl.NewsServiceImpl</type>
+  </component>
+  
+  <component>
+    <key>io.meeds.news.service.NewsTargetingService</key>
+    <type>io.meeds.news.service.impl.NewsTargetingServiceImpl</type>
+  </component>
+
+  <component>
+    <type>io.meeds.news.rest.NewsRestResourcesV1</type>
+  </component>
+
+  <component>
+    <type>io.meeds.news.rest.NewsTargetingRestResourcesV1</type>
+  </component>
+
+  <component>
+    <key>io.meeds.news.connector.NewsSearchConnector</key>
+    <type>io.meeds.news.connector.NewsSearchConnector</type>
+    <init-params>
+      <properties-param>
+        <name>constructor.params</name>
+        <property name="searchType" value="News"/>
+        <property name="displayName" value="News"/>
+      </properties-param>
+    </init-params>
+  </component>
+  
+  <external-component-plugins>
+    <target-component>org.exoplatform.services.resources.ResourceBundleService</target-component>
+    <component-plugin>
+      <name>Document Composer Plugin Resource Bundle</name>
+      <set-method>addResourceBundle</set-method>
+      <type>org.exoplatform.services.resources.impl.BaseResourceBundlePlugin</type>
+      <init-params>
+        <values-param>
+          <name>classpath.resources</name>
+          <value>locale.portlet.news.News</value>
+        </values-param>
+        <values-param>
+          <name>portal.resource.names</name>
+          <value>locale.portlet.news.News</value>
+        </values-param>
+      </init-params>
+    </component-plugin>
+  </external-component-plugins>
+
+  <external-component-plugins>
+    <target-component>org.exoplatform.commons.file.services.NameSpaceService</target-component>
+    <component-plugin>
+      <name>NewsNameSpacePlugin</name>
+      <set-method>addNameSpacePlugin</set-method>
+      <type>org.exoplatform.commons.file.services.NameSpacePlugin</type>
+      <init-params>
+        <properties-param>
+          <name>fileNameSpace.params</name>
+          <property name="name" value="news"/>
+          <property name="description" value="news files storage"/>
+        </properties-param>
+      </init-params>
+    </component-plugin>
+  </external-component-plugins>
+</configuration>
