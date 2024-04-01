@@ -63,10 +63,13 @@ export default {
   data: () => ({
     activityTitle: '',
     url: '',
-    isFavorite: true
+    isFavorite: true,
+    newsObjectType: 'article'
   }),
   created() {
-    this.$newsServices.getNewsById(this.id, false)
+    const lang = null
+    //TODO concat the lang to the news id during the favorite action
+    this.$newsServices.getNewsById(this.id, false, this.newsObjectType, lang)
       .then(news => {
         this.activityTitle = news.title;
         this.url = news.url;
