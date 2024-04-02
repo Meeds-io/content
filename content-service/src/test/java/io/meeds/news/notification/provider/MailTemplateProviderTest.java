@@ -151,7 +151,7 @@ public class MailTemplateProviderTest {
     when(encoder.encode("title")).thenReturn("title");
     when(encoder.encode("space1")).thenReturn("space1");
     when(encoder.encode("jean")).thenReturn("jean");
-    when(encoder.encode("http://localhost:8080/news/images/newsImageDefault.png")).thenReturn("http://localhost:8080/news/images/newsImageDefault.png");
+    when(encoder.encode("http://localhost:8080/content/images/newsImageDefault.png")).thenReturn("http://localhost:8080/content/images/newsImageDefault.png");
     when(encoder.encode("COMMENT MY NEWS")).thenReturn("COMMENT MY NEWS");
     when(encoder.encode("http://localhost:8080/portal/intranet/activity?id=39")).thenReturn("http://localhost:8080/portal/intranet/activity?id=39");
     when(notification.getValueOwnerParameter("read")).thenReturn("true");

@@ -23,7 +23,7 @@
     <div v-if="archivedNews && !news.canArchive">
       <div class="userNotAuthorized">
         <div class="notAuthorizedIconDiv">
-          <img src="/news/images/notauthorized.png" class="iconNotAuthorized">
+          <img src="/content/images/notauthorized.png" class="iconNotAuthorized">
         </div>
         <h3>{{ $t('news.archive.text') }}</h3>
       </div>

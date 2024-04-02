@@ -35,7 +35,7 @@
               class="articleLink d-block"
               target="_self"
               :href="articleUrl(item)">
-            <img :src="showArticleImage && item.illustrationURL !== null ? illustrationURL(item,index) : '/news/images/news.png'" :alt="$t('news.latest.alt.articleImage')">
+            <img :src="showArticleImage && item.illustrationURL !== null ? illustrationURL(item,index) : '/content/images/news.png'" :alt="$t('news.latest.alt.articleImage')">
             <div class="titleArea">
               <div v-if="showArticleDate" class="articleDate">
                 <date-format

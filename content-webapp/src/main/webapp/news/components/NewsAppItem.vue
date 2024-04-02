@@ -167,7 +167,7 @@ export default {
       return this.news && this.news.authorProfileURL && this.news.authorProfileURL.split('/').pop();
     },
     illustrationUrl() {
-      return this.news?.illustrationURL ? this.news.illustrationURL.concat('&size=150x150').toString() : '/news/images/news.png';
+      return this.news?.illustrationURL ? this.news.illustrationURL.concat('&size=150x150').toString() : '/content/images/news.png';
     },
   },
   methods: {
