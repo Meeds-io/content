@@ -119,7 +119,7 @@ export default {
       return this.selectedOption?.showArticleReactions;
     },
     articleImage() {
-      return this.item?.illustrationURL?.concat('&size=70x70').toString() || '/news/images/news.png';
+      return this.item?.illustrationURL?.concat('&size=70x70').toString() || '/content/images/news.png';
     },
     extraClass() {
       return (!this.showArticleSummary || !this.showArticleTitle) && 'text-truncate-2' || 'article-title' ;

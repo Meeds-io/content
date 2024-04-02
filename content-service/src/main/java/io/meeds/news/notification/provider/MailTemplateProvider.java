@@ -98,7 +98,7 @@ public class MailTemplateProvider extends TemplateProvider {
       String contentSpaceName = notification.getValueOwnerParameter(NotificationConstants.CONTENT_SPACE);
       String authorAvatarUrl = notification.getValueOwnerParameter(NotificationConstants.AUTHOR_AVATAR_URL);
       String baseUrl = PropertyManager.getProperty("gatein.email.domain.url");
-      String illustrationUrl = baseUrl.concat("/news/images/newsImageDefault.png");
+      String illustrationUrl = baseUrl.concat("/content/images/newsImageDefault.png");
       String activityLink = notification.getValueOwnerParameter(NotificationConstants.ACTIVITY_LINK);
       String context = notification.getValueOwnerParameter(NotificationConstants.CONTEXT);
 
