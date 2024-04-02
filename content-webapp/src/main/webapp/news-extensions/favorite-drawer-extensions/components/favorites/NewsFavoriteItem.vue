@@ -31,7 +31,7 @@
         <img
           v-else
           :alt="activityTitle"
-          src="/news/images/news.png">
+          src="/content/images/news.png">
       </v-avatar>
     </v-list-item-icon>
 

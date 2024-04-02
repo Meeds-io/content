@@ -54,7 +54,7 @@
             size="40"
             :class="isMobile ? 'me-3' : 'mx-3'"
             class="my-auto">
-            <v-img src="/news/images/news.png" />
+            <v-img src="/content/images/news.png" />
           </v-avatar>
           <div class="d-flex flex-grow-1 flex-column my-auto align-left">
             <div>
