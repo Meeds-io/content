@@ -44,6 +44,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.exoplatform.wiki.model.Page;
+import org.exoplatform.wiki.model.PageVersion;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
@@ -442,5 +444,62 @@ public class NewsServiceImplTest {
     // Then
     assertNotNull(newsList);
     assertEquals(newsList.size(), 1);
+  }
+
+  @Test
+  public void testPostNews() throws Exception {
+    News newsArticle = new News();
+    newsArticle.setAuthor("john");
+    newsArticle.setTitle("news article for new page");
+    newsArticle.setSummary("news article summary for new page");
+    newsArticle.setBody("news body");
+    newsArticle.setPublicationState("published");
+    newsArticle.setId("1");
+
+    Identity identity = mock(Identity.class);
+    when(identity.getUserId()).thenReturn("john");
+    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity(anyString())).thenReturn(identity);
+
+    Space space = mock(Space.class);
+    when(space.getId()).thenReturn("1");
+    when(space.getGroupId()).thenReturn("/space/groupId");
+    when(space.getAvatarUrl()).thenReturn("space/avatar/url");
+    when(space.getDisplayName()).thenReturn("spaceDisplayName");
+    when(space.getVisibility()).thenReturn("public");
+    when(spaceService.isSuperManager(anyString())).thenReturn(true);
+    when(spaceService.getSpaceById(any())).thenReturn(space);
+    when(spaceService.getSpaceByGroupId(anyString())).thenReturn(space);
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(anyString(), any(Identity.class))).thenReturn(true);
+    when(spaceService.canRedactOnSpace(any(Space.class), any(Identity.class))).thenReturn(true);
+
+    Wiki wiki = mock(Wiki.class);
+    when(wikiService.getWikiByTypeAndOwner(anyString(), anyString())).thenReturn(wiki);
+    org.exoplatform.wiki.model.Page rootPage = mock(org.exoplatform.wiki.model.Page.class);
+    when(rootPage.getName()).thenReturn(NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME);
+    when(rootPage.getId()).thenReturn("1");
+    when(noteService.getNoteOfNoteBookByName("group",
+            space.getGroupId(),
+            NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME)).thenReturn(rootPage);
+
+    Page newsArticlePage = new Page();
+    newsArticlePage.setTitle(newsArticle.getTitle());
+    newsArticlePage.setContent(newsArticle.getBody());
+    newsArticlePage.setParentPageId(rootPage.getId());
+    newsArticlePage.setAuthor(newsArticle.getAuthor());
+    newsArticlePage.setLang(null);
+    //
+    Page createdPage = mock(Page.class);
+    when(createdPage.getId()).thenReturn("1");
+    when(noteService.createNote(wiki, rootPage.getName(), newsArticlePage, identity)).thenReturn(createdPage);
+    PageVersion pageVersion = mock(PageVersion.class);
+    when(noteService.getPublishedVersionByPageIdAndLang(1L, null)).thenReturn(pageVersion);
+    when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(new org.exoplatform.social.core.identity.model.Identity("1"));
+
+    newsService.createNews(newsArticle, identity);
+    verify(noteService, times(1)).createNote(wiki, rootPage.getName(), newsArticlePage, identity);
+    verify(noteService, times(1)).createVersionOfNote(createdPage, identity.getUserId());
+
+    verify(noteService, times(1)).getPublishedVersionByPageIdAndLang(1L, null);
+    verify(metadataService, times(1)).createMetadataItem(any(MetadataObject.class),any(MetadataKey.class), any(Map.class), anyLong());
   }
 }
