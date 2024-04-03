@@ -663,6 +663,7 @@ public class NewsServiceImpl implements NewsService {
           } else {
             Long draftArticleIllustrationId = saveArticleIllustration(draftArticle.getUploadId(), null);
             draftArticleMetadataItemProperties.put(NEWS_ILLUSTRATION_ID, String.valueOf(draftArticleIllustrationId));
+            draftArticleMetadataItemProperties.put(NEWS_UPLOAD_ID, draftArticle.getUploadId());
             setArticleIllustration(draftArticle,
                                    draftArticleIllustrationId,
                                    io.meeds.news.utils.NewsUtils.NewsObjectType.DRAFT.name());
@@ -672,7 +673,9 @@ public class NewsServiceImpl implements NewsService {
           if (draftArticleMetadataItemProperties.containsKey(NEWS_UPLOAD_ID)
               && draftArticleMetadataItemProperties.get(NEWS_UPLOAD_ID) != null
               && draftArticleMetadataItemProperties.containsKey(NEWS_ILLUSTRATION_ID)
-              && draftArticleMetadataItemProperties.get(NEWS_ILLUSTRATION_ID) != null) {
+              && draftArticleMetadataItemProperties.get(NEWS_ILLUSTRATION_ID) != null
+              && draftArticle.getUploadId() != null
+              && StringUtils.isBlank(draftArticle.getUploadId())) {
             draftArticleMetadataItemProperties.remove(NEWS_UPLOAD_ID);
             FileItem draftArticleIllustrationFileItem =
                                                       fileService.getFile(Long.parseLong(draftArticleMetadataItemProperties.get(NEWS_ILLUSTRATION_ID)));
