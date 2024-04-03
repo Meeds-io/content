@@ -165,6 +165,7 @@ public interface NewsService {
 
   /**
    * Retrives a news identified by its technical identifier
+   * 
    * @param newsId {@link News} identifier
    * @return {@link News} if found else null
    */

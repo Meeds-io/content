@@ -478,8 +478,8 @@ public class NewsServiceImplTest {
     when(rootPage.getName()).thenReturn(NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME);
     when(rootPage.getId()).thenReturn("1");
     when(noteService.getNoteOfNoteBookByName("group",
-            space.getGroupId(),
-            NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME)).thenReturn(rootPage);
+                                             space.getGroupId(),
+                                             NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME)).thenReturn(rootPage);
 
     Page newsArticlePage = new Page();
     newsArticlePage.setTitle(newsArticle.getTitle());
@@ -500,6 +500,9 @@ public class NewsServiceImplTest {
     verify(noteService, times(1)).createVersionOfNote(createdPage, identity.getUserId());
 
     verify(noteService, times(1)).getPublishedVersionByPageIdAndLang(1L, null);
-    verify(metadataService, times(1)).createMetadataItem(any(MetadataObject.class),any(MetadataKey.class), any(Map.class), anyLong());
+    verify(metadataService, times(1)).createMetadataItem(any(MetadataObject.class),
+                                                         any(MetadataKey.class),
+                                                         any(Map.class),
+                                                         anyLong());
   }
 }
