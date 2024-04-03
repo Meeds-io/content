@@ -164,6 +164,14 @@ public interface NewsService {
                    String newsObjectType) throws IllegalAccessException;
 
   /**
+   * Retrives a news identified by its technical identifier
+   * 
+   * @param newsId {@link News} identifier
+   * @return {@link News} if found else null
+   */
+  News getNewsArticleById(String newsId);
+
+  /**
    * Get all news
    * 
    * @param filter
