@@ -26,6 +26,7 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
@@ -146,6 +147,12 @@ public class NewsServiceImpl implements NewsService {
   /** The Constant NEWS_METADATA_PAGE_VERSION_OBJECT_TYPE.*/
   public static final String         NEWS_METADATA_PAGE_VERSION_OBJECT_TYPE
                                                                          = "newsPageVersion";
+
+  /** The Constant NEWS_VIEWERS.*/
+  public static final String         NEWS_VIEWERS                         = "viewers";
+
+  /** The Constant NEWS_VIEWS.*/
+  public static final String         NEWS_VIEWS                           = "viewsCount";
 
 
   private static final Log           LOG                               = ExoLogger.getLogger(NewsServiceImpl.class);
@@ -546,7 +553,43 @@ public class NewsServiceImpl implements NewsService {
    */
   @Override
   public void markAsRead(News news, String userId) throws Exception {
-
+    try {
+      MetadataItem metadataItem = metadataService.getMetadataItemsByMetadataAndObject(new MetadataKey(NEWS_METADATA_TYPE.getName(), NEWS_METADATA_NAME, 0),
+              new NewsPageObject(NEWS_METADATA_PAGE_OBJECT_TYPE, news.getId(), null)).get(0);
+      if (metadataItem != null) {
+        Map<String, String> properties = metadataItem.getProperties();
+        if (properties == null) {
+          properties = new HashMap<>();
+        }
+        if (properties.containsKey(NEWS_VIEWERS) && StringUtils.isNotEmpty(properties.get(NEWS_VIEWERS))) {
+          String newsViewers = properties.get(NEWS_VIEWERS);
+          String[] newsViewersArray = newsViewers.split(",");
+          boolean isUserInNewsViewers = Arrays.stream(newsViewersArray).anyMatch(userId::equals);
+          if (isUserInNewsViewers) {
+            return;
+          }
+          newsViewers.concat("," + userId);
+          properties.put(NEWS_VIEWERS, newsViewers);
+          if (properties.containsKey(NEWS_VIEWS) && StringUtils.isNotEmpty(properties.get(NEWS_VIEWS))){
+            Long newsViewsCount = Long.parseLong(properties.get(NEWS_VIEWS)) + 1L ;
+            properties.put(NEWS_VIEWS, String.valueOf(newsViewsCount));
+          } else {
+            properties.put(NEWS_VIEWS, "1");
+          }
+        } else {
+          properties.put(NEWS_VIEWERS, userId);
+          properties.put(NEWS_VIEWS, "1");
+        }
+        metadataItem.setProperties(properties);
+        String userIdentityId = identityManager.getOrCreateUserIdentity(userId).getId();
+        metadataService.updateMetadataItem(metadataItem, Long.parseLong(userIdentityId));
+      }
+    }
+    catch (Exception exception) {
+      LOG.error("Failed to mark news article " + news.getId() + " as read for current user", exception);
+      return;
+    }
+    NewsUtils.broadcastEvent(NewsUtils.VIEW_NEWS, userId, news);
   }
 
   /**
@@ -1294,6 +1337,7 @@ public class NewsServiceImpl implements NewsService {
   private News buildArticle(String newsId) throws WikiException {
     Page articlePage = noteService.getNoteById(newsId);
     Identity userIdentity = getCurrentIdentity();
+    String currentUsername = userIdentity == null ? null : userIdentity.getUserId();
     if (articlePage != null) {
       News news = new News();
       MetadataKey metadataKey = new MetadataKey(NEWS_METADATA_TYPE.getName(), NEWS_METADATA_NAME, 0);
@@ -1311,7 +1355,7 @@ public class NewsServiceImpl implements NewsService {
           news.setActivityId(newsActivityId);
           StringBuilder newsUrl = new StringBuilder();
           Space newsPostedInSpace = spaceService.getSpaceById(activities[0].split(":")[0]);
-          if (userIdentity.getUserId() != null && spaceService.isMember(newsPostedInSpace, userIdentity.getUserId())) {
+          if (currentUsername != null && spaceService.isMember(newsPostedInSpace, currentUsername)) {
             newsUrl.append("/").append(PortalContainer.getCurrentPortalContainerName()).append("/").append(CommonsUtils.getCurrentPortalOwner()).append("/activity?id=").append(newsActivityId);
             news.setUrl(newsUrl.toString());
           }
@@ -1326,7 +1370,7 @@ public class NewsServiceImpl implements NewsService {
             sharedInSpacesList.add(sharedInSpaceId);
             Space sharedInSpace = spaceService.getSpaceById(sharedInSpaceId);
             String activityId = activities[i].split(":")[1];
-            if (sharedInSpace != null && userIdentity.getUserId() != null && spaceService.isMember(sharedInSpace, userIdentity.getUserId()) && activityManager.isActivityExists(activityId)) {
+            if (sharedInSpace != null && currentUsername != null && spaceService.isMember(sharedInSpace, currentUsername) && activityManager.isActivityExists(activityId)) {
               memberSpaceActivities.append(activities[i]).append(";");
             }
           }
@@ -1353,7 +1397,9 @@ public class NewsServiceImpl implements NewsService {
           } catch (Exception exception) {
             LOG.warn("failed to parse news published date for article with id " + news.getId());
           }
-
+        }
+        if (properties.containsKey(NEWS_VIEWS) && StringUtils.isNotEmpty(properties.get(NEWS_VIEWS))) {
+          news.setViewsCount(Long.parseLong(properties.get(NEWS_VIEWS)));
         }
       }
 
@@ -1372,11 +1418,11 @@ public class NewsServiceImpl implements NewsService {
           news.setSpaceAvatarUrl(space.getAvatarUrl());
           news.setSpaceDisplayName(space.getDisplayName());
           boolean hiddenSpace = space.getVisibility().equals(Space.HIDDEN)
-                  && !spaceService.isMember(space, userIdentity.getUserId())
-                  && !spaceService.isSuperManager(userIdentity.getUserId());
+                  && !spaceService.isMember(space, currentUsername)
+                  && !spaceService.isSuperManager(currentUsername);
           news.setHiddenSpace(hiddenSpace);
-          boolean isSpaceMember = spaceService.isSuperManager(userIdentity.getUserId())
-                  || spaceService.isMember(space, userIdentity.getUserId());
+          boolean isSpaceMember = spaceService.isSuperManager(currentUsername)
+                  || spaceService.isMember(space, currentUsername);
           news.setSpaceMember(isSpaceMember);
           if (StringUtils.isNotEmpty(space.getGroupId())) {
             String spaceGroupId = space.getGroupId().split("/")[2];
