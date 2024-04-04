@@ -512,8 +512,25 @@ public class NewsServiceImpl implements NewsService {
    * {@inheritDoc}
    */
   @Override
-  public List<News> getNewsByTargetName(NewsFilter filter, String targetName, Identity currentIdentity) throws Exception {
-    return new ArrayList<>();
+  public List<News> getNewsByTargetName(NewsFilter newsFilter, String targetName, Identity currentIdentity) throws Exception {
+    List<MetadataItem> newsTargetItems = newsTargetingService.getNewsTargetItemsByTargetName(targetName, newsFilter.getOffset(), 0);
+    return newsTargetItems.stream().filter(target -> {
+      try {
+        News news = getNewsById(target.getObjectId(), currentIdentity, false, ARTICLE.name().toLowerCase());
+        return news != null && (news.getAudience().equals("") || news.getAudience().equals(NewsUtils.ALL_NEWS_AUDIENCE) || news.isSpaceMember());
+      } catch (Exception e) {
+        return false;
+      }
+    }).map(target -> {
+      try {
+        News news = getNewsById(target.getObjectId(), currentIdentity, false, ARTICLE.name().toLowerCase());
+        news.setPublishDate(new Date(target.getCreatedDate()));
+        news.setIllustration(null);
+        return news;
+      } catch (Exception e) {
+        return null;
+      }
+    }).limit(newsFilter.getLimit()).toList();
   }
 
   /**
@@ -1299,7 +1316,7 @@ public class NewsServiceImpl implements NewsService {
             news.setUrl(newsUrl.toString());
           }
           else {
-            newsUrl.append("/").append(PortalContainer.getCurrentPortalContainerName()).append("/").append(CommonsUtils.getCurrentPortalOwner()).append("/news/detail?newsId=").append(news.getId()).append("&type=article");
+            newsUrl.append("/").append(PortalContainer.getCurrentPortalContainerName()).append("/").append(CommonsUtils.getCurrentPortalOwner()).append("/news/detail?newsId=").append(newsId).append("&type=article");
             news.setUrl(newsUrl.toString());
           }
           memberSpaceActivities.append(activities[0]).append(";");

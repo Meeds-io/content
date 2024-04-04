@@ -164,7 +164,7 @@ export default {
       return this.item && `${this.item.url}#activityReactions`;
     },
     articleUrl() {
-      return eXo.env.portal.userName !== '' ? this.item.url : `${eXo.env.portal.context}/${eXo.env.portal.portalName}/news-detail?newsId=${this.item.id}`;
+      return eXo.env.portal.userName !== '' ? this.item.url : `${eXo.env.portal.context}/${eXo.env.portal.portalName}/news-detail?newsId=${this.item.id}&type=article`;
     }
   }
 };
