@@ -91,6 +91,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 
+import static io.meeds.news.utils.NewsUtils.NewsObjectType.ARTICLE;
+
 @Path("v1/news")
 @Tag(name = "v1/news", description = "Managing news")
 public class NewsRestResourcesV1 implements ResourceContainer, Startable {
@@ -303,7 +305,7 @@ public class NewsRestResourcesV1 implements ResourceContainer, Startable {
                                           currentIdentity,
                                           false,
                                           isDraft ? NewsObjectType.DRAFT.name().toLowerCase()
-                                                  : NewsObjectType.ARTICLE.name().toLowerCase());
+                                                  : ARTICLE.name().toLowerCase());
       if (news == null) {
         return Response.status(Response.Status.NOT_FOUND).build();
       }
@@ -464,7 +466,7 @@ public class NewsRestResourcesV1 implements ResourceContainer, Startable {
         return Response.status(Response.Status.BAD_REQUEST).build();
       }
       org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
-      News news = newsService.getNewsById(id, currentIdentity, false);
+      News news = newsService.getNewsById(id, currentIdentity, false, ARTICLE.name().toLowerCase());
       if (news == null) {
         return Response.status(Response.Status.NOT_FOUND).build();
       }

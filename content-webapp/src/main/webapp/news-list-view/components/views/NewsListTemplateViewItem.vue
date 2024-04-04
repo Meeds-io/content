@@ -125,7 +125,7 @@ export default {
       return (!this.showArticleSummary || !this.showArticleTitle) && 'text-truncate-2' || 'article-title' ;
     },
     articleUrl() {
-      return eXo.env.portal.userName !== '' ? this.item.url : `${eXo.env.portal.context}/${eXo.env.portal.portalName}/news-detail?newsId=${this.item.id}`;
+      return eXo.env.portal.userName !== '' ? this.item.url : `${eXo.env.portal.context}/${eXo.env.portal.portalName}/news-detail?newsId=${this.item.id}&type=article`;
     }
   },
 };
