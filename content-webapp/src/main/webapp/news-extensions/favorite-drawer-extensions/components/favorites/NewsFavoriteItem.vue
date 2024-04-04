@@ -63,10 +63,11 @@ export default {
   data: () => ({
     activityTitle: '',
     url: '',
-    isFavorite: true
+    isFavorite: true,
+    newsObjectType: 'article',
   }),
   created() {
-    this.$newsServices.getNewsById(this.id, false)
+    this.$newsServices.getNewsById(this.id, false, this.newsObjectType)
       .then(news => {
         this.activityTitle = news.title;
         this.url = news.url;

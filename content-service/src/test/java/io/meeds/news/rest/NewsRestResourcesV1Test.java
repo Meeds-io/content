@@ -19,6 +19,7 @@
  */
 package io.meeds.news.rest;
 
+import static io.meeds.news.utils.NewsUtils.NewsObjectType.ARTICLE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -1946,7 +1947,7 @@ public class NewsRestResourcesV1Test {
     ConversationState.setCurrent(new ConversationState(currentIdentity));
     News news = new News();
     news.setId("1");
-    when(newsService.getNewsById("1", currentIdentity, false)).thenReturn(news);
+    when(newsService.getNewsById("1", currentIdentity, false, ARTICLE.name().toLowerCase())).thenReturn(news);
     doNothing().when(newsService).markAsRead(news, JOHN);
     Response response = newsRestResourcesV1.markNewsAsRead(request, "1");
     verify(newsService, times(1)).markAsRead(news, JOHN);

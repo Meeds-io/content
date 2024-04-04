@@ -101,7 +101,7 @@ public class NewsIndexingServiceConnector extends ElasticIndexingServiceConnecto
     LOG.debug("Index document for news id={}", id);
     News news = null;
     try {
-      news = newsService.getNewsById(id, false);
+      news = newsService.getNewsArticleById(id);
     } catch (Exception e) {
       LOG.error("Error when getting the news " + id, e);
     }
