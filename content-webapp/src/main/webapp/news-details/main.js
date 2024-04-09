@@ -58,6 +58,7 @@ export function init(params) {
           news: params.news,
           newsId: params.news.newsId,
           activityId: params.activityId,
+          newsType: params.newsType,
           showEditButton: params.news.canEdit,
           showPublishButton: params.news.canPublish,
           showDeleteButton: params.news.canDelete,
@@ -68,6 +69,7 @@ export function init(params) {
                     :news="news"
                     :news-id="newsId"
                     :activity-id="activityId"
+                    :news-type="newsType"
                     :show-edit-button="showEditButton"
                     :show-publish-button="showPublishButton"
                     :show-delete-button="showDeleteButton"/>
