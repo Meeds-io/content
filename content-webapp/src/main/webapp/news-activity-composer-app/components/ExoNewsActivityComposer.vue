@@ -812,7 +812,8 @@ export default {
         updatedNews.uploadId = '';
       }
 
-      return this.$newsServices.updateNews(updatedNews, post).then((createdNews) => {
+      const newsType = this.activityId && publicationState === 'draft' ? 'latest_draft' : this.newsType;
+      return this.$newsServices.updateNews(updatedNews, post, newsType).then((createdNews) => {
         this.spaceUrl = createdNews.spaceUrl;
         if (this.news.body !== createdNews.body) {
           this.imagesURLs = this.extractImagesURLsDiffs(this.news.body, createdNews.body);
