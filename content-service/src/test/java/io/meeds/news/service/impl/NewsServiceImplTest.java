@@ -63,6 +63,7 @@ import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.container.PortalContainer;
 import org.exoplatform.portal.config.UserACL;
 import org.exoplatform.services.security.Identity;
+import org.exoplatform.social.core.identity.provider.OrganizationIdentityProvider;
 import org.exoplatform.social.core.manager.ActivityManager;
 import org.exoplatform.social.core.manager.IdentityManager;
 import org.exoplatform.social.core.space.model.Space;
@@ -451,6 +452,8 @@ public class NewsServiceImplTest {
 
   @Test
   public void testPostNews() throws Exception {
+    
+    // Given
     News newsArticle = new News();
     newsArticle.setAuthor("john");
     newsArticle.setTitle("news article for new page");
@@ -458,6 +461,7 @@ public class NewsServiceImplTest {
     newsArticle.setBody("news body");
     newsArticle.setPublicationState("published");
     newsArticle.setId("1");
+    newsArticle.setActivities("1:2;3:4");
 
     Identity identity = mock(Identity.class);
     when(identity.getUserId()).thenReturn("john");
@@ -490,7 +494,7 @@ public class NewsServiceImplTest {
     newsArticlePage.setParentPageId(rootPage.getId());
     newsArticlePage.setAuthor(newsArticle.getAuthor());
     newsArticlePage.setLang(null);
-    //
+
     Page createdPage = mock(Page.class);
     when(createdPage.getId()).thenReturn("1");
     when(noteService.createNote(wiki, rootPage.getName(), newsArticlePage, identity)).thenReturn(createdPage);
@@ -498,19 +502,21 @@ public class NewsServiceImplTest {
     when(noteService.getPublishedVersionByPageIdAndLang(1L, null)).thenReturn(pageVersion);
     when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(new org.exoplatform.social.core.identity.model.Identity("1"));
 
+    // When
     newsService.createNews(newsArticle, identity);
+    
+    // Then
     verify(noteService, times(1)).createNote(wiki, rootPage.getName(), newsArticlePage, identity);
     verify(noteService, times(1)).createVersionOfNote(createdPage, identity.getUserId());
-
     verify(noteService, times(1)).getPublishedVersionByPageIdAndLang(1L, null);
-    /*verify(metadataService, times(1)).createMetadataItem(any(MetadataObject.class),
+    verify(metadataService, times(1)).createMetadataItem(any(MetadataObject.class),
                                                          any(MetadataKey.class),
                                                          any(Map.class),
-                                                         anyLong());*/
+                                                         anyLong());
   }
 
   @Test
-  public void testCreateNewsDraftForExistingPage() throws Exception {
+  public void testCreateDraftArticleForExistingPage() throws Exception {
     // Given
     Page existingPage = mock(Page.class);
     when(noteService.getNoteById(anyString())).thenReturn(existingPage);
