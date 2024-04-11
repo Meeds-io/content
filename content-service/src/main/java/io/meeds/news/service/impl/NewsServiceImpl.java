@@ -1070,13 +1070,11 @@ public class NewsServiceImpl implements NewsService {
   }
 
   private boolean canDeleteNews(Identity currentIdentity, String posterId, String spaceId) {
-    if (currentIdentity == null) {
+    Space space = spaceId == null ? null : spaceService.getSpaceById(spaceId);
+    if (space == null) {
       return false;
     }
-    String authenticatedUser = currentIdentity.getUserId();
-    Space currentSpace = spaceService.getSpaceById(spaceId);
-    return authenticatedUser.equals(posterId) || userACL.isSuperUser() || spaceService.isSuperManager(authenticatedUser)
-        || spaceService.isManager(currentSpace, authenticatedUser);
+    return spaceService.canRedactOnSpace(space, currentIdentity);
   }
 
   private boolean isMemberOfsharedInSpaces(News news, String username) {
