@@ -19,12 +19,14 @@
  */
 package io.meeds.news.service;
 
+import java.util.Date;
 import java.util.List;
 
 import org.exoplatform.commons.exception.ObjectNotFoundException;
 import org.exoplatform.social.core.activity.model.ExoSocialActivity;
 import org.exoplatform.social.core.identity.model.Identity;
 import org.exoplatform.social.core.space.model.Space;
+import org.exoplatform.wiki.model.Page;
 
 import io.meeds.news.filter.NewsFilter;
 import io.meeds.news.model.News;
@@ -296,4 +298,10 @@ public interface NewsService {
    * @throws Exception when user doesn't have access to {@link News}
    */
   void shareNews(News news, Space space, Identity userIdentity, String sharedActivityId) throws Exception;
+
+  News createDraftArticleForNewPage(News draftArticle, String pageOwnerId, String draftArticleCreator, long creationDate) throws Exception;
+  
+  News createNewsArticlePage(News newsArticle, String newsArticleCreator, Date createdDate, Date updatedDate) throws Exception;
+  
+  News createDraftForExistingPage(News news, String updater, Page page, long creationDate) throws Exception;
 }
