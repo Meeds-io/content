@@ -279,9 +279,9 @@ public class NewsServiceImpl implements NewsService {
     Set<String> previousMentions = NewsUtils.processMentions(originalNews.getOriginalBody(),
                                                              spaceService.getSpaceById(news.getSpaceId()));
     if (NewsObjectType.DRAFT.name().toLowerCase().equals(newsObjectType)) {
-      news = updateDraftArticleForNewPage(news, updater);
+      return updateDraftArticleForNewPage(news, updater);
     } else if (LATEST_DRAFT.name().toLowerCase().equals(newsObjectType)) {
-      news = createOrUpdateDraftForExistingPage(news, updater);
+      return createOrUpdateDraftForExistingPage(news, updater);
     } else if (ARTICLE.name().toLowerCase().equals(newsObjectType)) {
       // TODO
     }
@@ -1549,7 +1549,7 @@ public class NewsServiceImpl implements NewsService {
     if (draftPage == null) {
       news = createDraftForExistingPage(news, updater, existingPage);
     } else {
-      // TODO update draft for existing page
+      news = updateDraftForExistingPage(news, updater, existingPage, draftPage);
     }
     return news;
   }
@@ -1589,11 +1589,13 @@ public class NewsServiceImpl implements NewsService {
                                                .get(0);
       boolean hasIllustration = false;
       Long oldIllustrationId = null;
+      String oldIllustrationUploadId = null;
       if (metadataItem != null && metadataItem.getProperties() != null && !metadataItem.getProperties().isEmpty()) {
         hasIllustration = metadataItem.getProperties().containsKey(NEWS_ILLUSTRATION_ID)
             && StringUtils.isNotEmpty(metadataItem.getProperties().get(NEWS_ILLUSTRATION_ID));
         if (hasIllustration) {
           oldIllustrationId = Long.parseLong(metadataItem.getProperties().get(NEWS_ILLUSTRATION_ID));
+          oldIllustrationUploadId = metadataItem.getProperties().get(NEWS_UPLOAD_ID);
         }
       }
       if (StringUtils.isNotEmpty(news.getUploadId())) {
@@ -1601,17 +1603,96 @@ public class NewsServiceImpl implements NewsService {
         Long newIllustrationId = saveArticleIllustration(news.getUploadId(), null);
         if (newIllustrationId != null) {
           draftArticleMetadataItemProperties.put(NEWS_ILLUSTRATION_ID, String.valueOf(newIllustrationId));
+          draftArticleMetadataItemProperties.put(NEWS_UPLOAD_ID, news.getUploadId());
           setArticleIllustration(news, newIllustrationId, NewsObjectType.DRAFT.name().toLowerCase());
         }
       } else if (news.getUploadId() == null && hasIllustration) {
         // link the illustration to the newly created draft
         draftArticleMetadataItemProperties.put(NEWS_ILLUSTRATION_ID, String.valueOf(oldIllustrationId));
+        draftArticleMetadataItemProperties.put(NEWS_UPLOAD_ID, oldIllustrationUploadId);
         setArticleIllustration(news, oldIllustrationId, NewsObjectType.DRAFT.name().toLowerCase());
       }
     }
     metadataService.createMetadataItem(latestDraftObject, NEWS_METADATA_KEY, draftArticleMetadataItemProperties);
     return news;
   }
+
+  private News updateDraftForExistingPage(News news, String updater, Page page, DraftPage draftPage) {
+   try {
+     draftPage.setTitle(news.getTitle());
+     draftPage.setContent(news.getBody());
+     draftPage.setAuthor(news.getAuthor());
+     draftPage.setTargetPageId(page.getId());
+     draftPage.setLang(null);
+
+     draftPage = noteService.updateDraftForExistPage(draftPage, page, null, System.currentTimeMillis(), updater);
+
+     news.setDraftUpdateDate(draftPage.getUpdatedDate());
+     news.setDraftUpdater(draftPage.getAuthor());
+
+     NewsLatestDraftObject latestDraftObject = new NewsLatestDraftObject(NEWS_METADATA_LATEST_DRAFT_OBJECT_TYPE,
+             draftPage.getId(),
+             page.getId());
+
+     List<MetadataItem> latestDraftArticleMetadataItems =
+             metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY,
+                     latestDraftObject);
+     if (latestDraftArticleMetadataItems != null && !latestDraftArticleMetadataItems.isEmpty()) {
+       MetadataItem latestDraftArticleMetadataItem = latestDraftArticleMetadataItems.get(0);
+       Map<String, String> latestDraftArticleMetadataItemProperties = latestDraftArticleMetadataItem.getProperties();
+       if (latestDraftArticleMetadataItemProperties == null) {
+         latestDraftArticleMetadataItemProperties = new HashMap<>();
+       }
+       // create or update the illustration
+       if (StringUtils.isNotEmpty(news.getUploadId())) {
+         // update the illustration if exist
+         if (latestDraftArticleMetadataItemProperties.containsKey(NEWS_UPLOAD_ID)
+                 && latestDraftArticleMetadataItemProperties.get(NEWS_UPLOAD_ID) != null
+                 && latestDraftArticleMetadataItemProperties.containsKey(NEWS_ILLUSTRATION_ID)
+                 && latestDraftArticleMetadataItemProperties.get(NEWS_ILLUSTRATION_ID) != null) {
+           if (!latestDraftArticleMetadataItemProperties.get(NEWS_UPLOAD_ID).equals(news.getUploadId())) {
+             FileItem draftArticleIllustrationFileItem =
+                     fileService.getFile(Long.parseLong(latestDraftArticleMetadataItemProperties.get(NEWS_ILLUSTRATION_ID)));
+             Long draftArticleIllustrationId = saveArticleIllustration(news.getUploadId(),
+                     draftArticleIllustrationFileItem.getFileInfo().getId());
+             latestDraftArticleMetadataItemProperties.put(NEWS_ILLUSTRATION_ID, String.valueOf(draftArticleIllustrationId));
+             setArticleIllustration(news, draftArticleIllustrationId, NewsObjectType.DRAFT.name());
+           }
+         } else {
+           // create the illustration if not exist
+           Long draftArticleIllustrationId = saveArticleIllustration(news.getUploadId(), null);
+           latestDraftArticleMetadataItemProperties.put(NEWS_ILLUSTRATION_ID, String.valueOf(draftArticleIllustrationId));
+           latestDraftArticleMetadataItemProperties.put(NEWS_UPLOAD_ID, news.getUploadId());
+           setArticleIllustration(news, draftArticleIllustrationId, NewsObjectType.DRAFT.name());
+         }
+         latestDraftArticleMetadataItemProperties.put(NEWS_UPLOAD_ID, news.getUploadId());
+       } else {
+         // if the upload id is empty we should remove the existing illustration
+         if (latestDraftArticleMetadataItemProperties.containsKey(NEWS_ILLUSTRATION_ID)
+                 && latestDraftArticleMetadataItemProperties.get(NEWS_ILLUSTRATION_ID) != null && news.getUploadId() != null) {
+           latestDraftArticleMetadataItemProperties.remove(NEWS_UPLOAD_ID);
+           FileItem draftArticleIllustrationFileItem =
+                   fileService.getFile(Long.parseLong(latestDraftArticleMetadataItemProperties.get(NEWS_ILLUSTRATION_ID)));
+           latestDraftArticleMetadataItemProperties.remove(NEWS_ILLUSTRATION_ID);
+
+           fileService.deleteFile(draftArticleIllustrationFileItem.getFileInfo().getId());
+         }
+       }
+       if (StringUtils.isNotEmpty(news.getSummary())) {
+         latestDraftArticleMetadataItemProperties.put(NEWS_SUMMARY, news.getSummary());
+       }
+       latestDraftArticleMetadataItem.setProperties(latestDraftArticleMetadataItemProperties);
+       String draftArticleMetadataItemUpdaterIdentityId = identityManager.getOrCreateUserIdentity(updater).getId();
+       metadataService.updateMetadataItem(latestDraftArticleMetadataItem, Long.parseLong(draftArticleMetadataItemUpdaterIdentityId));
+     } else {
+       throw new ObjectNotFoundException("No metadata item found for the draft " + news.getId());
+     }
+   } catch (Exception exception) {
+     return null;
+   }
+    return news;
+  }
+
 
   private News buildLatestDraftArticle(String parentPageId, String currentIdentityId) throws Exception {
     Page parentPage = noteService.getNoteById(parentPageId);
