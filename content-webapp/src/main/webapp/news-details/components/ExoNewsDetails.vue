@@ -82,6 +82,11 @@ export default {
       required: false,
       default: ''
     },
+    newsType: {
+      type: String,
+      required: false,
+      default: ''
+    },
     showEditButton: {
       type: Boolean,
       required: false,
@@ -163,7 +168,8 @@ export default {
         });
     },
     editLink() {
-      const editUrl = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news/editor?spaceId=${this.spaceId}&newsId=${this.newsId}&activityId=${this.activityId}`;
+      const newsType = this.activityId && this.activityId !== '' ? 'latest_draft' : this.newsType;
+      const editUrl = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news/editor?spaceId=${this.spaceId}&newsId=${this.newsId}&activityId=${this.activityId}&type=${newsType}`;
       window.open(editUrl, '_target');
     },
     deleteConfirmDialog() {
