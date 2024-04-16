@@ -812,7 +812,13 @@ export default {
         updatedNews.uploadId = '';
       }
 
-      const newsType = this.activityId && publicationState === 'draft' ? 'latest_draft' : this.newsType;
+      let newsType = this.newsType;
+      if (this.activityId && publicationState === 'draft') {
+        newsType = 'latest_draft';
+      }
+      if (this.activityId && publicationState === 'published') {
+        newsType = 'article';
+      }
       return this.$newsServices.updateNews(updatedNews, post, newsType).then((createdNews) => {
         this.spaceUrl = createdNews.spaceUrl;
         if (this.news.body !== createdNews.body) {
