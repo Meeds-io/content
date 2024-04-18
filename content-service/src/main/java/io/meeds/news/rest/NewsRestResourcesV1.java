@@ -267,7 +267,7 @@ public class NewsRestResourcesV1 implements ResourceContainer, Startable {
 
       return Response.ok(news).build();
     } catch (IllegalAccessException e) {
-      LOG.warn("User '{}' is not autorized to update news", currentIdentity.getUserId(), e);
+      LOG.warn("User '{}' is not authorized to update news", currentIdentity.getUserId(), e);
       return Response.status(Response.Status.UNAUTHORIZED).entity(e.getMessage()).build();
     } catch (Exception e) {
       LOG.error("Error when updating the news " + id, e);
