@@ -120,7 +120,6 @@ public class NewsServiceImplTest {
 
   private NewsService                                newsService;
 
-  private UserACL                                    userACL;
 
   private static final MockedStatic<CommonsUtils>    COMMONS_UTILS    = mockStatic(CommonsUtils.class);
 
@@ -130,7 +129,6 @@ public class NewsServiceImplTest {
 
   @Before
   public void setUp() {
-    userACL = CommonsUtils.getService(UserACL.class);
     this.newsService = new NewsServiceImpl(spaceService,
                                            noteService,
                                            metadataService,
@@ -138,7 +136,6 @@ public class NewsServiceImplTest {
                                            newsTargetingService,
                                            indexingService,
                                            identityManager,
-                                           userACL,
                                            activityManager,
                                            wikiService,
                                            uploadService);
