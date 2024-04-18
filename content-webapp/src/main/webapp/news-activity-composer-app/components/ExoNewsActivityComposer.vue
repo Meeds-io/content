@@ -90,7 +90,7 @@
                     <span v-on="on">
                       <v-btn
                         id="newsUpdateAndPost"
-                        :disabled="news.archived || news.activityPosted ? true: updateDisabled"
+                        :disabled="news.archived || !news.activityPosted ? true: updateDisabled"
                         :class="[news.archived ? 'unauthorizedPublish' : '']"
                         class="btn ms-2 me-2"
                         v-bind="attrs"

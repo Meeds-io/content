@@ -948,6 +948,11 @@ public class NewsServiceImpl implements NewsService {
           if (draftArticleMetadataItemProperties.containsKey(NEWS_SUMMARY)) {
             draftArticle.setSummary(draftArticleMetadataItemProperties.get(NEWS_SUMMARY));
           }
+          if (draftArticleMetadataItemProperties.containsKey(NEWS_ACTIVITY_POSTED)) {
+            draftArticle.setActivityPosted(Boolean.parseBoolean(draftArticleMetadataItemProperties.get(NEWS_ACTIVITY_POSTED)));
+          } else {
+            draftArticle.setActivityPosted(false);
+          }
           if (draftArticleMetadataItemProperties.containsKey(NEWS_ILLUSTRATION_ID)
               && draftArticleMetadataItemProperties.get(NEWS_ILLUSTRATION_ID) != null) {
             setArticleIllustration(draftArticle,
@@ -1693,6 +1698,7 @@ public class NewsServiceImpl implements NewsService {
     if (StringUtils.isNotEmpty(news.getSummary())) {
       draftArticleMetadataItemProperties.put(NEWS_SUMMARY, news.getSummary());
     }
+    draftArticleMetadataItemProperties.put(NEWS_ACTIVITY_POSTED, String.valueOf(news.isActivityPosted()));
     // check if the article has an illustration to lik it to the created draft
     PageVersion latestPageVersion = noteService.getPublishedVersionByPageIdAndLang(Long.parseLong(page.getId()), null);
     if (latestPageVersion != null) {
@@ -1797,6 +1803,7 @@ public class NewsServiceImpl implements NewsService {
         if (StringUtils.isNotEmpty(news.getSummary())) {
           latestDraftArticleMetadataItemProperties.put(NEWS_SUMMARY, news.getSummary());
         }
+        latestDraftArticleMetadataItemProperties.put(NEWS_ACTIVITY_POSTED, String.valueOf(news.isActivityPosted()));
         latestDraftArticleMetadataItem.setProperties(latestDraftArticleMetadataItemProperties);
         String draftArticleMetadataItemUpdaterIdentityId = identityManager.getOrCreateUserIdentity(updater).getId();
         metadataService.updateMetadataItem(latestDraftArticleMetadataItem,
