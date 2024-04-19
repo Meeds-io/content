@@ -736,6 +736,35 @@ public class NewsServiceImpl implements NewsService {
                         org.exoplatform.social.core.identity.model.Identity userIdentity,
                         String sharedActivityId) throws Exception {
 
+    if (!canViewNews(news, userIdentity.getRemoteId())) {
+      throw new IllegalAccessException("User with id " + userIdentity.getRemoteId() + "doesn't have access to news");
+    }
+    if (sharedActivityId != null) {
+      // update article metadata activities
+      NewsPageObject newsPageObject = new NewsPageObject(NEWS_METADATA_PAGE_OBJECT_TYPE, news.getId(), null);
+      MetadataItem metadataItem = metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY, newsPageObject).stream().findFirst().orElse(null);
+      if (metadataItem == null) {
+        throw new ObjectNotFoundException("News metadata object with id " + news.getId() + " wasn't found");
+      }
+
+      Map<String, String> properties = metadataItem.getProperties();
+      if (properties == null) {
+        properties = new HashMap<>();
+      }
+      if (properties.containsKey(NEWS_ACTIVITIES)) {
+        String newsActivities = properties.get(NEWS_ACTIVITIES);
+        newsActivities = newsActivities.concat(";").concat(space.getId()).concat(":").concat(sharedActivityId);
+        properties.put(NEWS_ACTIVITIES, newsActivities);
+      } else {
+        properties.put(NEWS_ACTIVITIES, space.getId().concat(":").concat(sharedActivityId));
+      }
+
+      metadataItem.setProperties(properties);
+      metadataService.updateMetadataItem(metadataItem, Long.parseLong(userIdentity.getId()));
+
+      NewsUtils.broadcastEvent(NewsUtils.SHARE_NEWS, userIdentity.getRemoteId(), news);
+    }
+
   }
 
   /**
