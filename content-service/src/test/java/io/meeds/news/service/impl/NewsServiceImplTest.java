@@ -19,6 +19,7 @@
  */
 package io.meeds.news.service.impl;
 
+import static io.meeds.news.service.impl.NewsServiceImpl.NEWS_ACTIVITIES;
 import static io.meeds.news.service.impl.NewsServiceImpl.NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME;
 import static io.meeds.news.service.impl.NewsServiceImpl.NEWS_SUMMARY;
 import static org.junit.Assert.assertEquals;
@@ -324,7 +325,7 @@ public class NewsServiceImplTest {
     expecteddraftPage.setWikiOwner("/space/groupId");
 
     // When, Then
-    assertThrows(IllegalArgumentException.class, () -> newsService.updateNews(news, "john", false, false, "draft"));
+    assertThrows(IllegalAccessException.class, () -> newsService.updateNews(news, "john", false, false, "draft"));
 
     // Given
     when(spaceService.canRedactOnSpace(space, identity)).thenReturn(true);
@@ -571,7 +572,7 @@ public class NewsServiceImplTest {
     news.setOriginalBody("body");
 
     // When, Then
-    assertThrows(IllegalArgumentException.class, () -> newsService.updateNews(news, "john", false, false, "draft"));
+    assertThrows(IllegalAccessException.class, () -> newsService.updateNews(news, "john", false, false, "draft"));
 
     // Given
     when(spaceService.canRedactOnSpace(space, identity)).thenReturn(true);
@@ -663,7 +664,7 @@ public class NewsServiceImplTest {
     news.setOriginalBody("body");
 
     // When, Then
-    assertThrows(IllegalArgumentException.class, () -> newsService.updateNews(news, "john", false, false, "draft"));
+    assertThrows(IllegalAccessException.class, () -> newsService.updateNews(news, "john", false, false, "draft"));
 
     // Given
     when(spaceService.canRedactOnSpace(space, identity)).thenReturn(true);
@@ -750,7 +751,7 @@ public class NewsServiceImplTest {
     news.setOriginalBody("body");
 
     // When, Then
-    assertThrows(IllegalArgumentException.class, () -> newsService.updateNews(news, "john", false, false, "draft"));
+    assertThrows(IllegalAccessException.class, () -> newsService.updateNews(news, "john", false, false, "draft"));
 
     // Given
     when(spaceService.canRedactOnSpace(space, identity)).thenReturn(true);
@@ -770,5 +771,66 @@ public class NewsServiceImplTest {
     verify(noteService, times(1)).createVersionOfNote(existingPage, identity.getUserId());
     verify(noteService, times(2)).getPublishedVersionByPageIdAndLang(1L, null);
     verify(metadataService, times(1)).updateMetadataItem(any(MetadataItem.class), anyLong());
+  }
+
+  @Test
+  public void testDeleteNewsArticle() throws Exception {
+    // Given
+    Page existingPage = mock(Page.class);
+    when(noteService.getNoteById(anyString())).thenReturn(existingPage);
+    when(existingPage.getId()).thenReturn("1");
+    when(existingPage.getWikiOwner()).thenReturn("/space/groupId");
+    when(existingPage.getWikiType()).thenReturn("group");
+    when(existingPage.getName()).thenReturn("news");
+
+    MetadataItem metadataItem = mock(MetadataItem.class);
+    List<MetadataItem> metadataItems = new ArrayList<>();
+    metadataItems.add(metadataItem);
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+            any(MetadataObject.class))).thenReturn(metadataItems);
+    Map<String, String> properties = new HashMap<>();
+    properties.put(NEWS_ACTIVITIES, "1:1;");
+    when(metadataItem.getProperties()).thenReturn(properties);
+
+    Space space = mock(Space.class);
+    when(space.getId()).thenReturn("1");
+    when(space.getGroupId()).thenReturn("/space/groupId");
+    when(space.getAvatarUrl()).thenReturn("space/avatar/url");
+    when(space.getDisplayName()).thenReturn("spaceDisplayName");
+    when(space.getVisibility()).thenReturn("public");
+    when(spaceService.isSuperManager(anyString())).thenReturn(true);
+    when(spaceService.getSpaceById(any())).thenReturn(space);
+    when(spaceService.getSpaceByGroupId(anyString())).thenReturn(space);
+
+    Identity identity = mock(Identity.class);
+    when(identity.getUserId()).thenReturn("john");
+    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity(anyString())).thenReturn(identity);
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(anyString(), any(Identity.class))).thenReturn(false);
+    when(newsTargetingService.getTargetsByNewsId(anyString())).thenReturn(null);
+
+    PageVersion pageVersion = mock(PageVersion.class);
+    when(noteService.getPublishedVersionByPageIdAndLang(1L, null)).thenReturn(pageVersion);
+
+    when(existingPage.getAuthor()).thenReturn("john");
+    when(pageVersion.getAuthor()).thenReturn("john");
+    when(pageVersion.getUpdatedDate()).thenReturn(new Date());
+    when(pageVersion.getAuthorFullName()).thenReturn("full name");
+    //
+    assertThrows(IllegalAccessException.class, () -> newsService.deleteNews(existingPage.getId(), identity, false));
+
+    // when
+    when(spaceService.canRedactOnSpace(space, identity)).thenReturn(true);
+    when(noteService.deleteNote(existingPage.getWikiType(), existingPage.getWikiOwner(), existingPage.getName())).thenReturn(true);
+    DraftPage draftPage = mock(DraftPage.class);
+    when(draftPage.getId()).thenReturn("1");
+    when(noteService.getLatestDraftOfPage(existingPage, identity.getUserId())).thenReturn(draftPage);
+    when(noteService.getDraftNoteById(anyString(), anyString())).thenReturn(draftPage);
+
+    newsService.deleteNews(existingPage.getId(), identity, false);
+
+    //Then
+    verify(noteService, times(1)).deleteNote(existingPage.getWikiType(), existingPage.getWikiOwner(), existingPage.getName());
+    verify(noteService, times(1)).removeDraftById("1");
+    verify(activityManager, times(1)).deleteActivity("1");
   }
 }
