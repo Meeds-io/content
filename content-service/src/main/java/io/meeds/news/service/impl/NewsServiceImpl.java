@@ -47,6 +47,7 @@ import org.exoplatform.commons.notification.impl.NotificationContextImpl;
 import org.exoplatform.commons.search.index.IndexingService;
 import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.container.PortalContainer;
+import org.exoplatform.portal.config.UserACL;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
 import org.exoplatform.services.security.ConversationState;
@@ -178,6 +179,8 @@ public class NewsServiceImpl implements NewsService {
 
   private final IdentityManager      identityManager;
 
+  private final UserACL              userACL;
+
   private final ActivityManager      activityManager;
 
   private final WikiService          wikiService;
@@ -189,6 +192,7 @@ public class NewsServiceImpl implements NewsService {
                          NewsTargetingService newsTargetingService,
                          IndexingService indexingService,
                          IdentityManager identityManager,
+                         UserACL userACL,
                          ActivityManager activityManager,
                          WikiService wikiService,
                          UploadService uploadService) {
@@ -200,6 +204,7 @@ public class NewsServiceImpl implements NewsService {
     this.newsTargetingService = newsTargetingService;
     this.indexingService = indexingService;
     this.identityManager = identityManager;
+    this.userACL = userACL;
     this.activityManager = activityManager;
     this.wikiService = wikiService;
   }
