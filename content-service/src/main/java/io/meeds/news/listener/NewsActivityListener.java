@@ -35,6 +35,8 @@ import io.meeds.news.model.News;
 import io.meeds.news.service.NewsService;
 import io.meeds.news.utils.NewsUtils;
 
+import static io.meeds.news.utils.NewsUtils.NewsObjectType.ARTICLE;
+
 /**
  * A triggered listener class about activity lifecyles. This class is used to
  * propagate sharing activity in News elements to let targeted space members to
@@ -76,8 +78,8 @@ public class NewsActivityListener extends ActivityListenerPlugin {
         String newsId = originalActivity.getTemplateParams().get(NEWS_ID);
         org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
         try {
-          News news = newsService.getNewsById(newsId, currentIdentity, false);
-          if (news != null) {
+          News news = newsService.getNewsById(newsId, currentIdentity, false, ARTICLE.name().toLowerCase());
+          if (news != null && !news.isDeleted()) {
             Identity posterIdentity = getIdentity(sharedActivity);
             Space space = getSpace(sharedActivity);
             newsService.shareNews(news, space, posterIdentity, sharedActivity.getId());
