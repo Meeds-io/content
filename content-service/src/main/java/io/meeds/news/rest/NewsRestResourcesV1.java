@@ -405,7 +405,7 @@ public class NewsRestResourcesV1 implements ResourceContainer, Startable {
       }
       org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
       News news = newsService.getNewsById(id, currentIdentity, editMode, newsObjectType);
-      if (news == null) {
+      if (news == null || news.isDeleted()) {
         return Response.status(Response.Status.NOT_FOUND).build();
       }
       Locale userLocale = LocalizationFilter.getCurrentLocale();
