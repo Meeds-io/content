@@ -708,8 +708,8 @@ public class NewsServiceImpl implements NewsService {
               || isMemberOfsharedInSpaces(news, authenticatedUser))) {
         return false;
       }
-      if (news.isPublished() && news.getAudience().equals(NewsUtils.SPACE_NEWS_AUDIENCE)
-          && !spaceService.isMember(space, authenticatedUser)) {
+      if (news.isPublished() && StringUtils.equals(news.getPublicationState(), PUBLISHED) && news.getAudience().equals(NewsUtils.SPACE_NEWS_AUDIENCE)
+          && !(spaceService.isMember(space, authenticatedUser) || isMemberOfsharedInSpaces(news, authenticatedUser))) {
         return false;
       }
       if (StringUtils.equals(news.getPublicationState(), STAGED)
