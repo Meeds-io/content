@@ -59,7 +59,6 @@ import org.exoplatform.commons.file.services.FileService;
 import org.exoplatform.commons.search.index.IndexingService;
 import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.container.PortalContainer;
-import org.exoplatform.portal.config.UserACL;
 import org.exoplatform.services.security.Identity;
 import org.exoplatform.social.core.manager.ActivityManager;
 import org.exoplatform.social.core.manager.IdentityManager;
@@ -120,8 +119,6 @@ public class NewsServiceImplTest {
 
   private NewsService                                newsService;
 
-  private UserACL                                    userACL;
-
   private static final MockedStatic<CommonsUtils>    COMMONS_UTILS    = mockStatic(CommonsUtils.class);
 
   private static final MockedStatic<PortalContainer> PORTAL_CONTAINER = mockStatic(PortalContainer.class);
@@ -130,7 +127,6 @@ public class NewsServiceImplTest {
 
   @Before
   public void setUp() {
-    userACL = CommonsUtils.getService(UserACL.class);
     this.newsService = new NewsServiceImpl(spaceService,
                                            noteService,
                                            metadataService,
@@ -138,7 +134,6 @@ public class NewsServiceImplTest {
                                            newsTargetingService,
                                            indexingService,
                                            identityManager,
-                                           userACL,
                                            activityManager,
                                            wikiService,
                                            uploadService);
