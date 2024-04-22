@@ -31,3 +31,15 @@ export function convertDate(date) {
 export function pad(n) {
   return n < 10 && `0${n}` || n;
 }
+
+export const NewsUpdateType = {
+  CONTENT: 'content',
+  POSTING_AND_PUBLISHING: 'postingAndPublishing',
+  SCHEDULE: 'schedule'
+};
+
+export const NewsObjectType = {
+  DRAFT: 'draft',
+  ARTICLE: 'article',
+  LATEST_DRAFT: 'latest_draft'
+};

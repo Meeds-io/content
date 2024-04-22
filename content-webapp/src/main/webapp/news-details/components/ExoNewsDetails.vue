@@ -64,6 +64,8 @@
 </template>
 <script>
 
+import {NewsObjectType} from '../../js/newsUtils';
+
 const USER_TIMEZONE_ID = new window.Intl.DateTimeFormat().resolvedOptions().timeZone;
 export default {
   props: {
@@ -168,7 +170,7 @@ export default {
         });
     },
     editLink() {
-      const newsType = this.activityId && this.activityId !== '' ? 'latest_draft' : this.newsType;
+      const newsType = this.activityId && this.activityId !== '' ? NewsObjectType.LATEST_DRAFT : this.newsType;
       const editUrl = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news/editor?spaceId=${this.spaceId}&newsId=${this.newsId}&activityId=${this.activityId}&type=${newsType}`;
       window.open(editUrl, '_target');
     },

@@ -99,6 +99,8 @@
 </template>
 
 <script>
+import {NewsObjectType, NewsUpdateType} from '../../js/newsUtils';
+
 export default {
   props: {
     news: {
@@ -162,7 +164,7 @@ export default {
       return this.news && this.news.published;
     },
     isHiddenActivity() {
-      return this.news && this.news.activityPosted;
+      return this.news && !this.news.activityPosted;
     },
     disableTargetOption() {
       return this.selectedTargets && this.selectedTargets.length === 0;
@@ -202,7 +204,7 @@ export default {
     openDrawer() {
       if (this.news) {
         this.publish = this.news.published;
-        this.isActivityPosted = !this.news.activityPosted;
+        this.isActivityPosted = this.news.activityPosted;
       }
       if (this.$refs.postNewsDrawer) {
         this.disabled = true;
@@ -219,7 +221,7 @@ export default {
     updateNews() {
       this.editingNews = true;
       this.news.published = this.publish;
-      this.news.activityPosted = !this.isActivityPosted;
+      this.news.activityPosted = this.isActivityPosted;
       this.news.targets = this.selectedTargets;
       if (this.publish) {
         this.news.audience = this.selectedAudience === this.$t('news.composer.stepper.audienceSection.allUsers') ? 'all' : 'space';
@@ -227,7 +229,7 @@ export default {
       else {
         this.news.audience = null;
       }
-      return this.$newsServices.updateNews(this.news, false).then(() => {
+      return this.$newsServices.updateNews(this.news, false, NewsObjectType.ARTICLE, NewsUpdateType.POSTING_AND_PUBLISHING).then(() => {
         this.editingNews = false;
         this.$root.$emit('alert-message', this.$t('news.composer.alert.success.UpdateTargets'), 'success');
         this.$emit('refresh-news', this.news.newsId);
