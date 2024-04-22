@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
+import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -212,7 +213,7 @@ public class NewsServiceImpl implements NewsService {
     Space space = spaceService.getSpaceById(news.getSpaceId());
     try {
       if (!canCreateNews(space, currentIdentity)) {
-        throw new IllegalArgumentException("User " + currentIdentity.getUserId() + " not authorized to create news");
+        throw new IllegalAccessException("User " + currentIdentity.getUserId() + " not authorized to create news");
       }
       News createdNews;
       if (PUBLISHED.equals(news.getPublicationState())) {
@@ -266,7 +267,7 @@ public class NewsServiceImpl implements NewsService {
   public News updateNews(News news, String updater, Boolean post, boolean publish, String newsObjectType) throws Exception {
 
     if (!canEditNews(news, updater)) {
-      throw new IllegalArgumentException("User " + updater + " is not authorized to update news");
+      throw new IllegalAccessException("User " + updater + " is not authorized to update news");
     }
     Identity updaterIdentity = NewsUtils.getUserIdentity(updater);
     News originalNews = getNewsById(news.getId(), updaterIdentity, false, newsObjectType);
@@ -334,15 +335,15 @@ public class NewsServiceImpl implements NewsService {
                             false,
                             isDraft ? NewsObjectType.DRAFT.name().toLowerCase() : NewsObjectType.ARTICLE.name().toLowerCase());
     if (!news.isCanDelete()) {
-      throw new IllegalArgumentException("User " + currentIdentity.getUserId() + " is not authorized to delete news");
+      throw new IllegalAccessException("User " + currentIdentity.getUserId() + " is not authorized to delete news");
     }
     if (isDraft) {
       deleteDraftArticle(newsId, currentIdentity.getUserId(), true);
     } else {
-      // TODO delete article
-      indexingService.unindex(NewsIndexingServiceConnector.TYPE, String.valueOf(news.getId()));
+      deleteArticle(news, currentIdentity);
       MetadataObject newsMetadataObject = new MetadataObject(NewsUtils.NEWS_METADATA_OBJECT_TYPE, newsId);
       metadataService.deleteMetadataItemsByObject(newsMetadataObject);
+      indexingService.unindex(NewsIndexingServiceConnector.TYPE, String.valueOf(news.getId()));
       NewsUtils.broadcastEvent(NewsUtils.DELETE_NEWS, currentIdentity.getUserId(), news);
     }
   }
@@ -1637,6 +1638,7 @@ public class NewsServiceImpl implements NewsService {
         } else {
           news.setActivityPosted(false);
         }
+        news.setDeleted(articlePage.isDeleted());
       }
 
       // fetch the last version of the given lang
@@ -1863,5 +1865,31 @@ public class NewsServiceImpl implements NewsService {
     // exist
     draftArticle.setId(parentPageId);
     return draftArticle;
+  }
+
+  private void deleteArticle(News news, Identity currentIdentity) throws Exception {
+    Page articlePage = noteService.getNoteById(news.getId());
+    if (articlePage != null && !articlePage.isDeleted()) {
+      boolean hasDraft = true;
+      while (hasDraft) {
+        try {
+          DraftPage latestDraftPage = noteService.getLatestDraftOfPage(articlePage, currentIdentity.getUserId());
+          if (latestDraftPage != null) {
+            deleteDraftArticle(latestDraftPage.getId(), currentIdentity.getUserId(), true);
+          } else {
+            hasDraft = false;
+          }
+        } catch (Exception exception) {
+          hasDraft = false;
+        }
+      }
+      boolean isDeleted = noteService.deleteNote(articlePage.getWikiType(), articlePage.getWikiOwner(), articlePage.getName());
+      if (isDeleted) {
+        if (news.getActivities() != null) {
+          String newsActivities = news.getActivities();
+          Stream.of(newsActivities.split(";")).map(activity -> activity.split(":")[1]).forEach(activityManager::deleteActivity);
+        }
+      }
+    }
   }
 }
