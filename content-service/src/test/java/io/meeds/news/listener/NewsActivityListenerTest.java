@@ -19,6 +19,7 @@
  */
 package io.meeds.news.listener;
 
+import static io.meeds.news.utils.NewsUtils.NewsObjectType.ARTICLE;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.mock;
@@ -188,7 +189,7 @@ public class NewsActivityListenerTest {
 
     newsActivityListener.shareActivity(event);
 
-    verify(newsService, times(1)).getNewsById(newsId, currentIdentity, false);
+    verify(newsService, times(1)).getNewsById(newsId, currentIdentity, false, ARTICLE.name().toLowerCase());
     verify(newsService, never()).shareNews(nullable(News.class),
                                            nullable(Space.class),
                                            nullable(Identity.class),
@@ -232,11 +233,11 @@ public class NewsActivityListenerTest {
     ConversationState.setCurrent(new ConversationState(currentIdentity));
 
     News news = new News();
-    when(newsService.getNewsById(newsId, currentIdentity, false)).thenReturn(news);
+    when(newsService.getNewsById(newsId, currentIdentity, false, ARTICLE.name().toLowerCase())).thenReturn(news);
 
     newsActivityListener.shareActivity(event);
 
-    verify(newsService, times(1)).getNewsById(newsId, currentIdentity, false);
+    verify(newsService, times(1)).getNewsById(newsId, currentIdentity, false, ARTICLE.name().toLowerCase());
     verify(newsService, times(1)).shareNews(eq(news), nullable(Space.class), nullable(Identity.class), nullable(String.class));
   }
 }
