@@ -93,7 +93,7 @@ public interface NewsService {
    * @return updated News
    * @throws Exception
    */
-  News updateNews(News news, String updater, Boolean post, boolean publish, String newsObjectType) throws Exception;
+  News updateNews(News news, String updater, Boolean post, boolean publish, String newsObjectType, String newsUpdateType) throws Exception;
 
   /**
    * Delete news
