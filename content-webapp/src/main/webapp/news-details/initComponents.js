@@ -49,7 +49,7 @@ for (const key in components) {
 }
 
 import * as  newsServices from '../services/newsServices';
-import {newsConstants} from '../js/newsConstants';
+import * as newsConstants from '../js/newsConstants.js';
 
 if (!Vue.prototype.$newsServices) {
   window.Object.defineProperty(Vue.prototype, '$newsServices', {
