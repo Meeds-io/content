@@ -67,6 +67,7 @@ import org.exoplatform.social.metadata.model.MetadataItem;
 import org.exoplatform.social.metadata.model.MetadataKey;
 import org.exoplatform.social.metadata.model.MetadataObject;
 import org.exoplatform.social.metadata.model.MetadataType;
+import org.exoplatform.social.metadata.MetadataFilter;
 import org.exoplatform.social.notification.LinkProviderUtils;
 import org.exoplatform.upload.UploadResource;
 import org.exoplatform.upload.UploadService;
@@ -1023,13 +1024,13 @@ public class NewsServiceImpl implements NewsService {
                                                     .map(Space::getId)
                                                     .map(spaceId -> Long.parseLong(spaceId))
                                                     .toList();
+    MetadataFilter metadataFilter = new MetadataFilter();
+    metadataFilter.setMetadataName(NEWS_METADATA_NAME);
+    metadataFilter.setMetadataTypeName(NEWS_METADATA_TYPE.getName());
+    metadataFilter.setMetadataObjectTypes(List.of(NEWS_METADATA_DRAFT_OBJECT_TYPE, NEWS_METADATA_LATEST_DRAFT_OBJECT_TYPE));
+    metadataFilter.setMetadataSpaceIds(allowedDraftNewsSpacesIds);
     List<News> draftArticles =
-                             metadataService.getMetadataItemsByMetadataNameAndTypeAndObjectAndSpaceIds(NEWS_METADATA_NAME,
-                                                                                                       NEWS_METADATA_TYPE.getName(),
-                                                                                                       NEWS_METADATA_DRAFT_OBJECT_TYPE,
-                                                                                                       allowedDraftNewsSpacesIds,
-                                                                                                       filter.getOffset(),
-                                                                                                       filter.getLimit())
+                             metadataService.getMetadataItemsByFilter(metadataFilter, filter.getOffset(), filter.getLimit())
                                             .stream()
                                             .map(draftArticle -> {
                                               try {
