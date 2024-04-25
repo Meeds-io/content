@@ -19,6 +19,7 @@
  */
  
 import {newsConstants} from '../js/newsConstants.js';
+import {NewsUpdateType} from '../js/newsUtils';
 
 export function getNewsById(id, editMode, type) {
   return fetch(`${newsConstants.NEWS_API}/${id}?editMode=${editMode || ''}&type=${type || ''}`, {
@@ -142,8 +143,8 @@ export function importFileFromUrl(url) {
   });
 }
 
-export function updateNews(news, post, type) {
-  return fetch(`${newsConstants.NEWS_API}/${news.id}?post=${post}&type=${type || ''}`, {
+export function updateNews(news, post, type, newsUpdateType) {
+  return fetch(`${newsConstants.NEWS_API}/${news.id}?post=${post}&type=${type || ''}&newsUpdateType=${newsUpdateType || NewsUpdateType.CONTENT}`, {
     headers: {
       'Content-Type': 'application/json'
     },
