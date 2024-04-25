@@ -21,7 +21,7 @@
 import ExoNewsActivityComposer  from './components/ExoNewsActivityComposer.vue';
 import ExoNewsFileDrop from './components/ExoNewsFileDrop.vue';
 import * as  newsServices from '../services/newsServices.js';
-import {newsConstants} from '../js/newsConstants';
+import * as newsConstants from '../js/newsConstants.js';
 
 const components = {
   'exo-news-activity-composer': ExoNewsActivityComposer,
