@@ -1032,13 +1032,11 @@ public class NewsServiceImpl implements NewsService {
                                             .map(draftArticle -> {
                                               try {
                                                 return buildDraftArticle(draftArticle.getObjectId(), currentIdentity.getUserId());
-                                              } catch (IllegalAccessException | WikiException e) {
-                                                // TODO Auto-generated catch
-                                                // block
-                                                e.printStackTrace();
+                                              } catch (IllegalAccessException e) {
+                                                LOG.error("User with id " + currentIdentity.getUserId() + " not authorized to view news", e);
                                                 return null;
                                               } catch (Exception e) {
-                                                e.printStackTrace();
+                                                LOG.error("Error while building new draft article", e);
                                                 return null;
                                               }
                                             })

@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
- 
+
 export function convertDate(date) {
   return `${
     pad(date.getMonth()+1) }/${
@@ -31,15 +31,3 @@ export function convertDate(date) {
 export function pad(n) {
   return n < 10 && `0${n}` || n;
 }
-
-export const NewsUpdateType = {
-  CONTENT: 'content',
-  POSTING_AND_PUBLISHING: 'postingAndPublishing',
-  SCHEDULE: 'schedule'
-};
-
-export const NewsObjectType = {
-  DRAFT: 'draft',
-  ARTICLE: 'article',
-  LATEST_DRAFT: 'latest_draft'
-};

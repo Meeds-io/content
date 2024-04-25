@@ -21,6 +21,7 @@
 import ExoNewsActivityComposer  from './components/ExoNewsActivityComposer.vue';
 import ExoNewsFileDrop from './components/ExoNewsFileDrop.vue';
 import * as  newsServices from '../services/newsServices.js';
+import {newsConstants} from '../js/newsConstants';
 
 const components = {
   'exo-news-activity-composer': ExoNewsActivityComposer,
@@ -34,5 +35,11 @@ for (const key in components) {
 if (!Vue.prototype.$newsServices) {
   window.Object.defineProperty(Vue.prototype, '$newsServices', {
     value: newsServices,
+  });
+}
+
+if (!Vue.prototype.$newsConstants) {
+  window.Object.defineProperty(Vue.prototype, '$newsConstants', {
+    value: newsConstants,
   });
 }

@@ -99,8 +99,6 @@
 </template>
 
 <script>
-import {NewsObjectType, NewsUpdateType} from '../../js/newsUtils';
-
 export default {
   props: {
     news: {
@@ -229,7 +227,7 @@ export default {
       else {
         this.news.audience = null;
       }
-      return this.$newsServices.updateNews(this.news, false, NewsObjectType.ARTICLE, NewsUpdateType.POSTING_AND_PUBLISHING).then(() => {
+      return this.$newsServices.updateNews(this.news, false, this.$newsConstants.newsObjectType.ARTICLE, this.$newsConstants.newsUpdateType.POSTING_AND_PUBLISHING).then(() => {
         this.editingNews = false;
         this.$root.$emit('alert-message', this.$t('news.composer.alert.success.UpdateTargets'), 'success');
         this.$emit('refresh-news', this.news.newsId);

@@ -98,7 +98,6 @@ public class NewsUtils {
     CONTENT, SCHEDULE, POSTING_AND_PUBLISHING
   }
 
-
   public static void broadcastEvent(String eventName, Object source, Object data) {
     try {
       ListenerService listenerService = CommonsUtils.getService(ListenerService.class);
