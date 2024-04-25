@@ -813,11 +813,11 @@ export default {
       }
 
       let newsType = this.newsType;
-      if (this.activityId && publicationState === 'draft') {
-        newsType = 'latest_draft';
+      if (this.activityId && publicationState === this.$newsConstants.newsObjectType.DRAFT) {
+        newsType = this.$newsConstants.newsObjectType.LATEST_DRAFT;
       }
       if (this.activityId && publicationState === 'published') {
-        newsType = 'article';
+        newsType = this.$newsConstants.newsObjectType.ARTICLE;
       }
       return this.$newsServices.updateNews(updatedNews, post, newsType).then((createdNews) => {
         this.spaceUrl = createdNews.spaceUrl;
