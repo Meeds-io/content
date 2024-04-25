@@ -59,13 +59,13 @@ public interface NewsTargetingService {
 
   /**
    * Gets the {@link List} of {@link News} targets linked to a given
-   * {@link News} id
+   * {@link News}
    * 
-   * @param newsId {@link News} identifier of {@link News} targets to be
+   * @param news {@link News} for which targets to be
    *          retrieved
-   * @return {@link List} of {@link News} targets by {@link News} id
+   * @return {@link List} of {@link News} targets by {@link News} news object
    */
-  List<String> getTargetsByNewsId(String newsId);
+  List<String> getTargetsByNews(News news);
 
   /**
    * Gets the {@link List} of {@link News} target items by a given target name.
@@ -105,9 +105,9 @@ public interface NewsTargetingService {
    * Delete the {@link List} of {@link News} targets linked to a given
    * {@link News} id
    * 
-   * @param newsId {@link News} identifier of {@link News} to delete targets
+   * @param news {@link News} for which targets to be deleted
    */
-  void deleteNewsTargets(String newsId);
+  void deleteNewsTargets(News news);
 
   /**
    * Create news target
