@@ -28,6 +28,7 @@ for (const key in components) {
 }
 import * as  newsServices from '../services/newsServices';
 import * as newsUtils from '../js/newsUtils';
+import {newsConstants} from '../js/newsConstants';
 
 if (!Vue.prototype.$newsServices) {
   window.Object.defineProperty(Vue.prototype, '$newsServices', {
@@ -37,5 +38,10 @@ if (!Vue.prototype.$newsServices) {
 if (!Vue.prototype.$newsUtils) {
   window.Object.defineProperty(Vue.prototype, '$newsUtils', {
     value: newsUtils,
+  });
+}
+if (!Vue.prototype.$newsConstants) {
+  window.Object.defineProperty(Vue.prototype, '$newsConstants', {
+    value: newsConstants,
   });
 }
