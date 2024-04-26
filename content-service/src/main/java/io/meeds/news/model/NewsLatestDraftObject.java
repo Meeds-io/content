@@ -26,7 +26,7 @@ public class NewsLatestDraftObject extends MetadataObject {
   public NewsLatestDraftObject() {
   }
 
-  public NewsLatestDraftObject(String objectType, String objectId, String parentObjectId) {
-    super(objectType, objectId, parentObjectId);
+  public NewsLatestDraftObject(String objectType, String objectId, String parentObjectId, long spaceId) {
+    super(objectType, objectId, parentObjectId, spaceId);
   }
 }
