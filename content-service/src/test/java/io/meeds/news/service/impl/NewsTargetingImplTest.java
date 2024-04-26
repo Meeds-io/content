@@ -310,12 +310,16 @@ public class NewsTargetingImplTest {
   }
 
   @Test
-  public void testGetTargetsByNewsId() throws Exception {
+  public void testGetTargetsByNews() throws Exception {
     // Given
     NewsTargetingServiceImpl newsTargetingService = new NewsTargetingServiceImpl(metadataService,
                                                                                  identityManager,
                                                                                  spaceService,
                                                                                  organizationService);
+    News news = new News();
+    news.setId("123456");
+    news.setSpaceId("1");
+
     Metadata sliderNews = new Metadata();
     sliderNews.setName("sliderNews");
     sliderNews.setCreatedDate(100);
@@ -330,12 +334,12 @@ public class NewsTargetingImplTest {
     metadataItem.setMetadata(sliderNews);
     metadataItems.add(metadataItem);
 
-    NewsTargetObject newsTargetObject = new NewsTargetObject("news", "123456", null);
+    NewsTargetObject newsTargetObject = new NewsTargetObject("news", "123456", null, 1L);
     when(metadataService.getMetadataItemsByMetadataTypeAndObject(NewsTargetingService.METADATA_TYPE.getName(),
                                                                  newsTargetObject)).thenReturn(metadataItems);
 
     // When
-    List<String> newsTargets = newsTargetingService.getTargetsByNewsId("123456");
+    List<String> newsTargets = newsTargetingService.getTargetsByNews(news);
 
     // Then
     assertNotNull(newsTargets);
@@ -367,13 +371,13 @@ public class NewsTargetingImplTest {
     targets.add("sliderNews");
 
     News news = new News();
-    news.setSpaceId("spaceId");
+    news.setSpaceId("1");
     news.setTitle("Test news");
     news.setAuthor("user1");
     news.setTargets(targets);
     news.setId("123456");
 
-    NewsTargetObject newsTargetObject = new NewsTargetObject("news", "123456", null);
+    NewsTargetObject newsTargetObject = new NewsTargetObject("news", "123456", null, 1L);
     MetadataKey metadataKey = new MetadataKey(NewsTargetingService.METADATA_TYPE.getName(), "sliderNews", 0);
     Identity userIdentity = new Identity("1");
     when(identityManager.getOrCreateIdentity(OrganizationIdentityProvider.NAME, "root")).thenReturn(userIdentity);
@@ -381,7 +385,7 @@ public class NewsTargetingImplTest {
     Authenticator authenticator = mock(Authenticator.class);
     EXO_CONTAINER_CONTEXT.when(() -> ExoContainerContext.getService(IdentityRegistry.class)).thenReturn(identityRegistry);
     EXO_CONTAINER_CONTEXT.when(() -> ExoContainerContext.getCurrentContainer()).thenReturn(container);
-    when(spaceService.getSpaceById("spaceId")).thenReturn(space);
+    when(spaceService.getSpaceById("1")).thenReturn(space);
     when(spaceService.isMember(space, identity.getUserId())).thenReturn(true);
     EXO_CONTAINER_CONTEXT.when(() -> ExoContainerContext.getService(Authenticator.class)).thenReturn(authenticator);
     when(authenticator.createIdentity("root")).thenReturn(identity);
