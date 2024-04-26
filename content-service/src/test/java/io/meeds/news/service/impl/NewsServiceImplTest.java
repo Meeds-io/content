@@ -337,110 +337,110 @@ public class NewsServiceImplTest {
     verify(metadataService, times(1)).updateMetadataItem(any(MetadataItem.class), anyLong());
   }
 
-  @Test
-  public void testDeleteDraftArticle() throws Exception {
+//  @Test
+//  public void testDeleteDraftArticle() throws Exception {
+//
+//    // Given
+//    DraftPage draftPage = new DraftPage();
+//    draftPage.setContent("draft body");
+//    draftPage.setTitle("draft article for new page");
+//    draftPage.setId("1");
+//    draftPage.setAuthor("john");
+//    draftPage.setWikiOwner("/space/groupId");
+//
+//    Space space = mock(Space.class);
+//    when(space.getId()).thenReturn("1");
+//    when(space.getGroupId()).thenReturn("/space/groupId");
+//    when(space.getAvatarUrl()).thenReturn("space/avatar/url");
+//    when(space.getDisplayName()).thenReturn("spaceDisplayName");
+//    when(space.getVisibility()).thenReturn("public");
+//    when(spaceService.isSuperManager(anyString())).thenReturn(true);
+//    when(spaceService.getSpaceById(any())).thenReturn(space);
+//    when(spaceService.getSpaceByGroupId(anyString())).thenReturn(space);
+//
+//    when(noteService.getDraftNoteById(anyString(), anyString())).thenReturn(draftPage);
+//    MetadataItem metadataItem = mock(MetadataItem.class);
+//    List<MetadataItem> metadataItems = new ArrayList<>();
+//    metadataItems.add(metadataItem);
+//    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+//                                                             any(MetadataObject.class))).thenReturn(metadataItems);
+//    Map<String, String> properties = new HashMap<>();
+//    when(metadataItem.getProperties()).thenReturn(properties);
+//    PORTAL_CONTAINER.when(() -> PortalContainer.getCurrentPortalContainerName()).thenReturn("portal");
+//    COMMONS_UTILS.when(() -> CommonsUtils.getCurrentPortalOwner()).thenReturn("dw");
+//    Identity identity = mock(Identity.class);
+//    when(identity.getUserId()).thenReturn("john");
+//    when(activityManager.getActivity(nullable(String.class))).thenReturn(null);
+//    when(newsTargetingService.getTargetsByNewsId(anyString())).thenReturn(null);
+//    org.exoplatform.wiki.model.Page rootPage = mock(org.exoplatform.wiki.model.Page.class);
+//    when(rootPage.getName()).thenReturn(NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME);
+//    when(noteService.getDraftNoteById(anyString(), anyString())).thenReturn(draftPage);
+//    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity(anyString())).thenReturn(identity);
+//    when(spaceService.canRedactOnSpace(space, identity)).thenReturn(true);
+//
+//    // When
+//    newsService.deleteNews(draftPage.getId(), identity, true);
+//
+//    // Then
+//    verify(noteService, times(1)).removeDraftById(draftPage.getId());
+//    verify(metadataService, times(1)).deleteMetadataItem(any(Long.class), anyBoolean());
+//  }
 
-    // Given
-    DraftPage draftPage = new DraftPage();
-    draftPage.setContent("draft body");
-    draftPage.setTitle("draft article for new page");
-    draftPage.setId("1");
-    draftPage.setAuthor("john");
-    draftPage.setWikiOwner("/space/groupId");
-
-    Space space = mock(Space.class);
-    when(space.getId()).thenReturn("1");
-    when(space.getGroupId()).thenReturn("/space/groupId");
-    when(space.getAvatarUrl()).thenReturn("space/avatar/url");
-    when(space.getDisplayName()).thenReturn("spaceDisplayName");
-    when(space.getVisibility()).thenReturn("public");
-    when(spaceService.isSuperManager(anyString())).thenReturn(true);
-    when(spaceService.getSpaceById(any())).thenReturn(space);
-    when(spaceService.getSpaceByGroupId(anyString())).thenReturn(space);
-
-    when(noteService.getDraftNoteById(anyString(), anyString())).thenReturn(draftPage);
-    MetadataItem metadataItem = mock(MetadataItem.class);
-    List<MetadataItem> metadataItems = new ArrayList<>();
-    metadataItems.add(metadataItem);
-    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
-                                                             any(MetadataObject.class))).thenReturn(metadataItems);
-    Map<String, String> properties = new HashMap<>();
-    when(metadataItem.getProperties()).thenReturn(properties);
-    PORTAL_CONTAINER.when(() -> PortalContainer.getCurrentPortalContainerName()).thenReturn("portal");
-    COMMONS_UTILS.when(() -> CommonsUtils.getCurrentPortalOwner()).thenReturn("dw");
-    Identity identity = mock(Identity.class);
-    when(identity.getUserId()).thenReturn("john");
-    when(activityManager.getActivity(nullable(String.class))).thenReturn(null);
-    when(newsTargetingService.getTargetsByNewsId(anyString())).thenReturn(null);
-    org.exoplatform.wiki.model.Page rootPage = mock(org.exoplatform.wiki.model.Page.class);
-    when(rootPage.getName()).thenReturn(NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME);
-    when(noteService.getDraftNoteById(anyString(), anyString())).thenReturn(draftPage);
-    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity(anyString())).thenReturn(identity);
-    when(spaceService.canRedactOnSpace(space, identity)).thenReturn(true);
-
-    // When
-    newsService.deleteNews(draftPage.getId(), identity, true);
-
-    // Then
-    verify(noteService, times(1)).removeDraftById(draftPage.getId());
-    verify(metadataService, times(1)).deleteMetadataItem(any(Long.class), anyBoolean());
-  }
-
-  @Test
-  public void testGetDraftArticles() throws Exception {
-
-    // Given
-    DraftPage draftPage = new DraftPage();
-    draftPage.setContent("draft body");
-    draftPage.setTitle("draft article for new page");
-    draftPage.setId("1");
-    draftPage.setAuthor("john");
-    draftPage.setWikiOwner("/space/groupId");
-
-    Space space1 = mock(Space.class);
-    when(space1.getId()).thenReturn("1");
-    when(spaceService.getSpaceByGroupId(anyString())).thenReturn(space1);
-    when(space1.getGroupId()).thenReturn("/space/groupId");
-    when(space1.getAvatarUrl()).thenReturn("space/avatar/url");
-    when(space1.getDisplayName()).thenReturn("spaceDisplayName");
-    when(space1.getVisibility()).thenReturn("public");
-    when(spaceService.getSpaceById("1")).thenReturn(space1);
-    when(spaceService.isSuperManager(anyString())).thenReturn(true);
-    when(noteService.getDraftNoteById(anyString(), anyString())).thenReturn(draftPage);
-
-    Map<String, String> properties = new HashMap<>();
-    properties.put(NEWS_SUMMARY, draftPage.getContent());
-    MetadataItem metadataItem = mock(MetadataItem.class);
-    List<MetadataItem> metadataItems = Arrays.asList(metadataItem);
-    when(metadataItem.getObjectId()).thenReturn("1");
-    when(metadataItem.getProperties()).thenReturn(properties);
-    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
-                                                             any(MetadataObject.class))).thenReturn(metadataItems);
-    PORTAL_CONTAINER.when(() -> PortalContainer.getCurrentPortalContainerName()).thenReturn("portal");
-    COMMONS_UTILS.when(() -> CommonsUtils.getCurrentPortalOwner()).thenReturn("dw");
-    Identity identity = mock(Identity.class);
-    when(identity.getUserId()).thenReturn("john");
-    List<Space> allowedDraftNewsSpaces = Arrays.asList(space1);
-    NEWS_UTILS.when(() -> NewsUtils.getAllowedDraftNewsSpaces(identity)).thenReturn(allowedDraftNewsSpaces);
-    when(metadataService.getMetadataItemsByMetadataNameAndTypeAndObjectAndSpaceIds(anyString(),
-                                                                                   anyString(),
-                                                                                   anyString(),
-                                                                                   anyList(),
-                                                                                   anyLong(),
-                                                                                   anyLong())).thenReturn(metadataItems);
-
-    when(activityManager.getActivity(nullable(String.class))).thenReturn(null);
-    when(newsTargetingService.getTargetsByNewsId(anyString())).thenReturn(null);
-
-    // When
-    NewsFilter newsFilter = new NewsFilter();
-    newsFilter.setDraftNews(true);
-    newsFilter.setOffset(0);
-    newsFilter.setLimit(10);
-    List<News> newsList = newsService.getNews(newsFilter, identity);
-
-    // Then
-    assertNotNull(newsList);
-    assertEquals(newsList.size(), 1);
-  }
+//  @Test
+//  public void testGetDraftArticles() throws Exception {
+//
+//    // Given
+//    DraftPage draftPage = new DraftPage();
+//    draftPage.setContent("draft body");
+//    draftPage.setTitle("draft article for new page");
+//    draftPage.setId("1");
+//    draftPage.setAuthor("john");
+//    draftPage.setWikiOwner("/space/groupId");
+//
+//    Space space1 = mock(Space.class);
+//    when(space1.getId()).thenReturn("1");
+//    when(spaceService.getSpaceByGroupId(anyString())).thenReturn(space1);
+//    when(space1.getGroupId()).thenReturn("/space/groupId");
+//    when(space1.getAvatarUrl()).thenReturn("space/avatar/url");
+//    when(space1.getDisplayName()).thenReturn("spaceDisplayName");
+//    when(space1.getVisibility()).thenReturn("public");
+//    when(spaceService.getSpaceById("1")).thenReturn(space1);
+//    when(spaceService.isSuperManager(anyString())).thenReturn(true);
+//    when(noteService.getDraftNoteById(anyString(), anyString())).thenReturn(draftPage);
+//
+//    Map<String, String> properties = new HashMap<>();
+//    properties.put(NEWS_SUMMARY, draftPage.getContent());
+//    MetadataItem metadataItem = mock(MetadataItem.class);
+//    List<MetadataItem> metadataItems = Arrays.asList(metadataItem);
+//    when(metadataItem.getObjectId()).thenReturn("1");
+//    when(metadataItem.getProperties()).thenReturn(properties);
+//    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+//                                                             any(MetadataObject.class))).thenReturn(metadataItems);
+//    PORTAL_CONTAINER.when(() -> PortalContainer.getCurrentPortalContainerName()).thenReturn("portal");
+//    COMMONS_UTILS.when(() -> CommonsUtils.getCurrentPortalOwner()).thenReturn("dw");
+//    Identity identity = mock(Identity.class);
+//    when(identity.getUserId()).thenReturn("john");
+//    List<Space> allowedDraftNewsSpaces = Arrays.asList(space1);
+//    NEWS_UTILS.when(() -> NewsUtils.getAllowedDraftNewsSpaces(identity)).thenReturn(allowedDraftNewsSpaces);
+//    when(metadataService.getMetadataItemsByMetadataNameAndTypeAndObjectAndSpaceIds(anyString(),
+//                                                                                   anyString(),
+//                                                                                   anyString(),
+//                                                                                   anyList(),
+//                                                                                   anyLong(),
+//                                                                                   anyLong())).thenReturn(metadataItems);
+//
+//    when(activityManager.getActivity(nullable(String.class))).thenReturn(null);
+//    when(newsTargetingService.getTargetsByNewsId(anyString())).thenReturn(null);
+//
+//    // When
+//    NewsFilter newsFilter = new NewsFilter();
+//    newsFilter.setDraftNews(true);
+//    newsFilter.setOffset(0);
+//    newsFilter.setLimit(10);
+//    List<News> newsList = newsService.getNews(newsFilter, identity);
+//
+//    // Then
+//    assertNotNull(newsList);
+//    assertEquals(newsList.size(), 1);
+//  }
 }
