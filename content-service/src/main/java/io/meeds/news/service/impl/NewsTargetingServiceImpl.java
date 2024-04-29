@@ -129,8 +129,8 @@ public class NewsTargetingServiceImpl implements NewsTargetingService {
   }
 
   @Override
-  public List<String> getTargetsByNewsId(String newsId) {
-    NewsTargetObject newsTargetObject = new NewsTargetObject(NewsUtils.NEWS_METADATA_OBJECT_TYPE, newsId, null);
+  public List<String> getTargetsByNews(News news) {
+    NewsTargetObject newsTargetObject = new NewsTargetObject(NewsUtils.NEWS_METADATA_OBJECT_TYPE, news.getId(), null, Long.parseLong(news.getSpaceId()));
     List<MetadataItem> newsTargets = metadataService.getMetadataItemsByMetadataTypeAndObject(METADATA_TYPE.getName(),
                                                                                              newsTargetObject);
     return newsTargets.stream().map(MetadataItem::getMetadata).map(Metadata::getName).toList();
@@ -145,7 +145,7 @@ public class NewsTargetingServiceImpl implements NewsTargetingService {
     if (!NewsUtils.canPublishNews(news.getSpaceId(), currentIdentity)) {
       throw new IllegalAccessException("User " + currentUserId + " not authorized to save news targets");
     }
-    NewsTargetObject newsTargetObject = new NewsTargetObject(NewsUtils.NEWS_METADATA_OBJECT_TYPE, news.getId(), null);
+    NewsTargetObject newsTargetObject = new NewsTargetObject(NewsUtils.NEWS_METADATA_OBJECT_TYPE, news.getId(), null, Long.parseLong(news.getSpaceId()));
     Identity currentSocIdentity = identityManager.getOrCreateIdentity(OrganizationIdentityProvider.NAME, currentUserId);
     Map<String, String> properties = new LinkedHashMap<>();
     properties.put(NewsUtils.DISPLAYED_STATUS, String.valueOf(displayed));
@@ -174,8 +174,8 @@ public class NewsTargetingServiceImpl implements NewsTargetingService {
   }
 
   @Override
-  public void deleteNewsTargets(String newsId) {
-    NewsTargetObject newsTargetObject = new NewsTargetObject(NewsUtils.NEWS_METADATA_OBJECT_TYPE, newsId, null);
+  public void deleteNewsTargets(News news) {
+    NewsTargetObject newsTargetObject = new NewsTargetObject(NewsUtils.NEWS_METADATA_OBJECT_TYPE, news.getId(), null, Long.parseLong(news.getSpaceId()));
     metadataService.deleteMetadataItemsByMetadataTypeAndObject(METADATA_TYPE.getName(), newsTargetObject);
   }
 
@@ -185,7 +185,7 @@ public class NewsTargetingServiceImpl implements NewsTargetingService {
     if (!NewsUtils.canPublishNews(news.getSpaceId(), currentIdentity)) {
       throw new IllegalAccessException("User " + currentIdentity.getUserId() + " not authorized to delete news targets");
     }
-    deleteNewsTargets(news.getId());
+    deleteNewsTargets(news);
   }
 
   @Override
