@@ -20,6 +20,7 @@
 package io.meeds.news.rest;
 
 import static io.meeds.news.utils.NewsUtils.NewsObjectType.ARTICLE;
+import static io.meeds.news.utils.NewsUtils.NewsUpdateType.CONTENT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -365,10 +366,10 @@ public class NewsRestResourcesV1Test {
     updatedNews.setSummary("Updated Summary");
     updatedNews.setBody("Updated Body");
     updatedNews.setPublicationState("published");
-    lenient().when(newsService.updateNews(existingNews, JOHN, false, updatedNews.isPublished(), null)).then(returnsFirstArg());
+    lenient().when(newsService.updateNews(existingNews, JOHN, false, updatedNews.isPublished(), null, CONTENT.name().toLowerCase())).then(returnsFirstArg());
 
     // When
-    Response response = newsRestResourcesV1.updateNews("1", false, null, updatedNews);
+    Response response = newsRestResourcesV1.updateNews("1", false, null, CONTENT.name().toLowerCase(), updatedNews);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
@@ -379,10 +380,10 @@ public class NewsRestResourcesV1Test {
     assertEquals("Updated Body", returnedNews.getBody());
     assertEquals("published", returnedNews.getPublicationState());
 
-    when(newsRestResourcesV1.updateNews("1", false, null, updatedNews)).thenThrow(IllegalAccessException.class);
+    when(newsRestResourcesV1.updateNews("1", false, null, CONTENT.name().toLowerCase(), updatedNews)).thenThrow(IllegalAccessException.class);
 
     // When
-    response = newsRestResourcesV1.updateNews("1", false, null, updatedNews);
+    response = newsRestResourcesV1.updateNews("1", false, null, CONTENT.name().toLowerCase(), updatedNews);
 
     // Then
     assertEquals(Response.Status.UNAUTHORIZED.getStatusCode(), response.getStatus());
@@ -396,7 +397,7 @@ public class NewsRestResourcesV1Test {
     lenient().when(newsService.getNewsById(anyString(), any(), anyBoolean(), nullable(String.class))).thenReturn(null);
 
     // When
-    Response response = newsRestResourcesV1.updateNews("1", false, null, new News());
+    Response response = newsRestResourcesV1.updateNews("1", false, null, CONTENT.name().toLowerCase(), new News());
 
     // Then
     assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatus());
@@ -597,10 +598,10 @@ public class NewsRestResourcesV1Test {
     currentIdentity.setMemberships(memberships);
 
     lenient().when(newsService.getNewsById("id123", currentIdentity, false, null)).thenReturn(existingNews);
-    lenient().when(newsService.updateNews(existingNews, JOHN, false, updatedNews.isPublished(), null)).then(returnsFirstArg());
+    lenient().when(newsService.updateNews(existingNews, JOHN, false, updatedNews.isPublished(), null, CONTENT.name().toLowerCase())).then(returnsFirstArg());
 
     // When
-    Response response = newsRestResourcesV1.updateNews("id123", false, null, updatedNews);
+    Response response = newsRestResourcesV1.updateNews("id123", false, null, CONTENT.name().toLowerCase(), updatedNews);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
@@ -643,7 +644,7 @@ public class NewsRestResourcesV1Test {
     lenient().when(newsService.getNewsById("id123", currentIdentity, false, null)).thenReturn(oldnews);
 
     // When
-    Response response = newsRestResourcesV1.updateNews("id123", false, null, updatedNews);
+    Response response = newsRestResourcesV1.updateNews("id123", false, null, CONTENT.name().toLowerCase(), updatedNews);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
@@ -758,7 +759,7 @@ public class NewsRestResourcesV1Test {
     ConversationState.setCurrent(new ConversationState(currentIdentity));
 
     // When
-    Response response = newsRestResourcesV1.updateNews("1", false, null, null);
+    Response response = newsRestResourcesV1.updateNews("1", false, null, CONTENT.name().toLowerCase(), null);
 
     // Then
     assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());

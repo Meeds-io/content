@@ -35,3 +35,15 @@ export const newsConstants = {
   MAX_UPLOAD_FILES: 1,
   userName: eXo.env.portal.userName
 };
+
+export const newsUpdateType = {
+  CONTENT: 'content',
+  POSTING_AND_PUBLISHING: 'postingAndPublishing',
+  SCHEDULE: 'schedule'
+};
+
+export const newsObjectType = {
+  DRAFT: 'draft',
+  ARTICLE: 'article',
+  LATEST_DRAFT: 'latest_draft'
+};
