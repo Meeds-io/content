@@ -94,6 +94,10 @@ public class NewsUtils {
     DRAFT, LATEST_DRAFT, ARTICLE;
   }
 
+  public enum NewsUpdateType {
+    CONTENT, SCHEDULE, POSTING_AND_PUBLISHING
+  }
+
   public static void broadcastEvent(String eventName, Object source, Object data) {
     try {
       ListenerService listenerService = CommonsUtils.getService(ListenerService.class);

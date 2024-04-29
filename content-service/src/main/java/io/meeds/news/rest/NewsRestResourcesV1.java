@@ -240,6 +240,10 @@ public class NewsRestResourcesV1 implements ResourceContainer, Startable {
                              @Parameter(description = "News object type to be updated", required = false)
                              @QueryParam("type")
                              String newsObjectType,
+                             @Parameter(description = "News update action type to be done", required = false)
+                             @Schema(defaultValue = "content")
+                             @QueryParam("newsUpdateType")
+                             String newsUpdateType,
                              @RequestBody(description = "News object to be updated", required = true)
                              News updatedNews) {
 
@@ -263,7 +267,7 @@ public class NewsRestResourcesV1 implements ResourceContainer, Startable {
       news.setTargets(updatedNews.getTargets());
       news.setAudience(updatedNews.getAudience());
 
-      news = newsService.updateNews(news, currentIdentity.getUserId(), post, updatedNews.isPublished(), newsObjectType);
+      news = newsService.updateNews(news, currentIdentity.getUserId(), post, updatedNews.isPublished(), newsObjectType, newsUpdateType);
 
       return Response.ok(news).build();
     } catch (IllegalAccessException e) {
