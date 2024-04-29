@@ -1662,6 +1662,8 @@ public class NewsServiceImpl implements NewsService {
           } catch (Exception exception) {
             LOG.warn("failed to parse news published date for article with id " + news.getId());
           }
+        } else {
+          news.setPublicationDate(articlePage.getCreatedDate());
         }
         if (properties.containsKey(NEWS_VIEWS) && StringUtils.isNotEmpty(properties.get(NEWS_VIEWS))) {
           news.setViewsCount(Long.parseLong(properties.get(NEWS_VIEWS)));

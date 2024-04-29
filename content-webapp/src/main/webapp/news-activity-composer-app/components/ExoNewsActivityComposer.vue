@@ -34,6 +34,7 @@
       <schedule-news-drawer
         :posting-news="postingNews"
         :news-id="newsId"
+        :news-type="newsType"
         @post-article="postNews" />
       <div class="newsComposerToolbar">
         <div id="composerToolbarInformation" class="d-flex flex-row py-2">
