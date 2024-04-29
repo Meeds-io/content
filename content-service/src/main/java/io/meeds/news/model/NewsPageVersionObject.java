@@ -26,7 +26,7 @@ public class NewsPageVersionObject extends MetadataObject {
   public NewsPageVersionObject() {
   }
 
-  public NewsPageVersionObject(String objectType, String objectId, String parentObjectId) {
-    super(objectType, objectId, parentObjectId);
+  public NewsPageVersionObject(String objectType, String objectId, String parentObjectId, Long spaceId) {
+    super(objectType, objectId, parentObjectId, spaceId);
   }
 }

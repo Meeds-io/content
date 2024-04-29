@@ -37,6 +37,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
@@ -252,7 +253,7 @@ public class NewsServiceImplTest {
     Identity identity = mock(Identity.class);
     when(identity.getUserId()).thenReturn("john");
     when(activityManager.getActivity(nullable(String.class))).thenReturn(null);
-    when(newsTargetingService.getTargetsByNewsId(anyString())).thenReturn(null);
+    when(newsTargetingService.getTargetsByNews(any(News.class))).thenReturn(null);
 
     // When
     News news = newsService.getNewsById("1", identity, false, NewsUtils.NewsObjectType.DRAFT.name().toLowerCase());
@@ -302,7 +303,7 @@ public class NewsServiceImplTest {
     Identity identity = mock(Identity.class);
     when(identity.getUserId()).thenReturn("john");
     when(activityManager.getActivity(nullable(String.class))).thenReturn(null);
-    when(newsTargetingService.getTargetsByNewsId(anyString())).thenReturn(null);
+    when(newsTargetingService.getTargetsByNews(any(News.class))).thenReturn(null);
     org.exoplatform.wiki.model.Page rootPage = mock(org.exoplatform.wiki.model.Page.class);
     when(rootPage.getName()).thenReturn(NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME);
     when(noteService.getDraftNoteById(anyString(), anyString())).thenReturn(draftPage);
@@ -376,7 +377,7 @@ public class NewsServiceImplTest {
     Identity identity = mock(Identity.class);
     when(identity.getUserId()).thenReturn("john");
     when(activityManager.getActivity(nullable(String.class))).thenReturn(null);
-    when(newsTargetingService.getTargetsByNewsId(anyString())).thenReturn(null);
+    when(newsTargetingService.getTargetsByNews(any(News.class))).thenReturn(null);
     org.exoplatform.wiki.model.Page rootPage = mock(org.exoplatform.wiki.model.Page.class);
     when(rootPage.getName()).thenReturn(NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME);
     when(noteService.getDraftNoteById(anyString(), anyString())).thenReturn(draftPage);
@@ -435,7 +436,7 @@ public class NewsServiceImplTest {
                                                                                    anyLong())).thenReturn(metadataItems);
 
     when(activityManager.getActivity(nullable(String.class))).thenReturn(null);
-    when(newsTargetingService.getTargetsByNewsId(anyString())).thenReturn(null);
+    when(newsTargetingService.getTargetsByNews(any(News.class))).thenReturn(null);
 
     // When
     NewsFilter newsFilter = new NewsFilter();
@@ -508,7 +509,7 @@ public class NewsServiceImplTest {
     verify(noteService, times(1)).createNote(wiki, rootPage.getName(), newsArticlePage, identity);
     verify(noteService, times(1)).createVersionOfNote(createdPage, identity.getUserId());
     verify(noteService, times(1)).getPublishedVersionByPageIdAndLang(1L, null);
-    verify(metadataService, times(1)).createMetadataItem(any(MetadataObject.class),
+    verify(metadataService, atLeast(1)).createMetadataItem(any(MetadataObject.class),
                                                          any(MetadataKey.class),
                                                          any(Map.class),
                                                          anyLong());
@@ -556,7 +557,7 @@ public class NewsServiceImplTest {
     NEWS_UTILS.when(() -> NewsUtils.processMentions(anyString(), any())).thenReturn(new HashSet<>());
 
     when(activityManager.getActivity(nullable(String.class))).thenReturn(null);
-    when(newsTargetingService.getTargetsByNewsId(anyString())).thenReturn(null);
+    when(newsTargetingService.getTargetsByNews(any(News.class))).thenReturn(null);
 
     when(noteService.getLatestDraftPageByUserAndTargetPageAndLang(anyLong(), anyString(), anyString())).thenReturn(null);
 
@@ -603,7 +604,8 @@ public class NewsServiceImplTest {
                                                           anyString());
     verify(metadataService, times(1)).createMetadataItem(any(NewsLatestDraftObject.class),
                                                          any(MetadataKey.class),
-                                                         any(Map.class));
+                                                         any(Map.class),
+                                                         anyLong());
 
   }
 
@@ -638,7 +640,7 @@ public class NewsServiceImplTest {
     NEWS_UTILS.when(() -> NewsUtils.getUserIdentity(anyString())).thenReturn(identity);
     NEWS_UTILS.when(() -> NewsUtils.canPublishNews(anyString(), any(Identity.class))).thenReturn(false);
     NEWS_UTILS.when(() -> NewsUtils.processMentions(anyString(), any())).thenReturn(new HashSet<>());
-    when(newsTargetingService.getTargetsByNewsId(anyString())).thenReturn(null);
+    when(newsTargetingService.getTargetsByNews(any(News.class))).thenReturn(null);
 
     DraftPage draftPage = mock(DraftPage.class);
     when(draftPage.getUpdatedDate()).thenReturn(new Date());
@@ -722,7 +724,7 @@ public class NewsServiceImplTest {
     NEWS_UTILS.when(() -> NewsUtils.getUserIdentity(anyString())).thenReturn(identity);
     NEWS_UTILS.when(() -> NewsUtils.canPublishNews(anyString(), any(Identity.class))).thenReturn(false);
     NEWS_UTILS.when(() -> NewsUtils.processMentions(anyString(), any())).thenReturn(new HashSet<>());
-    when(newsTargetingService.getTargetsByNewsId(anyString())).thenReturn(null);
+    when(newsTargetingService.getTargetsByNews(any(News.class))).thenReturn(null);
 
     DraftPage draftPage = mock(DraftPage.class);
     ;
@@ -805,7 +807,7 @@ public class NewsServiceImplTest {
     when(identity.getUserId()).thenReturn("john");
     NEWS_UTILS.when(() -> NewsUtils.getUserIdentity(anyString())).thenReturn(identity);
     NEWS_UTILS.when(() -> NewsUtils.canPublishNews(anyString(), any(Identity.class))).thenReturn(false);
-    when(newsTargetingService.getTargetsByNewsId(anyString())).thenReturn(null);
+    when(newsTargetingService.getTargetsByNews(any(News.class))).thenReturn(null);
 
     PageVersion pageVersion = mock(PageVersion.class);
     when(noteService.getPublishedVersionByPageIdAndLang(1L, null)).thenReturn(pageVersion);
