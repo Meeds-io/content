@@ -480,7 +480,9 @@ export default {
           if (news) {
             this.news = news;
             this.canPublishNews = news.canPublish;
-            this.isActivityPosted = news.activityPosted;
+            if (this.news.publicationState !== this.$newsConstants.newsObjectType.DRAFT) {
+              this.isActivityPosted = this.news.activityPosted;
+            }
             this.schedulePostDate = news.schedulePostDate;
             this.selectedTargets = news.targets;
             this.audience = news.audience ? news.audience : 'all';
