@@ -428,12 +428,7 @@ public class NewsServiceImplTest {
     when(identity.getUserId()).thenReturn("john");
     List<Space> allowedDraftNewsSpaces = Arrays.asList(space1);
     NEWS_UTILS.when(() -> NewsUtils.getAllowedDraftNewsSpaces(identity)).thenReturn(allowedDraftNewsSpaces);
-    when(metadataService.getMetadataItemsByMetadataNameAndTypeAndObjectAndSpaceIds(anyString(),
-                                                                                   anyString(),
-                                                                                   anyString(),
-                                                                                   anyList(),
-                                                                                   anyLong(),
-                                                                                   anyLong())).thenReturn(metadataItems);
+    when(metadataService.getMetadataItemsByFilter(any(), anyLong(), anyLong())).thenReturn(metadataItems);
 
     when(activityManager.getActivity(nullable(String.class))).thenReturn(null);
     when(newsTargetingService.getTargetsByNews(any(News.class))).thenReturn(null);
