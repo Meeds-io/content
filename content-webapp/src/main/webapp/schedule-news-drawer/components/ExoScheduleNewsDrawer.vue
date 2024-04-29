@@ -280,6 +280,11 @@ export default {
       required: false,
       default: null
     },
+    newsType: {
+      type: String,
+      required: false,
+      default: ''
+    },
     postingNews: {
       type: Boolean,
       default: false
@@ -470,12 +475,12 @@ export default {
       }
     },
     initializeDate() {
-      this.$newsServices.getNewsById(this.newsId, false)
+      this.$newsServices.getNewsById(this.newsId, false, this.newsType)
         .then(news => {
           if (news) {
             this.news = news;
             this.canPublishNews = news.canPublish;
-            this.isActivityPosted = !news.activityPosted;
+            this.isActivityPosted = news.activityPosted;
             this.schedulePostDate = news.schedulePostDate;
             this.selectedTargets = news.targets;
             this.audience = news.audience ? news.audience : 'all';
