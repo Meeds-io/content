@@ -248,13 +248,13 @@ public class NewsServiceImplTest {
     Map<String, String> properties = new HashMap<>();
     properties.put(NEWS_SUMMARY, draftPage.getContent());
     when(metadataItem.getProperties()).thenReturn(properties);
-    PORTAL_CONTAINER.when(() -> PortalContainer.getCurrentPortalContainerName()).thenReturn("portal");
-    COMMONS_UTILS.when(() -> CommonsUtils.getCurrentPortalOwner()).thenReturn("dw");
+    PORTAL_CONTAINER.when(PortalContainer::getCurrentPortalContainerName).thenReturn("portal");
+    COMMONS_UTILS.when(CommonsUtils::getCurrentPortalOwner).thenReturn("dw");
     Identity identity = mock(Identity.class);
     when(identity.getUserId()).thenReturn("john");
     when(activityManager.getActivity(nullable(String.class))).thenReturn(null);
     when(newsTargetingService.getTargetsByNews(any(News.class))).thenReturn(null);
-
+    NEWS_UTILS.when(() -> NewsUtils.buildDraftUrl(any())).thenReturn("url");
     // When
     News news = newsService.getNewsById("1", identity, false, NewsUtils.NewsObjectType.DRAFT.name().toLowerCase());
 
@@ -266,7 +266,7 @@ public class NewsServiceImplTest {
     assertEquals("draft", news.getPublicationState());
     assertEquals(space.getDisplayName(), news.getSpaceDisplayName());
     assertEquals(space.getAvatarUrl(), news.getSpaceAvatarUrl());
-    assertEquals("/portal/dw/news/detail?newsId=1&type=draft", news.getUrl());
+    assertEquals("url", news.getUrl());
   }
 
   @Test
@@ -428,12 +428,7 @@ public class NewsServiceImplTest {
     when(identity.getUserId()).thenReturn("john");
     List<Space> allowedDraftNewsSpaces = Arrays.asList(space1);
     NEWS_UTILS.when(() -> NewsUtils.getAllowedDraftNewsSpaces(identity)).thenReturn(allowedDraftNewsSpaces);
-    when(metadataService.getMetadataItemsByMetadataNameAndTypeAndObjectAndSpaceIds(anyString(),
-                                                                                   anyString(),
-                                                                                   anyString(),
-                                                                                   anyList(),
-                                                                                   anyLong(),
-                                                                                   anyLong())).thenReturn(metadataItems);
+    when(metadataService.getMetadataItemsByFilter(any(), anyLong(), anyLong())).thenReturn(metadataItems);
 
     when(activityManager.getActivity(nullable(String.class))).thenReturn(null);
     when(newsTargetingService.getTargetsByNews(any(News.class))).thenReturn(null);

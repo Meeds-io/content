@@ -31,6 +31,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.commons.utils.ListAccess;
 import org.exoplatform.container.ExoContainerContext;
+import org.exoplatform.container.PortalContainer;
 import org.exoplatform.services.listener.ListenerService;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
@@ -43,6 +44,7 @@ import org.exoplatform.social.core.space.model.Space;
 import org.exoplatform.social.core.space.spi.SpaceService;
 import org.exoplatform.social.core.storage.api.IdentityStorage;
 import org.exoplatform.social.core.utils.MentionUtils;
+import org.exoplatform.wiki.model.DraftPage;
 
 public class NewsUtils {
 
@@ -196,5 +198,17 @@ public class NewsUtils {
       throw new IllegalStateException("Error occurred while retrieving security identity of user " + username);
     }
     return identity;
+  }
+  
+  public static String buildDraftUrl(DraftPage draftPage) {
+    StringBuilder draftArticleUrl = new StringBuilder();
+    draftArticleUrl.append("/")
+                   .append(PortalContainer.getCurrentPortalContainerName())
+                   .append("/")
+                   .append(CommonsUtils.getCurrentPortalOwner())
+                   .append("/news/detail?newsId=")
+                   .append(draftPage.getId())
+                   .append(draftPage.getTargetPageId() != null ? "&type=latest_draft" : "&type=draft");
+    return draftArticleUrl.toString();
   }
 }
