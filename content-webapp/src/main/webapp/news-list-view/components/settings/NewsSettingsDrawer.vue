@@ -25,6 +25,7 @@
     id="newsSettingsDrawer"
     right
     fixed
+    detached
     @closed="close">
     <template slot="title">
       <div class="flex flex-row">
