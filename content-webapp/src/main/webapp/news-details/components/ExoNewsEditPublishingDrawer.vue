@@ -202,7 +202,9 @@ export default {
     openDrawer() {
       if (this.news) {
         this.publish = this.news.published;
-        this.isActivityPosted = this.news.activityPosted;
+        if (this.news.publicationState !== this.$newsConstants.newsObjectType.DRAFT) {
+          this.isActivityPosted = this.news.activityPosted;
+        }
       }
       if (this.$refs.postNewsDrawer) {
         this.disabled = true;
