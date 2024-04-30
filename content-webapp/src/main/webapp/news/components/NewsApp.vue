@@ -254,6 +254,17 @@ export default {
     });
   },
   methods: {
+    getDraftUrl(item) {
+      let draftUrl = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news/editor?newsId=${item.id}`;
+      if (item.spaceId) {
+        draftUrl += `&spaceId=${item.spaceId}`;
+      }
+      if (item.activityId) {
+        draftUrl += `&activityId=${item.activityId}`;
+      }
+      draftUrl += `&type=${item.activityId && 'latest_draft' || 'draft'}`;
+      return draftUrl;
+    },
     getNewsText(newsSummary, newsBody) {
       let text = newsSummary;
       if (!text) {
@@ -283,7 +294,7 @@ export default {
           updatedDate: this.isDraftsFilter ? newsPublicationDate : newsUpdateDate,
           spaceDisplayName: item.spaceDisplayName,
           spaceUrl: item.spaceUrl,
-          url: this.isDraftsFilter ? `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news/editor?spaceId=${item.spaceId}&newsId=${item.id}&activityId=${activityId}&type=draft` : item.url,
+          url: this.isDraftsFilter ? this.getDraftUrl(item) : item.url,
           authorFullName: item.authorDisplayName,
           authorProfileURL: `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/profile/${item.author}`,
           viewsCount: item.viewsCount == null ? 0 : item.viewsCount,
