@@ -38,7 +38,8 @@
     <schedule-news-drawer
       v-if="currentUser"
       @post-article="postNews"
-      :news-id="newsId" />
+      :news-id="newsId"
+      :news-type="newsType"/>
     <exo-confirm-dialog
       v-if="currentUser"
       ref="deleteConfirmDialog"

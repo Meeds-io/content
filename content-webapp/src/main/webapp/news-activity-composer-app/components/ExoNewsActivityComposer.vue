@@ -34,6 +34,7 @@
       <schedule-news-drawer
         :posting-news="postingNews"
         :news-id="newsId"
+        :news-type="newsType"
         @post-article="postNews" />
       <div class="newsComposerToolbar">
         <div id="composerToolbarInformation" class="d-flex flex-row py-2">
@@ -614,7 +615,11 @@ export default {
       }
     },
     postNews: function (schedulePostDate, postArticleMode, publish, isActivityPosted, selectedTargets, selectedAudience) {
-      this.news.activityPosted = isActivityPosted;
+      if (typeof isActivityPosted === 'undefined') {
+        this.news.activityPosted = true;
+      } else {
+        this.news.activityPosted = isActivityPosted;
+      }
       this.news.published = publish;
       this.news.targets = selectedTargets;
       if (selectedAudience !== null) {
