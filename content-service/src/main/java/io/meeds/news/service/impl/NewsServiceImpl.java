@@ -125,6 +125,9 @@ public class NewsServiceImpl implements NewsService {
   /** The Constant PUBLISHED. */
   public final static String         PUBLISHED                              = "published";
 
+  /** The Constant POSTED. */
+  public final static String         POSTED                                 = "posted";
+
   /** The Constant DRAFT. */
   public final static String         DRAFT                                  = "draft";
 
@@ -225,7 +228,7 @@ public class NewsServiceImpl implements NewsService {
         throw new IllegalAccessException("User " + currentIdentity.getUserId() + " not authorized to create news");
       }
       News createdNews;
-      if (PUBLISHED.equals(news.getPublicationState())) {
+      if (POSTED.equals(news.getPublicationState())) {
         createdNews = postNews(news, currentIdentity.getUserId());
       } else if (news.getSchedulePostDate() != null) {
         createdNews = unScheduleNews(news, currentIdentity);
@@ -314,7 +317,7 @@ public class NewsServiceImpl implements NewsService {
       news = updateNewsArticle(news, updaterIdentity, newsUpdateType);
     }
 
-    if (PUBLISHED.equals(news.getPublicationState())) {
+    if (POSTED.equals(news.getPublicationState())) {
       // Send mention notifs
       if (StringUtils.isNotEmpty(news.getId()) && news.getCreationDate() != null) {
         News newMentionedNews = news;
@@ -719,12 +722,12 @@ public class NewsServiceImpl implements NewsService {
         LOG.warn("Can't find space with id {} when checking access on news with id {}", spaceId, news.getId());
         return false;
       }
-      if (!news.isPublished() && StringUtils.equals(news.getPublicationState(), PUBLISHED)
+      if (!news.isPublished() && StringUtils.equals(news.getPublicationState(), POSTED)
           && !(spaceService.isSuperManager(authenticatedUser) || spaceService.isMember(space, authenticatedUser)
               || isMemberOfsharedInSpaces(news, authenticatedUser))) {
         return false;
       }
-      if (news.isPublished() && StringUtils.equals(news.getPublicationState(), PUBLISHED) && news.getAudience().equals(NewsUtils.SPACE_NEWS_AUDIENCE)
+      if (news.isPublished() && StringUtils.equals(news.getPublicationState(), POSTED) && news.getAudience().equals(NewsUtils.SPACE_NEWS_AUDIENCE)
           && !(spaceService.isMember(space, authenticatedUser) || isMemberOfsharedInSpaces(news, authenticatedUser))) {
         return false;
       }
