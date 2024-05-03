@@ -23,6 +23,7 @@ import static io.meeds.news.service.impl.NewsServiceImpl.DRAFT;
 import static io.meeds.news.service.impl.NewsServiceImpl.NEWS_ACTIVITIES;
 import static io.meeds.news.service.impl.NewsServiceImpl.NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME;
 import static io.meeds.news.service.impl.NewsServiceImpl.NEWS_SUMMARY;
+import static io.meeds.news.service.impl.NewsServiceImpl.POSTED;
 import static io.meeds.news.utils.NewsUtils.NewsObjectType.ARTICLE;
 import static io.meeds.news.utils.NewsUtils.NewsObjectType.LATEST_DRAFT;
 import static io.meeds.news.utils.NewsUtils.NewsUpdateType.CONTENT;
@@ -454,7 +455,7 @@ public class NewsServiceImplTest {
     newsArticle.setTitle("news article for new page");
     newsArticle.setSummary("news article summary for new page");
     newsArticle.setBody("news body");
-    newsArticle.setPublicationState("published");
+    newsArticle.setPublicationState(POSTED);
     newsArticle.setId("1");
     newsArticle.setActivities("1:2;3:4");
 
@@ -741,7 +742,7 @@ public class NewsServiceImplTest {
     news.setTitle("new draft title");
     news.setBody("draft body");
     news.setId("1");
-    news.setPublicationState("published");
+    news.setPublicationState(POSTED);
     news.setSpaceId("1");
     news.setSummary("news summary");
     news.setOriginalBody("body");
