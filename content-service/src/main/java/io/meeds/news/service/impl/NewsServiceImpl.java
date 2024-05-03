@@ -34,6 +34,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.stream.Stream;
 
@@ -538,12 +539,12 @@ public class NewsServiceImpl implements NewsService {
       } else if (filter.isScheduledNews()) {
         // TODO
       } else {
-        // TODO
+        newsList = getPostedArticles(filter, currentIdentity);
       }
     } else {
       throw new Exception("Unable to build query, filter is null");
     }
-    newsList.stream().forEach(news -> {
+    newsList.stream().filter(Objects::nonNull).forEach(news -> {
       news.setCanEdit(canEditNews(news, currentIdentity.getUserId()));
       news.setCanDelete(canDeleteNews(currentIdentity, news.getAuthor(), news.getSpaceId()));
       news.setCanPublish(NewsUtils.canPublishNews(news.getSpaceId(), currentIdentity));
@@ -1053,11 +1054,32 @@ public class NewsServiceImpl implements NewsService {
                           .toList();
   }
 
+  private List<News> getPostedArticles(NewsFilter filter, Identity currentIdentity) throws Exception {
+    MetadataFilter metadataFilter = new MetadataFilter();
+    metadataFilter.setMetadataName(NEWS_METADATA_NAME);
+    metadataFilter.setMetadataTypeName(NEWS_METADATA_TYPE.getName());
+    metadataFilter.setMetadataObjectTypes(List.of(NEWS_METADATA_PAGE_OBJECT_TYPE));
+    metadataFilter.setMetadataProperties(Map.of(NEWS_PUBLICATION_STATE, POSTED));
+    metadataFilter.setMetadataSpaceIds(NewsUtils.getMyFilteredSpacesIds(currentIdentity, filter.getSpaces()));
+    metadataFilter.setCombinedMetadataProperties(Map.of(PUBLISHED, "true", NEWS_AUDIENCE, NewsUtils.ALL_NEWS_AUDIENCE));
+    return metadataService.getMetadataItemsByFilter(metadataFilter, filter.getOffset(), filter.getLimit())
+                          .stream()
+                          .map(article -> {
+                            try {
+                              return buildArticle(article.getObjectId());
+                            } catch (Exception e) {
+                              LOG.error("Error while building news article", e);
+                              return null;
+                            }
+                          })
+                          .toList();
+  }
+
   private List<News> buildDraftArticles(NewsFilter filter, Identity currentIdentity) throws Exception {
     List<Long> allowedDraftNewsSpacesIds = NewsUtils.getAllowedDraftNewsSpaces(currentIdentity)
                                                     .stream()
                                                     .map(Space::getId)
-                                                    .map(spaceId -> Long.parseLong(spaceId))
+                                                    .map(Long::parseLong)
                                                     .toList();
     MetadataFilter metadataFilter = new MetadataFilter();
     metadataFilter.setMetadataName(NEWS_METADATA_NAME);
