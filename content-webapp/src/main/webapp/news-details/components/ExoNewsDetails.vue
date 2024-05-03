@@ -215,7 +215,7 @@ export default {
           }
         });
       } else if (postArticleMode === 'immediate') {
-        this.news.publicationState = 'published';
+        this.news.publicationState = 'posted';
         this.$newsServices.saveNews(this.news).then((createdNews) => {
           let createdNewsActivity = null;
           if (createdNews.activities) {

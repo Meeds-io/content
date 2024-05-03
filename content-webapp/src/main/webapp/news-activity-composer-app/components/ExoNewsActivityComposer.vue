@@ -653,7 +653,7 @@ export default {
         published: this.news.published,
         targets: this.news.targets,
         spaceId: this.spaceId,
-        publicationState: 'published',
+        publicationState: 'posted',
         schedulePostDate: null,
         timeZoneId: null,
         activityPosted: this.news.activityPosted,
@@ -796,7 +796,7 @@ export default {
       });
     },
     confirmAndUpdateNews: function(post) {
-      return this.doUpdateNews('published', post);
+      return this.doUpdateNews('posted', post);
     },
     doUpdateNews: function (publicationState, post) {
       const newsBody = this.replaceImagesURLs(this.getBody());
@@ -821,7 +821,7 @@ export default {
       if (this.activityId && publicationState === this.$newsConstants.newsObjectType.DRAFT) {
         newsType = this.$newsConstants.newsObjectType.LATEST_DRAFT;
       }
-      if (this.activityId && publicationState === 'published') {
+      if (this.activityId && publicationState === 'posted') {
         newsType = this.$newsConstants.newsObjectType.ARTICLE;
       }
       return this.$newsServices.updateNews(updatedNews, post, newsType).then((createdNews) => {
