@@ -26,6 +26,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import org.exoplatform.commons.utils.CommonsUtils;
@@ -145,11 +146,18 @@ public class NewsUtils {
     }).filter(Objects::nonNull).collect(Collectors.toSet());
   }
 
+  public static List<Long> getMyFilteredSpacesIds(org.exoplatform.services.security.Identity userIdentity,
+                                          List<String> filteredSpacesIds) throws Exception {
+    return getMySpaces(userIdentity).stream()
+                                    .filter(filteredSpace -> !CollectionUtils.isEmpty(filteredSpacesIds)
+                                        && filteredSpacesIds.stream().anyMatch(spaceId -> spaceId.equals(filteredSpace.getId())))
+                                    .map(space -> Long.valueOf(space.getId()))
+                                    .toList();
+  }
+
   public static List<Space> getAllowedDraftNewsSpaces(org.exoplatform.services.security.Identity userIdentity) throws Exception {
     SpaceService spaceService = CommonsUtils.getService(SpaceService.class);
-    ListAccess<Space> memberSpacesListAccess = spaceService.getMemberSpaces(userIdentity.getUserId());
-    List<Space> memberSpaces = Arrays.asList(memberSpacesListAccess.load(0, memberSpacesListAccess.getSize()));
-    return memberSpaces.stream()
+    return getMySpaces(userIdentity).stream()
                        .filter(space -> (spaceService.canRedactOnSpace(space, userIdentity)
                            || canPublishNews(space.getId(), userIdentity)))
                        .toList();
@@ -157,9 +165,7 @@ public class NewsUtils {
 
   public static List<Space> getAllowedScheduledNewsSpaces(org.exoplatform.services.security.Identity currentIdentity) throws Exception {
     SpaceService spaceService = CommonsUtils.getService(SpaceService.class);
-    ListAccess<Space> memberSpacesListAccess = spaceService.getMemberSpaces(currentIdentity.getUserId());
-    List<Space> memberSpaces = Arrays.asList(memberSpacesListAccess.load(0, memberSpacesListAccess.getSize()));
-    return memberSpaces.stream()
+    return getMySpaces(currentIdentity).stream()
                        .filter(space -> (spaceService.isManager(space, currentIdentity.getUserId())
                            || spaceService.isRedactor(space, currentIdentity.getUserId())
                            || canPublishNews(space.getId(), currentIdentity)))
@@ -210,5 +216,11 @@ public class NewsUtils {
                    .append(draftPage.getId())
                    .append(draftPage.getTargetPageId() != null ? "&type=latest_draft" : "&type=draft");
     return draftArticleUrl.toString();
+  }
+  
+  private static List<Space> getMySpaces(org.exoplatform.services.security.Identity userIdentity) throws Exception {
+    SpaceService spaceService = CommonsUtils.getService(SpaceService.class);
+    ListAccess<Space> memberSpacesListAccess = spaceService.getMemberSpaces(userIdentity.getUserId());
+    return Arrays.asList(memberSpacesListAccess.load(0, memberSpacesListAccess.getSize()));
   }
 }
