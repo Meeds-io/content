@@ -1067,10 +1067,10 @@ public class NewsServiceImpl implements NewsService {
     if (draftArticlePage != null) {
       noteService.removeDraftById(draftArticlePage.getId());
       Space draftArticleSpace = spaceService.getSpaceByGroupId(draftArticlePage.getWikiOwner());
-      NewsDraftObject draftArticleMetaDataObject = new NewsDraftObject(NEWS_METADATA_DRAFT_OBJECT_TYPE,
-                                                                       draftArticlePage.getId(),
-                                                                       null,
-                                                                       Long.parseLong(draftArticleSpace.getId()));
+      MetadataObject draftArticleMetaDataObject = new MetadataObject(draftArticlePage.getTargetPageId() != null ? NEWS_METADATA_LATEST_DRAFT_OBJECT_TYPE : NEWS_METADATA_DRAFT_OBJECT_TYPE,
+              draftArticlePage.getId(),
+              draftArticlePage.getTargetPageId(),
+              Long.parseLong(draftArticleSpace.getId()));
       List<MetadataItem> draftArticleMetadataItems =
                                                    metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY,
                                                                                                        draftArticleMetaDataObject);
@@ -1592,7 +1592,10 @@ public class NewsServiceImpl implements NewsService {
 
       }
       // remove the draft
-      noteService.removeDraftOfNote(existingPage, updater.getUserId());
+      if (newsUpdateType.equalsIgnoreCase(CONTENT.name())) {
+        DraftPage draftPage = noteService.getLatestDraftPageByUserAndTargetPageAndLang(Long.parseLong(existingPage.getId()), updater.getUserId(), null);
+        deleteDraftArticle(draftPage.getId(), updater.getUserId(), news.getIllustration() == null);
+      }
       return news;
     }
     return null;
