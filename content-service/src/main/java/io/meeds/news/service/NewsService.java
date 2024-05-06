@@ -246,7 +246,7 @@ public interface NewsService {
    * @return the published news
    * @throws Exception when error occurs
    */
-  News scheduleNews(News news, org.exoplatform.services.security.Identity currentIdentity) throws Exception;
+  News scheduleNews(News news, org.exoplatform.services.security.Identity currentIdentity, String newsObjectType) throws Exception;
 
   /**
    * Un-schedule publishing a News

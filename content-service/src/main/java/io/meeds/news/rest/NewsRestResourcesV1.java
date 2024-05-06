@@ -691,18 +691,22 @@ public class NewsRestResourcesV1 implements ResourceContainer, Startable {
       @ApiResponse(responseCode = "401", description = "User not authorized to schedule the news"),
       @ApiResponse(responseCode = "500", description = "Internal server error") })
   public Response scheduleNews(@Context
-  HttpServletRequest request, @RequestBody(description = "News object to be scheduled", required = true)
-  News scheduledNews) {
+                               HttpServletRequest request,
+                               @Parameter(description = "News object type to be fetched", required = false)
+                               @QueryParam("type")
+                               String newsObjectType,
+                               @RequestBody(description = "News object to be scheduled", required = true)
+                               News scheduledNews) {
     if (scheduledNews == null || StringUtils.isEmpty(scheduledNews.getId())) {
       return Response.status(Response.Status.BAD_REQUEST).build();
     }
     org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
     try {
-      News news = newsService.getNewsById(scheduledNews.getId(), currentIdentity, false);
+      News news = newsService.getNewsById(scheduledNews.getId(), currentIdentity, false, newsObjectType);
       if (news == null) {
         return Response.status(Response.Status.NOT_FOUND).build();
       }
-      news = newsService.scheduleNews(scheduledNews, currentIdentity);
+      news = newsService.scheduleNews(scheduledNews, currentIdentity, newsObjectType);
       return Response.ok(news).build();
     } catch (IllegalAccessException e) {
       LOG.warn("User '{}' is not autorized to schedule news", currentIdentity.getUserId(), e);

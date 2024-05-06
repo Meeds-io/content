@@ -120,8 +120,8 @@ export function saveNews(news) {
   });
 }
 
-export function scheduleNews(news) {
-  return fetch(`${newsConstants.NEWS_API}/schedule`, {
+export function scheduleNews(news, newsType) {
+  return fetch(`${newsConstants.NEWS_API}/schedule?type=${newsType || ''}`, {
     headers: {
       'Content-Type': 'application/json'
     },

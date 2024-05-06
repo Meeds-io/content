@@ -26,6 +26,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import io.meeds.news.model.News;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 
@@ -41,6 +42,7 @@ import org.exoplatform.services.security.IdentityRegistry;
 import org.exoplatform.social.core.identity.model.Identity;
 import org.exoplatform.social.core.identity.provider.OrganizationIdentityProvider;
 import org.exoplatform.social.core.identity.provider.SpaceIdentityProvider;
+import org.exoplatform.social.core.space.SpaceException;
 import org.exoplatform.social.core.space.model.Space;
 import org.exoplatform.social.core.space.spi.SpaceService;
 import org.exoplatform.social.core.storage.api.IdentityStorage;
@@ -217,7 +219,43 @@ public class NewsUtils {
                    .append(draftPage.getTargetPageId() != null ? "&type=latest_draft" : "&type=draft");
     return draftArticleUrl.toString();
   }
-  
+
+  public static String buildNewsArticleUrl(News news, String currentUsername) throws SpaceException {
+    StringBuilder newsArticleUrl = new StringBuilder();
+    SpaceService spaceService = CommonsUtils.getService(SpaceService.class);
+    if (currentUsername != null && spaceService.isMember(news.getSpaceId(), currentUsername) && news.getActivityId() != null) {
+      newsArticleUrl.append("/")
+              .append(PortalContainer.getCurrentPortalContainerName())
+              .append("/")
+              .append(CommonsUtils.getCurrentPortalOwner())
+              .append("/activity?id=")
+              .append(news.getActivityId());
+    } else {
+      newsArticleUrl.append("/")
+              .append(PortalContainer.getCurrentPortalContainerName())
+              .append("/")
+              .append(CommonsUtils.getCurrentPortalOwner())
+              .append("/news/detail?newsId=")
+              .append(news.getId())
+              .append("&type=article");
+    }
+    return newsArticleUrl.toString();
+  }
+  public static String buildSpaceUrl(String spaceId) {
+    StringBuilder spaceUrl = new StringBuilder();
+    SpaceService spaceService = CommonsUtils.getService(SpaceService.class);
+    Space space = spaceService.getSpaceById(spaceId);
+    if (space != null) {
+      String spaceGroupId = space.getGroupId().split("/")[2];
+      spaceUrl.append("/portal/g/:spaces:");
+      spaceUrl.append(spaceGroupId);
+      spaceUrl.append("/");
+      spaceUrl.append(space.getPrettyName());
+      return spaceUrl.toString();
+    }
+    return null;
+  }
+
   private static List<Space> getMySpaces(org.exoplatform.services.security.Identity userIdentity) throws Exception {
     SpaceService spaceService = CommonsUtils.getService(SpaceService.class);
     ListAccess<Space> memberSpacesListAccess = spaceService.getMemberSpaces(userIdentity.getUserId());
