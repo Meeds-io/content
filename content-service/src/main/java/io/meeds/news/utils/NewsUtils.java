@@ -147,12 +147,11 @@ public class NewsUtils {
   }
 
   public static List<Long> getMyFilteredSpacesIds(org.exoplatform.services.security.Identity userIdentity,
-                                          List<String> filteredSpacesIds) throws Exception {
-    return getMySpaces(userIdentity).stream()
-                                    .filter(filteredSpace -> !CollectionUtils.isEmpty(filteredSpacesIds)
-                                        && filteredSpacesIds.stream().anyMatch(spaceId -> spaceId.equals(filteredSpace.getId())))
-                                    .map(space -> Long.valueOf(space.getId()))
-                                    .toList();
+                                                  List<String> filteredSpacesIds) throws Exception {
+    if (!CollectionUtils.isEmpty(filteredSpacesIds)) {
+      return filteredSpacesIds.stream().map(Long::parseLong).toList();
+    }
+    return getMySpaces(userIdentity).stream().map(space -> Long.valueOf(space.getId())).toList();
   }
 
   public static List<Space> getAllowedDraftNewsSpaces(org.exoplatform.services.security.Identity userIdentity) throws Exception {
