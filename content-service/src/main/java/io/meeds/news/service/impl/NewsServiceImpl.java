@@ -684,8 +684,7 @@ public class NewsServiceImpl implements NewsService {
       // Create news article with the publication state STAGED without posting or publishing it ( displayed false news target)
       // it will be posted and published by the news schedule job or the edit scheduling.
       news = createNewsArticlePage(news, currentIdentity.getUserId());
-    }
-    else if (newsObjectType.equalsIgnoreCase(ARTICLE.name())){
+    } else if (newsObjectType.equalsIgnoreCase(ARTICLE.name())) {
       //TODO
     }
     if (news !=null) {
@@ -1686,7 +1685,7 @@ public class NewsServiceImpl implements NewsService {
           String newsActivityId = activities[0].split(":")[1];
           news.setActivityId(newsActivityId);
           news.setSpaceId(space.getId());
-          news.setUrl(NewsUtils.buildNewsArticleUrl(news,currentUsername));
+          news.setUrl(NewsUtils.buildNewsArticleUrl(news, currentUsername));
           memberSpaceActivities.append(activities[0]).append(";");
           List<String> sharedInSpacesList = new ArrayList<>();
           for (int i = 1; i < activities.length; i++) {
