@@ -670,7 +670,7 @@ export default {
         news.uploadId = this.news.illustration[0].uploadId;
       }
       if (news.publicationState ==='staged') {
-        this.$newsServices.scheduleNews(news).then((scheduleNews) => {
+        this.$newsServices.scheduleNews(news, this.newsType).then((scheduleNews) => {
           if (scheduleNews) {
             history.replaceState(null,'',scheduleNews.spaceUrl);
             window.location.href = scheduleNews.url;
