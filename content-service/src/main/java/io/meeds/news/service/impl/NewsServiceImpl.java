@@ -518,26 +518,18 @@ public class NewsServiceImpl implements NewsService {
   public List<News> getNews(NewsFilter filter, Identity currentIdentity) throws Exception {
     List<News> newsList = new ArrayList<>();
     if (filter != null) {
-      if (filter.isArchivedNews()) {
+      if (StringUtils.isNotBlank(filter.getSearchText())) {
         // TODO
-      }
-      if (filter.getSearchText() != null && !filter.getSearchText().equals("")) {
+      } else if (filter.isArchivedNews()) {
         // TODO
-      } else {
-        // TODO
-      }
-      if (filter.isPublishedNews()) {
+      } else if (filter.isPublishedNews()) {
         newsList = getPublishedArticles(filter, currentIdentity);
-      }
-
-      List<String> spaces = filter.getSpaces();
-      if (spaces != null && spaces.size() != 0) {
-        // TODO
-      }
-      if (filter.isDraftNews()) {
+      } else if (filter.isDraftNews()) {
         newsList = buildDraftArticles(filter, currentIdentity);
       } else if (filter.isScheduledNews()) {
         // TODO
+      } else if (filter.getAuthor() != null) {
+        newsList = getMyPostedArticles(filter, currentIdentity);
       } else {
         newsList = getPostedArticles(filter, currentIdentity);
       }
@@ -1059,6 +1051,28 @@ public class NewsServiceImpl implements NewsService {
     metadataFilter.setMetadataName(NEWS_METADATA_NAME);
     metadataFilter.setMetadataTypeName(NEWS_METADATA_TYPE.getName());
     metadataFilter.setMetadataObjectTypes(List.of(NEWS_METADATA_PAGE_OBJECT_TYPE));
+    metadataFilter.setMetadataProperties(Map.of(NEWS_PUBLICATION_STATE, POSTED));
+    metadataFilter.setMetadataSpaceIds(NewsUtils.getMyFilteredSpacesIds(currentIdentity, filter.getSpaces()));
+    metadataFilter.setCombinedMetadataProperties(Map.of(PUBLISHED, "true", NEWS_AUDIENCE, NewsUtils.ALL_NEWS_AUDIENCE));
+    return metadataService.getMetadataItemsByFilter(metadataFilter, filter.getOffset(), filter.getLimit())
+                          .stream()
+                          .map(article -> {
+                            try {
+                              return buildArticle(article.getObjectId());
+                            } catch (Exception e) {
+                              LOG.error("Error while building news article", e);
+                              return null;
+                            }
+                          })
+                          .toList();
+  }
+
+  private List<News> getMyPostedArticles(NewsFilter filter, Identity currentIdentity) throws Exception {
+    MetadataFilter metadataFilter = new MetadataFilter();
+    metadataFilter.setMetadataName(NEWS_METADATA_NAME);
+    metadataFilter.setMetadataTypeName(NEWS_METADATA_TYPE.getName());
+    metadataFilter.setMetadataObjectTypes(List.of(NEWS_METADATA_PAGE_OBJECT_TYPE));
+    metadataFilter.setCreatorId(Long.parseLong(identityManager.getOrCreateUserIdentity(filter.getAuthor()).getId()));
     metadataFilter.setMetadataProperties(Map.of(NEWS_PUBLICATION_STATE, POSTED));
     metadataFilter.setMetadataSpaceIds(NewsUtils.getMyFilteredSpacesIds(currentIdentity, filter.getSpaces()));
     metadataFilter.setCombinedMetadataProperties(Map.of(PUBLISHED, "true", NEWS_AUDIENCE, NewsUtils.ALL_NEWS_AUDIENCE));
