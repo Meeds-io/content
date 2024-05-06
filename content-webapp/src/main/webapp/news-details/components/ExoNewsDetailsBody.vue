@@ -20,14 +20,6 @@
 -->
 <template>
   <div v-if="news">
-    <div v-if="archivedNews && !news.canArchive">
-      <div class="userNotAuthorized">
-        <div class="notAuthorizedIconDiv">
-          <img src="/content/images/notauthorized.png" class="iconNotAuthorized">
-        </div>
-        <h3>{{ $t('news.archive.text') }}</h3>
-      </div>
-    </div>
     <div class="newsDetails-description card-border-radius">
       <div :class="[illustrationURL ? 'newsDetails-header' : '']" class="newsDetails-header">
         <div v-if="illustrationURL" class="illustration center">
@@ -41,9 +33,6 @@
           <div class="news-top-information d-flex">
             <div id="titleNews" class="newsTitle newsTitleMobile">
               <a class="activityLinkColor newsTitleLink">{{ newsTitle }}</a>
-              <div v-if="archivedNews" class="newsArchived">
-                <span class="newsArchiveLabel"> ( {{ $t('news.archive.label') }} ) </span>
-              </div>
             </div>
           </div>
           <div class="newsInformationBackground center">
@@ -210,9 +199,6 @@ export default {
       return {
         news: this.news,
       };
-    },
-    archivedNews() {
-      return this.news && this.news.archived;
     },
     illustrationURL() {
       return this.news && this.news.illustrationURL;

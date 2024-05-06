@@ -278,7 +278,7 @@ public interface NewsService {
 
   /**
    * Checks if the user can view the News
-   * 
+   *
    * @param news {@link News} to check
    * @param authenticatedUser authenticated username
    * @return true if user has access to news, else false
@@ -295,31 +295,4 @@ public interface NewsService {
    * @throws Exception when user doesn't have access to {@link News}
    */
   void shareNews(News news, Space space, Identity userIdentity, String sharedActivityId) throws Exception;
-
-  /**
-   * Archive a news
-   *
-   * @param newsId The id of the news to be archived
-   * @param currentUserName {@link Identity} of user archiving the news
-   * @throws Exception when error
-   */
-  void archiveNews(String newsId, String currentUserName) throws Exception;
-
-  /**
-   * Unarchive a news
-   *
-   * @param newsId The id of the news to be unarchived
-   * @param currentUserName {@link Identity} of user unarchiving the news
-   * @throws Exception when error
-   */
-  void unarchiveNews(String newsId, String currentUserName) throws Exception;
-
-  /**
-   * checks if the user can archive the news
-   * 
-   * @param currentIdentity
-   * @param newsAuthor
-   * @return boolean : true if user can archive the news
-   */
-  boolean canArchiveNews(org.exoplatform.services.security.Identity currentIdentity, String newsAuthor);
 }
