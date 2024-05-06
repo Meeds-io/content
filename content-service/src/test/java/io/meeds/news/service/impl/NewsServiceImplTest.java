@@ -444,6 +444,28 @@ public class NewsServiceImplTest {
   }
 
   @Test
+  public void testGetMyPostedArticles() throws Exception {
+    NewsFilter newsFilter = new NewsFilter();
+    newsFilter.setSpaces(List.of("1"));
+    newsFilter.setAuthor("john");
+    Map<String, String> properties = new HashMap<>();
+    properties.put(NEWS_PUBLICATION_STATE, POSTED);
+    MetadataItem metadataItem = mock(MetadataItem.class);
+    List<MetadataItem> metadataItems = List.of(metadataItem);
+    when(metadataItem.getObjectId()).thenReturn("1");
+    when(metadataItem.getProperties()).thenReturn(properties);
+
+    org.exoplatform.social.core.identity.model.Identity identity = mock(org.exoplatform.social.core.identity.model.Identity.class);
+    when(identity.getId()).thenReturn("1");
+    when(identityManager.getOrCreateUserIdentity(newsFilter.getAuthor())).thenReturn(identity);
+    mockBuildArticle(metadataItems);
+
+    List<News> newsList = newsService.getNews(newsFilter, johnIdentity);
+    assertNotNull(newsList);
+    assertEquals(newsList.size(), 1);
+  }
+
+  @Test
   public void testGetDraftArticles() throws Exception {
 
     // Given
