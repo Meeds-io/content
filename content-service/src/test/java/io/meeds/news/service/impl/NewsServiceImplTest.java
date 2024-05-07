@@ -802,6 +802,7 @@ public class NewsServiceImplTest {
     Identity identity = mock(Identity.class);
     when(identity.getUserId()).thenReturn("john");
     NEWS_UTILS.when(() -> NewsUtils.getUserIdentity(anyString())).thenReturn(identity);
+    when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(new org.exoplatform.social.core.identity.model.Identity("1"));
     NEWS_UTILS.when(() -> NewsUtils.canPublishNews(anyString(), any(Identity.class))).thenReturn(false);
     when(newsTargetingService.getTargetsByNews(any(News.class))).thenReturn(null);
 
@@ -829,5 +830,6 @@ public class NewsServiceImplTest {
     verify(noteService, times(1)).deleteNote(existingPage.getWikiType(), existingPage.getWikiOwner(), existingPage.getName());
     verify(noteService, times(1)).removeDraftById("1");
     verify(activityManager, times(1)).deleteActivity("1");
+    verify(metadataService, times(1)).updateMetadataItem(any(MetadataItem.class), anyLong());
   }
 }
