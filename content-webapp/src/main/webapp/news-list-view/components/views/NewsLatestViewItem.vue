@@ -114,7 +114,7 @@ export default {
       return  this.showArticleImage || (!this.showArticleImage && !this.index );
     },
     img() {
-      return this.illustrationURL() || '/news/images/news.png';
+      return this.illustrationURL() || '/content/images/news.png';
     },
     displayDate() {
       return this.item.publishDate && this.item.publishDate.time && new Date(this.item.publishDate.time);
@@ -123,7 +123,7 @@ export default {
       return this.item && !this.item.spaceMember && this.item.hiddenSpace;
     },
     articleUrl() {
-      return eXo.env.portal.userName !== '' ? this.item.url : `${eXo.env.portal.context}/${eXo.env.portal.portalName}/news-detail?newsId=${this.item.id}`;
+      return eXo.env.portal.userName !== '' ? this.item.url : `${eXo.env.portal.context}/${eXo.env.portal.portalName}/news-detail?newsId=${this.item.id}&type=article`;
     }
   },
   created() {

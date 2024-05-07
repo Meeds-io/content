@@ -46,12 +46,9 @@
             <select
               v-model="newsFilter"
               class="width-auto my-auto ms-4 subtitle-1 ignore-vuetify-classes">
-              <option value="all">{{ $t('news.app.filter.all') }}</option>
-              <option value="pinned">{{ $t('news.app.filter.pinned') }}</option>
-              <option value="myPosted">{{ $t('news.app.filter.myPosted') }}</option>
-              <option value="archived">{{ $t('news.app.filter.archived') }}</option>
-              <option value="drafts">{{ $t('news.app.filter.drafts') }}</option>
-              <option value="scheduled">{{ $t('news.app.filter.scheduled') }}</option>
+              <option v-for="(option, index) in filterOptions" :key="index" :value="option.value">
+                {{ option.label }}
+              </option>
             </select>
             <div class="d-flex align-center">
               <v-btn
@@ -141,9 +138,25 @@ export default {
         month: 'long',
         day: 'numeric',
       },
+      newsScheduleAndFilterDisplaying: false,
     };
   },
   computed: {
+    filterOptions() {
+      if (this.newsScheduleAndFilterDisplaying) {
+        return [
+          { value: 'all', label: this.$t('news.app.filter.all') },
+          { value: 'pinned', label: this.$t('news.app.filter.pinned') },
+          { value: 'myPosted', label: this.$t('news.app.filter.myPosted') },
+          { value: 'archived', label: this.$t('news.app.filter.archived') },
+          { value: 'drafts', label: this.$t('news.app.filter.drafts') },
+          { value: 'scheduled', label: this.$t('news.app.filter.scheduled') }
+        ];
+      }
+      return [
+        { value: 'drafts', label: this.$t('news.app.filter.drafts') },
+      ];
+    },
     notFoundMessage() {
       if (this.searchText.trim().length) {
         return this.$t('news.app.searchNotFound').replace('{0}', this.searchText);
@@ -202,28 +215,32 @@ export default {
     }
   },
   created() {
-    const filterQueryParam = this.getQueryParam('filter');
-    const searchQueryParam = this.getQueryParam('search');
-    const spacesFilterParam = this.getQueryParam('spaces')?.split('_');    
-    if (filterQueryParam || searchQueryParam || spacesFilterParam) {
-      if (filterQueryParam) {
-        // set filter value, which will trigger news fetching
-        this.newsFilter = filterQueryParam;
+    this.$featureService.isFeatureEnabled('newsScheduleAndFilterDisplaying').then(enabled => {
+      this.newsScheduleAndFilterDisplaying = enabled;
+      const filterQueryParam = this.getQueryParam('filter');
+      const searchQueryParam = this.getQueryParam('search');
+      const spacesFilterParam = this.getQueryParam('spaces')?.split('_');
+      if (filterQueryParam || searchQueryParam || spacesFilterParam) {
+        if (filterQueryParam) {
+          // set filter value, which will trigger news fetching
+          this.newsFilter = filterQueryParam;
+        }
+        if (searchQueryParam) {
+          // set search value
+          this.searchText = searchQueryParam;
+        }
+        if (spacesFilterParam) {
+          // set search value
+          this.spacesFilter = spacesFilterParam;
+        }
+
+      } else if (filterQueryParam === null) {
+        this.newsFilter = this.filterOptions[0].value;
+      } else {
+        this.fetchNews();
       }
-      if (searchQueryParam) {
-        // set search value
-        this.searchText = searchQueryParam;
-      }
-      if (spacesFilterParam) {
-        // set search value
-        this.spacesFilter = spacesFilterParam;
-      }
-      
-    } else if (filterQueryParam === null) {
-      this.newsFilter = 'all';
-    } else {
-      this.fetchNews();
-    }
+    });
+
     this.$root.$on('activity-shared', (activityId, spaces, selectedApps) => {
       if (selectedApps === 'newsApp' && activityId && spaces && spaces.length > 0) {
         const spacesList = spaces.map(space => space.displayName);
@@ -237,6 +254,17 @@ export default {
     });
   },
   methods: {
+    getDraftUrl(item) {
+      let draftUrl = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news/editor?newsId=${item.id}`;
+      if (item.spaceId) {
+        draftUrl += `&spaceId=${item.spaceId}`;
+      }
+      if (item.activityId) {
+        draftUrl += `&activityId=${item.activityId}`;
+      }
+      draftUrl += `&type=${item.activityId && 'latest_draft' || 'draft'}`;
+      return draftUrl;
+    },
     getNewsText(newsSummary, newsBody) {
       let text = newsSummary;
       if (!text) {
@@ -266,7 +294,7 @@ export default {
           updatedDate: this.isDraftsFilter ? newsPublicationDate : newsUpdateDate,
           spaceDisplayName: item.spaceDisplayName,
           spaceUrl: item.spaceUrl,
-          url: this.isDraftsFilter ? `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news/editor?spaceId=${item.spaceId}&newsId=${item.id}&activityId=${activityId}&type=draft` : item.url,
+          url: this.isDraftsFilter ? this.getDraftUrl(item) : item.url,
           authorFullName: item.authorDisplayName,
           authorProfileURL: `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/profile/${item.author}`,
           viewsCount: item.viewsCount == null ? 0 : item.viewsCount,

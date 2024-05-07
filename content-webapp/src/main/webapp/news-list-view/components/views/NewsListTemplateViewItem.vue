@@ -119,13 +119,13 @@ export default {
       return this.selectedOption?.showArticleReactions;
     },
     articleImage() {
-      return this.item?.illustrationURL?.concat('&size=70x70').toString() || '/news/images/news.png';
+      return this.item?.illustrationURL?.concat('&size=70x70').toString() || '/content/images/news.png';
     },
     extraClass() {
       return (!this.showArticleSummary || !this.showArticleTitle) && 'text-truncate-2' || 'article-title' ;
     },
     articleUrl() {
-      return eXo.env.portal.userName !== '' ? this.item.url : `${eXo.env.portal.context}/${eXo.env.portal.portalName}/news-detail?newsId=${this.item.id}`;
+      return eXo.env.portal.userName !== '' ? this.item.url : `${eXo.env.portal.context}/${eXo.env.portal.portalName}/news-detail?newsId=${this.item.id}&type=article`;
     }
   },
 };

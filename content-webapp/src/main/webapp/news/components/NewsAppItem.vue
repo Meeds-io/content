@@ -60,7 +60,12 @@
             class="align-center width-full my-auto text-truncate flex-grow-0 flex"
             small-font-size
             popover />
-          <i v-if="!news.hiddenSpace" class="uiIconArrowNext pt-1"></i>
+          <v-icon
+            v-if="!news.hiddenSpace"
+            size="15"
+            class="text-color">
+            fas fa-chevron-right
+          </v-icon>
           <exo-space-avatar
             v-if="!news.hiddenSpace"
             :space-id="spaceId"
@@ -167,7 +172,7 @@ export default {
       return this.news && this.news.authorProfileURL && this.news.authorProfileURL.split('/').pop();
     },
     illustrationUrl() {
-      return this.news?.illustrationURL ? this.news.illustrationURL.concat('&size=150x150').toString() : '/news/images/news.png';
+      return this.news?.illustrationURL ? this.news.illustrationURL.concat('&size=150x150').toString() : '/content/images/news.png';
     },
   },
   methods: {

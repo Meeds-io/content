@@ -38,7 +38,8 @@
     <schedule-news-drawer
       v-if="currentUser"
       @post-article="postNews"
-      :news-id="newsId" />
+      :news-id="newsId"
+      :news-type="newsType"/>
     <exo-confirm-dialog
       v-if="currentUser"
       ref="deleteConfirmDialog"
@@ -78,6 +79,11 @@ export default {
       default: null
     },
     activityId: {
+      type: String,
+      required: false,
+      default: ''
+    },
+    newsType: {
       type: String,
       required: false,
       default: ''
@@ -163,7 +169,8 @@ export default {
         });
     },
     editLink() {
-      const editUrl = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news/editor?spaceId=${this.spaceId}&newsId=${this.newsId}&activityId=${this.activityId}`;
+      const newsType = this.activityId && this.activityId !== '' ? this.$newsConstants.newsObjectType.LATEST_DRAFT : this.newsType;
+      const editUrl = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news/editor?spaceId=${this.spaceId}&newsId=${this.newsId}&activityId=${this.activityId}&type=${newsType}`;
       window.open(editUrl, '_target');
     },
     deleteConfirmDialog() {
@@ -208,7 +215,7 @@ export default {
           }
         });
       } else if (postArticleMode === 'immediate') {
-        this.news.publicationState = 'published';
+        this.news.publicationState = 'posted';
         this.$newsServices.saveNews(this.news).then((createdNews) => {
           let createdNewsActivity = null;
           if (createdNews.activities) {

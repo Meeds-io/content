@@ -33,6 +33,8 @@ import io.meeds.news.model.News;
 import io.meeds.news.service.NewsService;
 import io.meeds.news.utils.NewsUtils;
 
+import static io.meeds.news.utils.NewsUtils.NewsObjectType.ARTICLE;
+
 public class ActivityNewsProcessor extends BaseActivityProcessorPlugin {
 
   private static final Log LOG = ExoLogger.getLogger(ActivityNewsProcessor.class);
@@ -58,7 +60,7 @@ public class ActivityNewsProcessor extends BaseActivityProcessorPlugin {
     News news = (News) activity.getLinkedProcessedEntities().get("news");
     if (news == null) {
       try {
-        news = newsService.getNewsById(activity.getTemplateParams().get("newsId"), false);
+        news = newsService.getNewsArticleById(activity.getTemplateParams().get("newsId"));
 
         RealtimeListAccess<ExoSocialActivity> listAccess = activityManager.getCommentsWithListAccess(activity, true);
         news.setCommentsCount(listAccess.getSize());

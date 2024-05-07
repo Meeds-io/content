@@ -25,6 +25,7 @@
     id="newsSettingsDrawer"
     right
     fixed
+    detached
     @closed="close">
     <template slot="title">
       <div class="flex flex-row">
@@ -227,19 +228,19 @@ export default {
     },
     previewTemplate() {
       if ( this.viewTemplate === 'NewsLatest') {
-        return '/news/images/latestNews.png';
+        return '/content/images/latestNews.png';
       } else if ( this.viewTemplate === 'NewsSlider') {
-        return '/news/images/sliderNews.png';
+        return '/content/images/sliderNews.png';
       } else if ( this.viewTemplate === 'NewsAlert') {
-        return '/news/images/alertNews.png';
+        return '/content/images/alertNews.png';
       } else if ( this.viewTemplate === 'NewsList') {
-        return '/news/images/listNews.png';
+        return '/content/images/listNews.png';
       } else if ( this.viewTemplate === 'NewsMosaic') {
-        return '/news/images/mosaicNews.png';
+        return '/content/images/mosaicNews.png';
       } else if ( this.viewTemplate === 'NewsStories') {
-        return '/news/images/storiesNews.png';
+        return '/content/images/storiesNews.png';
       } else if ( this.viewTemplate === 'NewsCards') {
-        return '/news/images/cardsNews.png';
+        return '/content/images/cardsNews.png';
       } else {
         return '';
       }

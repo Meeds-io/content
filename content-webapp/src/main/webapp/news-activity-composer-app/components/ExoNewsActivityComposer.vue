@@ -34,6 +34,7 @@
       <schedule-news-drawer
         :posting-news="postingNews"
         :news-id="newsId"
+        :news-type="newsType"
         @post-article="postNews" />
       <div class="newsComposerToolbar">
         <div id="composerToolbarInformation" class="d-flex flex-row py-2">
@@ -54,7 +55,7 @@
             size="40"
             :class="isMobile ? 'me-3' : 'mx-3'"
             class="my-auto">
-            <v-img src="/news/images/news.png" />
+            <v-img src="/content/images/news.png" />
           </v-avatar>
           <div class="d-flex flex-grow-1 flex-column my-auto align-left">
             <div>
@@ -90,7 +91,7 @@
                     <span v-on="on">
                       <v-btn
                         id="newsUpdateAndPost"
-                        :disabled="news.archived || news.activityPosted ? true: updateDisabled"
+                        :disabled="news.archived || !news.activityPosted ? true: updateDisabled"
                         :class="[news.archived ? 'unauthorizedPublish' : '']"
                         class="btn ms-2 me-2"
                         v-bind="attrs"
@@ -614,7 +615,11 @@ export default {
       }
     },
     postNews: function (schedulePostDate, postArticleMode, publish, isActivityPosted, selectedTargets, selectedAudience) {
-      this.news.activityPosted = isActivityPosted;
+      if (typeof isActivityPosted === 'undefined') {
+        this.news.activityPosted = true;
+      } else {
+        this.news.activityPosted = isActivityPosted;
+      }
       this.news.published = publish;
       this.news.targets = selectedTargets;
       if (selectedAudience !== null) {
@@ -648,7 +653,7 @@ export default {
         published: this.news.published,
         targets: this.news.targets,
         spaceId: this.spaceId,
-        publicationState: 'published',
+        publicationState: 'posted',
         schedulePostDate: null,
         timeZoneId: null,
         activityPosted: this.news.activityPosted,
@@ -791,7 +796,7 @@ export default {
       });
     },
     confirmAndUpdateNews: function(post) {
-      return this.doUpdateNews('published', post);
+      return this.doUpdateNews('posted', post);
     },
     doUpdateNews: function (publicationState, post) {
       const newsBody = this.replaceImagesURLs(this.getBody());
@@ -812,7 +817,14 @@ export default {
         updatedNews.uploadId = '';
       }
 
-      return this.$newsServices.updateNews(updatedNews, post).then((createdNews) => {
+      let newsType = this.newsType;
+      if (this.activityId && publicationState === this.$newsConstants.newsObjectType.DRAFT) {
+        newsType = this.$newsConstants.newsObjectType.LATEST_DRAFT;
+      }
+      if (this.activityId && publicationState === 'posted') {
+        newsType = this.$newsConstants.newsObjectType.ARTICLE;
+      }
+      return this.$newsServices.updateNews(updatedNews, post, newsType).then((createdNews) => {
         this.spaceUrl = createdNews.spaceUrl;
         if (this.news.body !== createdNews.body) {
           this.imagesURLs = this.extractImagesURLsDiffs(this.news.body, createdNews.body);

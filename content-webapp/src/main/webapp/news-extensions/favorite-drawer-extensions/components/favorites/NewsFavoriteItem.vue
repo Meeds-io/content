@@ -31,7 +31,7 @@
         <img
           v-else
           :alt="activityTitle"
-          src="/news/images/news.png">
+          src="/content/images/news.png">
       </v-avatar>
     </v-list-item-icon>
 
@@ -63,10 +63,11 @@ export default {
   data: () => ({
     activityTitle: '',
     url: '',
-    isFavorite: true
+    isFavorite: true,
+    newsObjectType: 'article',
   }),
   created() {
-    this.$newsServices.getNewsById(this.id, false)
+    this.$newsServices.getNewsById(this.id, false, this.newsObjectType)
       .then(news => {
         this.activityTitle = news.title;
         this.url = news.url;

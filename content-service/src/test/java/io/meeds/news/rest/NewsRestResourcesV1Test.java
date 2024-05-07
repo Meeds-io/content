@@ -19,6 +19,9 @@
  */
 package io.meeds.news.rest;
 
+import static io.meeds.news.service.impl.NewsServiceImpl.POSTED;
+import static io.meeds.news.utils.NewsUtils.NewsObjectType.ARTICLE;
+import static io.meeds.news.utils.NewsUtils.NewsUpdateType.CONTENT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -363,11 +366,11 @@ public class NewsRestResourcesV1Test {
     updatedNews.setTitle("Updated Title");
     updatedNews.setSummary("Updated Summary");
     updatedNews.setBody("Updated Body");
-    updatedNews.setPublicationState("published");
-    lenient().when(newsService.updateNews(existingNews, JOHN, false, updatedNews.isPublished(), null)).then(returnsFirstArg());
+    updatedNews.setPublicationState(POSTED);
+    lenient().when(newsService.updateNews(existingNews, JOHN, false, updatedNews.isPublished(), null, CONTENT.name().toLowerCase())).then(returnsFirstArg());
 
     // When
-    Response response = newsRestResourcesV1.updateNews("1", false, null, updatedNews);
+    Response response = newsRestResourcesV1.updateNews("1", false, null, CONTENT.name().toLowerCase(), updatedNews);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
@@ -376,12 +379,12 @@ public class NewsRestResourcesV1Test {
     assertEquals("Updated Title", returnedNews.getTitle());
     assertEquals("Updated Summary", returnedNews.getSummary());
     assertEquals("Updated Body", returnedNews.getBody());
-    assertEquals("published", returnedNews.getPublicationState());
+    assertEquals(POSTED, returnedNews.getPublicationState());
 
-    when(newsRestResourcesV1.updateNews("1", false, null, updatedNews)).thenThrow(IllegalAccessException.class);
+    when(newsRestResourcesV1.updateNews("1", false, null, CONTENT.name().toLowerCase(), updatedNews)).thenThrow(IllegalAccessException.class);
 
     // When
-    response = newsRestResourcesV1.updateNews("1", false, null, updatedNews);
+    response = newsRestResourcesV1.updateNews("1", false, null, CONTENT.name().toLowerCase(), updatedNews);
 
     // Then
     assertEquals(Response.Status.UNAUTHORIZED.getStatusCode(), response.getStatus());
@@ -395,7 +398,7 @@ public class NewsRestResourcesV1Test {
     lenient().when(newsService.getNewsById(anyString(), any(), anyBoolean(), nullable(String.class))).thenReturn(null);
 
     // When
-    Response response = newsRestResourcesV1.updateNews("1", false, null, new News());
+    Response response = newsRestResourcesV1.updateNews("1", false, null, CONTENT.name().toLowerCase(), new News());
 
     // Then
     assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatus());
@@ -596,10 +599,10 @@ public class NewsRestResourcesV1Test {
     currentIdentity.setMemberships(memberships);
 
     lenient().when(newsService.getNewsById("id123", currentIdentity, false, null)).thenReturn(existingNews);
-    lenient().when(newsService.updateNews(existingNews, JOHN, false, updatedNews.isPublished(), null)).then(returnsFirstArg());
+    lenient().when(newsService.updateNews(existingNews, JOHN, false, updatedNews.isPublished(), null, CONTENT.name().toLowerCase())).then(returnsFirstArg());
 
     // When
-    Response response = newsRestResourcesV1.updateNews("id123", false, null, updatedNews);
+    Response response = newsRestResourcesV1.updateNews("id123", false, null, CONTENT.name().toLowerCase(), updatedNews);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
@@ -642,7 +645,7 @@ public class NewsRestResourcesV1Test {
     lenient().when(newsService.getNewsById("id123", currentIdentity, false, null)).thenReturn(oldnews);
 
     // When
-    Response response = newsRestResourcesV1.updateNews("id123", false, null, updatedNews);
+    Response response = newsRestResourcesV1.updateNews("id123", false, null, CONTENT.name().toLowerCase(), updatedNews);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
@@ -757,7 +760,7 @@ public class NewsRestResourcesV1Test {
     ConversationState.setCurrent(new ConversationState(currentIdentity));
 
     // When
-    Response response = newsRestResourcesV1.updateNews("1", false, null, null);
+    Response response = newsRestResourcesV1.updateNews("1", false, null, CONTENT.name().toLowerCase(), null);
 
     // Then
     assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
@@ -840,7 +843,7 @@ public class NewsRestResourcesV1Test {
     ConversationState.setCurrent(new ConversationState(currentIdentity));
     News news = new News();
     news.setId("1");
-    news.setPublicationState("published");
+    news.setPublicationState(POSTED);
     news.setSpaceId("1");
     Space space1 = new Space();
     space1.setId("1");
@@ -1261,15 +1264,15 @@ public class NewsRestResourcesV1Test {
     News news1 = new News();
     news1.setPublished(true);
     news1.setAuthor(JOHN);
-    news1.setPublicationState("published");
+    news1.setPublicationState(POSTED);
     News news2 = new News();
     news2.setPublished(true);
     news2.setAuthor(JOHN);
-    news2.setPublicationState("published");
+    news2.setPublicationState(POSTED);
     News news3 = new News();
     news3.setPublished(true);
     news3.setAuthor(JOHN);
-    news3.setPublicationState("published");
+    news3.setPublicationState(POSTED);
     List<News> allNews = new ArrayList<>();
     allNews.add(news1);
     allNews.add(news2);
@@ -1290,7 +1293,7 @@ public class NewsRestResourcesV1Test {
     assertEquals(3, newsList.size());
     for (int i = 0; i < newsList.size(); i++) {
       assertEquals(true, newsList.get(i).isPublished());
-      assertEquals("published", newsList.get(i).getPublicationState());
+      assertEquals(POSTED, newsList.get(i).getPublicationState());
       assertEquals(JOHN, newsList.get(i).getAuthor());
     }
     assertEquals(0, newsEntity.getOffset().intValue());
@@ -1312,17 +1315,17 @@ public class NewsRestResourcesV1Test {
     news1.setSpaceId("4");
     news1.setAuthor(JOHN);
     news1.setTitle(text);
-    news1.setPublicationState("published");
+    news1.setPublicationState(POSTED);
     News news2 = new News();
     news2.setSpaceId("1");
     news2.setAuthor(JOHN);
     news2.setTitle(text);
-    news2.setPublicationState("published");
+    news2.setPublicationState(POSTED);
     News news3 = new News();
     news3.setSpaceId("4");
     news3.setAuthor(JOHN);
     news3.setTitle(text);
-    news3.setPublicationState("published");
+    news3.setPublicationState(POSTED);
     List<News> allNews = new ArrayList<>();
     allNews.add(news1);
     allNews.add(news2);
@@ -1343,7 +1346,7 @@ public class NewsRestResourcesV1Test {
     assertNotNull(newsList);
     assertEquals(3, newsList.size());
     for (int i = 0; i < newsList.size(); i++) {
-      assertEquals("published", newsList.get(i).getPublicationState());
+      assertEquals(POSTED, newsList.get(i).getPublicationState());
       assertEquals(JOHN, newsList.get(i).getAuthor());
       assertEquals(text, newsList.get(i).getTitle());
       assertEquals(true, spacesIds.contains(newsList.get(i).getSpaceId()));
@@ -1367,17 +1370,17 @@ public class NewsRestResourcesV1Test {
     news1.setSpaceId(spaceId);
     news1.setAuthor(JOHN);
     news1.setTitle(text);
-    news1.setPublicationState("published");
+    news1.setPublicationState(POSTED);
     News news2 = new News();
     news2.setSpaceId(spaceId);
     news2.setAuthor(JOHN);
     news2.setTitle(text);
-    news2.setPublicationState("published");
+    news2.setPublicationState(POSTED);
     News news3 = new News();
     news3.setSpaceId(spaceId);
     news3.setAuthor(JOHN);
     news3.setTitle(text);
-    news3.setPublicationState("published");
+    news3.setPublicationState(POSTED);
     List<News> allNews = new ArrayList<>();
     allNews.add(news1);
     allNews.add(news2);
@@ -1397,7 +1400,7 @@ public class NewsRestResourcesV1Test {
     assertNotNull(newsList);
     assertEquals(3, newsList.size());
     for (int i = 0; i < newsList.size(); i++) {
-      assertEquals("published", newsList.get(i).getPublicationState());
+      assertEquals(POSTED, newsList.get(i).getPublicationState());
       assertEquals(JOHN, newsList.get(i).getAuthor());
       assertEquals(text, newsList.get(i).getTitle());
       assertEquals("4", newsList.get(i).getSpaceId());
@@ -1420,13 +1423,13 @@ public class NewsRestResourcesV1Test {
     news1.setAuthor(JOHN);
     news1.setTitle("newsTitle");
     news1.setBody(newsBody);
-    news1.setPublicationState("published");
+    news1.setPublicationState(POSTED);
     News news2 = new News();
     news2.setSpaceId(spaceId);
     news2.setAuthor(JOHN);
     news2.setTitle("newsTitle");
     news2.setBody(newsBody);
-    news2.setPublicationState("published");
+    news2.setPublicationState(POSTED);
     List<News> allNews = new ArrayList<>();
     allNews.add(news1);
     allNews.add(news2);
@@ -1464,19 +1467,19 @@ public class NewsRestResourcesV1Test {
     news1.setSpaceId("4");
     news1.setAuthor(JOHN);
     news1.setTitle(text);
-    news1.setPublicationState("published");
+    news1.setPublicationState(POSTED);
     News news2 = new News();
     news2.setPublished(true);
     news2.setSpaceId("1");
     news2.setAuthor(JOHN);
     news2.setTitle(text);
-    news2.setPublicationState("published");
+    news2.setPublicationState(POSTED);
     News news3 = new News();
     news3.setPublished(true);
     news3.setSpaceId("4");
     news3.setAuthor(JOHN);
     news3.setTitle(text);
-    news3.setPublicationState("published");
+    news3.setPublicationState(POSTED);
     List<News> allNews = new ArrayList<>();
     allNews.add(news1);
     allNews.add(news2);
@@ -1498,7 +1501,7 @@ public class NewsRestResourcesV1Test {
     assertEquals(3, newsList.size());
     for (int i = 0; i < newsList.size(); i++) {
       assertEquals(true, newsList.get(i).isPublished());
-      assertEquals("published", newsList.get(i).getPublicationState());
+      assertEquals(POSTED, newsList.get(i).getPublicationState());
       assertEquals(JOHN, newsList.get(i).getAuthor());
       assertEquals(text, newsList.get(i).getTitle());
       assertEquals(true, spacesIds.contains(newsList.get(i).getSpaceId()));
@@ -1551,17 +1554,17 @@ public class NewsRestResourcesV1Test {
     news1.setSpaceId("4");
     news1.setAuthor(JOHN);
     news1.setTitle(text);
-    news1.setPublicationState("published");
+    news1.setPublicationState(POSTED);
     News news2 = new News();
     news2.setSpaceId("1");
     news2.setAuthor(JOHN);
     news2.setTitle(text);
-    news2.setPublicationState("published");
+    news2.setPublicationState(POSTED);
     News news3 = new News();
     news3.setSpaceId("4");
     news3.setAuthor(JOHN);
     news3.setTitle(text);
-    news3.setPublicationState("published");
+    news3.setPublicationState(POSTED);
     List<News> allNews = new ArrayList<>();
     allNews.add(news1);
     allNews.add(news2);
@@ -1580,7 +1583,7 @@ public class NewsRestResourcesV1Test {
     assertNotNull(newsList);
     assertEquals(3, newsList.size());
     for (int i = 0; i < newsList.size(); i++) {
-      assertEquals("published", newsList.get(i).getPublicationState());
+      assertEquals(POSTED, newsList.get(i).getPublicationState());
       assertEquals(JOHN, newsList.get(i).getAuthor());
     }
   }
@@ -1600,17 +1603,17 @@ public class NewsRestResourcesV1Test {
     news1.setSpaceId("4");
     news1.setAuthor(JOHN);
     news1.setTitle(text);
-    news1.setPublicationState("published");
+    news1.setPublicationState(POSTED);
     News news2 = new News();
     news2.setSpaceId("1");
     news2.setAuthor(JOHN);
     news2.setTitle(text);
-    news2.setPublicationState("published");
+    news2.setPublicationState(POSTED);
     News news3 = new News();
     news3.setSpaceId("4");
     news3.setAuthor(JOHN);
     news3.setTitle(text);
-    news3.setPublicationState("published");
+    news3.setPublicationState(POSTED);
     List<News> allNews = new ArrayList<>();
     allNews.add(news1);
     allNews.add(news2);
@@ -1629,7 +1632,7 @@ public class NewsRestResourcesV1Test {
     assertNotNull(newsList);
     assertEquals(3, newsList.size());
     for (int i = 0; i < newsList.size(); i++) {
-      assertEquals("published", newsList.get(i).getPublicationState());
+      assertEquals(POSTED, newsList.get(i).getPublicationState());
       assertEquals(JOHN, newsList.get(i).getAuthor());
       assertEquals(true, spacesIds.contains(newsList.get(i).getSpaceId()));
     }
@@ -1650,17 +1653,17 @@ public class NewsRestResourcesV1Test {
     news1.setSpaceId("4");
     news1.setAuthor(JOHN);
     news1.setTitle(text);
-    news1.setPublicationState("published");
+    news1.setPublicationState(POSTED);
     News news2 = new News();
     news2.setSpaceId("1");
     news2.setAuthor(JOHN);
     news2.setTitle(text);
-    news2.setPublicationState("published");
+    news2.setPublicationState(POSTED);
     News news3 = new News();
     news3.setSpaceId("4");
     news3.setAuthor(JOHN);
     news3.setTitle(text);
-    news3.setPublicationState("published");
+    news3.setPublicationState(POSTED);
     List<News> allNews = new ArrayList<>();
     allNews.add(news1);
     allNews.add(news2);
@@ -1681,7 +1684,7 @@ public class NewsRestResourcesV1Test {
     assertNotNull(newsList);
     assertEquals(3, newsList.size());
     for (int i = 0; i < newsList.size(); i++) {
-      assertEquals("published", newsList.get(i).getPublicationState());
+      assertEquals(POSTED, newsList.get(i).getPublicationState());
       assertEquals(JOHN, newsList.get(i).getAuthor());
       assertEquals(text, newsList.get(i).getTitle());
       assertEquals(true, spacesIds.contains(newsList.get(i).getSpaceId()));
@@ -1793,17 +1796,17 @@ public class NewsRestResourcesV1Test {
     news1.setSpaceId("4");
     news1.setAuthor(JOHN);
     news1.setTitle(text);
-    news1.setPublicationState("published");
+    news1.setPublicationState(POSTED);
     News news2 = new News();
     news2.setSpaceId("1");
     news2.setAuthor(JOHN);
     news2.setTitle(text);
-    news2.setPublicationState("published");
+    news2.setPublicationState(POSTED);
     News news3 = new News();
     news3.setSpaceId("4");
     news3.setAuthor(JOHN);
     news3.setTitle(text);
-    news3.setPublicationState("published");
+    news3.setPublicationState(POSTED);
     List<News> allNews = new ArrayList<>();
     allNews.add(news1);
     allNews.add(news2);
@@ -1829,17 +1832,17 @@ public class NewsRestResourcesV1Test {
     news1.setSpaceId("4");
     news1.setAuthor(JOHN);
     news1.setTitle(text);
-    news1.setPublicationState("published");
+    news1.setPublicationState(POSTED);
     News news2 = new News();
     news2.setSpaceId("1");
     news2.setAuthor(JOHN);
     news2.setTitle(text);
-    news2.setPublicationState("published");
+    news2.setPublicationState(POSTED);
     News news3 = new News();
     news3.setSpaceId("4");
     news3.setAuthor(JOHN);
     news3.setTitle(text);
-    news3.setPublicationState("published");
+    news3.setPublicationState(POSTED);
     List<News> allNews = new ArrayList<>();
     allNews.add(news1);
     allNews.add(news2);
@@ -1866,17 +1869,17 @@ public class NewsRestResourcesV1Test {
     news1.setSpaceId("4");
     news1.setAuthor(JOHN);
     news1.setTitle(text);
-    news1.setPublicationState("published");
+    news1.setPublicationState(POSTED);
     News news2 = new News();
     news2.setSpaceId("1");
     news2.setAuthor(JOHN);
     news2.setTitle(text);
-    news2.setPublicationState("published");
+    news2.setPublicationState(POSTED);
     News news3 = new News();
     news3.setSpaceId("4");
     news3.setAuthor(JOHN);
     news3.setTitle(text);
-    news3.setPublicationState("published");
+    news3.setPublicationState(POSTED);
     List<News> allNews = new ArrayList<>();
     allNews.add(news1);
     allNews.add(news2);
@@ -1904,17 +1907,17 @@ public class NewsRestResourcesV1Test {
     news1.setSpaceId("4");
     news1.setAuthor(JOHN);
     news1.setTitle(text);
-    news1.setPublicationState("published");
+    news1.setPublicationState(POSTED);
     News news2 = new News();
     news2.setSpaceId("1");
     news2.setAuthor(JOHN);
     news2.setTitle(text);
-    news2.setPublicationState("published");
+    news2.setPublicationState(POSTED);
     News news3 = new News();
     news3.setSpaceId("4");
     news3.setAuthor(JOHN);
     news3.setTitle(text);
-    news3.setPublicationState("published");
+    news3.setPublicationState(POSTED);
     List<News> allNews = new ArrayList<>();
     allNews.add(news1);
     allNews.add(news2);
@@ -1946,7 +1949,7 @@ public class NewsRestResourcesV1Test {
     ConversationState.setCurrent(new ConversationState(currentIdentity));
     News news = new News();
     news.setId("1");
-    when(newsService.getNewsById("1", currentIdentity, false)).thenReturn(news);
+    when(newsService.getNewsById("1", currentIdentity, false, ARTICLE.name().toLowerCase())).thenReturn(news);
     doNothing().when(newsService).markAsRead(news, JOHN);
     Response response = newsRestResourcesV1.markNewsAsRead(request, "1");
     verify(newsService, times(1)).markAsRead(news, JOHN);

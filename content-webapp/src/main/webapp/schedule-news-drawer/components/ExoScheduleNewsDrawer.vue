@@ -149,6 +149,7 @@
                   <span slot="label" class="postModeText">{{ $t('news.composer.postImmediately') }}</span>
                 </v-radio>
                 <v-radio
+                  v-if="newsScheduleAndFilterDisplaying"
                   value="later"
                   class="mt-4">
                   <span slot="label" class="postModeText">{{ $t('news.composer.postLater') }}</span>
@@ -279,6 +280,11 @@ export default {
       required: false,
       default: null
     },
+    newsType: {
+      type: String,
+      required: false,
+      default: ''
+    },
     postingNews: {
       type: Boolean,
       default: false
@@ -302,6 +308,7 @@ export default {
     audience: null,
     selectedAudience: null,
     disabled: true,
+    newsScheduleAndFilterDisplaying: false,
   }),
   watch: {
     postDate(newVal, oldVal) {
@@ -419,6 +426,7 @@ export default {
     }
   },
   created() {
+    this.$featureService.isFeatureEnabled('newsScheduleAndFilterDisplaying').then(enabled => this.newsScheduleAndFilterDisplaying = enabled);
     this.selectedAudience= this.$t('news.composer.stepper.audienceSection.allUsers');
     this.disabled = true;
     this.getAllowedTargets();
@@ -467,12 +475,14 @@ export default {
       }
     },
     initializeDate() {
-      this.$newsServices.getNewsById(this.newsId, false)
+      this.$newsServices.getNewsById(this.newsId, false, this.newsType)
         .then(news => {
           if (news) {
             this.news = news;
             this.canPublishNews = news.canPublish;
-            this.isActivityPosted = !news.activityPosted;
+            if (this.news.publicationState !== this.$newsConstants.newsObjectType.DRAFT) {
+              this.isActivityPosted = this.news.activityPosted;
+            }
             this.schedulePostDate = news.schedulePostDate;
             this.selectedTargets = news.targets;
             this.audience = news.audience ? news.audience : 'all';
@@ -481,7 +491,7 @@ export default {
         });
     },
     postArticle() {
-      this.$emit('post-article', this.postArticleMode !== 'later' ? null : this.$newsUtils.convertDate(this.postDate), this.postArticleMode, this.publish, !this.isActivityPosted, this.selectedTargets, this.publish ? this.selectedAudience : null);
+      this.$emit('post-article', this.postArticleMode !== 'later' ? null : this.$newsUtils.convertDate(this.postDate), this.postArticleMode, this.publish, this.isActivityPosted, this.selectedTargets, this.publish ? this.selectedAudience : null);
     },
     closeDrawer() {
       if (this.news) {

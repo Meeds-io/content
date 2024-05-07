@@ -36,7 +36,7 @@
             dark>
           <v-img
               class="articleImage fill-height"
-              :src="showArticleImage && item.illustrationURL !== null ? item.illustrationURL.concat('&size=1420x222').toString() : '/news/images/news.png'"
+              :src="showArticleImage && item.illustrationURL !== null ? item.illustrationURL.concat('&size=1420x222').toString() : '/content/images/news.png'"
               eager />
           <v-container class="slide-text-container d-flex text-center body-2">
             <div class="flex flex-column carouselNewsInfo">
@@ -134,7 +134,7 @@ export default {
     },
     articleUrl() {
       return (item) => {
-        return eXo.env.portal.userName !== '' ? item.url : `${eXo.env.portal.context}/${eXo.env.portal.portalName}/news-detail?newsId=${item.id}`;
+        return eXo.env.portal.userName !== '' ? item.url : `${eXo.env.portal.context}/${eXo.env.portal.portalName}/news-detail?newsId=${item.id}&type=article`;
       };
     }
   },

@@ -10,6 +10,7 @@
       :news="news"
       :news-id="newsId"
       :activity-id="news.activityId"
+      :news-type=newsType
       :show-edit-button="showEditButton"
       :show-publish-button="showPublishButton"
       :show-delete-button="showDeleteButton" />
@@ -24,6 +25,10 @@ export default {
       type: String,
       default: ''
     },
+    newsType: {
+      type: String,
+      default: ''
+    },
   },
   data: () => ({
     news: null,
@@ -33,7 +38,7 @@ export default {
     showDeleteButton: false,
   }),
   created() {
-    this.$newsServices.getNewsById(this.newsId, false)
+    this.$newsServices.getNewsById(this.newsId, false, this.newsType)
       .then(news => {
         if (news !== null && news !== UNAUTHORIZED_CODE) {
           this.news = news;

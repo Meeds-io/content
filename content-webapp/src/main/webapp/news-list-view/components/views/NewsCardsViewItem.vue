@@ -155,7 +155,7 @@ export default {
       return this.showArticleImage && this.item
                                    && this.item.illustrationURL
                                    && this.item.illustrationURL.concat('&size=235x140').toString()
-                                   || '/news/images/news.png';
+                                   || '/content/images/news.png';
     },
     isHiddenSpace() {
       return this.item && !this.item.spaceMember && this.item.hiddenSpace;
@@ -164,7 +164,7 @@ export default {
       return this.item && `${this.item.url}#activityReactions`;
     },
     articleUrl() {
-      return eXo.env.portal.userName !== '' ? this.item.url : `${eXo.env.portal.context}/${eXo.env.portal.portalName}/news-detail?newsId=${this.item.id}`;
+      return eXo.env.portal.userName !== '' ? this.item.url : `${eXo.env.portal.context}/${eXo.env.portal.portalName}/news-detail?newsId=${this.item.id}&type=article`;
     }
   }
 };

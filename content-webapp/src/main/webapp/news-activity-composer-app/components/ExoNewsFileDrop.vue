@@ -25,8 +25,11 @@
         :class="files.length >0 ? 'imageUploaded' : '' "
         class="dropMsg"
         for="uploadedFile">
-        <i class="uiIcon uiIconIllustrationUpload"></i>
-        <i class="uiIcon uiIconPlusCircled"></i>
+        <v-icon
+          size="50"
+          class="grey--text text--lighten-1">
+          fa-regular fa-image
+        </v-icon>
       </label>
       <input
         id="uploadedFile"

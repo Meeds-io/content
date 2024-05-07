@@ -93,7 +93,7 @@ public interface NewsService {
    * @return updated News
    * @throws Exception
    */
-  News updateNews(News news, String updater, Boolean post, boolean publish, String newsObjectType) throws Exception;
+  News updateNews(News news, String updater, Boolean post, boolean publish, String newsObjectType, String newsUpdateType) throws Exception;
 
   /**
    * Delete news
@@ -162,6 +162,14 @@ public interface NewsService {
                    org.exoplatform.services.security.Identity currentIdentity,
                    boolean editMode,
                    String newsObjectType) throws IllegalAccessException;
+
+  /**
+   * Retrives a news identified by its technical identifier
+   * 
+   * @param newsId {@link News} identifier
+   * @return {@link News} if found else null
+   */
+  News getNewsArticleById(String newsId);
 
   /**
    * Get all news

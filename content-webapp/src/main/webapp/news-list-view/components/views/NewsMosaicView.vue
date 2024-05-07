@@ -35,7 +35,7 @@
               class="articleLink d-block"
               target="_self"
               :href="articleUrl(item)">
-            <img :src="showArticleImage && item.illustrationURL !== null ? illustrationURL(item,index) : '/news/images/news.png'" :alt="$t('news.latest.alt.articleImage')">
+            <img :src="showArticleImage && item.illustrationURL !== null ? illustrationURL(item,index) : '/content/images/news.png'" :alt="$t('news.latest.alt.articleImage')">
             <div class="titleArea">
               <div v-if="showArticleDate" class="articleDate">
                 <date-format
@@ -114,7 +114,7 @@ export default {
     },
     articleUrl() {
       return (item) => {
-        return eXo.env.portal.userName !== '' ? item.url : `${eXo.env.portal.context}/${eXo.env.portal.portalName}/news-detail?newsId=${item.id}`;
+        return eXo.env.portal.userName !== '' ? item.url : `${eXo.env.portal.context}/${eXo.env.portal.portalName}/news-detail?newsId=${item.id}&type=article`;
       };
     }
   },

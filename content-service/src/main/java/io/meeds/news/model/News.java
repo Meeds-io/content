@@ -139,4 +139,6 @@ public class News {
   private List<String>                    targets;
 
   private boolean                         favorite;
+
+  private boolean                         deleted;
 }

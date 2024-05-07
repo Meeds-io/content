@@ -91,6 +91,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 
+import static io.meeds.news.utils.NewsUtils.NewsObjectType.ARTICLE;
+
 @Path("v1/news")
 @Tag(name = "v1/news", description = "Managing news")
 public class NewsRestResourcesV1 implements ResourceContainer, Startable {
@@ -158,7 +160,7 @@ public class NewsRestResourcesV1 implements ResourceContainer, Startable {
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
   @RolesAllowed("users")
-  @Operation(summary = "Create a news", method = "POST", description = "This creates the news if the authenticated user is a member of the space or a spaces super manager. The news is created in draft status, unless the publicationState property is set to 'published'.")
+  @Operation(summary = "Create a news", method = "POST", description = "This creates the news if the authenticated user is a member of the space or a spaces super manager. The news is created in draft status, unless the publicationState property is set to 'posted'.")
   @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "News created"),
       @ApiResponse(responseCode = "400", description = "Invalid query input"),
       @ApiResponse(responseCode = "401", description = "User not authorized to create the news"),
@@ -238,6 +240,10 @@ public class NewsRestResourcesV1 implements ResourceContainer, Startable {
                              @Parameter(description = "News object type to be updated", required = false)
                              @QueryParam("type")
                              String newsObjectType,
+                             @Parameter(description = "News update action type to be done", required = false)
+                             @Schema(defaultValue = "content")
+                             @QueryParam("newsUpdateType")
+                             String newsUpdateType,
                              @RequestBody(description = "News object to be updated", required = true)
                              News updatedNews) {
 
@@ -261,11 +267,11 @@ public class NewsRestResourcesV1 implements ResourceContainer, Startable {
       news.setTargets(updatedNews.getTargets());
       news.setAudience(updatedNews.getAudience());
 
-      news = newsService.updateNews(news, currentIdentity.getUserId(), post, updatedNews.isPublished(), newsObjectType);
+      news = newsService.updateNews(news, currentIdentity.getUserId(), post, updatedNews.isPublished(), newsObjectType, newsUpdateType);
 
       return Response.ok(news).build();
     } catch (IllegalAccessException e) {
-      LOG.warn("User '{}' is not autorized to update news", currentIdentity.getUserId(), e);
+      LOG.warn("User '{}' is not authorized to update news", currentIdentity.getUserId(), e);
       return Response.status(Response.Status.UNAUTHORIZED).entity(e.getMessage()).build();
     } catch (Exception e) {
       LOG.error("Error when updating the news " + id, e);
@@ -303,7 +309,7 @@ public class NewsRestResourcesV1 implements ResourceContainer, Startable {
                                           currentIdentity,
                                           false,
                                           isDraft ? NewsObjectType.DRAFT.name().toLowerCase()
-                                                  : NewsObjectType.ARTICLE.name().toLowerCase());
+                                                  : ARTICLE.name().toLowerCase());
       if (news == null) {
         return Response.status(Response.Status.NOT_FOUND).build();
       }
@@ -403,7 +409,7 @@ public class NewsRestResourcesV1 implements ResourceContainer, Startable {
       }
       org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
       News news = newsService.getNewsById(id, currentIdentity, editMode, newsObjectType);
-      if (news == null) {
+      if (news == null || news.isDeleted()) {
         return Response.status(Response.Status.NOT_FOUND).build();
       }
       Locale userLocale = LocalizationFilter.getCurrentLocale();
@@ -464,7 +470,7 @@ public class NewsRestResourcesV1 implements ResourceContainer, Startable {
         return Response.status(Response.Status.BAD_REQUEST).build();
       }
       org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
-      News news = newsService.getNewsById(id, currentIdentity, false);
+      News news = newsService.getNewsById(id, currentIdentity, false, ARTICLE.name().toLowerCase());
       if (news == null) {
         return Response.status(Response.Status.NOT_FOUND).build();
       }
@@ -679,7 +685,7 @@ public class NewsRestResourcesV1 implements ResourceContainer, Startable {
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
   @RolesAllowed("users")
-  @Operation(summary = "Schedule a news", method = "POST", description = "This schedules the news if the authenticated user is a member of the space or a spaces super manager. The news is created in staged status, after reaching a date of publication startPublishedDate, the publicationState property is set to 'published'.")
+  @Operation(summary = "Schedule a news", method = "POST", description = "This schedules the news if the authenticated user is a member of the space or a spaces super manager. The news is created in staged status, after reaching a date of publication startPublishedDate, the publicationState property is set to 'posted'.")
   @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "News scheduled"),
       @ApiResponse(responseCode = "400", description = "Invalid query input"),
       @ApiResponse(responseCode = "401", description = "User not authorized to schedule the news"),

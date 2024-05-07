@@ -98,7 +98,7 @@ public class MailTemplateProvider extends TemplateProvider {
       String contentSpaceName = notification.getValueOwnerParameter(NotificationConstants.CONTENT_SPACE);
       String authorAvatarUrl = notification.getValueOwnerParameter(NotificationConstants.AUTHOR_AVATAR_URL);
       String baseUrl = PropertyManager.getProperty("gatein.email.domain.url");
-      String illustrationUrl = baseUrl.concat("/news/images/newsImageDefault.png");
+      String illustrationUrl = baseUrl.concat("/content/images/newsImageDefault.png");
       String activityLink = notification.getValueOwnerParameter(NotificationConstants.ACTIVITY_LINK);
       String context = notification.getValueOwnerParameter(NotificationConstants.CONTEXT);
 
@@ -150,6 +150,7 @@ public class MailTemplateProvider extends TemplateProvider {
       templateContext.put("FIRST_NAME", encoder.encode(receiver.getProfile().getProperty(Profile.FIRST_NAME).toString()));
       // Footer
       templateContext.put("FOOTER_LINK", LinkProviderUtils.getRedirectUrl("notification_settings", receiver.getRemoteId()));
+      templateContext.put("COMPANY_LINK", LinkProviderUtils.getBaseUrl());
       String subject = TemplateUtils.processSubject(templateContext);
       String body = TemplateUtils.processGroovy(templateContext);
       // binding the exception throws by processing template
