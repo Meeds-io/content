@@ -788,20 +788,9 @@ public class NewsServiceImplTest {
     Map<String, String> properties = new HashMap<>();
     properties.put(NEWS_ACTIVITIES, "1:1;");
     when(metadataItem.getProperties()).thenReturn(properties);
-
-    Space space = mock(Space.class);
-    when(space.getId()).thenReturn("1");
-    when(space.getGroupId()).thenReturn("/space/groupId");
-    when(space.getAvatarUrl()).thenReturn("space/avatar/url");
-    when(space.getDisplayName()).thenReturn("spaceDisplayName");
-    when(space.getVisibility()).thenReturn("public");
-    when(spaceService.isSuperManager(anyString())).thenReturn(true);
-    when(spaceService.getSpaceById(any())).thenReturn(space);
-    when(spaceService.getSpaceByGroupId(anyString())).thenReturn(space);
-
-    Identity identity = mock(Identity.class);
-    when(identity.getUserId()).thenReturn("john");
-    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity(anyString())).thenReturn(identity);
+    Space space = mockSpace();
+    Identity identity = mockIdentity();
+    when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(new org.exoplatform.social.core.identity.model.Identity("1"));
     NEWS_UTILS.when(() -> NewsUtils.canPublishNews(anyString(), any(Identity.class))).thenReturn(false);
     when(newsTargetingService.getTargetsByNews(any(News.class))).thenReturn(null);
 
@@ -829,6 +818,7 @@ public class NewsServiceImplTest {
     verify(noteService, times(1)).deleteNote(existingPage.getWikiType(), existingPage.getWikiOwner(), existingPage.getName());
     verify(noteService, times(1)).removeDraftById("1");
     verify(activityManager, times(1)).deleteActivity("1");
+    verify(metadataService, times(1)).updateMetadataItem(any(MetadataItem.class), anyLong());
   }
 
   @Test

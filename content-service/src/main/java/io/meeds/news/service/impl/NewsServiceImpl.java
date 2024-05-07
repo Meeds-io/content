@@ -140,6 +140,9 @@ public class NewsServiceImpl implements NewsService {
   /** The Constant AUDIENCE. */
   public static final String         NEWS_AUDIENCE                          = "audience";
 
+  /** The Constant DELETED. */
+  public static final String         NEWS_DELETED                           = "deleted";
+
   /** The Constant NEWS_ID. */
   public static final String         NEWS_ID                                = "newsId";
 
@@ -1556,6 +1559,7 @@ public class NewsServiceImpl implements NewsService {
         }
         newsPageProperties.put(NEWS_ACTIVITY_POSTED, String.valueOf(newsArticle.isActivityPosted()));
         newsPageProperties.put(PUBLISHED, String.valueOf(newsArticle.isPublished()));
+        newsPageProperties.put(NEWS_DELETED, String.valueOf(newsArticlePage.isDeleted()));
         metadataService.createMetadataItem(newsPageObject, NEWS_METADATA_KEY, newsPageProperties, Long.parseLong(newsArticleMetadataItemCreatorIdentityId));
 
         // delete the draft
@@ -1990,6 +1994,15 @@ public class NewsServiceImpl implements NewsService {
         if (news.getActivities() != null) {
           String newsActivities = news.getActivities();
           Stream.of(newsActivities.split(";")).map(activity -> activity.split(":")[1]).forEach(activityManager::deleteActivity);
+          NewsPageObject newsPageMetadataObject = new NewsPageObject(NEWS_METADATA_PAGE_OBJECT_TYPE, news.getId(), null, Long.parseLong(news.getSpaceId()));
+          MetadataItem metadataItem = metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY, newsPageMetadataObject).stream().findFirst().orElse(null);
+          if (metadataItem != null) {
+            Map<String, String> properties = metadataItem.getProperties();
+            properties.put(NEWS_DELETED, String.valueOf(true));
+            metadataItem.setProperties(properties);
+            String currentIdentityId = identityManager.getOrCreateUserIdentity(currentIdentity.getUserId()).getId();
+            metadataService.updateMetadataItem(metadataItem, Long.parseLong(currentIdentityId));
+          }
         }
       }
     }
