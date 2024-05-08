@@ -1102,6 +1102,7 @@ public class NewsServiceImpl implements NewsService {
     metadataFilter.setCreatorId(Long.parseLong(identityManager.getOrCreateUserIdentity(filter.getAuthor()).getId()));
     metadataFilter.setMetadataProperties(Map.of(NEWS_PUBLICATION_STATE, POSTED));
     metadataFilter.setMetadataSpaceIds(NewsUtils.getMyFilteredSpacesIds(currentIdentity, filter.getSpaces()));
+    metadataFilter.setCombinedMetadataProperties(Map.of(PUBLISHED, "true", NEWS_AUDIENCE, NewsUtils.ALL_NEWS_AUDIENCE));
     return metadataService.getMetadataItemsByFilter(metadataFilter, filter.getOffset(), filter.getLimit())
                           .stream()
                           .map(article -> {
