@@ -99,16 +99,6 @@
       <type>io.meeds.news.listener.AttachedActivityCacheUpdater</type>
     </component-plugin>
     <component-plugin>
-      <name>exo.news.archiveArticle</name>
-      <set-method>addListener</set-method>
-      <type>io.meeds.news.listener.AttachedActivityCacheUpdater</type>
-    </component-plugin>
-    <component-plugin>
-      <name>exo.news.unarchiveArticle</name>
-      <set-method>addListener</set-method>
-      <type>io.meeds.news.listener.AttachedActivityCacheUpdater</type>
-    </component-plugin>
-    <component-plugin>
       <name>exo.news.scheduleArticle</name>
       <set-method>addListener</set-method>
       <type>io.meeds.news.listener.AttachedActivityCacheUpdater</type>

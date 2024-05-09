@@ -79,11 +79,6 @@ export default {
       required: false,
       default: null
     },
-    newsArchived: {
-      type: Boolean,
-      required: true,
-      default: false
-    },
     showShareButton: {
       type: Boolean,
       required: false,
