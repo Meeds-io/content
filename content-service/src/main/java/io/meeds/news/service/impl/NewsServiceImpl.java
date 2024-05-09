@@ -1029,9 +1029,19 @@ public class NewsServiceImpl implements NewsService {
     metadataFilter.setMetadataName(NEWS_METADATA_NAME);
     metadataFilter.setMetadataTypeName(NEWS_METADATA_TYPE.getName());
     metadataFilter.setMetadataObjectTypes(List.of(NEWS_METADATA_PAGE_OBJECT_TYPE));
-    metadataFilter.setMetadataProperties(Map.of(PUBLISHED, "true", NEWS_AUDIENCE, NewsUtils.SPACE_NEWS_AUDIENCE));
+    metadataFilter.setMetadataProperties(Map.of(PUBLISHED,
+                                                "true",
+                                                NEWS_AUDIENCE,
+                                                NewsUtils.SPACE_NEWS_AUDIENCE,
+                                                NEWS_DELETED,
+                                                "false"));
     metadataFilter.setMetadataSpaceIds(NewsUtils.getMyFilteredSpacesIds(currentIdentity, filter.getSpaces()));
-    metadataFilter.setCombinedMetadataProperties(Map.of(PUBLISHED, "true", NEWS_AUDIENCE, NewsUtils.ALL_NEWS_AUDIENCE));
+    metadataFilter.setCombinedMetadataProperties(Map.of(PUBLISHED,
+                                                        "true",
+                                                        NEWS_AUDIENCE,
+                                                        NewsUtils.ALL_NEWS_AUDIENCE,
+                                                        NEWS_DELETED,
+                                                        "false"));
     return metadataService.getMetadataItemsByFilter(metadataFilter, filter.getOffset(), filter.getLimit())
                           .stream()
                           .map(article -> {
@@ -1050,9 +1060,14 @@ public class NewsServiceImpl implements NewsService {
     metadataFilter.setMetadataName(NEWS_METADATA_NAME);
     metadataFilter.setMetadataTypeName(NEWS_METADATA_TYPE.getName());
     metadataFilter.setMetadataObjectTypes(List.of(NEWS_METADATA_PAGE_OBJECT_TYPE));
-    metadataFilter.setMetadataProperties(Map.of(NEWS_PUBLICATION_STATE, POSTED));
+    metadataFilter.setMetadataProperties(Map.of(NEWS_PUBLICATION_STATE, POSTED, NEWS_DELETED, "false"));
     metadataFilter.setMetadataSpaceIds(NewsUtils.getMyFilteredSpacesIds(currentIdentity, filter.getSpaces()));
-    metadataFilter.setCombinedMetadataProperties(Map.of(PUBLISHED, "true", NEWS_AUDIENCE, NewsUtils.ALL_NEWS_AUDIENCE));
+    metadataFilter.setCombinedMetadataProperties(Map.of(PUBLISHED,
+                                                        "true",
+                                                        NEWS_AUDIENCE,
+                                                        NewsUtils.ALL_NEWS_AUDIENCE,
+                                                        NEWS_DELETED,
+                                                        "false"));
     return metadataService.getMetadataItemsByFilter(metadataFilter, filter.getOffset(), filter.getLimit())
                           .stream()
                           .map(article -> {
@@ -1072,9 +1087,14 @@ public class NewsServiceImpl implements NewsService {
     metadataFilter.setMetadataTypeName(NEWS_METADATA_TYPE.getName());
     metadataFilter.setMetadataObjectTypes(List.of(NEWS_METADATA_PAGE_OBJECT_TYPE));
     metadataFilter.setCreatorId(Long.parseLong(identityManager.getOrCreateUserIdentity(filter.getAuthor()).getId()));
-    metadataFilter.setMetadataProperties(Map.of(NEWS_PUBLICATION_STATE, POSTED));
+    metadataFilter.setMetadataProperties(Map.of(NEWS_PUBLICATION_STATE, POSTED, NEWS_DELETED, "false"));
     metadataFilter.setMetadataSpaceIds(NewsUtils.getMyFilteredSpacesIds(currentIdentity, filter.getSpaces()));
-    metadataFilter.setCombinedMetadataProperties(Map.of(PUBLISHED, "true", NEWS_AUDIENCE, NewsUtils.ALL_NEWS_AUDIENCE));
+    metadataFilter.setCombinedMetadataProperties(Map.of(PUBLISHED,
+                                                        "true",
+                                                        NEWS_AUDIENCE,
+                                                        NewsUtils.ALL_NEWS_AUDIENCE,
+                                                        NEWS_DELETED,
+                                                        "false"));
     return metadataService.getMetadataItemsByFilter(metadataFilter, filter.getOffset(), filter.getLimit())
                           .stream()
                           .map(article -> {
