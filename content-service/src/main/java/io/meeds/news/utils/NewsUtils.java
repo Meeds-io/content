@@ -156,12 +156,19 @@ public class NewsUtils {
     return getMySpaces(userIdentity).stream().map(space -> Long.valueOf(space.getId())).toList();
   }
 
-  public static List<Space> getAllowedDraftNewsSpaces(org.exoplatform.services.security.Identity userIdentity) throws Exception {
+  public static List<Long> getAllowedDraftArticleSpaceIds(org.exoplatform.services.security.Identity userIdentity, List<String> filteredSpacesIds) throws Exception {
     SpaceService spaceService = CommonsUtils.getService(SpaceService.class);
     return getMySpaces(userIdentity).stream()
-                       .filter(space -> (spaceService.canRedactOnSpace(space, userIdentity)
-                           || canPublishNews(space.getId(), userIdentity)))
-                       .toList();
+                                    .filter(space -> {
+                                      boolean allowed = spaceService.canRedactOnSpace(space, userIdentity)
+                                          || canPublishNews(space.getId(), userIdentity);
+                                      if (!CollectionUtils.isEmpty(filteredSpacesIds)) {
+                                        return allowed && filteredSpacesIds.contains(space.getId());
+                                      }
+                                      return allowed;
+                                    })
+                                    .map(space -> Long.valueOf(space.getId()))
+                                    .toList();
   }
 
   public static List<Space> getAllowedScheduledNewsSpaces(org.exoplatform.services.security.Identity currentIdentity) throws Exception {
