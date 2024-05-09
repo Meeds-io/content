@@ -1129,16 +1129,11 @@ public class NewsServiceImpl implements NewsService {
   }
 
   private List<News> buildDraftArticles(NewsFilter filter, Identity currentIdentity) throws Exception {
-    List<Long> allowedDraftNewsSpacesIds = NewsUtils.getAllowedDraftNewsSpaces(currentIdentity)
-                                                    .stream()
-                                                    .map(Space::getId)
-                                                    .map(Long::parseLong)
-                                                    .toList();
     MetadataFilter metadataFilter = new MetadataFilter();
     metadataFilter.setMetadataName(NEWS_METADATA_NAME);
     metadataFilter.setMetadataTypeName(NEWS_METADATA_TYPE.getName());
     metadataFilter.setMetadataObjectTypes(List.of(NEWS_METADATA_DRAFT_OBJECT_TYPE, NEWS_METADATA_LATEST_DRAFT_OBJECT_TYPE));
-    metadataFilter.setMetadataSpaceIds(allowedDraftNewsSpacesIds);
+    metadataFilter.setMetadataSpaceIds(NewsUtils.getAllowedDraftArticleSpaceIds(currentIdentity, filter.getSpaces()));
     return metadataService.getMetadataItemsByFilter(metadataFilter, filter.getOffset(), filter.getLimit())
                           .stream()
                           .map(draftArticle -> {
