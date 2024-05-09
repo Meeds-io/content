@@ -468,7 +468,7 @@ public class NewsServiceImplTest {
     Identity identity = mock(Identity.class);
     when(identity.getUserId()).thenReturn("john");
     List<Space> allowedDraftNewsSpaces = Arrays.asList(space1);
-    NEWS_UTILS.when(() -> NewsUtils.getAllowedDraftNewsSpaces(identity)).thenReturn(allowedDraftNewsSpaces);
+    NEWS_UTILS.when(() -> NewsUtils.getAllowedDraftArticleSpaceIds(identity, new ArrayList<>())).thenReturn(allowedDraftNewsSpaces);
     when(metadataService.getMetadataItemsByFilter(any(), anyLong(), anyLong())).thenReturn(metadataItems);
 
     when(activityManager.getActivity(nullable(String.class))).thenReturn(null);
