@@ -526,7 +526,7 @@ public class NewsServiceImpl implements NewsService {
       } else if (filter.isDraftNews()) {
         newsList = buildDraftArticles(filter, currentIdentity);
       } else if (filter.isScheduledNews()) {
-        // TODO
+        newsList = getScheduledArticles(filter, currentIdentity);
       } else if (filter.getAuthor() != null) {
         newsList = getMyPostedArticles(filter, currentIdentity);
       } else {
@@ -1064,6 +1064,26 @@ public class NewsServiceImpl implements NewsService {
                             }
                           })
                           .toList();
+  }
+
+  private List<News> getScheduledArticles(NewsFilter filter, Identity currentIdentity) throws Exception {
+    MetadataFilter metadataFilter = new MetadataFilter();
+    metadataFilter.setMetadataName(NEWS_METADATA_NAME);
+    metadataFilter.setMetadataTypeName(NEWS_METADATA_TYPE.getName());
+    metadataFilter.setMetadataObjectTypes(List.of(NEWS_METADATA_PAGE_OBJECT_TYPE));
+    metadataFilter.setMetadataProperties(Map.of(NEWS_PUBLICATION_STATE, STAGED, NEWS_DELETED, "false"));
+    metadataFilter.setMetadataSpaceIds(NewsUtils.getAllowedScheduledNewsSpacesIds(currentIdentity, filter.getSpaces()));
+    return metadataService.getMetadataItemsByFilter(metadataFilter, filter.getOffset(), filter.getLimit())
+            .stream()
+            .map(article -> {
+              try {
+                return buildArticle(article.getObjectId());
+              } catch (Exception e) {
+                LOG.error("Error while building news article", e);
+                return null;
+              }
+            })
+            .toList();
   }
 
   private List<News> getMyPostedArticles(NewsFilter filter, Identity currentIdentity) throws Exception {
@@ -1662,7 +1682,6 @@ public class NewsServiceImpl implements NewsService {
           String newsActivityId = activities[0].split(":")[1];
           news.setActivityId(newsActivityId);
           news.setSpaceId(space.getId());
-          news.setUrl(NewsUtils.buildNewsArticleUrl(news, currentUsername));
           memberSpaceActivities.append(activities[0]).append(";");
           List<String> sharedInSpacesList = new ArrayList<>();
           for (int i = 1; i < activities.length; i++) {
@@ -1710,6 +1729,7 @@ public class NewsServiceImpl implements NewsService {
           news.setActivityPosted(false);
         }
         news.setDeleted(articlePage.isDeleted());
+        news.setUrl(NewsUtils.buildNewsArticleUrl(news, currentUsername));
       }
 
       // fetch the last version of the given lang
