@@ -306,7 +306,7 @@ public class NewsServiceImpl implements NewsService {
         unpublishNews(news.getId(), updater);
       }
     }
-    boolean displayed = !(StringUtils.equals(news.getPublicationState(), STAGED) || news.isArchived());
+    boolean displayed = !(StringUtils.equals(news.getPublicationState(), STAGED));
     if (publish == news.isPublished() && news.isPublished() && canPublish) {
       if (news.getTargets() != null && (oldTargets == null || !oldTargets.equals(news.getTargets()))) {
         newsTargetingService.deleteNewsTargets(news, updater);
@@ -376,7 +376,7 @@ public class NewsServiceImpl implements NewsService {
   public void publishNews(News newsToPublish, String publisher) throws Exception {
     Identity publisherIdentity = NewsUtils.getUserIdentity(publisher);
     News news = getNewsArticleById(newsToPublish.getId());
-    boolean displayed = !(StringUtils.equals(news.getPublicationState(), STAGED) || news.isArchived());
+    boolean displayed = !(StringUtils.equals(news.getPublicationState(), STAGED));
 
     // update page metadata
     NewsPageObject newsPageObject = new NewsPageObject(NEWS_METADATA_PAGE_OBJECT_TYPE, news.getId(), null, Long.parseLong(news.getSpaceId()));
@@ -484,7 +484,6 @@ public class NewsServiceImpl implements NewsService {
       news.setCanEdit(canEditNews(news, currentIdentity.getUserId()));
       news.setCanDelete(canDeleteNews(currentIdentity, news.getAuthor(), news.getSpaceId()));
       news.setCanPublish(NewsUtils.canPublishNews(news.getSpaceId(), currentIdentity));
-      news.setCanArchive(canArchiveNews(currentIdentity, news.getAuthor()));
       news.setTargets(newsTargetingService.getTargetsByNews(news));
       ExoSocialActivity activity = null;
       try {
@@ -522,8 +521,6 @@ public class NewsServiceImpl implements NewsService {
     if (filter != null) {
       if (StringUtils.isNotBlank(filter.getSearchText())) {
         // TODO
-      } else if (filter.isArchivedNews()) {
-        // TODO
       } else if (filter.isPublishedNews()) {
         newsList = getPublishedArticles(filter, currentIdentity);
       } else if (filter.isDraftNews()) {
@@ -542,7 +539,6 @@ public class NewsServiceImpl implements NewsService {
       news.setCanEdit(canEditNews(news, currentIdentity.getUserId()));
       news.setCanDelete(canDeleteNews(currentIdentity, news.getAuthor(), news.getSpaceId()));
       news.setCanPublish(NewsUtils.canPublishNews(news.getSpaceId(), currentIdentity));
-      news.setCanArchive(canArchiveNews(currentIdentity, news.getAuthor()));
     });
     return newsList;
   }
@@ -803,30 +799,6 @@ public class NewsServiceImpl implements NewsService {
       NewsUtils.broadcastEvent(NewsUtils.SHARE_NEWS, userIdentity.getRemoteId(), news);
     }
 
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public void archiveNews(String newsId, String currentUserName) throws Exception {
-
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public void unarchiveNews(String newsId, String currentUserName) throws Exception {
-
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public boolean canArchiveNews(Identity currentIdentity, String newsAuthor) {
-    return false;
   }
 
   private News createDraftArticleForNewPage(News draftArticle, String pageOwnerId, String draftArticleCreator) throws Exception {

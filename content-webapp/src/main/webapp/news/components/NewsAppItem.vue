@@ -104,15 +104,6 @@
         <a :href="news.url" :target="news.target">
           <p class="newsSummary" v-sanitized-html="news.newsText"></p>
         </a>
-        <div class="newsActions" v-if="!news.draft">
-          <exo-news-archive
-            v-if="news.canArchive"
-            :news-id="news.newsId"
-            :news-archived="news.archived"
-            :news-title="news.title"
-            :published="news.published"
-            @refresh-news-list="$emit('update-news-list', false)" />
-        </div>
       </div>
     </div>
   </div>

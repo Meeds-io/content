@@ -17,8 +17,7 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
- 
-import ExoNewsArchive  from './components/ExoNewsArchive.vue';
+
 import ExoNewsDetails  from './components/ExoNewsDetails.vue';
 import ExoNewsDetailsActionMenu from './components/ExoNewsDetailsActionMenu.vue';
 import ExoNewsDetailsActivity from './components/ExoNewsDetailsActivity.vue';
@@ -31,7 +30,6 @@ import ExoNewsEditPublishingDrawer from './components/ExoNewsEditPublishingDrawe
 import ExoNewsFavoriteAction from './components/ExoNewsFavoriteAction.vue';
 
 const components = {
-  'exo-news-archive': ExoNewsArchive,
   'exo-news-details': ExoNewsDetails,
   'exo-news-details-activity': ExoNewsDetailsActivity,
   'exo-news-details-action-menu': ExoNewsDetailsActionMenu,

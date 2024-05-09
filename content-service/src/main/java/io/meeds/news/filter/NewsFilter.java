@@ -30,8 +30,6 @@ public class NewsFilter {
 
   private boolean      publishedNews;
 
-  private boolean      archivedNews;
-
   private boolean      draftNews;
 
   private boolean      scheduledNews;
