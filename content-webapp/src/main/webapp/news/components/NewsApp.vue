@@ -283,7 +283,6 @@ export default {
       data.forEach((item) => {
         const newsPublicationDate = item.publicationDate != null ? new Date(item.publicationDate.time) : null;
         const newsUpdateDate = new Date(item.updateDate.time);
-        const activityId = item.activities ? item.activities.split(';')[0].split(':')[1] : '';
         result.push({
           newsId: item.id,
           newsText: this.getNewsText(item.summary, item.body),
@@ -296,7 +295,7 @@ export default {
           authorFullName: item.authorDisplayName,
           authorProfileURL: `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/profile/${item.author}`,
           viewsCount: item.viewsCount == null ? 0 : item.viewsCount,
-          activityId: activityId,
+          activityId: item.activityId,
           canEdit: item.canEdit,
           canDelete: item.canDelete,
           draft: item.publicationState === 'draft',
@@ -351,7 +350,17 @@ export default {
     deleteNews(news) {
       const deleteDelay = 6;
       const redirectionTime = 8100;
-      this.$newsServices.deleteNews(news.newsId, this.newsFilter === 'drafts', deleteDelay)
+      let newsObjectType;
+      if (this.newsFilter === 'drafts') {
+        if (news.activityId) {
+          newsObjectType = 'latest_draft';
+        } else {
+          newsObjectType = 'draft';
+        }
+      } else  {
+        newsObjectType = 'article';
+      }
+      this.$newsServices.deleteNews(news.newsId, newsObjectType, deleteDelay)
         .then(() => {
           const clickMessage = this.$t('news.details.undoDelete');
           const message = this.isDraftsFilter ? this.$t('news.details.deleteDraftSuccess') : this.$t('news.details.deleteSuccess');

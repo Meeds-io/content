@@ -375,11 +375,24 @@ public class NewsServiceImplTest {
     when(spaceService.canRedactOnSpace(space, identity)).thenReturn(true);
 
     // When
-    newsService.deleteNews(draftPage.getId(), identity, true);
+    newsService.deleteNews(draftPage.getId(), identity, NewsUtils.NewsObjectType.DRAFT.name().toLowerCase());
 
     // Then
     verify(noteService, times(1)).removeDraftById(draftPage.getId());
     verify(metadataService, times(1)).deleteMetadataItem(any(Long.class), anyBoolean());
+
+    // delete draft for existing page case
+    Page existingPage = mock(Page.class);
+    when(existingPage.getId()).thenReturn("1");
+    when(noteService.getNoteById(anyString())).thenReturn(existingPage);
+    when(noteService.getLatestDraftPageByUserAndTargetPageAndLang(anyLong(), anyString(), any())).thenReturn(draftPage);
+
+    // When
+    newsService.deleteNews(draftPage.getId(), identity, LATEST_DRAFT.name().toLowerCase());
+
+    // Then
+    verify(noteService, atLeast(1)).removeDraftById(draftPage.getId());
+    verify(metadataService, atLeast(1)).deleteMetadataItem(any(Long.class), anyBoolean());
   }
 
 
@@ -802,7 +815,7 @@ public class NewsServiceImplTest {
     when(pageVersion.getUpdatedDate()).thenReturn(new Date());
     when(pageVersion.getAuthorFullName()).thenReturn("full name");
     //
-    assertThrows(IllegalAccessException.class, () -> newsService.deleteNews(existingPage.getId(), identity, false));
+    assertThrows(IllegalAccessException.class, () -> newsService.deleteNews(existingPage.getId(), identity, ARTICLE.name().toLowerCase()));
 
     // when
     when(spaceService.canRedactOnSpace(space, identity)).thenReturn(true);
@@ -812,7 +825,7 @@ public class NewsServiceImplTest {
     when(noteService.getLatestDraftOfPage(existingPage, identity.getUserId())).thenReturn(draftPage);
     when(noteService.getDraftNoteById(anyString(), anyString())).thenReturn(draftPage);
 
-    newsService.deleteNews(existingPage.getId(), identity, false);
+    newsService.deleteNews(existingPage.getId(), identity, ARTICLE.name().toLowerCase());
 
     //Then
     verify(noteService, times(1)).deleteNote(existingPage.getWikiType(), existingPage.getWikiOwner(), existingPage.getName());
