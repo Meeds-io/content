@@ -43,18 +43,6 @@
   </component>
 
   <component>
-    <key>io.meeds.news.connector.NewsSearchConnector</key>
-    <type>io.meeds.news.connector.NewsSearchConnector</type>
-    <init-params>
-      <properties-param>
-        <name>constructor.params</name>
-        <property name="searchType" value="News"/>
-        <property name="displayName" value="News"/>
-      </properties-param>
-    </init-params>
-  </component>
-
-  <component>
     <key>NewsScheduleAndFilterDisplayingFeatureProperties</key>
     <type>org.exoplatform.container.ExtendedPropertyConfigurator</type>
     <init-params>

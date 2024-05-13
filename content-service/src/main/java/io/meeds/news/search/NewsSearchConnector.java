@@ -57,14 +57,17 @@ import org.exoplatform.social.metadata.tag.TagService;
 
 import io.meeds.news.filter.NewsFilter;
 
-public class NewsESSearchConnector {
-  private static final Log             LOG                          = ExoLogger.getLogger(NewsESSearchConnector.class);
+public class NewsSearchConnector {
+  private static final Log             LOG                          = ExoLogger.getLogger(NewsSearchConnector.class);
 
   private static final String          SEARCH_QUERY_FILE_PATH_PARAM = "query.file.path";
 
-  public static final String           SEARCH_QUERY_TERM            = "\"must\":{" + "  \"query_string\":{"
-      + "    \"fields\": [\"body\", \"posterName\"]," + "    \"default_operator\": \"AND\"," + "    \"query\": \"@term@\"" + "  }"
-      + "},";
+  public static final String           SEARCH_QUERY_TERM            = """
+                                                                      "must":{ "query_string" :{
+                                                                              "fields": ["body", "posterName"],
+                                                                              "default_operator": "AND",
+                                                                              "query": "@term@"}
+                                                                              },""";
 
   private final ConfigurationManager   configurationManager;
 
@@ -82,11 +85,11 @@ public class NewsESSearchConnector {
 
   private String                       searchQuery;
 
-  public NewsESSearchConnector(ConfigurationManager configurationManager,
-                               IdentityManager identityManager,
-                               ActivityStorage activityStorage,
-                               ElasticSearchingClient client,
-                               InitParams initParams) {
+  public NewsSearchConnector(ConfigurationManager configurationManager,
+                             IdentityManager identityManager,
+                             ActivityStorage activityStorage,
+                             ElasticSearchingClient client,
+                             InitParams initParams) {
     this.configurationManager = configurationManager;
     this.identityManager = identityManager;
     this.activityStorage = activityStorage;
@@ -125,7 +128,7 @@ public class NewsESSearchConnector {
   }
 
   private String buildQueryStatement(Identity viewerIdentity, Set<Long> streamFeedOwnerIds, NewsFilter filter) {
-    Map<String, List<String>> metadataFilters = buildMetadatasFilter(filter, viewerIdentity);
+    Map<String, List<String>> metadataFilters = buildMetadataFilter(filter, viewerIdentity);
     String termQuery = buildTermQueryStatement(filter.getSearchText());
     String favoriteQuery = buildFavoriteQueryStatement(metadataFilters.get(FavoriteService.METADATA_TYPE.getName()));
     String tagsQuery = buildTagsQueryStatement(metadataFilters.get(TagService.METADATA_TYPE.getName()));
@@ -194,10 +197,7 @@ public class NewsESSearchConnector {
 
         String portalName = PortalContainer.getCurrentPortalContainerName();
         String portalOwner = CommonsUtils.getCurrentPortalOwner();
-        StringBuilder newsUrl = new StringBuilder("");
-        newsUrl.append("/").append(portalName).append("/").append(portalOwner).append("/activity?id=").append(newsActivityId);
-        newsSearchResult.setNewsUrl(newsUrl.toString());
-
+        newsSearchResult.setNewsUrl("/" + portalName + "/" + portalOwner + "/activity?id=" + newsActivityId);
         newsSearchResult.setBody(body);
         newsSearchResult.setExcerpts(excerpts);
 
@@ -274,7 +274,7 @@ public class NewsESSearchConnector {
                               .toString();
   }
 
-  private Map<String, List<String>> buildMetadatasFilter(NewsFilter filter, Identity viewerIdentity) {
+  private Map<String, List<String>> buildMetadataFilter(NewsFilter filter, Identity viewerIdentity) {
     Map<String, List<String>> metadataFilters = new HashMap<>();
     if (filter.isFavorites()) {
       metadataFilters.put(FavoriteService.METADATA_TYPE.getName(), Collections.singletonList(viewerIdentity.getId()));
