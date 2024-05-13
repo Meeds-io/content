@@ -49,4 +49,6 @@ public class NewsFilter {
   private int          limit;
 
   private boolean      favorites;
+
+  private String       lang;
 }

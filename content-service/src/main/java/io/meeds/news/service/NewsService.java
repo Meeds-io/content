@@ -216,11 +216,11 @@ public interface NewsService {
    * Search news with the given text
    * 
    * @param filter news filter
-   * @param lang language
+   * @param currentIdentity current user identity
    * @throws Exception when error
    * @return List of News returned by the search
    */
-  List<News> searchNews(NewsFilter filter, String lang) throws Exception;
+  List<News> searchNews(NewsFilter filter, Identity currentIdentity) throws Exception;
 
   /**
    * Retrieves a news item identified by originating Activity identifier or a
