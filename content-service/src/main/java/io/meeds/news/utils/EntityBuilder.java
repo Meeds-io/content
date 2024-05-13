@@ -21,6 +21,7 @@ package io.meeds.news.utils;
 
 import javax.ws.rs.core.UriInfo;
 
+import io.meeds.news.model.News;
 import org.exoplatform.social.core.identity.model.Identity;
 import org.exoplatform.social.metadata.favorite.FavoriteService;
 import org.exoplatform.social.metadata.favorite.model.Favorite;

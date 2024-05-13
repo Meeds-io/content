@@ -57,7 +57,7 @@ import org.exoplatform.social.core.storage.api.ActivityStorage;
 import io.meeds.news.filter.NewsFilter;
 
 @RunWith(MockitoJUnitRunner.class)
-public class NewsESSearchConnectorTest {
+public class NewsSearchConnectorTest {
 
   private static final String ES_INDEX        = "news_alias";
 
@@ -104,7 +104,7 @@ public class NewsESSearchConnectorTest {
 
   @Test
   public void testSearchArguments() {
-    NewsESSearchConnector newsESSearchConnector = new NewsESSearchConnector(configurationManager,
+    NewsSearchConnector newsSearchConnector = new NewsSearchConnector(configurationManager,
                                                                             identityManager,
                                                                             activityStorage,
                                                                             client,
@@ -114,7 +114,7 @@ public class NewsESSearchConnectorTest {
     filter.setLimit(0);
     filter.setOffset(10);
     try {
-      newsESSearchConnector.search(null, filter);
+      newsSearchConnector.search(null, filter);
       fail("Should throw IllegalArgumentException: viewer identity is mandatory");
     } catch (IllegalArgumentException e) {
       // Expected
@@ -126,7 +126,7 @@ public class NewsESSearchConnectorTest {
       filter.setSearchText("term");
       filter.setLimit(-1);
       filter.setOffset(10);
-      newsESSearchConnector.search(identity, filter2);
+      newsSearchConnector.search(identity, filter2);
       fail("Should throw IllegalArgumentException: limit should be positive");
     } catch (IllegalArgumentException e) {
       // Expected
@@ -136,7 +136,7 @@ public class NewsESSearchConnectorTest {
       filter.setSearchText("term");
       filter.setLimit(0);
       filter.setOffset(-1);
-      newsESSearchConnector.search(identity, filter3);
+      newsSearchConnector.search(identity, filter3);
       fail("Should throw IllegalArgumentException: offset should be positive");
     } catch (IllegalArgumentException e) {
       // Expected
@@ -145,7 +145,7 @@ public class NewsESSearchConnectorTest {
 
   @Test
   public void testSearchNoResult() {
-    NewsESSearchConnector newsESSearchConnector = new NewsESSearchConnector(configurationManager,
+    NewsSearchConnector newsSearchConnector = new NewsSearchConnector(configurationManager,
                                                                             identityManager,
                                                                             activityStorage,
                                                                             client,
@@ -171,14 +171,14 @@ public class NewsESSearchConnectorTest {
                                           .replaceAll("@limit@", "10");
     lenient().when(client.sendRequest(eq(expectedESQuery), eq(ES_INDEX))).thenReturn("{}");
 
-    List<NewsESSearchResult> result = newsESSearchConnector.search(identity, filter);
+    List<NewsESSearchResult> result = newsSearchConnector.search(identity, filter);
     assertNotNull(result);
     assertEquals(0, result.size());
   }
 
   @Test
   public void testSearchWithResult() {
-    NewsESSearchConnector newsESSearchConnector = new NewsESSearchConnector(configurationManager,
+    NewsSearchConnector newsSearchConnector = new NewsSearchConnector(configurationManager,
                                                                             identityManager,
                                                                             activityStorage,
                                                                             client,
@@ -207,7 +207,7 @@ public class NewsESSearchConnectorTest {
     Identity rootIdentity = new Identity("organization", "root");
     lenient().when(identityManager.getOrCreateIdentity(OrganizationIdentityProvider.NAME, "posterId")).thenReturn(rootIdentity);
 
-    List<NewsESSearchResult> result = newsESSearchConnector.search(identity, filter);
+    List<NewsESSearchResult> result = newsSearchConnector.search(identity, filter);
     assertNotNull(result);
     assertEquals(2, result.size());
 
@@ -220,7 +220,7 @@ public class NewsESSearchConnectorTest {
 
   @Test
   public void testSearchWithIdentityResult() throws IOException {// NOSONAR
-    NewsESSearchConnector newsESSearchConnector = new NewsESSearchConnector(configurationManager,
+    NewsSearchConnector newsSearchConnector = new NewsSearchConnector(configurationManager,
                                                                             identityManager,
                                                                             activityStorage,
                                                                             client,
@@ -251,7 +251,7 @@ public class NewsESSearchConnectorTest {
     Identity poster = new Identity(OrganizationIdentityProvider.NAME, "posterId");
     lenient().when(identityManager.getOrCreateIdentity(OrganizationIdentityProvider.NAME, "posterId")).thenReturn(poster);
 
-    List<NewsESSearchResult> result = newsESSearchConnector.search(identity, filter);
+    List<NewsESSearchResult> result = newsSearchConnector.search(identity, filter);
     assertNotNull(result);
     assertEquals(1, result.size());
 

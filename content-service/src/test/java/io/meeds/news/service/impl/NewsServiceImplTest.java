@@ -48,6 +48,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
+import io.meeds.news.search.NewsSearchConnector;
+import io.meeds.news.search.NewsESSearchResult;
 import org.exoplatform.services.security.ConversationState;
 import org.exoplatform.social.core.utils.MentionUtils;
 import org.exoplatform.wiki.WikiException;
@@ -124,6 +126,9 @@ public class NewsServiceImplTest {
   @Mock
   private Identity                                     johnIdentity;
 
+  @Mock
+  private NewsSearchConnector newsSearchConnector;
+
   private NewsService                                  newsService;
 
   private static final MockedStatic<CommonsUtils>      COMMONS_UTILS      = mockStatic(CommonsUtils.class);
@@ -147,7 +152,8 @@ public class NewsServiceImplTest {
                                            identityManager,
                                            activityManager,
                                            wikiService,
-                                           uploadService);
+                                           uploadService,
+            newsSearchConnector);
 
     when(johnIdentity.getUserId()).thenReturn("john");
     ConversationState conversationState = mock(ConversationState.class);
@@ -893,6 +899,27 @@ public class NewsServiceImplTest {
     List<News> newsList = newsService.getNews(newsFilter, johnIdentity);
     assertNotNull(newsList);
     assertEquals(newsList.size(), 1);
+  }
+
+  @Test
+  public void searchNews() throws Exception {
+    List<NewsESSearchResult> results = new ArrayList<>();
+    NewsESSearchResult newsESSearchResult = new NewsESSearchResult();
+    newsESSearchResult.setId("1");
+    results.add(newsESSearchResult);
+    when(newsSearchConnector.search(any(), any())).thenReturn(results);
+    Map<String, String> properties = new HashMap<>();
+    properties.put(NEWS_PUBLICATION_STATE, "staged");
+    properties.put(NEWS_DELETED, String.valueOf(false));
+    MetadataItem metadataItem = mock(MetadataItem.class);
+    List<MetadataItem> metadataItems = List.of(metadataItem);
+    when(metadataItem.getObjectId()).thenReturn("1");
+    when(metadataItem.getProperties()).thenReturn(properties);
+    mockBuildArticle(metadataItems);
+    org.exoplatform.social.core.identity.model.Identity currentIdentity = mock(org.exoplatform.social.core.identity.model.Identity.class);
+    List<News> news = newsService.searchNews(new NewsFilter(), currentIdentity);
+    assertNotNull(news);
+    assertEquals(news.size(), 1);
   }
 
   private void mockBuildArticle(List<MetadataItem> metadataItems) throws WikiException {
