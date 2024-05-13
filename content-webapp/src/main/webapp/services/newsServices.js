@@ -243,11 +243,11 @@ export function canScheduleNews(spaceId) {
   }).then((resp) => resp && resp.ok && resp.json());
 }
 
-export function deleteNews(newsId, isDraft, delay) {
+export function deleteNews(newsId, newsObjectType, delay) {
   if (delay > 0) {
     localStorage.setItem('deletedNews', newsId);
   }
-  return fetch(`${newsConstants.NEWS_API}/${newsId}?isDraft=${isDraft || ''}&delay=${delay || 0}`, {
+  return fetch(`${newsConstants.NEWS_API}/${newsId}?type=${newsObjectType || ''}&delay=${delay || 0}`, {
     credentials: 'include',
     method: 'DELETE'
   }).then((resp) => {
