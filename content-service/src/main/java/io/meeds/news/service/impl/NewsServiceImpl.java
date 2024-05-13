@@ -41,6 +41,7 @@ import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.stream.Stream;
 
+import io.meeds.news.search.NewsSearchConnector;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 
@@ -61,6 +62,7 @@ import org.exoplatform.services.security.IdentityConstants;
 import org.exoplatform.social.common.RealtimeListAccess;
 import org.exoplatform.social.core.activity.model.ExoSocialActivity;
 import org.exoplatform.social.core.activity.model.ExoSocialActivityImpl;
+import org.exoplatform.social.core.identity.provider.OrganizationIdentityProvider;
 import org.exoplatform.social.core.manager.ActivityManager;
 import org.exoplatform.social.core.manager.IdentityManager;
 import org.exoplatform.social.core.space.model.Space;
@@ -179,27 +181,29 @@ public class NewsServiceImpl implements NewsService {
   public static final MetadataKey    NEWS_METADATA_KEY                      =
                                                        new MetadataKey(NEWS_METADATA_TYPE.getName(), NEWS_METADATA_NAME, 0);
 
-  private static final Log           LOG                                    = ExoLogger.getLogger(NewsServiceImpl.class);
+  private static final Log            LOG                                   = ExoLogger.getLogger(NewsServiceImpl.class);
 
-  private final SpaceService         spaceService;
+  private final SpaceService          spaceService;
 
-  private final NoteService          noteService;
+  private final NoteService           noteService;
 
-  private final MetadataService      metadataService;
+  private final MetadataService       metadataService;
 
-  private final FileService          fileService;
+  private final FileService           fileService;
 
-  private final UploadService        uploadService;
+  private final UploadService         uploadService;
 
-  private final NewsTargetingService newsTargetingService;
+  private final NewsTargetingService  newsTargetingService;
 
-  private final IndexingService      indexingService;
+  private final IndexingService       indexingService;
 
-  private final IdentityManager      identityManager;
+  private final IdentityManager       identityManager;
 
-  private final ActivityManager      activityManager;
+  private final ActivityManager       activityManager;
 
-  private final WikiService          wikiService;
+  private final WikiService           wikiService;
+
+  private final NewsSearchConnector newsSearchConnector;
 
   public NewsServiceImpl(SpaceService spaceService,
                          NoteService noteService,
@@ -210,7 +214,8 @@ public class NewsServiceImpl implements NewsService {
                          IdentityManager identityManager,
                          ActivityManager activityManager,
                          WikiService wikiService,
-                         UploadService uploadService) {
+                         UploadService uploadService,
+                         NewsSearchConnector newsSearchConnector) {
     this.spaceService = spaceService;
     this.noteService = noteService;
     this.metadataService = metadataService;
@@ -221,6 +226,7 @@ public class NewsServiceImpl implements NewsService {
     this.identityManager = identityManager;
     this.activityManager = activityManager;
     this.wikiService = wikiService;
+    this.newsSearchConnector = newsSearchConnector;
   }
 
   /**
@@ -520,7 +526,9 @@ public class NewsServiceImpl implements NewsService {
     List<News> newsList = new ArrayList<>();
     if (filter != null) {
       if (StringUtils.isNotBlank(filter.getSearchText())) {
-        // TODO
+        newsList =
+                 searchNews(filter,
+                            identityManager.getOrCreateIdentity(OrganizationIdentityProvider.NAME, currentIdentity.getUserId()));
       } else if (filter.isPublishedNews()) {
         newsList = getPublishedArticles(filter, currentIdentity);
       } else if (filter.isDraftNews()) {
@@ -630,8 +638,16 @@ public class NewsServiceImpl implements NewsService {
    * {@inheritDoc}
    */
   @Override
-  public List<News> searchNews(NewsFilter filter, String lang) throws Exception {
-    return new ArrayList<>();
+  public List<News> searchNews(NewsFilter filter,
+                               org.exoplatform.social.core.identity.model.Identity currentIdentity) throws Exception {
+    return newsSearchConnector.search(currentIdentity, filter).stream().map(articleSearchResult -> {
+      try {
+        return buildArticle(articleSearchResult.getId());
+      } catch (Exception e) {
+        LOG.error("Error while building news article", e);
+        return null;
+      }
+    }).toList();
   }
 
   /**
@@ -716,7 +732,7 @@ public class NewsServiceImpl implements NewsService {
    */
   @Override
   public List<NewsESSearchResult> search(org.exoplatform.social.core.identity.model.Identity currentIdentity, NewsFilter filter) {
-    return new ArrayList<>();
+    return newsSearchConnector.search(currentIdentity, filter);
   }
 
   /**
