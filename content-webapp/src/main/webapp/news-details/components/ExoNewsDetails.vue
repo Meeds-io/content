@@ -179,7 +179,7 @@ export default {
     deleteNews() {
       const deleteDelay = 6;
       const redirectionTime = 6100;
-      this.$newsServices.deleteNews(this.newsId, false, deleteDelay)
+      this.$newsServices.deleteNews(this.newsId, this.$newsConstants.newsObjectType.ARTICLE, deleteDelay)
         .then(() => {
           this.$root.$emit('confirm-news-deletion', this.news);
           const clickMessage = this.$t('news.details.undoDelete');
