@@ -950,11 +950,11 @@ public class NewsRestResourcesV1Test {
     lenient().when(spaceService.isSuperManager(eq(JOHN))).thenReturn(true);
 
     // When
-    Response response = newsRestResourcesV1.deleteNews(request, "1", false, 0L);
+    Response response = newsRestResourcesV1.deleteNews(request, "1", ARTICLE.name().toLowerCase(), 0L);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-    verify(newsService).deleteNews("1", currentIdentity, false);
+    verify(newsService).deleteNews("1", currentIdentity, ARTICLE.name().toLowerCase());
   }
 
   @Test
@@ -979,11 +979,11 @@ public class NewsRestResourcesV1Test {
     lenient().when(spaceService.isSuperManager(eq(JOHN))).thenReturn(true);
 
     // When
-    Response response = newsRestResourcesV1.deleteNews(request, "1", false, 0L);
+    Response response = newsRestResourcesV1.deleteNews(request, "1", ARTICLE.name().toLowerCase(), 0L);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-    verify(newsService).deleteNews("1", currentIdentity, false);
+    verify(newsService).deleteNews("1", currentIdentity, ARTICLE.name().toLowerCase());
   }
 
   @Test
@@ -1000,11 +1000,11 @@ public class NewsRestResourcesV1Test {
     lenient().when(spaceService.isSuperManager(eq(JOHN))).thenReturn(true);
 
     // When
-    Response response = newsRestResourcesV1.deleteNews(request, "1", false, 0L);
+    Response response = newsRestResourcesV1.deleteNews(request, "1", ARTICLE.name().toLowerCase(), 0L);
 
     // Then
     assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatus());
-    verify(newsService, never()).deleteNews("1", currentIdentity, false);
+    verify(newsService, never()).deleteNews("1", currentIdentity, ARTICLE.name().toLowerCase());
   }
 
   @Test
@@ -1022,11 +1022,11 @@ public class NewsRestResourcesV1Test {
     lenient().when(spaceService.isSuperManager(eq(JOHN))).thenReturn(true);
 
     // When
-    Response response = newsRestResourcesV1.deleteNews(request, null, false, 0L);
+    Response response = newsRestResourcesV1.deleteNews(request, null, ARTICLE.name().toLowerCase(), 0L);
 
     // Then
     assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
-    verify(newsService, never()).deleteNews("1", currentIdentity, false);
+    verify(newsService, never()).deleteNews("1", currentIdentity, ARTICLE.name().toLowerCase());
   }
 
   @Test
@@ -1611,7 +1611,7 @@ public class NewsRestResourcesV1Test {
     lenient().when(spaceService.isMember(any(Space.class), eq(JOHN))).thenReturn(true);
 
     // When
-    Response response = newsRestResourcesV1.deleteNews(request, news.getId(), false, 0);
+    Response response = newsRestResourcesV1.deleteNews(request, news.getId(), ARTICLE.name().toLowerCase(), 0);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
