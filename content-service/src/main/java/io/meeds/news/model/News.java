@@ -88,10 +88,6 @@ public class News {
 
   private String                          audience;
 
-  private boolean                         archived;
-
-  private boolean                         canArchive;
-
   private String                          spaceId;
 
   private String                          spaceDisplayName;

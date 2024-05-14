@@ -125,7 +125,6 @@ export default {
       newsFilter: '',
       spacesFilter: [],
       newsStatusLabel: this.$t('news.app.filter.all'),
-      showArchiveButton: true,
       showShareButton: true,
       loadingNews: true,
       initialized: false,
@@ -148,7 +147,6 @@ export default {
           { value: 'all', label: this.$t('news.app.filter.all') },
           { value: 'pinned', label: this.$t('news.app.filter.pinned') },
           { value: 'myPosted', label: this.$t('news.app.filter.myPosted') },
-          { value: 'archived', label: this.$t('news.app.filter.archived') },
           { value: 'drafts', label: this.$t('news.app.filter.drafts') },
           { value: 'scheduled', label: this.$t('news.app.filter.scheduled') }
         ];
@@ -301,11 +299,9 @@ export default {
           activityId: activityId,
           canEdit: item.canEdit,
           canDelete: item.canDelete,
-          archived: item.archived,
           draft: item.publicationState === 'draft',
           scheduled: item.publicationState === 'staged',
           schedulePostDate: item.schedulePostDate,
-          canArchive: item.canArchive,
           published: item.published,
           activities: item.activities,
           authorAvatarUrl: item.authorAvatarUrl,
