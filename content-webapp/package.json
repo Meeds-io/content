@@ -15,7 +15,7 @@
   "license": "LGPL",
   "devDependencies": {
     "babel-loader": "^8.3.0",
-    "eslint": "^8.12.0",
+    "eslint": "^8.42.0",
     "eslint-config-meedsio": "^1.0.5",
     "eslint-plugin-vue": "^8.6.0",
     "eslint-plugin-vuejs-accessibility": "^2.1.0",
