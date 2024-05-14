@@ -128,7 +128,7 @@ public class NewsRestResourcesV1 implements ResourceContainer, Startable {
   }
 
   private enum FilterType {
-    PINNED, MYPOSTED, ARCHIVED, DRAFTS, SCHEDULED, ALL
+    PINNED, MYPOSTED, DRAFTS, SCHEDULED, ALL
   }
 
   public NewsRestResourcesV1(NewsService newsService,
@@ -937,22 +937,6 @@ public class NewsRestResourcesV1 implements ResourceContainer, Startable {
       if (space == null) {
         return Response.status(Response.Status.NOT_FOUND).build();
       }
-
-      // TODO Move to service layer
-      if (updatedNews.isArchived() != news.isArchived()) {
-        boolean canArchiveOrUnarchiveNews = currentIdentity.isMemberOf(PLATFORM_WEB_CONTRIBUTORS_GROUP, PUBLISHER_MEMBERSHIP_NAME)
-            || currentIdentity.getUserId().equals(news.getAuthor());
-        if (!canArchiveOrUnarchiveNews) {
-          return Response.status(Response.Status.UNAUTHORIZED).build();
-        }
-        news.setArchived(updatedNews.isArchived());
-        if (news.isArchived()) {
-          newsService.archiveNews(id, currentIdentity.getUserId());
-        } else {
-          newsService.unarchiveNews(id, currentIdentity.getUserId());
-        }
-      }
-
       boolean isUpdatedTitle = (updatedNews.getTitle() != null) && !updatedNews.getTitle().equals(news.getTitle());
       boolean isUpdatedSummary = (updatedNews.getSummary() != null) && !updatedNews.getSummary().equals(news.getSummary());
       boolean isUpdatedBody = (updatedNews.getBody() != null) && !updatedNews.getBody().equals(news.getBody());
@@ -1058,11 +1042,6 @@ public class NewsRestResourcesV1 implements ResourceContainer, Startable {
         if (StringUtils.isNotEmpty(author)) {
           newsFilter.setAuthor(author);
         }
-        break;
-      }
-
-      case ARCHIVED: {
-        newsFilter.setArchivedNews(true);
         break;
       }
       case DRAFTS: {
