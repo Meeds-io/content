@@ -1034,14 +1034,18 @@ public class NewsServiceImpl implements NewsService {
                                                 NEWS_AUDIENCE,
                                                 NewsUtils.SPACE_NEWS_AUDIENCE,
                                                 NEWS_DELETED,
-                                                "false"));
+                                                "false",
+                                                NEWS_PUBLICATION_STATE,
+                                                POSTED));
     metadataFilter.setMetadataSpaceIds(NewsUtils.getMyFilteredSpacesIds(currentIdentity, filter.getSpaces()));
     metadataFilter.setCombinedMetadataProperties(Map.of(PUBLISHED,
                                                         "true",
                                                         NEWS_AUDIENCE,
                                                         NewsUtils.ALL_NEWS_AUDIENCE,
                                                         NEWS_DELETED,
-                                                        "false"));
+                                                        "false",
+                                                        NEWS_PUBLICATION_STATE,
+                                                        POSTED));
     return metadataService.getMetadataItemsByFilter(metadataFilter, filter.getOffset(), filter.getLimit())
                           .stream()
                           .map(article -> {
@@ -1067,7 +1071,9 @@ public class NewsServiceImpl implements NewsService {
                                                         NEWS_AUDIENCE,
                                                         NewsUtils.ALL_NEWS_AUDIENCE,
                                                         NEWS_DELETED,
-                                                        "false"));
+                                                        "false",
+                                                        NEWS_PUBLICATION_STATE,
+                                                        POSTED));
     return metadataService.getMetadataItemsByFilter(metadataFilter, filter.getOffset(), filter.getLimit())
                           .stream()
                           .map(article -> {
@@ -1114,7 +1120,9 @@ public class NewsServiceImpl implements NewsService {
                                                         NEWS_AUDIENCE,
                                                         NewsUtils.ALL_NEWS_AUDIENCE,
                                                         NEWS_DELETED,
-                                                        "false"));
+                                                        "false",
+                                                        NEWS_PUBLICATION_STATE,
+                                                        POSTED));
     return metadataService.getMetadataItemsByFilter(metadataFilter, filter.getOffset(), filter.getLimit())
                           .stream()
                           .map(article -> {
