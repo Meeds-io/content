@@ -875,13 +875,13 @@ public class NewsRestResourcesV1Test {
     Space space1 = new Space();
     space1.setId("1");
     space1.setPrettyName("space1");
-    lenient().when(newsService.getNewsById(anyString(), any(), anyBoolean())).thenReturn(news);
+    lenient().when(newsService.getNewsById(anyString(), any(), anyBoolean(),  anyString())).thenReturn(news);
     lenient().when(spaceService.getSpaceById(anyString())).thenReturn(space1);
     lenient().when(spaceService.isMember(any(Space.class), eq(JOHN))).thenReturn(true);
     lenient().when(spaceService.isSuperManager(eq(JOHN))).thenReturn(true);
 
     // When
-    Response response = newsRestResourcesV1.scheduleNews(request, news);
+    Response response = newsRestResourcesV1.scheduleNews(request, ARTICLE.name().toLowerCase(), news);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
