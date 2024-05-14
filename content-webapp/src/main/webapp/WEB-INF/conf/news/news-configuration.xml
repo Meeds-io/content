@@ -42,18 +42,6 @@
     <type>io.meeds.news.rest.NewsTargetingRestResourcesV1</type>
   </component>
 
-  <component>
-    <key>NewsScheduleAndFilterDisplayingFeatureProperties</key>
-    <type>org.exoplatform.container.ExtendedPropertyConfigurator</type>
-    <init-params>
-      <properties-param>
-        <name>NewsScheduleAndFilterDisplayingFeatureProperties</name>
-        <description>Schedule and filter options displaying Feature enablement flag</description>
-        <property name="exo.feature.newsScheduleAndFilterDisplaying.enabled" value="${exo.feature.newsScheduleAndFilterDisplaying.enabled:false}"/>
-      </properties-param>
-    </init-params>
-  </component>
-  
   <external-component-plugins>
     <target-component>org.exoplatform.services.resources.ResourceBundleService</target-component>
     <component-plugin>
