@@ -142,17 +142,12 @@ export default {
   },
   computed: {
     filterOptions() {
-      if (this.newsScheduleAndFilterDisplaying) {
-        return [
-          { value: 'all', label: this.$t('news.app.filter.all') },
-          { value: 'pinned', label: this.$t('news.app.filter.pinned') },
-          { value: 'myPosted', label: this.$t('news.app.filter.myPosted') },
-          { value: 'drafts', label: this.$t('news.app.filter.drafts') },
-          { value: 'scheduled', label: this.$t('news.app.filter.scheduled') }
-        ];
-      }
       return [
+        { value: 'all', label: this.$t('news.app.filter.all') },
+        { value: 'pinned', label: this.$t('news.app.filter.pinned') },
+        { value: 'myPosted', label: this.$t('news.app.filter.myPosted') },
         { value: 'drafts', label: this.$t('news.app.filter.drafts') },
+        { value: 'scheduled', label: this.$t('news.app.filter.scheduled') }
       ];
     },
     notFoundMessage() {
@@ -213,31 +208,28 @@ export default {
     }
   },
   created() {
-    this.$featureService.isFeatureEnabled('newsScheduleAndFilterDisplaying').then(enabled => {
-      this.newsScheduleAndFilterDisplaying = enabled;
-      const filterQueryParam = this.getQueryParam('filter');
-      const searchQueryParam = this.getQueryParam('search');
-      const spacesFilterParam = this.getQueryParam('spaces')?.split('_');
-      if (filterQueryParam || searchQueryParam || spacesFilterParam) {
-        if (filterQueryParam) {
-          // set filter value, which will trigger news fetching
-          this.newsFilter = filterQueryParam;
-        }
-        if (searchQueryParam) {
-          // set search value
-          this.searchText = searchQueryParam;
-        }
-        if (spacesFilterParam) {
-          // set search value
-          this.spacesFilter = spacesFilterParam;
-        }
-
-      } else if (filterQueryParam === null) {
-        this.newsFilter = this.filterOptions[0].value;
-      } else {
-        this.fetchNews();
+    const filterQueryParam = this.getQueryParam('filter');
+    const searchQueryParam = this.getQueryParam('search');
+    const spacesFilterParam = this.getQueryParam('spaces')?.split('_');
+    if (filterQueryParam || searchQueryParam || spacesFilterParam) {
+      if (filterQueryParam) {
+        // set filter value, which will trigger news fetching
+        this.newsFilter = filterQueryParam;
       }
-    });
+      if (searchQueryParam) {
+        // set search value
+        this.searchText = searchQueryParam;
+      }
+      if (spacesFilterParam) {
+        // set search value
+        this.spacesFilter = spacesFilterParam;
+      }
+
+    } else if (filterQueryParam === null) {
+      this.newsFilter = this.filterOptions[0].value;
+    } else {
+      this.fetchNews();
+    }
 
     this.$root.$on('activity-shared', (activityId, spaces, selectedApps) => {
       if (selectedApps === 'newsApp' && activityId && spaces && spaces.length > 0) {
