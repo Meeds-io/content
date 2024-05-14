@@ -863,6 +863,25 @@ public class NewsServiceImplTest {
     verify(noteService, times(1)).createNote(any(Wiki.class), anyString(), any(Page.class), any(Identity.class));
   }
 
+  @Test
+  public void testGetScheduledArticles() throws Exception {
+    NewsFilter newsFilter = new NewsFilter();
+    newsFilter.setScheduledNews(true);
+    Map<String, String> properties = new HashMap<>();
+    properties.put(NEWS_PUBLICATION_STATE, "staged");
+    properties.put(NEWS_DELETED, String.valueOf(false));
+    MetadataItem metadataItem = mock(MetadataItem.class);
+    List<MetadataItem> metadataItems = List.of(metadataItem);
+    when(metadataItem.getObjectId()).thenReturn("1");
+    when(metadataItem.getProperties()).thenReturn(properties);
+
+    mockBuildArticle(metadataItems);
+
+    List<News> newsList = newsService.getNews(newsFilter, johnIdentity);
+    assertNotNull(newsList);
+    assertEquals(newsList.size(), 1);
+  }
+
   private void mockBuildArticle(List<MetadataItem> metadataItems) throws WikiException {
     when(metadataService.getMetadataItemsByFilter(any(), anyLong(), anyLong())).thenReturn(metadataItems);
     Page page = new Page();
