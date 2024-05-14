@@ -52,7 +52,7 @@ export function getNewsByActivityId(activityId) {
 }
 
 export function getNewsSpaces(newsId) {
-  return fetch(`${newsConstants.NEWS_API}/${newsId}?fields=spaces`, {
+  return fetch(`${newsConstants.NEWS_API}/${newsId}?fields=spaces&type=article`, {
     credentials: 'include',
     method: 'GET',
   }).then((resp) => resp.json()).then(resp => {
