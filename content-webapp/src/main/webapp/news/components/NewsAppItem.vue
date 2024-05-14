@@ -167,8 +167,19 @@ export default {
     },
   },
   methods: {
+    getEditUrl(news) {
+      let editUrl = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news/editor?newsId=${news.newsId}`;
+      if (news.spaceId) {
+        editUrl += `&spaceId=${news.spaceId}`;
+      }
+      if (news.activityId) {
+        editUrl += `&activityId=${news.activityId}`;
+      }
+      editUrl += `&type=${news.activityId && 'latest_draft' || 'draft'}`;
+      return editUrl;
+    },
     editLink(news) {
-      const editUrl = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news/editor?spaceId=${news.spaceId}&newsId=${news.newsId}&activityId=${news.activityId}&type=${news.type}`;
+      const editUrl = this.getEditUrl(news);
       window.open(editUrl, '_blank');
     },
     deleteConfirmDialog() {
