@@ -35,7 +35,7 @@
   </modules>
 
   <properties>
-    <addon.exo.notes.version>7.0.x-meed-SNAPSHOT</addon.exo.notes.version>
+    <addon.exo.notes.version>7.0.0-meed-20240515</addon.exo.notes.version>
     <pitest.version>1.4.10</pitest.version>
     <sonar.organization>meeds-io</sonar.organization>
     <exo.snapshots.repo.url>https://repository.exoplatform.org/content/repositories/meeds-snapshots</exo.snapshots.repo.url>
