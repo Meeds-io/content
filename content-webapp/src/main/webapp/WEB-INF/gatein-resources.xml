@@ -99,9 +99,6 @@
         <as>$</as>
       </depends>
       <depends>
-        <module>socialUtil</module>
-      </depends>
-      <depends>
         <module>suggester</module>
       </depends>
       <depends>
@@ -137,9 +134,6 @@
       </depends>
       <depends>
         <module>latestNews</module>
-      </depends>
-      <depends>
-        <module>socialUtil</module>
       </depends>
       <depends>
         <module>jquery</module>
@@ -301,20 +295,7 @@
       <module>ScheduleNewsDrawer</module>
     </depends>
     <depends>
-      <module>documentPreview</module>
-    </depends>
-    <depends>
       <module>suggester</module>
-    </depends>
-    <depends>
-      <module>file_drop</module>
-    </depends>
-    <depends>
-      <module>LegacyComposerAttachments</module>
-      <as>attachmentsApp</as>
-    </depends>
-    <depends>
-      <module>AttachmentIntegration</module>
     </depends>
   </module>
 
