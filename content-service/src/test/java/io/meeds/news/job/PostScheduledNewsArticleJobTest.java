@@ -31,7 +31,7 @@ import io.meeds.news.model.News;
 import io.meeds.news.service.NewsService;
 
 @RunWith(MockitoJUnitRunner.class)
-public class NewsPublicationJobTest {
+public class PostScheduledNewsArticleJobTest {
 
   @Mock
   private MetadataService    metadataService;
