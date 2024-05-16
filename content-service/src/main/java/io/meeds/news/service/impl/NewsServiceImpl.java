@@ -256,7 +256,11 @@ public class NewsServiceImpl implements NewsService {
 
   @Override
   public News postNews(News news, String poster) throws Exception {
-    news = createNewsArticlePage(news, poster);
+    if (news.getPublicationState().equals(STAGED)) {
+      news = postScheduledArticle(news);
+    } else {
+      news = createNewsArticlePage(news, poster);
+    }
     postNewsActivity(news);
     sendNotification(poster, news, NotificationConstants.NOTIFICATION_CONTEXT.POST_NEWS);
     if (news.isPublished()) {
@@ -406,6 +410,9 @@ public class NewsServiceImpl implements NewsService {
       Calendar updateCalendar = Calendar.getInstance();
       Date newsPublicationDate = updateCalendar.getTime();
       properties.put(NEWS_PUBLICATION_DATE, String.valueOf(newsPublicationDate));
+      if (StringUtils.isNotEmpty(newsToPublish.getAudience())) {
+        properties.put(NEWS_AUDIENCE, news.getAudience());
+      }
       metadataItem.setProperties(properties);
       String publisherId = identityManager.getOrCreateUserIdentity(publisherIdentity.getUserId()).getId();
       metadataService.updateMetadataItem(metadataItem, Long.parseLong(publisherId));
@@ -2081,5 +2088,23 @@ public class NewsServiceImpl implements NewsService {
       }
     }
     return false;
+  }
+
+  private News postScheduledArticle(News news) throws ObjectNotFoundException {
+    NewsPageObject newsPageObject = new NewsPageObject(NEWS_METADATA_PAGE_OBJECT_TYPE, news.getId(), null, Long.parseLong(news.getSpaceId()));
+    MetadataItem metadataItem = metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY, newsPageObject).stream().findFirst().orElse(null);
+    if (metadataItem == null) {
+      throw new ObjectNotFoundException("Metadata items not found for news " + news.getId());
+    }
+    Map<String, String> properties = metadataItem.getProperties();
+    if (properties != null) {
+      properties.put(NEWS_PUBLICATION_STATE, POSTED);
+      properties.remove(SCHEDULE_POST_DATE);
+      String poster = identityManager.getOrCreateUserIdentity(news.getAuthor()).getId();
+      metadataService.updateMetadataItem(metadataItem, Long.parseLong(poster));
+      news.setSchedulePostDate(null);
+      return news;
+    }
+    return null;
   }
 }
