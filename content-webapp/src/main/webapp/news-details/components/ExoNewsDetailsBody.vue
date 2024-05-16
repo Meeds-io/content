@@ -149,14 +149,16 @@
           <div v-show="attachments && attachments.length" class="newsAttachmentsTitle">
             {{ $t('news.details.attachments.title') }} ({{ attachments ? attachments.length : 0 }})
           </div>
-
-          <div v-show="attachments && attachments.length" class="newsAttachments">
-            <div
-              v-for="attachedFile in attachments"
-              :key="attachedFile.id"
-              class="newsAttachment">
-              <exo-attachment-item :file="attachedFile" />
-            </div>
+          <div
+            v-show="attachments?.length"
+            class="newsAttachments">
+            <extension-registry-components
+              :params="attachments"
+              name="NewsDetails"
+              type="news-details-attachments"
+              element="div"
+              element-class="newsAttachment text-truncate"
+              class="d-flex" />
           </div>
         </div>
       </div>
@@ -284,25 +286,6 @@ export default {
     },
     refreshTranslationExtensions() {
       this.translateExtension = extensionRegistry.loadExtensions('news', 'translation-menu-extension')[0];
-    },
-
-    /**
-     * Hack to hide the document preview comments panel because the document preview component
-     * does not allow to hide it through its API
-     * @returns {void} when the comments panel appeared and has been hidden
-     */
-    hideDocPreviewComments() {
-      const intervalCheck = 100;
-
-      const commentsPanel = document.querySelector('.uiDocumentPreview .commentArea');
-      const collapsedCommentsButton = document.querySelector('.uiDocumentPreview .resizeButton');
-      if (commentsPanel != null && collapsedCommentsButton != null) {
-        commentsPanel.style.display = 'none';
-        collapsedCommentsButton.style.display = 'none';
-        document.querySelector('.uiDocumentPreview').classList += ' collapsed';
-      } else {
-        setTimeout(this.hideDocPreviewComments, intervalCheck);
-      }
     }
   }
 };
