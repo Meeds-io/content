@@ -32,6 +32,7 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -159,9 +160,6 @@ public class NewsServiceImpl implements NewsService {
 
   /** The Constant NEWS_ACTIVITY_POSTED. */
   public static final String         NEWS_ACTIVITY_POSTED                   = "activityPosted";
-
-  /** The Constant NEWS_PUBLICATION_DATE. */
-  public static final String         NEWS_PUBLICATION_DATE                  = "publicationDate";
 
   /** The Constant NEWS_METADATA_PAGE_OBJECT_TYPE. */
   public static final String         NEWS_METADATA_PAGE_OBJECT_TYPE         = "newsPage";
@@ -407,9 +405,6 @@ public class NewsServiceImpl implements NewsService {
         properties = new HashMap<>();
       }
       properties.put(PUBLISHED, String.valueOf(true));
-      Calendar updateCalendar = Calendar.getInstance();
-      Date newsPublicationDate = updateCalendar.getTime();
-      properties.put(NEWS_PUBLICATION_DATE, String.valueOf(newsPublicationDate));
       if (StringUtils.isNotEmpty(newsToPublish.getAudience())) {
         properties.put(NEWS_AUDIENCE, news.getAudience());
       }
@@ -448,7 +443,6 @@ public class NewsServiceImpl implements NewsService {
       Map<String, String> properties = newsMetadataItem.getProperties();
       if (properties != null) {
         properties.put(PUBLISHED, String.valueOf(false));
-        properties.remove(NEWS_PUBLICATION_DATE);
         properties.remove(NEWS_AUDIENCE);
       }
       newsMetadataItem.setProperties(properties);
@@ -560,7 +554,7 @@ public class NewsServiceImpl implements NewsService {
     } else {
       throw new Exception("Unable to build query, filter is null");
     }
-    newsList.stream().filter(Objects::nonNull).forEach(news -> {
+    newsList.stream().filter(Objects::nonNull).sorted(Comparator.comparing(News::getUpdateDate)).forEach(news -> {
       news.setCanEdit(canEditNews(news, currentIdentity.getUserId()));
       news.setCanDelete(canDeleteNews(currentIdentity, news.getAuthor(), news.getSpaceId()));
       news.setCanPublish(NewsUtils.canPublishNews(news.getSpaceId(), currentIdentity));
@@ -1016,6 +1010,9 @@ public class NewsServiceImpl implements NewsService {
                                                              .findFirst()
                                                              .orElse(null);
       buildDraftArticleProperties(draftArticle, draftArticleMetadataItem);
+      if (draftArticlePage.getTargetPageId() != null) {
+        draftArticle.setPublicationDate(noteService.getNoteById(draftArticlePage.getTargetPageId()).getCreatedDate());
+      }
       return draftArticle;
     }
     return null;
@@ -1052,6 +1049,9 @@ public class NewsServiceImpl implements NewsService {
           String[] activities = properties.get(NEWS_ACTIVITIES).split(";");
           String newsActivityId = activities[0].split(":")[1];
           draftArticle.setActivityId(newsActivityId);
+        }
+        if (properties.containsKey(NEWS_VIEWS) && StringUtils.isNotEmpty(properties.get(NEWS_VIEWS))) {
+          draftArticle.setViewsCount(Long.parseLong(properties.get(NEWS_VIEWS)));
         }
       }
     }
@@ -1765,17 +1765,6 @@ public class NewsServiceImpl implements NewsService {
         if (properties.containsKey(PUBLISHED) && StringUtils.isNotEmpty(properties.get(PUBLISHED))) {
           news.setPublished(Boolean.valueOf(properties.get(PUBLISHED)));
         }
-        if (properties.containsKey(NEWS_PUBLICATION_DATE) && StringUtils.isNotEmpty(properties.get(NEWS_PUBLICATION_DATE))) {
-          try {
-            SimpleDateFormat format = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy");
-            Date date = format.parse(properties.get(NEWS_PUBLICATION_DATE));
-            news.setPublicationDate(date);
-          } catch (Exception exception) {
-            LOG.warn("failed to parse news published date for article with id " + news.getId());
-          }
-        } else {
-          news.setPublicationDate(articlePage.getCreatedDate());
-        }
         if (properties.containsKey(NEWS_VIEWS) && StringUtils.isNotEmpty(properties.get(NEWS_VIEWS))) {
           news.setViewsCount(Long.parseLong(properties.get(NEWS_VIEWS)));
         }
@@ -1784,6 +1773,7 @@ public class NewsServiceImpl implements NewsService {
         } else {
           news.setActivityPosted(false);
         }
+        news.setPublicationDate(articlePage.getCreatedDate());
         news.setDeleted(articlePage.isDeleted());
         news.setUrl(NewsUtils.buildNewsArticleUrl(news, currentUsername));
       }
