@@ -922,6 +922,48 @@ public class NewsServiceImplTest {
     assertEquals(news.size(), 1);
   }
 
+  @Test
+  public void testUnScheduleNews() throws Exception {
+    NewsFilter newsFilter = new NewsFilter();
+    newsFilter.setScheduledNews(true);
+    Map<String, String> properties = new HashMap<>();
+    properties.put(SCHEDULE_POST_DATE, "05/05/2024 08:00:00 +0100");
+    MetadataItem metadataItem = mock(MetadataItem.class);
+    List<MetadataItem> metadataItems = List.of(metadataItem);
+    when(metadataItem.getProperties()).thenReturn(properties);
+
+    mockBuildArticle(metadataItems);
+    Space space = mockSpace();
+    Wiki wiki = mock(Wiki.class);
+    when(wikiService.getWikiByTypeAndOwner(anyString(), anyString())).thenReturn(wiki);
+    org.exoplatform.wiki.model.Page rootPage = mock(org.exoplatform.wiki.model.Page.class);
+    when(rootPage.getName()).thenReturn(NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME);
+    when(rootPage.getId()).thenReturn("1");
+    when(noteService.getNoteOfNoteBookByName("group",
+            space.getGroupId(),
+            NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME)).thenReturn(rootPage);
+
+    News newsArticle = mock(News.class);
+    when(newsArticle.getId()).thenReturn("1");
+
+    DraftPage draftPage = mock(DraftPage.class);
+    when(draftPage.getUpdatedDate()).thenReturn(new Date());
+    when(draftPage.getCreatedDate()).thenReturn(new Date());
+    when(draftPage.getAuthor()).thenReturn("john");
+    when(draftPage.getId()).thenReturn("1");
+    when(noteService.createDraftForNewPage(any(DraftPage.class), anyLong())).thenReturn(draftPage);
+
+    org.exoplatform.social.core.identity.model.Identity identity1 =
+            mock(org.exoplatform.social.core.identity.model.Identity.class);
+    when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(identity1);
+    when(identity1.getId()).thenReturn("1");
+
+    newsService.unScheduleNews(newsArticle, space.getGroupId(), mockIdentity());
+
+    verify(noteService, times(1)).createDraftForNewPage(any(DraftPage.class), anyLong());
+    verify(noteService, times(1)).deleteNote(anyString(), anyString(), anyString());
+  }
+
   private void mockBuildArticle(List<MetadataItem> metadataItems) throws WikiException {
     when(metadataService.getMetadataItemsByFilter(any(), anyLong(), anyLong())).thenReturn(metadataItems);
     Page page = new Page();
@@ -930,6 +972,8 @@ public class NewsServiceImplTest {
     page.setId("1");
     page.setAuthor("john");
     page.setWikiOwner("/space/groupId");
+    page.setName("article name");
+    page.setWikiType("group");
     Space space = mock(Space.class);
     when(space.getId()).thenReturn("1");
     when(space.getGroupId()).thenReturn("/space/groupId");
