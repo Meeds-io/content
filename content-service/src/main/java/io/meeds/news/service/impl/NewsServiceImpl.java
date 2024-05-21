@@ -248,7 +248,7 @@ public class NewsServiceImpl implements NewsService {
       if (POSTED.equals(news.getPublicationState())) {
         createdNews = postNews(news, currentIdentity.getUserId());
       } else if (news.getSchedulePostDate() != null) {
-        createdNews = unScheduleNews(news, space.getGroupId(), currentIdentity);
+        createdNews = unScheduleNews(news, space.getGroupId(), currentIdentity.getUserId());
       } else {
         createdNews = createDraftArticleForNewPage(news, space.getGroupId(), currentIdentity.getUserId(), System.currentTimeMillis());
       }
@@ -386,7 +386,11 @@ public class NewsServiceImpl implements NewsService {
         }
       }
     } else {
-      deleteArticle(news, currentIdentity);
+      deleteArticle(news, currentIdentity.getUserId());
+      if (news.getActivities() != null) {
+        String newsActivities = news.getActivities();
+        Stream.of(newsActivities.split(";")).map(activity -> activity.split(":")[1]).forEach(activityManager::deleteActivity);
+      }
       MetadataObject newsMetadataObject = new MetadataObject(NewsUtils.NEWS_METADATA_OBJECT_TYPE, newsId);
       metadataService.deleteMetadataItemsByObject(newsMetadataObject);
       indexingService.unindex(NewsIndexingServiceConnector.TYPE, String.valueOf(news.getId()));
@@ -738,14 +742,14 @@ public class NewsServiceImpl implements NewsService {
    * {@inheritDoc}
    */
   @Override
-  public News unScheduleNews(News news, String pageOwnerId, Identity currentIdentity) throws Exception {
+  public News unScheduleNews(News news, String pageOwnerId, String articleCreator) throws Exception {
     News existingNews = getNewsArticleById(news.getId());
     if (existingNews != null) {
       Map<String, String> illustrationInfo = getArticleIllustrationInfo(news);
 
       news.setId(null);
       news.setUploadId(null);
-      news = createDraftArticleForNewPage(news, pageOwnerId, currentIdentity.getUserId(), System.currentTimeMillis());
+      news = createDraftArticleForNewPage(news, pageOwnerId, articleCreator, System.currentTimeMillis());
 
       if (!MapUtils.isEmpty(illustrationInfo)) {
         MetadataItem draftMetadataItem = metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY, new NewsDraftObject(NEWS_METADATA_DRAFT_OBJECT_TYPE, news.getId(), null, Long.parseLong(news.getSpaceId()))).stream().findFirst().orElse(null);
@@ -760,11 +764,11 @@ public class NewsServiceImpl implements NewsService {
           draftProperties.put(NEWS_ILLUSTRATION_ID, illustrationInfo.get(NEWS_ILLUSTRATION_ID));
         }
         draftMetadataItem.setProperties(draftProperties);
-        String draftArticleMetadataItemUpdaterIdentityId = identityManager.getOrCreateUserIdentity(currentIdentity.getUserId()).getId();
+        String draftArticleMetadataItemUpdaterIdentityId = identityManager.getOrCreateUserIdentity(articleCreator).getId();
         metadataService.updateMetadataItem(draftMetadataItem, Long.parseLong(draftArticleMetadataItemUpdaterIdentityId));
       }
-      deleteArticle(existingNews, currentIdentity);
-      return buildDraftArticle(news.getId(), currentIdentity.getUserId());
+      deleteArticle(existingNews, articleCreator);
+      return buildDraftArticle(news.getId(), articleCreator);
     }
     return null;
   }
@@ -1117,6 +1121,80 @@ public class NewsServiceImpl implements NewsService {
     String draftArticleMetadataItemCreatorIdentityId = identityManager.getOrCreateUserIdentity(updater).getId();
     metadataService.createMetadataItem(latestDraftObject, NEWS_METADATA_KEY, draftArticleMetadataItemProperties, Long.parseLong(draftArticleMetadataItemCreatorIdentityId));
     return draftArticle;
+  }
+  
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public void deleteArticle(News news, String articleCreator) throws Exception {
+    Page articlePage = noteService.getNoteById(news.getId());
+    if (articlePage != null && !articlePage.isDeleted()) {
+      boolean hasDraft = true;
+      while (hasDraft) {
+        try {
+          DraftPage latestDraftPage = noteService.getLatestDraftOfPage(articlePage, articleCreator);
+          if (latestDraftPage != null) {
+            deleteDraftArticle(latestDraftPage.getId(), articleCreator, true);
+          } else {
+            hasDraft = false;
+          }
+        } catch (Exception exception) {
+          hasDraft = false;
+        }
+      }
+      boolean isDeleted = noteService.deleteNote(articlePage.getWikiType(), articlePage.getWikiOwner(), articlePage.getName());
+      if (isDeleted) {
+        NewsPageObject newsPageMetadataObject = new NewsPageObject(NEWS_METADATA_PAGE_OBJECT_TYPE,
+                                                                   news.getId(),
+                                                                   null,
+                                                                   Long.parseLong(news.getSpaceId()));
+        MetadataItem metadataItem = metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY, newsPageMetadataObject)
+                                                   .stream()
+                                                   .findFirst()
+                                                   .orElse(null);
+        if (metadataItem != null) {
+          Map<String, String> properties = metadataItem.getProperties();
+          properties.put(NEWS_DELETED, String.valueOf(true));
+          metadataItem.setProperties(properties);
+          String currentIdentityId = identityManager.getOrCreateUserIdentity(articleCreator).getId();
+          metadataService.updateMetadataItem(metadataItem, Long.parseLong(currentIdentityId));
+        }
+      }
+    }
+  }
+  
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public void deleteDraftArticle(String draftArticleId,
+                                  String draftArticleCreator,
+                                  boolean deleteIllustration) throws Exception {
+    DraftPage draftArticlePage = noteService.getDraftNoteById(draftArticleId, draftArticleCreator);
+    if (draftArticlePage != null) {
+      noteService.removeDraftById(draftArticlePage.getId());
+      Space draftArticleSpace = spaceService.getSpaceByGroupId(draftArticlePage.getWikiOwner());
+      MetadataObject draftArticleMetaDataObject = new MetadataObject(draftArticlePage.getTargetPageId() != null ? NEWS_METADATA_LATEST_DRAFT_OBJECT_TYPE : NEWS_METADATA_DRAFT_OBJECT_TYPE,
+              draftArticlePage.getId(),
+              draftArticlePage.getTargetPageId(),
+              Long.parseLong(draftArticleSpace.getId()));
+      List<MetadataItem> draftArticleMetadataItems =
+                                                   metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY,
+                                                                                                       draftArticleMetaDataObject);
+      if (draftArticleMetadataItems != null && !draftArticleMetadataItems.isEmpty()) {
+        Map<String, String> draftArticleMetadataItemProperties = draftArticleMetadataItems.get(0).getProperties();
+        if (deleteIllustration) {
+          if (draftArticleMetadataItemProperties != null && draftArticleMetadataItemProperties.containsKey(NEWS_ILLUSTRATION_ID)
+              && draftArticleMetadataItemProperties.get(NEWS_ILLUSTRATION_ID) != null) {
+            FileItem draftArticleIllustrationFileItem =
+                                                      fileService.getFile(Long.parseLong(draftArticleMetadataItemProperties.get(NEWS_ILLUSTRATION_ID)));
+            fileService.deleteFile(draftArticleIllustrationFileItem.getFileInfo().getId());
+          }
+        }
+        metadataService.deleteMetadataItem(draftArticleMetadataItems.get(0).getId(), false);
+      }
+    }
   }
 
   private News updateDraftArticleForNewPage(News draftArticle, String draftArticleUpdater) throws WikiException,
@@ -1504,35 +1582,6 @@ public class NewsServiceImpl implements NewsService {
                             }
                           })
                           .toList();
-  }
-
-  private void deleteDraftArticle(String draftArticleId,
-                                  String draftArticleCreator,
-                                  boolean deleteIllustration) throws Exception {
-    DraftPage draftArticlePage = noteService.getDraftNoteById(draftArticleId, draftArticleCreator);
-    if (draftArticlePage != null) {
-      noteService.removeDraftById(draftArticlePage.getId());
-      Space draftArticleSpace = spaceService.getSpaceByGroupId(draftArticlePage.getWikiOwner());
-      MetadataObject draftArticleMetaDataObject = new MetadataObject(draftArticlePage.getTargetPageId() != null ? NEWS_METADATA_LATEST_DRAFT_OBJECT_TYPE : NEWS_METADATA_DRAFT_OBJECT_TYPE,
-              draftArticlePage.getId(),
-              draftArticlePage.getTargetPageId(),
-              Long.parseLong(draftArticleSpace.getId()));
-      List<MetadataItem> draftArticleMetadataItems =
-                                                   metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY,
-                                                                                                       draftArticleMetaDataObject);
-      if (draftArticleMetadataItems != null && !draftArticleMetadataItems.isEmpty()) {
-        Map<String, String> draftArticleMetadataItemProperties = draftArticleMetadataItems.get(0).getProperties();
-        if (deleteIllustration) {
-          if (draftArticleMetadataItemProperties != null && draftArticleMetadataItemProperties.containsKey(NEWS_ILLUSTRATION_ID)
-              && draftArticleMetadataItemProperties.get(NEWS_ILLUSTRATION_ID) != null) {
-            FileItem draftArticleIllustrationFileItem =
-                                                      fileService.getFile(Long.parseLong(draftArticleMetadataItemProperties.get(NEWS_ILLUSTRATION_ID)));
-            fileService.deleteFile(draftArticleIllustrationFileItem.getFileInfo().getId());
-          }
-        }
-        metadataService.deleteMetadataItem(draftArticleMetadataItems.get(0).getId(), false);
-      }
-    }
   }
 
   private boolean canEditNews(News news, String authenticatedUser) {
@@ -2117,41 +2166,6 @@ public class NewsServiceImpl implements NewsService {
     sanitizedBody = sanitizedBody.replaceAll(HTML_AT_SYMBOL_ESCAPED_PATTERN, HTML_AT_SYMBOL_PATTERN);
     news.setBody(MentionUtils.substituteUsernames(portalOwner, sanitizedBody));
     news.setOriginalBody(sanitizedBody);
-  }
-
-  private void deleteArticle(News news, Identity currentIdentity) throws Exception {
-    Page articlePage = noteService.getNoteById(news.getId());
-    if (articlePage != null && !articlePage.isDeleted()) {
-      boolean hasDraft = true;
-      while (hasDraft) {
-        try {
-          DraftPage latestDraftPage = noteService.getLatestDraftOfPage(articlePage, currentIdentity.getUserId());
-          if (latestDraftPage != null) {
-            deleteDraftArticle(latestDraftPage.getId(), currentIdentity.getUserId(), true);
-          } else {
-            hasDraft = false;
-          }
-        } catch (Exception exception) {
-          hasDraft = false;
-        }
-      }
-      boolean isDeleted = noteService.deleteNote(articlePage.getWikiType(), articlePage.getWikiOwner(), articlePage.getName());
-      if (isDeleted) {
-        if (news.getActivities() != null) {
-          String newsActivities = news.getActivities();
-          Stream.of(newsActivities.split(";")).map(activity -> activity.split(":")[1]).forEach(activityManager::deleteActivity);
-          NewsPageObject newsPageMetadataObject = new NewsPageObject(NEWS_METADATA_PAGE_OBJECT_TYPE, news.getId(), null, Long.parseLong(news.getSpaceId()));
-          MetadataItem metadataItem = metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY, newsPageMetadataObject).stream().findFirst().orElse(null);
-          if (metadataItem != null) {
-            Map<String, String> properties = metadataItem.getProperties();
-            properties.put(NEWS_DELETED, String.valueOf(true));
-            metadataItem.setProperties(properties);
-            String currentIdentityId = identityManager.getOrCreateUserIdentity(currentIdentity.getUserId()).getId();
-            metadataService.updateMetadataItem(metadataItem, Long.parseLong(currentIdentityId));
-          }
-        }
-      }
-    }
   }
 
   private void setSchedulePostDate(News news, Map<String, String> newsProperties) throws ParseException {

@@ -95,7 +95,12 @@ public interface NewsService {
    * @return updated News
    * @throws Exception
    */
-  News updateNews(News news, String updater, Boolean post, boolean publish, String newsObjectType, String newsUpdateType) throws Exception;
+  News updateNews(News news,
+                  String updater,
+                  Boolean post,
+                  boolean publish,
+                  String newsObjectType,
+                  String newsUpdateType) throws Exception;
 
   /**
    * Delete news
@@ -248,18 +253,20 @@ public interface NewsService {
    * @return the published news
    * @throws Exception when error occurs
    */
-  News scheduleNews(News news, org.exoplatform.services.security.Identity currentIdentity, String newsObjectType) throws Exception;
+  News scheduleNews(News news,
+                    org.exoplatform.services.security.Identity currentIdentity,
+                    String newsObjectType) throws Exception;
 
   /**
    * Un-schedule publishing a News
    *
    * @param news
-   * @param currentIdentity
    * @param pageOwnerId
+   * @param newsArticleCreator
    * @return unscheduled News
    * @throws Exception when error occurs
    */
-  News unScheduleNews(News news, String pageOwnerId, org.exoplatform.services.security.Identity currentIdentity) throws Exception;
+  News unScheduleNews(News news, String pageOwnerId, String newsArticleCreator) throws Exception;
 
   /**
    * Search news by term
@@ -299,9 +306,16 @@ public interface NewsService {
    */
   void shareNews(News news, Space space, Identity userIdentity, String sharedActivityId) throws Exception;
 
-  News createDraftArticleForNewPage(News draftArticle, String pageOwnerId, String draftArticleCreator, long creationDate) throws Exception;
-  
+  News createDraftArticleForNewPage(News draftArticle,
+                                    String pageOwnerId,
+                                    String draftArticleCreator,
+                                    long creationDate) throws Exception;
+
   News createNewsArticlePage(News newsArticle, String newsArticleCreator, Date createdDate, Date updatedDate) throws Exception;
-  
+
   News createDraftForExistingPage(News news, String updater, Page page, long creationDate) throws Exception;
+
+  void deleteArticle(News news, String articleCreator) throws Exception;
+
+  void deleteDraftArticle(String draftArticleId, String draftArticleCreator, boolean deleteIllustration) throws Exception;
 }
