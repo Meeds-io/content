@@ -365,7 +365,7 @@ export default {
     },
     isActivityPosted() {
       if (this.editScheduledNews ==='editScheduledNews') {
-        if (this.visibilityActivity === !this.isActivityPosted) {
+        if (this.visibilityActivity === this.isActivityPosted) {
           this.disabled = true;
         } else {
           this.disabled = false;
