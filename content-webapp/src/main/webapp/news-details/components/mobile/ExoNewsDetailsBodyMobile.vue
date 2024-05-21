@@ -58,20 +58,11 @@
         class="rich-editor-content extended-rich-content"
         v-html="newsBody"></div>
     </div>
-    <div v-show="attachments && attachments.length" class="d-flex flex-row pa-4 newsAttachmentsTitle subtitle-2">
-      {{ $t('news.details.attachments.title') }} ({{ attachments ? attachments.length : 0 }})
-    </div>
-    <div
-      v-show="attachments?.length"
-      class="newsAttachments">
-      <extension-registry-components
-        :params="attachments"
-        name="NewsDetails"
-        type="news-details-attachments"
-        element="div"
-        element-class="newsAttachment text-truncate"
-        class="d-flex" />
-    </div>
+    <extension-registry-components
+      :params="{attachmentsIds: attachmentsIds}"
+      name="NewsDetails"
+      type="news-details-attachments"
+      element="div" />
   </div>
 </template>
 
@@ -129,8 +120,8 @@ export default {
     newsAuthor() {
       return this.news && this.news.author;
     },
-    attachments() {
-      return this.news && this.news.attachments;
+    attachmentsIds() {
+      return this.news?.attachmentsIds;
     },
   }
 };
