@@ -42,6 +42,7 @@ import java.util.Set;
 import java.util.Objects;
 import java.util.TimeZone;
 import java.util.regex.Matcher;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import io.meeds.news.search.NewsSearchConnector;
@@ -564,6 +565,7 @@ public class NewsServiceImpl implements NewsService {
       news.setCanDelete(canDeleteNews(currentIdentity, news.getAuthor(), news.getSpaceId()));
       news.setCanPublish(NewsUtils.canPublishNews(news.getSpaceId(), currentIdentity));
     });
+    newsList = newsList.stream().sorted(Comparator.comparing(News::getUpdateDate).reversed()).collect(Collectors.toList());
     return newsList;
   }
 
