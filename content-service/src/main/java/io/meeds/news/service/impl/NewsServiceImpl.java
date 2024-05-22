@@ -2105,7 +2105,30 @@ public class NewsServiceImpl implements NewsService {
     newsProperties.put(SCHEDULE_POST_DATE, schedulePostDate);
   }
 
-  private boolean isSameIllustration(String newsDraftId, String newsArticleId) throws ObjectNotFoundException, FileStorageException
+  private boolean isSameIllustration(String newsDraftId, String newsArticleId) throws ObjectNotFoundException, FileStorageException {
+
+    News news = getNewsArticleById(newsArticleId);
+    if (news == null || news.getIllustration() == null) {
+      return false;
+    }
+    NewsLatestDraftObject draftObject = new NewsLatestDraftObject(NEWS_METADATA_LATEST_DRAFT_OBJECT_TYPE,
+            newsDraftId, newsArticleId, Long.parseLong(news.getSpaceId()));
+    MetadataItem draftMetadataItem = metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY, draftObject).stream().findFirst().orElse(null);
+    if (draftMetadataItem == null) {
+      throw new ObjectNotFoundException("Metadata items not found for news draft " + newsDraftId);
+    }
+
+    // Retrieve illustration ID from metadata
+    Map<String, String> draftProperties = draftMetadataItem.getProperties();
+    if (draftProperties != null ) {
+      String draftIllustrationId = draftProperties.getOrDefault(NEWS_ILLUSTRATION_ID, null);
+      FileItem fileItem = fileService.getFile(Long.parseLong(draftIllustrationId));
+      if (fileItem != null) {
+        return Arrays.equals(fileItem.getAsByte(), news.getIllustration());
+      }
+    }
+    return false;
+  }
 
   private News postScheduledArticle(News news) throws ObjectNotFoundException {
     NewsPageObject newsPageObject = new NewsPageObject(NEWS_METADATA_PAGE_OBJECT_TYPE, news.getId(), null, Long.parseLong(news.getSpaceId()));
@@ -2125,5 +2148,3 @@ public class NewsServiceImpl implements NewsService {
     return null;
   }
 }
-
-

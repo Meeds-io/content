@@ -28,10 +28,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.ZoneOffset;
+import java.util.Calendar;
 import java.util.TimeZone;
 
 import static io.meeds.news.service.impl.NewsServiceImpl.NEWS_METADATA_NAME;
@@ -56,9 +56,6 @@ public class PostScheduledNewsArticleJob {
   @Scheduled(cron = "${meeds.content.postScheduledNewsArticle.job.cron:15 */2 * * * ?}")
   @ContainerTransactional
   public void postScheduledNewsArticle() {
-    ZoneId zoneId = ZoneId.of(TimeZone.getDefault().getID());
-    // Get the current date and time
-    LocalDateTime currentDate = LocalDateTime.now(zoneId);
 
     metadataService.getMetadataItemsByMetadataNameAndTypeAndObjectAndMetadataItemProperty(NEWS_METADATA_NAME,
                                                                                           NEWS_METADATA_TYPE.getName(),
@@ -73,8 +70,8 @@ public class PostScheduledNewsArticleJob {
                        if (scheduledArticleMetadataItem.getProperties() != null && !scheduledArticleMetadataItem.getProperties().isEmpty()) {
                          String articleScheduleDate = scheduledArticleMetadataItem.getProperties().getOrDefault(SCHEDULE_POST_DATE, null);
                          if (articleScheduleDate != null) {
-                           LocalDateTime scheduleDate = parseSavedDate(articleScheduleDate);
-                           if (scheduleDate != null && (scheduleDate.isEqual(currentDate) || scheduleDate.isBefore(currentDate))) {
+
+                           if (isSchedulePostDatePassed(articleScheduleDate)) {
                              // return only the metadata items with a schedule date property equals or prior to
                              // the current date to be mapped to news articles and then post them.
                              return true;
@@ -99,9 +96,19 @@ public class PostScheduledNewsArticleJob {
                    });
   }
 
-  private LocalDateTime parseSavedDate(String dateString) {
-    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss Z");
-    OffsetDateTime offsetDateTime = OffsetDateTime.parse(dateString, formatter);
-    return offsetDateTime.toLocalDateTime();
+  private boolean isSchedulePostDatePassed(String schedulePostDateString) {
+    Calendar schedulePostDate = Calendar.getInstance();
+    try {
+      SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+      format.setTimeZone(TimeZone.getTimeZone(ZoneOffset.UTC));
+      schedulePostDate.setTime(format.parse(schedulePostDateString));
+    } catch (ParseException e) {
+      // Handle exception as needed
+      LOG.error("Error parsing schedule post date", e);
+      return false;
+    }
+
+    Calendar now = Calendar.getInstance();
+    return schedulePostDate.before(now) || now.equals(schedulePostDate);
   }
 }
