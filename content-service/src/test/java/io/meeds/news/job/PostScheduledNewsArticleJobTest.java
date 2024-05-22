@@ -8,13 +8,17 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 import java.util.Map;
+import java.util.TimeZone;
 
 import org.junit.Test;
 import org.junit.jupiter.api.BeforeEach;
@@ -57,12 +61,24 @@ public class PostScheduledNewsArticleJobTest {
     when(metadataItemWithDateBeforeTheCurrentDate.getObjectId()).thenReturn(newsId);
     LocalDateTime beforeDate = currentDate.minusDays(1);
     String beforeDateString = DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss").format(beforeDate).concat(" ").concat("+0100");
-    when(metadataItemWithDateBeforeTheCurrentDate.getProperties()).thenReturn(Map.of(SCHEDULE_POST_DATE, beforeDateString));
+
+    SimpleDateFormat format = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss" + "Z");
+    Calendar startPublishedDate = Calendar.getInstance();
+    startPublishedDate.setTime(format.parse(beforeDateString));
+
+    SimpleDateFormat defaultFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+    defaultFormat.setTimeZone(TimeZone.getTimeZone(ZoneOffset.UTC));
+    String startPublishedDateString = defaultFormat.format(startPublishedDate.getTime());
+
+    when(metadataItemWithDateBeforeTheCurrentDate.getProperties()).thenReturn(Map.of(SCHEDULE_POST_DATE, startPublishedDateString));
 
     MetadataItem metadataItemWithDateAfterTheCurrentDate = mock(MetadataItem.class);
     LocalDateTime afterDate = currentDate.plusDays(1);
     String afterDateString = DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss").format(afterDate).concat(" ").concat("+0100");
-    when(metadataItemWithDateAfterTheCurrentDate.getProperties()).thenReturn(Map.of(SCHEDULE_POST_DATE, afterDateString));
+    // after date
+    startPublishedDate.setTime(format.parse(afterDateString));
+    String afterSatrtDateString = defaultFormat.format(startPublishedDate.getTime());
+    when(metadataItemWithDateAfterTheCurrentDate.getProperties()).thenReturn(Map.of(SCHEDULE_POST_DATE, afterSatrtDateString));
 
     List<MetadataItem> metadataItems = new ArrayList<>();
     metadataItems.add(metadataItemWithDateBeforeTheCurrentDate);
