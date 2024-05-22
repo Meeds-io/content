@@ -25,6 +25,8 @@ import static io.meeds.news.utils.NewsUtils.NewsUpdateType.CONTENT;
 
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.time.OffsetTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
@@ -38,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Objects;
+import java.util.TimeZone;
 import java.util.regex.Matcher;
 import java.util.stream.Stream;
 
@@ -2081,12 +2084,23 @@ public class NewsServiceImpl implements NewsService {
     }
   }
 
-  private void setSchedulePostDate(News news, Map<String, String> newsProperties) {
+  private void setSchedulePostDate(News news, Map<String, String> newsProperties) throws ParseException {
     String schedulePostDate = news.getSchedulePostDate();
     ZoneId userTimeZone = StringUtils.isBlank(news.getTimeZoneId()) ? ZoneOffset.UTC : ZoneId.of(news.getTimeZoneId());
     String offsetTimeZone = String.valueOf(OffsetTime.now(userTimeZone).getOffset()).replace(":", "");
     schedulePostDate = schedulePostDate.concat(" ").concat(offsetTimeZone);
-    newsProperties.put(SCHEDULE_POST_DATE, schedulePostDate);
+
+    // Create a SimpleDateFormat object to parse the scheduled post date given by the front
+    SimpleDateFormat format = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss" + "Z");
+    Calendar startPublishedDate = Calendar.getInstance();
+    startPublishedDate.setTime(format.parse(schedulePostDate));
+
+    // create a SimpleDateFormat to format the parsed date and then save it as string
+    SimpleDateFormat defaultFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+    defaultFormat.setTimeZone(TimeZone.getTimeZone(ZoneOffset.UTC));
+    String startPublishedDateString = defaultFormat.format(startPublishedDate.getTime());
+
+    newsProperties.put(SCHEDULE_POST_DATE, startPublishedDateString);
   }
 
   private boolean isSameIllustration(String newsDraftId, String newsArticleId) throws ObjectNotFoundException, FileStorageException {
