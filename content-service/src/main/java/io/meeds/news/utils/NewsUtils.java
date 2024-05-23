@@ -226,7 +226,7 @@ public class NewsUtils {
                    .append(PortalContainer.getCurrentPortalContainerName())
                    .append("/")
                    .append(CommonsUtils.getCurrentPortalOwner())
-                   .append("/news/detail?newsId=")
+                   .append("/news-detail?newsId=")
                    .append(draftPage.getId())
                    .append(draftPage.getTargetPageId() != null ? "&type=latest_draft" : "&type=draft");
     return draftArticleUrl.toString();
@@ -247,7 +247,7 @@ public class NewsUtils {
               .append(PortalContainer.getCurrentPortalContainerName())
               .append("/")
               .append(CommonsUtils.getCurrentPortalOwner())
-              .append("/news/detail?newsId=")
+              .append("/news-detail?newsId=")
               .append(news.getId())
               .append("&type=article");
     }

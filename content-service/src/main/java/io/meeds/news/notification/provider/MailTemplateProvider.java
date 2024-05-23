@@ -123,7 +123,7 @@ public class MailTemplateProvider extends TemplateProvider {
                    .append(portalName)
                    .append("/")
                    .append(portalOwner)
-                   .append("/news/detail?newsId=")
+                   .append("/news-detail?newsId=")
                    .append(newsId);
       } else {
         activityUrl.append(activityLink);
