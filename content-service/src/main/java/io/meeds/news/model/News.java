@@ -108,7 +108,7 @@ public class News {
 
   private String                          activityId;
 
-  private List<NewsAttachment>            attachments;
+  private List<String>                    attachmentsIds;
 
   private String                          spaceAvatarUrl;
 
