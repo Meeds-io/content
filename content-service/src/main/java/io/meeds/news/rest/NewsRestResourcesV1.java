@@ -1059,11 +1059,7 @@ public class NewsRestResourcesV1 implements ResourceContainer, Startable {
         break;
       }
       }
-      if ("DRAFTS".equals(filterType.toString())) {
-        newsFilter.setOrder("exo:dateModified");
-      } else {
-        newsFilter.setOrder("publication:liveDate");
-      }
+      newsFilter.setOrder("UPDATED_DATE");
     }
     // Set text to search news with
     if (StringUtils.isNotEmpty(text) && text.indexOf("#") != 0) {
