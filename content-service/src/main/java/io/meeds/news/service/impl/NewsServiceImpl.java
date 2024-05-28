@@ -987,6 +987,7 @@ public class NewsServiceImpl implements NewsService {
 
     if (newsArticlesRootNotePage != null) {
       Page newsArticlePage = new Page();
+      newsArticlePage.setName(newsArticle.getName());
       newsArticlePage.setTitle(newsArticle.getTitle());
       newsArticlePage.setContent(newsArticle.getBody());
       newsArticlePage.setParentPageId(newsArticlesRootNotePage.getId());
