@@ -264,7 +264,7 @@ public class NewsServiceImpl implements NewsService {
     if (news.getPublicationState().equals(STAGED) || news.getSchedulePostDate() != null) {
       news = postScheduledArticle(news);
     } else {
-      news = createNewsArticlePage(news, poster, null, null);
+      news = createNewsArticlePage(news, poster, NewsObjectType.DRAFT.name());
     }
     postNewsActivity(news);
     sendNotification(poster, news, NotificationConstants.NOTIFICATION_CONTEXT.POST_NEWS);
@@ -311,7 +311,7 @@ public class NewsServiceImpl implements NewsService {
     if (NewsObjectType.DRAFT.name().toLowerCase().equals(newsObjectType)) {
       return updateDraftArticleForNewPage(news, updater);
     } else if (LATEST_DRAFT.name().toLowerCase().equals(newsObjectType)) {
-      return createOrUpdateDraftForExistingPage(news, updater, System.currentTimeMillis());
+      return createOrUpdateDraftForExistingPage(news, updater);
     }
     if (publish != news.isPublished() && news.isCanPublish()) {
       news.setPublished(publish);
@@ -720,7 +720,7 @@ public class NewsServiceImpl implements NewsService {
     if (newsObjectType.equalsIgnoreCase(NewsObjectType.DRAFT.name())) {
       // Create news article with the publication state STAGED without posting or publishing it ( displayed false news target)
       // it will be posted and published by the news schedule job or the edit scheduling.
-      news = createNewsArticlePage(news, currentIdentity.getUserId(), null, null);
+      news = createNewsArticlePage(news, currentIdentity.getUserId(), newsObjectType);
     } else if (newsObjectType.equalsIgnoreCase(ARTICLE.name())) {
       updateNewsArticle(news, currentIdentity, NewsUtils.NewsUpdateType.SCHEDULE.name().toLowerCase());
     }
@@ -958,7 +958,7 @@ public class NewsServiceImpl implements NewsService {
    * {@inheritDoc}
    */
   @Override
-  public News createNewsArticlePage(News newsArticle, String newsArticleCreator, Date createdDate, Date updatedDate) throws Exception {
+  public News createNewsArticlePage(News newsArticle, String newsArticleCreator, String newsObjectType) throws Exception {
     // get the news draft article from the news model before setting the news
     // article id to the news model
     String draftNewsId = newsArticle.getId();
@@ -993,8 +993,8 @@ public class NewsServiceImpl implements NewsService {
       newsArticlePage.setParentPageId(newsArticlesRootNotePage.getId());
       newsArticlePage.setAuthor(newsArticle.getAuthor());
       newsArticlePage.setLang(null);
-      if (createdDate != null) {
-        newsArticlePage.setCreatedDate(createdDate);
+      if (newsArticle.getCreationDate() != null && newsObjectType.equalsIgnoreCase(ARTICLE.name())) {
+        newsArticlePage.setCreatedDate(newsArticle.getCreationDate());
       }
       newsArticlePage = noteService.createNote(wiki, newsArticlesRootNotePage.getName(), newsArticlePage, poster);
       // create the version
@@ -1054,10 +1054,10 @@ public class NewsServiceImpl implements NewsService {
         MetadataItem pageMetadataItem = metadataService.createMetadataItem(newsPageObject, NEWS_METADATA_KEY, newsPageProperties, Long.parseLong(newsArticleMetadataItemCreatorIdentityId));
         // set the update date to the created note page and the related page
         // metadata item in the migration context.
-        if (updatedDate != null) {
-          newsArticlePage.setUpdatedDate(updatedDate);
+        if (newsArticle.getUpdateDate() != null && newsObjectType.equalsIgnoreCase(ARTICLE.name())) {
+          newsArticlePage.setUpdatedDate(newsArticle.getUpdateDate());
           noteService.updateNote(newsArticlePage);
-          pageMetadataItem.setUpdatedDate(updatedDate.getTime());
+          pageMetadataItem.setUpdatedDate(newsArticle.getUpdateDate().getTime());
           metadataService.updateMetadataItem(pageMetadataItem, Long.parseLong(newsArticleMetadataItemCreatorIdentityId));
         }
 
@@ -2050,7 +2050,7 @@ public class NewsServiceImpl implements NewsService {
     return null;
   }
 
-  private News createOrUpdateDraftForExistingPage(News news, String updater, long creationDate) throws Exception {
+  private News createOrUpdateDraftForExistingPage(News news, String updater) throws Exception {
     String pageId = news.getId();
     Page existingPage = noteService.getNoteById(pageId);
     if (existingPage == null) {
@@ -2058,7 +2058,7 @@ public class NewsServiceImpl implements NewsService {
     }
     DraftPage draftPage = noteService.getLatestDraftPageByUserAndTargetPageAndLang(Long.parseLong(pageId), updater, null);
     if (draftPage == null) {
-      news = createDraftForExistingPage(news, updater, existingPage, creationDate);
+      news = createDraftForExistingPage(news, updater, existingPage, System.currentTimeMillis());
     } else {
       news = updateDraftForExistingPage(news, updater, existingPage, draftPage);
     }

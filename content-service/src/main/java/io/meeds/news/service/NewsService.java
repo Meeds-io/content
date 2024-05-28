@@ -311,7 +311,7 @@ public interface NewsService {
                                     String draftArticleCreator,
                                     long creationDate) throws Exception;
 
-  News createNewsArticlePage(News newsArticle, String newsArticleCreator, Date createdDate, Date updatedDate) throws Exception;
+  News createNewsArticlePage(News newsArticle, String newsArticleCreator, String newsObjectType) throws Exception;
 
   News createDraftForExistingPage(News news, String updater, Page page, long creationDate) throws Exception;
 
