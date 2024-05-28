@@ -22,7 +22,7 @@
     },
     {
       "nameId":"NewsDetail",
-      "categoryNameId":"content",
+      "categoryNameId":"others",
       "portletName":"NewsDetail",
       "names":{
         "en":"layout.portletInstance.NewsDetail.name"
