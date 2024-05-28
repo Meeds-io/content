@@ -998,11 +998,6 @@ public class NewsServiceImpl implements NewsService {
       newsArticlePage = noteService.createNote(wiki, newsArticlesRootNotePage.getName(), newsArticlePage, poster);
       // create the version
       noteService.createVersionOfNote(newsArticlePage, poster.getUserId());
-      if (updatedDate != null) {
-        newsArticlePage.setUpdatedDate(updatedDate);
-        newsArticlePage = noteService.updateNote(newsArticlePage);
-      }
-
       if (newsArticlePage != null) {
         PageVersion pageVersion = noteService.getPublishedVersionByPageIdAndLang(Long.parseLong(newsArticlePage.getId()), null);
         // set properties
@@ -1055,7 +1050,15 @@ public class NewsServiceImpl implements NewsService {
         newsPageProperties.put(NEWS_ACTIVITY_POSTED, String.valueOf(newsArticle.isActivityPosted()));
         newsPageProperties.put(PUBLISHED, String.valueOf(newsArticle.isPublished()));
         newsPageProperties.put(NEWS_DELETED, String.valueOf(newsArticlePage.isDeleted()));
-        metadataService.createMetadataItem(newsPageObject, NEWS_METADATA_KEY, newsPageProperties, Long.parseLong(newsArticleMetadataItemCreatorIdentityId));
+        MetadataItem pageMetadataItem = metadataService.createMetadataItem(newsPageObject, NEWS_METADATA_KEY, newsPageProperties, Long.parseLong(newsArticleMetadataItemCreatorIdentityId));
+        // set the update date to the created note page and the related page
+        // metadata item in the migration context.
+        if (updatedDate != null) {
+          newsArticlePage.setUpdatedDate(updatedDate);
+          noteService.updateNote(newsArticlePage);
+          pageMetadataItem.setUpdatedDate(updatedDate.getTime());
+          metadataService.updateMetadataItem(pageMetadataItem, Long.parseLong(newsArticleMetadataItemCreatorIdentityId));
+        }
 
         // delete the draft
         deleteDraftArticle(draftNewsId, poster.getUserId(), newsArticle.getIllustration() == null);
