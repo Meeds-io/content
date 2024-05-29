@@ -306,16 +306,50 @@ public interface NewsService {
    */
   void shareNews(News news, Space space, Identity userIdentity, String sharedActivityId) throws Exception;
 
+  /**
+   * @param draftArticle {@link News} news draft article to be created
+   * @param pageOwnerId
+   * @param draftArticleCreator
+   * @param creationDate
+   * @return the created draft news article
+   * @throws Exception when error occurs
+   */
   News createDraftArticleForNewPage(News draftArticle,
                                     String pageOwnerId,
                                     String draftArticleCreator,
                                     long creationDate) throws Exception;
 
+  /**
+   * @param newsArticle {@link News} news article to be created
+   * @param newsArticleCreator
+   * @param newsObjectType
+   * @return the created news article
+   * @throws Exception when error occurs
+   */
   News createNewsArticlePage(News newsArticle, String newsArticleCreator, String newsObjectType) throws Exception;
 
+  /**
+   * @param news {@link News} news draft article to be created
+   * @param updater
+   * @param page
+   * @param creationDate
+   * @return the created news draft for an existing news article
+   * @throws Exception when error occurs
+   */
   News createDraftForExistingPage(News news, String updater, Page page, long creationDate) throws Exception;
 
+  /**
+   * @param news {@link News} news article to be deleted
+   * @param articleCreator
+   * @throws Exception when error occurs
+   */
   void deleteArticle(News news, String articleCreator) throws Exception;
 
+  /**
+   * @param draftArticleId
+   * @param draftArticleCreator
+   * @param deleteIllustration
+   * @throws Exception when error occurs
+   */
   void deleteDraftArticle(String draftArticleId, String draftArticleCreator, boolean deleteIllustration) throws Exception;
 }
