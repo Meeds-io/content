@@ -178,7 +178,9 @@ public class NewsServiceImpl implements NewsService {
   /** The Constant NEWS_METADATA_LATEST_DRAFT_OBJECT_TYPE. */
   public static final String         NEWS_METADATA_LATEST_DRAFT_OBJECT_TYPE = "newsLatestDraftPage";
 
-  public static final String         NEWS_ATTACHMENTS_IDS                         = "attachmentsIds";
+  public static final String         NEWS_ATTACHMENTS_IDS                   = "attachmentsIds";
+
+  public static final String         ARTICLE_CONTENT                        = "content";
 
   public static final MetadataKey    NEWS_METADATA_KEY                      =
                                                        new MetadataKey(NEWS_METADATA_TYPE.getName(), NEWS_METADATA_NAME, 0);
@@ -824,11 +826,39 @@ public class NewsServiceImpl implements NewsService {
       metadataItem.setProperties(properties);
       metadataService.updateMetadataItem(metadataItem, Long.parseLong(userIdentity.getId()));
 
+      NewsUtils.broadcastEvent(NewsUtils.SHARE_CONTENT_ATTACHMENTS,
+                               Map.of(NEWS_ATTACHMENTS_IDS,
+                                      getArticleAttachmentIdsToShare(news,
+                                                                     Long.parseLong(space.getId()),
+                                                                     Long.parseLong(newsPageObject.getId())),
+                                      ARTICLE_CONTENT,
+                                      news.getBody()),
+                               space);
       NewsUtils.broadcastEvent(NewsUtils.SHARE_NEWS, userIdentity.getRemoteId(), news);
     }
 
   }
 
+  private List<String> getArticleAttachmentIdsToShare(News article, long spaceId, long articlePageId) {
+    List<String> attachmentIds = new ArrayList<>();
+    PageVersion pageVersion = noteService.getPublishedVersionByPageIdAndLang(articlePageId, null);
+    NewsPageVersionObject newsPageVersionObject = new NewsPageVersionObject(NEWS_METADATA_PAGE_VERSION_OBJECT_TYPE,
+                                                                            pageVersion.getId(),
+                                                                            null,
+                                                                            spaceId);
+    List<MetadataItem> newsPageVersionMetadataItems = metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY,
+                                                                                                          newsPageVersionObject);
+    Map<String, String> newsPageVersionMetadataItemProperties = newsPageVersionMetadataItems.get(0).getProperties();
+    if(!MapUtils.isEmpty(newsPageVersionMetadataItems.get(0).getProperties())) {
+
+      if (newsPageVersionMetadataItemProperties.containsKey(NEWS_ATTACHMENTS_IDS)
+              && newsPageVersionMetadataItemProperties.get(NEWS_ATTACHMENTS_IDS) != null) {
+        attachmentIds.addAll( List.of(newsPageVersionMetadataItemProperties.get(NEWS_ATTACHMENTS_IDS).split(";")));
+      }
+    }
+    return attachmentIds;
+  }
+  
   private News createDraftArticleForNewPage(News draftArticle, String pageOwnerId, String draftArticleCreator) throws Exception {
     Wiki wiki = wikiService.getWikiByTypeAndOwner(WikiType.GROUP.name().toLowerCase(), pageOwnerId);
     Page newsArticlesRootNotePage = null;

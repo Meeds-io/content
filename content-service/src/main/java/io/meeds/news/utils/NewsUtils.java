@@ -91,6 +91,9 @@ public class NewsUtils {
 
   private static final String PLATFORM_WEB_CONTRIBUTORS_GROUP = "/platform/web-contributors";
 
+  public static final String  SHARE_CONTENT_ATTACHMENTS       = "content.share.attachments";
+
+
   public enum NewsObjectType {
     DRAFT, LATEST_DRAFT, ARTICLE;
   }
