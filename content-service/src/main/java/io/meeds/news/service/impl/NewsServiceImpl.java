@@ -25,6 +25,8 @@ import static io.meeds.news.utils.NewsUtils.NewsUpdateType.CONTENT;
 
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.time.OffsetTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
@@ -36,6 +38,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.stream.Stream;
@@ -260,7 +263,11 @@ public class NewsServiceImpl implements NewsService {
 
   @Override
   public News postNews(News news, String poster) throws Exception {
-    news = createNewsArticlePage(news, poster);
+    if (news.getPublicationState().equals(STAGED)) {
+      news = postScheduledArticle(news);
+    } else {
+      news = createNewsArticlePage(news, poster);
+    }
     postNewsActivity(news);
     sendNotification(poster, news, NotificationConstants.NOTIFICATION_CONTEXT.POST_NEWS);
     if (news.isPublished()) {
@@ -410,6 +417,9 @@ public class NewsServiceImpl implements NewsService {
       Calendar updateCalendar = Calendar.getInstance();
       Date newsPublicationDate = updateCalendar.getTime();
       properties.put(NEWS_PUBLICATION_DATE, String.valueOf(newsPublicationDate));
+      if (StringUtils.isNotEmpty(newsToPublish.getAudience())) {
+        properties.put(NEWS_AUDIENCE, news.getAudience());
+      }
       metadataItem.setProperties(properties);
       String publisherId = identityManager.getOrCreateUserIdentity(publisherIdentity.getUserId()).getId();
       metadataService.updateMetadataItem(metadataItem, Long.parseLong(publisherId));
@@ -2090,12 +2100,23 @@ public class NewsServiceImpl implements NewsService {
     }
   }
 
-  private void setSchedulePostDate(News news, Map<String, String> newsProperties) {
+  private void setSchedulePostDate(News news, Map<String, String> newsProperties) throws ParseException {
     String schedulePostDate = news.getSchedulePostDate();
     ZoneId userTimeZone = StringUtils.isBlank(news.getTimeZoneId()) ? ZoneOffset.UTC : ZoneId.of(news.getTimeZoneId());
     String offsetTimeZone = String.valueOf(OffsetTime.now(userTimeZone).getOffset()).replace(":", "");
     schedulePostDate = schedulePostDate.concat(" ").concat(offsetTimeZone);
-    newsProperties.put(SCHEDULE_POST_DATE, schedulePostDate);
+
+    // Create a SimpleDateFormat object to parse the scheduled post date given by the front
+    SimpleDateFormat format = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss" + "Z");
+    Calendar startPublishedDate = Calendar.getInstance();
+    startPublishedDate.setTime(format.parse(schedulePostDate));
+
+    // create a SimpleDateFormat to format the parsed date and then save it as string
+    SimpleDateFormat defaultFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+    defaultFormat.setTimeZone(TimeZone.getTimeZone(ZoneOffset.UTC));
+    String startPublishedDateString = defaultFormat.format(startPublishedDate.getTime());
+
+    newsProperties.put(SCHEDULE_POST_DATE, startPublishedDateString);
   }
 
   private boolean isSameIllustration(String newsDraftId, String newsArticleId) throws ObjectNotFoundException, FileStorageException {
@@ -2121,5 +2142,23 @@ public class NewsServiceImpl implements NewsService {
       }
     }
     return false;
+  }
+
+  private News postScheduledArticle(News news) throws ObjectNotFoundException {
+    NewsPageObject newsPageObject = new NewsPageObject(NEWS_METADATA_PAGE_OBJECT_TYPE, news.getId(), null, Long.parseLong(news.getSpaceId()));
+    MetadataItem metadataItem = metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY, newsPageObject).stream().findFirst().orElse(null);
+    if (metadataItem == null) {
+      throw new ObjectNotFoundException("Metadata items not found for news " + news.getId());
+    }
+    Map<String, String> properties = metadataItem.getProperties();
+    if (properties != null) {
+      properties.put(NEWS_PUBLICATION_STATE, POSTED);
+      properties.remove(SCHEDULE_POST_DATE);
+      String poster = identityManager.getOrCreateUserIdentity(news.getAuthor()).getId();
+      metadataService.updateMetadataItem(metadataItem, Long.parseLong(poster));
+      news.setSchedulePostDate(null);
+      return news;
+    }
+    return null;
   }
 }
