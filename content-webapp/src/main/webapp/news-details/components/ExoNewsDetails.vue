@@ -209,7 +209,7 @@ export default {
       }
       if (postArticleMode === 'later') {
         this.news.schedulePostDate = schedulePostDate;
-        this.$newsServices.scheduleNews(this.news).then((scheduleNews) => {
+        this.$newsServices.scheduleNews(this.news, this.newsType).then((scheduleNews) => {
           if (scheduleNews) {
             window.location.href = scheduleNews.url;
           }
