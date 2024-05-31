@@ -160,9 +160,6 @@ public class NewsServiceImpl implements NewsService {
   /** The Constant NEWS_ACTIVITY_POSTED. */
   public static final String         NEWS_ACTIVITY_POSTED                   = "activityPosted";
 
-  /** The Constant NEWS_PUBLICATION_DATE. */
-  public static final String         NEWS_PUBLICATION_DATE                  = "publicationDate";
-
   /** The Constant NEWS_METADATA_PAGE_OBJECT_TYPE. */
   public static final String         NEWS_METADATA_PAGE_OBJECT_TYPE         = "newsPage";
 
@@ -411,9 +408,6 @@ public class NewsServiceImpl implements NewsService {
         properties = new HashMap<>();
       }
       properties.put(PUBLISHED, String.valueOf(true));
-      Calendar updateCalendar = Calendar.getInstance();
-      Date newsPublicationDate = updateCalendar.getTime();
-      properties.put(NEWS_PUBLICATION_DATE, String.valueOf(newsPublicationDate));
       if (StringUtils.isNotEmpty(newsToPublish.getAudience())) {
         properties.put(NEWS_AUDIENCE, news.getAudience());
       }
@@ -452,7 +446,6 @@ public class NewsServiceImpl implements NewsService {
       Map<String, String> properties = newsMetadataItem.getProperties();
       if (properties != null) {
         properties.put(PUBLISHED, String.valueOf(false));
-        properties.remove(NEWS_PUBLICATION_DATE);
         properties.remove(NEWS_AUDIENCE);
       }
       newsMetadataItem.setProperties(properties);
@@ -1046,6 +1039,9 @@ public class NewsServiceImpl implements NewsService {
                                                              .findFirst()
                                                              .orElse(null);
       buildDraftArticleProperties(draftArticle, draftArticleMetadataItem);
+      if (draftArticlePage.getTargetPageId() != null) {
+        draftArticle.setPublicationDate(noteService.getNoteById(draftArticlePage.getTargetPageId()).getCreatedDate());
+      }
       return draftArticle;
     }
     return null;
@@ -1158,6 +1154,9 @@ public class NewsServiceImpl implements NewsService {
           String newsActivityId = activities[0].split(":")[1];
           draftArticle.setActivityId(newsActivityId);
         }
+        if (properties.containsKey(NEWS_VIEWS) && StringUtils.isNotEmpty(properties.get(NEWS_VIEWS))) {
+          draftArticle.setViewsCount(Long.parseLong(properties.get(NEWS_VIEWS)));
+        }
       }
     }
   }
@@ -1167,6 +1166,7 @@ public class NewsServiceImpl implements NewsService {
     metadataFilter.setMetadataName(NEWS_METADATA_NAME);
     metadataFilter.setMetadataTypeName(NEWS_METADATA_TYPE.getName());
     metadataFilter.setMetadataObjectTypes(List.of(NEWS_METADATA_PAGE_OBJECT_TYPE));
+    metadataFilter.setSortField(filter.getOrder());
     metadataFilter.setMetadataProperties(Map.of(PUBLISHED,
                                                 "true",
                                                 NEWS_AUDIENCE,
@@ -1204,6 +1204,7 @@ public class NewsServiceImpl implements NewsService {
     metadataFilter.setMetadataObjectTypes(List.of(NEWS_METADATA_PAGE_OBJECT_TYPE));
     metadataFilter.setMetadataProperties(Map.of(NEWS_PUBLICATION_STATE, POSTED, NEWS_DELETED, "false"));
     metadataFilter.setMetadataSpaceIds(NewsUtils.getMyFilteredSpacesIds(currentIdentity, filter.getSpaces()));
+    metadataFilter.setSortField(filter.getOrder());
     metadataFilter.setCombinedMetadataProperties(Map.of(PUBLISHED,
                                                         "true",
                                                         NEWS_AUDIENCE,
@@ -1231,6 +1232,7 @@ public class NewsServiceImpl implements NewsService {
     metadataFilter.setMetadataTypeName(NEWS_METADATA_TYPE.getName());
     metadataFilter.setMetadataObjectTypes(List.of(NEWS_METADATA_PAGE_OBJECT_TYPE));
     metadataFilter.setMetadataProperties(Map.of(NEWS_PUBLICATION_STATE, STAGED, NEWS_DELETED, "false"));
+    metadataFilter.setSortField(filter.getOrder());
     metadataFilter.setMetadataSpaceIds(NewsUtils.getAllowedScheduledNewsSpacesIds(currentIdentity, filter.getSpaces()));
     return metadataService.getMetadataItemsByFilter(metadataFilter, filter.getOffset(), filter.getLimit())
             .stream()
@@ -1253,6 +1255,7 @@ public class NewsServiceImpl implements NewsService {
     metadataFilter.setCreatorId(Long.parseLong(identityManager.getOrCreateUserIdentity(filter.getAuthor()).getId()));
     metadataFilter.setMetadataProperties(Map.of(NEWS_PUBLICATION_STATE, POSTED, NEWS_DELETED, "false"));
     metadataFilter.setMetadataSpaceIds(NewsUtils.getMyFilteredSpacesIds(currentIdentity, filter.getSpaces()));
+    metadataFilter.setSortField(filter.getOrder());
     metadataFilter.setCombinedMetadataProperties(Map.of(PUBLISHED,
                                                         "true",
                                                         NEWS_AUDIENCE,
@@ -1278,6 +1281,7 @@ public class NewsServiceImpl implements NewsService {
     MetadataFilter metadataFilter = new MetadataFilter();
     metadataFilter.setMetadataName(NEWS_METADATA_NAME);
     metadataFilter.setMetadataTypeName(NEWS_METADATA_TYPE.getName());
+    metadataFilter.setSortField(filter.getOrder());
     metadataFilter.setMetadataObjectTypes(List.of(NEWS_METADATA_DRAFT_OBJECT_TYPE, NEWS_METADATA_LATEST_DRAFT_OBJECT_TYPE));
     metadataFilter.setMetadataSpaceIds(NewsUtils.getAllowedDraftArticleSpaceIds(currentIdentity, filter.getSpaces()));
     return metadataService.getMetadataItemsByFilter(metadataFilter, filter.getOffset(), filter.getLimit())
