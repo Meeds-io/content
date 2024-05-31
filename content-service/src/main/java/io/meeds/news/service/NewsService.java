@@ -253,10 +253,11 @@ public interface NewsService {
    *
    * @param news
    * @param currentIdentity
+   * @param pageOwnerId
    * @return unscheduled News
    * @throws Exception when error occurs
    */
-  News unScheduleNews(News news, org.exoplatform.services.security.Identity currentIdentity) throws Exception;
+  News unScheduleNews(News news, String pageOwnerId, org.exoplatform.services.security.Identity currentIdentity) throws Exception;
 
   /**
    * Search news by term
