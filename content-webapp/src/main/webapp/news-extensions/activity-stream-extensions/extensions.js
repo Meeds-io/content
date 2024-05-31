@@ -53,6 +53,7 @@ const newsActivityTypeExtensionOptions = {
   summaryLinesToDisplay: 3,
   noEmbeddedLinkView: true,
   windowTitlePrefixKey: 'news.window.title',
+  addMargin: true,
   getThumbnail: (activity) => activity?.news?.illustrationURL && `${activity?.news?.illustrationURL}&size=305x285` || '/content/images/news.png',
   getThumbnailProperties: (activity) => !(activity?.news?.illustrationURL) && {
     height: '90px',
