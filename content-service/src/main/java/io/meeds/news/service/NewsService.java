@@ -322,11 +322,10 @@ public interface NewsService {
   /**
    * @param newsArticle {@link News} news article to be created
    * @param newsArticleCreator
-   * @param newsObjectType
    * @return the created news article
    * @throws Exception when error occurs
    */
-  News createNewsArticlePage(News newsArticle, String newsArticleCreator, String newsObjectType) throws Exception;
+  News createNewsArticlePage(News newsArticle, String newsArticleCreator) throws Exception;
 
   /**
    * @param news {@link News} news draft article to be created
