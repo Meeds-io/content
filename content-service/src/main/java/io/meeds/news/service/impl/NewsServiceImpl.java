@@ -263,7 +263,7 @@ public class NewsServiceImpl implements NewsService {
     if (news.getPublicationState().equals(STAGED) || news.getSchedulePostDate() != null) {
       news = postScheduledArticle(news);
     } else {
-      news = createNewsArticlePage(news, poster, NewsObjectType.DRAFT.name());
+      news = createNewsArticlePage(news, poster);
     }
     postNewsActivity(news);
     sendNotification(poster, news, NotificationConstants.NOTIFICATION_CONTEXT.POST_NEWS);
@@ -419,6 +419,8 @@ public class NewsServiceImpl implements NewsService {
         properties.put(NEWS_AUDIENCE, news.getAudience());
       }
       metadataItem.setProperties(properties);
+      Date updatedDate = Calendar.getInstance().getTime();
+      metadataItem.setUpdatedDate(updatedDate.getTime());
       String publisherId = identityManager.getOrCreateUserIdentity(publisherIdentity.getUserId()).getId();
       metadataService.updateMetadataItem(metadataItem, Long.parseLong(publisherId));
     }
@@ -456,6 +458,8 @@ public class NewsServiceImpl implements NewsService {
         properties.remove(NEWS_AUDIENCE);
       }
       newsMetadataItem.setProperties(properties);
+      Date updatedDate = Calendar.getInstance().getTime();
+      newsMetadataItem.setUpdatedDate(updatedDate.getTime());
       String publisherId = identityManager.getOrCreateUserIdentity(publisher).getId();
       metadataService.updateMetadataItem(newsMetadataItem, Long.parseLong(publisherId));
     }
@@ -719,7 +723,7 @@ public class NewsServiceImpl implements NewsService {
     if (newsObjectType.equalsIgnoreCase(NewsObjectType.DRAFT.name())) {
       // Create news article with the publication state STAGED without posting or publishing it ( displayed false news target)
       // it will be posted and published by the news schedule job or the edit scheduling.
-      news = createNewsArticlePage(news, currentIdentity.getUserId(), newsObjectType);
+      news = createNewsArticlePage(news, currentIdentity.getUserId());
     } else if (newsObjectType.equalsIgnoreCase(ARTICLE.name())) {
       updateNewsArticle(news, currentIdentity, NewsUtils.NewsUpdateType.SCHEDULE.name().toLowerCase());
     }
@@ -957,7 +961,7 @@ public class NewsServiceImpl implements NewsService {
    * {@inheritDoc}
    */
   @Override
-  public News createNewsArticlePage(News newsArticle, String newsArticleCreator, String newsObjectType) throws Exception {
+  public News createNewsArticlePage(News newsArticle, String newsArticleCreator) throws Exception {
     // get the news draft article from the news model before setting the news
     // article id to the news model
     String draftNewsId = newsArticle.getId();
@@ -992,9 +996,6 @@ public class NewsServiceImpl implements NewsService {
       newsArticlePage.setParentPageId(newsArticlesRootNotePage.getId());
       newsArticlePage.setAuthor(newsArticle.getAuthor());
       newsArticlePage.setLang(null);
-      if (newsArticle.getCreationDate() != null && newsObjectType.equalsIgnoreCase(ARTICLE.name())) {
-        newsArticlePage.setCreatedDate(newsArticle.getCreationDate());
-      }
       newsArticlePage = noteService.createNote(wiki, newsArticlesRootNotePage.getName(), newsArticlePage, poster);
       // create the version
       noteService.createVersionOfNote(newsArticlePage, poster.getUserId());
@@ -1050,16 +1051,7 @@ public class NewsServiceImpl implements NewsService {
         newsPageProperties.put(NEWS_ACTIVITY_POSTED, String.valueOf(newsArticle.isActivityPosted()));
         newsPageProperties.put(PUBLISHED, String.valueOf(newsArticle.isPublished()));
         newsPageProperties.put(NEWS_DELETED, String.valueOf(newsArticlePage.isDeleted()));
-        MetadataItem pageMetadataItem = metadataService.createMetadataItem(newsPageObject, NEWS_METADATA_KEY, newsPageProperties, Long.parseLong(newsArticleMetadataItemCreatorIdentityId));
-        // set the update date to the created note page and the related page
-        // metadata item in the migration context.
-        if (newsArticle.getUpdateDate() != null && newsObjectType.equalsIgnoreCase(ARTICLE.name())) {
-          newsArticlePage.setUpdatedDate(newsArticle.getUpdateDate());
-          noteService.updateNote(newsArticlePage);
-          pageMetadataItem.setUpdatedDate(newsArticle.getUpdateDate().getTime());
-          metadataService.updateMetadataItem(pageMetadataItem, Long.parseLong(newsArticleMetadataItemCreatorIdentityId));
-        }
-
+        metadataService.createMetadataItem(newsPageObject, NEWS_METADATA_KEY, newsPageProperties, Long.parseLong(newsArticleMetadataItemCreatorIdentityId));
         // delete the draft
         deleteDraftArticle(draftNewsId, poster.getUserId(), newsArticle.getIllustration() == null);
         return newsArticle;
@@ -1865,6 +1857,8 @@ public class NewsServiceImpl implements NewsService {
           }
           metadataItem.setProperties(properties);
           String updaterId = identityManager.getOrCreateUserIdentity(news.getAuthor()).getId();
+          Date updateDate = Calendar.getInstance().getTime();
+          metadataItem.setUpdatedDate(updateDate.getTime());
           metadataService.updateMetadataItem(metadataItem, Long.parseLong(updaterId));
           news.setActivities(properties.get(NEWS_ACTIVITIES));
           news.setActivityId(activityId);
@@ -1935,6 +1929,8 @@ public class NewsServiceImpl implements NewsService {
         }
         newsPageProperties.put(NEWS_ACTIVITY_POSTED, String.valueOf(news.isActivityPosted()));
         existingPageMetadataItem.setProperties(newsPageProperties);
+        Date updateDate = Calendar.getInstance().getTime();
+        existingPageMetadataItem.setUpdatedDate(updateDate.getTime());
         metadataService.updateMetadataItem(existingPageMetadataItem, Long.parseLong(newsArticleUpdaterIdentityId));
       } else {
         throw new ObjectNotFoundException("No such news article metadata item exists with id " + news.getId());
@@ -2005,7 +2001,6 @@ public class NewsServiceImpl implements NewsService {
       news.setId(articlePage.getId());
       news.setCreationDate(articlePage.getCreatedDate());
       news.setAuthor(articlePage.getAuthor());
-      news.setUpdateDate(articlePage.getUpdatedDate());
       news.setUpdater(articlePage.getAuthor());
 
       // fetch related metadata item properties
@@ -2030,6 +2025,7 @@ public class NewsServiceImpl implements NewsService {
       news.setDeleted(articlePage.isDeleted());
       news.setUrl(NewsUtils.buildNewsArticleUrl(news, currentUsername));
       news.setPublicationDate(articlePage.getCreatedDate());
+      news.setUpdateDate(new Date(metadataItem.getUpdatedDate()));
       // fetch the last version of the given lang
       PageVersion pageVersion = noteService.getPublishedVersionByPageIdAndLang(Long.parseLong(articlePage.getId()), null);
       news.setTitle(pageVersion.getTitle());
@@ -2226,6 +2222,8 @@ public class NewsServiceImpl implements NewsService {
       properties.put(NEWS_PUBLICATION_STATE, POSTED);
       properties.remove(SCHEDULE_POST_DATE);
       String poster = identityManager.getOrCreateUserIdentity(news.getAuthor()).getId();
+      Date updateDate = Calendar.getInstance().getTime();
+      metadataItem.setUpdatedDate(updateDate.getTime());
       metadataService.updateMetadataItem(metadataItem, Long.parseLong(poster));
       news.setSchedulePostDate(null);
       return news;
