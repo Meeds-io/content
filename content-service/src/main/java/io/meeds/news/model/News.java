@@ -38,6 +38,8 @@ public class News {
 
   private String                          title;
 
+  private String                          name;
+
   private String                          summary;
 
   /* sanitizedBody with usernames */

@@ -19,12 +19,14 @@
  */
 package io.meeds.news.service;
 
+import java.util.Date;
 import java.util.List;
 
 import org.exoplatform.commons.exception.ObjectNotFoundException;
 import org.exoplatform.social.core.activity.model.ExoSocialActivity;
 import org.exoplatform.social.core.identity.model.Identity;
 import org.exoplatform.social.core.space.model.Space;
+import org.exoplatform.wiki.model.Page;
 
 import io.meeds.news.filter.NewsFilter;
 import io.meeds.news.model.News;
@@ -93,7 +95,12 @@ public interface NewsService {
    * @return updated News
    * @throws Exception
    */
-  News updateNews(News news, String updater, Boolean post, boolean publish, String newsObjectType, String newsUpdateType) throws Exception;
+  News updateNews(News news,
+                  String updater,
+                  Boolean post,
+                  boolean publish,
+                  String newsObjectType,
+                  String newsUpdateType) throws Exception;
 
   /**
    * Delete news
@@ -246,18 +253,20 @@ public interface NewsService {
    * @return the published news
    * @throws Exception when error occurs
    */
-  News scheduleNews(News news, org.exoplatform.services.security.Identity currentIdentity, String newsObjectType) throws Exception;
+  News scheduleNews(News news,
+                    org.exoplatform.services.security.Identity currentIdentity,
+                    String newsObjectType) throws Exception;
 
   /**
    * Un-schedule publishing a News
    *
    * @param news
-   * @param currentIdentity
    * @param pageOwnerId
+   * @param newsArticleCreator
    * @return unscheduled News
    * @throws Exception when error occurs
    */
-  News unScheduleNews(News news, String pageOwnerId, org.exoplatform.services.security.Identity currentIdentity) throws Exception;
+  News unScheduleNews(News news, String pageOwnerId, String newsArticleCreator) throws Exception;
 
   /**
    * Search news by term
@@ -296,4 +305,50 @@ public interface NewsService {
    * @throws Exception when user doesn't have access to {@link News}
    */
   void shareNews(News news, Space space, Identity userIdentity, String sharedActivityId) throws Exception;
+
+  /**
+   * @param draftArticle {@link News} news draft article to be created
+   * @param pageOwnerId
+   * @param draftArticleCreator
+   * @param creationDate
+   * @return the created draft news article
+   * @throws Exception when error occurs
+   */
+  News createDraftArticleForNewPage(News draftArticle,
+                                    String pageOwnerId,
+                                    String draftArticleCreator,
+                                    long creationDate) throws Exception;
+
+  /**
+   * @param newsArticle {@link News} news article to be created
+   * @param newsArticleCreator
+   * @return the created news article
+   * @throws Exception when error occurs
+   */
+  News createNewsArticlePage(News newsArticle, String newsArticleCreator) throws Exception;
+
+  /**
+   * @param news {@link News} news draft article to be created
+   * @param updater
+   * @param page
+   * @param creationDate
+   * @return the created news draft for an existing news article
+   * @throws Exception when error occurs
+   */
+  News createDraftForExistingPage(News news, String updater, Page page, long creationDate) throws Exception;
+
+  /**
+   * @param news {@link News} news article to be deleted
+   * @param articleCreator
+   * @throws Exception when error occurs
+   */
+  void deleteArticle(News news, String articleCreator) throws Exception;
+
+  /**
+   * @param draftArticleId
+   * @param draftArticleCreator
+   * @param deleteIllustration
+   * @throws Exception when error occurs
+   */
+  void deleteDraftArticle(String draftArticleId, String draftArticleCreator, boolean deleteIllustration) throws Exception;
 }
