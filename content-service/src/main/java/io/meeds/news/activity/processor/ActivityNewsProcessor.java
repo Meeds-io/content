@@ -21,6 +21,7 @@ package io.meeds.news.activity.processor;
 
 import java.util.HashMap;
 
+import org.apache.commons.lang3.math.NumberUtils;
 import org.exoplatform.container.xml.InitParams;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
@@ -60,6 +61,9 @@ public class ActivityNewsProcessor extends BaseActivityProcessorPlugin {
     News news = (News) activity.getLinkedProcessedEntities().get("news");
     if (news == null) {
       try {
+        if (!NumberUtils.isParsable(activity.getTemplateParams().get("newsId"))) {
+          return;
+        }
         news = newsService.getNewsArticleById(activity.getTemplateParams().get("newsId"));
 
         RealtimeListAccess<ExoSocialActivity> listAccess = activityManager.getCommentsWithListAccess(activity, true);

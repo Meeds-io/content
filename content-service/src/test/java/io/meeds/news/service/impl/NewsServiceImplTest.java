@@ -958,7 +958,7 @@ public class NewsServiceImplTest {
     when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(identity1);
     when(identity1.getId()).thenReturn("1");
 
-    newsService.unScheduleNews(newsArticle, space.getGroupId(), mockIdentity());
+    newsService.unScheduleNews(newsArticle, space.getGroupId(), "john");
 
     verify(noteService, times(1)).createDraftForNewPage(any(DraftPage.class), anyLong());
     verify(noteService, times(1)).deleteNote(anyString(), anyString(), anyString());
