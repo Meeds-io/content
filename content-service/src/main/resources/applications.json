@@ -1,0 +1,22 @@
+{
+    "descriptors": [
+        {
+            "name": "News",
+            "imagePath": "war:/../images/news.png",
+            "override": false,
+            "enabled": true,
+            "application": {
+                "title": "News",
+                "description": "News application",
+                "url": "./news",
+                "active": true,
+                "mandatory": false,
+                "mobile": true,
+                "permissions": [
+                    "*:/platform/users",
+                    "*:/platform/externals"
+                ]
+            }
+        }
+    ]
+}
