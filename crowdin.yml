@@ -16,7 +16,7 @@
 #
 files: [
   {
-    "source" : "/services/src/main/resources/locale/portlet/news/News_en.properties",
+    "source" : "/content-service/src/main/resources/locale/portlet/news/News_en.properties",
 
     "translation" : "%original_path%/%file_name%!_%locale_with_underscore%.%file_extension%",
     "translation_replace" : {
@@ -34,7 +34,7 @@ files: [
     "escape_quotes" : 0,
   },
   {
-    "source" : "/services/src/main/resources/locale/addon/Gamification_en.properties",
+    "source" : "/content-service/src/main/resources/locale/addon/Gamification_en.properties",
 
     "translation" : "%original_path%/%file_name%!_%locale_with_underscore%.%file_extension%",
     "translation_replace" : {
@@ -52,7 +52,7 @@ files: [
     "escape_quotes" : 0,
   },
   {
-    "source" : "/webapp/src/main/resources/locale/navigation/portal/global_en.properties",
+    "source" : "/content-webapp/src/main/resources/locale/navigation/portal/global_en.properties",
 
     "translation" : "%original_path%/%file_name%!_%locale_with_underscore%.%file_extension%",
     "translation_replace" : {
@@ -70,7 +70,7 @@ files: [
     "escape_quotes" : 0,
   },
   {
-    "source" : "/webapp/src/main/resources/locale/portlet/Analytics_en.properties",
+    "source" : "/content-webapp/src/main/resources/locale/portlet/Analytics_en.properties",
 
     "translation" : "%original_path%/%file_name%!_%locale_with_underscore%.%file_extension%",
     "translation_replace" : {
