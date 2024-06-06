@@ -2021,6 +2021,12 @@ public class NewsServiceImpl implements NewsService {
         news.setSpaceUrl(NewsUtils.buildSpaceUrl(space.getId()));
       }
 
+      org.exoplatform.social.core.identity.model.Identity identity = identityManager.getOrCreateIdentity(OrganizationIdentityProvider.NAME, news.getAuthor());
+      if (identity != null && identity.getProfile() != null) {
+        news.setAuthorDisplayName(identity.getProfile().getFullName());
+        news.setAuthorAvatarUrl(identity.getProfile().getAvatarUrl());
+      }
+
       buildArticleProperties(news, articlePage, currentUsername, metadataItem);
       news.setDeleted(articlePage.isDeleted());
       news.setUrl(NewsUtils.buildNewsArticleUrl(news, currentUsername));
