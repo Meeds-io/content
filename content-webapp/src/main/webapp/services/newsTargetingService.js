@@ -17,10 +17,9 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
-import {newsConstants} from '../js/newsConstants.js';
 
 export function getAllTargets() {
-  return fetch(`${newsConstants.NEWS_API}/targeting`, {
+  return fetch('/content/rest/targeting', {
     credentials: 'include',
     method: 'GET',
   }).then((resp) => {
@@ -30,7 +29,7 @@ export function getAllTargets() {
   });
 }
 export function getAllowedTargets() {
-  return fetch(`${newsConstants.NEWS_API}/targeting/allowed`, {
+  return fetch('/content/rest/targeting/allowed', {
     credentials: 'include',
     method: 'GET',
   }).then((resp) => {
@@ -44,7 +43,7 @@ export function deleteTargetByName(targetName, delay) {
   if (delay > 0) {
     localStorage.setItem('deletedNewsTarget', targetName);
   }
-  return fetch(`${newsConstants.NEWS_API}/targeting/${targetName}?delay=${delay || 0}`, {
+  return fetch(`/content/rest/targeting/${targetName}?delay=${delay || 0}`, {
     credentials: 'include',
     method: 'DELETE'
   }).then((resp) => {
@@ -55,7 +54,7 @@ export function deleteTargetByName(targetName, delay) {
 }
 
 export function undoDeleteTarget(targetName) {
-  return fetch(`${newsConstants.NEWS_API}/targeting/${targetName}/undoDelete`, {
+  return fetch(`/content/rest/targeting/${targetName}/undoDelete`, {
     method: 'POST',
     credentials: 'include',
   }).then((resp) => {
@@ -68,7 +67,7 @@ export function undoDeleteTarget(targetName) {
 }
 
 export function createTarget(target) {
-  return fetch(`${newsConstants.NEWS_API}/targeting`, {
+  return fetch('/content/rest/targeting', {
     method: 'POST',
     credentials: 'include',
     headers: {
@@ -85,7 +84,7 @@ export function createTarget(target) {
 }
 
 export function updateTarget(target, originalTargetName) {
-  return fetch(`${newsConstants.NEWS_API}/targeting/${originalTargetName}`, {
+  return fetch(`/content/rest/targeting/${originalTargetName}`, {
     method: 'PUT',
     credentials: 'include',
     headers: {

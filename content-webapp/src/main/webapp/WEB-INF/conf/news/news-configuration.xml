@@ -28,10 +28,6 @@
     <type>io.meeds.news.rest.NewsRestResourcesV1</type>
   </component>
 
-  <component>
-    <type>io.meeds.news.rest.NewsTargetingRestResourcesV1</type>
-  </component>
-
   <external-component-plugins>
     <target-component>org.exoplatform.services.resources.ResourceBundleService</target-component>
     <component-plugin>

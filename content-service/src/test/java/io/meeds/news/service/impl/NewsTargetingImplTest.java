@@ -24,6 +24,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -38,6 +39,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import org.exoplatform.container.component.RequestLifeCycle;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
@@ -114,7 +116,7 @@ public class NewsTargetingImplTest {
 
   @Before
   public void setUp() {
-    MockitoAnnotations.openMocks(this);
+    EXO_CONTAINER_CONTEXT.when(() -> ExoContainerContext.getCurrentContainer()).thenReturn(container);
   }
 
   @AfterClass
@@ -127,7 +129,6 @@ public class NewsTargetingImplTest {
   @Test
   public void testGetAllTargets() throws Exception {
     // Given
-    IdentityRegistry identityRegistry = mock(IdentityRegistry.class);
     EXO_CONTAINER_CONTEXT.when(() -> ExoContainerContext.getService(IdentityRegistry.class)).thenReturn(identityRegistry);
     org.exoplatform.services.security.Identity identity = mock(org.exoplatform.services.security.Identity.class);
     REST_UTILS.when(() -> RestUtils.getCurrentUser()).thenReturn("root");
@@ -185,7 +186,6 @@ public class NewsTargetingImplTest {
   @Test
   public void testGetAllowedTargets() throws Exception {
     // Given
-    IdentityRegistry identityRegistry = mock(IdentityRegistry.class);
     EXO_CONTAINER_CONTEXT.when(() -> ExoContainerContext.getService(IdentityRegistry.class)).thenReturn(identityRegistry);
     org.exoplatform.services.security.Identity identity = mock(org.exoplatform.services.security.Identity.class);
     REST_UTILS.when(() -> RestUtils.getCurrentUser()).thenReturn("user");
@@ -376,7 +376,6 @@ public class NewsTargetingImplTest {
     MetadataKey metadataKey = new MetadataKey(NewsTargetingService.METADATA_TYPE.getName(), "sliderNews", 0);
     Identity userIdentity = new Identity("1");
     when(identityManager.getOrCreateIdentity(OrganizationIdentityProvider.NAME, "root")).thenReturn(userIdentity);
-    IdentityRegistry identityRegistry = mock(IdentityRegistry.class);
     Authenticator authenticator = mock(Authenticator.class);
     EXO_CONTAINER_CONTEXT.when(() -> ExoContainerContext.getService(IdentityRegistry.class)).thenReturn(identityRegistry);
     EXO_CONTAINER_CONTEXT.when(() -> ExoContainerContext.getCurrentContainer()).thenReturn(container);
@@ -441,7 +440,6 @@ public class NewsTargetingImplTest {
     Identity userIdentity = new Identity();
     userIdentity.setRemoteId(username);
 
-    IdentityRegistry identityRegistry = mock(IdentityRegistry.class);
     EXO_CONTAINER_CONTEXT.when(() -> ExoContainerContext.getService(IdentityRegistry.class)).thenReturn(identityRegistry);
     org.exoplatform.services.security.Identity identity = mock(org.exoplatform.services.security.Identity.class);
     when(identity.isMemberOf("/platform/web-contributors", "manager")).thenReturn(true);
@@ -478,7 +476,7 @@ public class NewsTargetingImplTest {
     currentIdentity.setMemberships(memberships);
     Identity userIdentity = new Identity("organization", "root");
     userIdentity.setId("1");
-    when(identityManager.getOrCreateIdentity(any(), any())).thenReturn(userIdentity);
+    when(identityManager.getOrCreateIdentity(anyString(), anyString())).thenReturn(userIdentity);
 
     List<Metadata> newsTargets = new LinkedList<>();
     Metadata sliderNews = new Metadata();
@@ -520,8 +518,7 @@ public class NewsTargetingImplTest {
     userIdentity1.setId(id1);
     userIdentity1.setRemoteId(username1);
 
-    IdentityRegistry identityRegistry1 = mock(IdentityRegistry.class);
-    EXO_CONTAINER_CONTEXT.when(() -> ExoContainerContext.getService(IdentityRegistry.class)).thenReturn(identityRegistry1);
+    EXO_CONTAINER_CONTEXT.when(() -> ExoContainerContext.getService(IdentityRegistry.class)).thenReturn(identityRegistry);
     org.exoplatform.services.security.Identity identity1 = mock(org.exoplatform.services.security.Identity.class);
     try {
       newsTargetingService.createNewsTarget(newsTargetingEntity, identity1);

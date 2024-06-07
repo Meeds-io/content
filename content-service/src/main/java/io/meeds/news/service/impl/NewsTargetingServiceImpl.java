@@ -77,7 +77,6 @@ public class NewsTargetingServiceImpl implements NewsTargetingService {
   @Autowired
   private OrganizationService organizationService;
 
-
   @Override
   public List<NewsTargetingEntity> getAllTargets() {
     List<Metadata> targets = metadataService.getMetadatas(METADATA_TYPE.getName(), 0);
