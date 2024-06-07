@@ -230,6 +230,9 @@ export default {
     },
   },
   computed: {
+    newListTranslationEnabled() {
+      return this.$root.newListTranslationEnabled;
+    },
     backgroundColor(){
       return this.newsTargets.length === 0 ? '#E1E8EE': '';
     },
@@ -244,6 +247,9 @@ export default {
     },
     displayedViewTemplates() {
       return this.viewTemplates.filter(e=> !e.name.includes('EmptyTemplate'));
+    },
+    hasNewsHeader() {
+      return this.newListTranslationEnabled && this.newsHeader?.[this.language]?.length || this.newsHeader?.length;
     },
     disabled() {
       return this.showSeeAll && !this.isValidSeeAllUrl;

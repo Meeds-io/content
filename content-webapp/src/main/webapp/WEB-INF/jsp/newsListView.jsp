@@ -56,14 +56,17 @@
       currentIdentity = ConversationState.getCurrent().getIdentity();
     }
 
+    ExoFeatureService featureService = CommonsUtils.getService(ExoFeatureService.class);
     PortalRequestContext rcontext = PortalRequestContext.getCurrentInstance();
     PortalHttpServletResponseWrapper responseWrapper = ( PortalHttpServletResponseWrapper ) rcontext.getResponse();
     String newsListUrl = "/content/rest/contents/byTarget/" + newsTarget + "?offset=0&limit=" + limit + "&returnSize=true";
     responseWrapper.addHeader("Link", "<" + newsListUrl + ">; rel=prefetch; as=fetch; crossorigin=use-credentials", false);
     boolean canManageNewsPublishTargets = NewsUtils.canManageNewsPublishTargets(currentIdentity);
+    boolean newsListTranslationEnabled = featureService.isFeatureActiveForUser("newsListTranslation", request.getRemoteUser());
   %>
   <div class="news-list-view-app" id="<%= appId %>">
     <script type="text/javascript">
+      eXo.env.portal.newsListTranslationEnabled = <%=newsListTranslationEnabled%>;
       eXo.env.portal.canManageNewsPublishTargets = <%=canManageNewsPublishTargets%>;
       require(['PORTLET/content/NewsListView'], app => app.init({
         applicationId: '<%=applicationId%>',
