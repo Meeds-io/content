@@ -23,7 +23,7 @@
     <v-overlay
       z-index="1000"
       :value="drawer"
-      @click.native="drawer = false" />
+      @click.native="closeDrawer" />
     <exo-drawer
       id="postNewsDrawer"
       ref="postNewsDrawer"
@@ -233,9 +233,7 @@ export default {
         this.editingNews = false;
         this.$root.$emit('alert-message', this.$t('news.composer.alert.success.UpdateTargets'), 'success');
         this.$emit('refresh-news', this.news.newsId);
-        window.setTimeout(() => {
-          this.drawer = false;
-        }, 400);
+        this.closeDrawer();
       })
         .catch(() => {
           this.editingNews = false;
