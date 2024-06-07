@@ -41,7 +41,7 @@ export function saveSettings(saveSettingsURL, settings) {
       formData.append(name, settings[name]);
     });
   }
-  return fetch(saveSettingsURL, {
+  return fetch(saveSettingsURL.replaceAll('&amp;', '&'), {
     method: 'POST',
     credentials: 'include',
     headers: {
