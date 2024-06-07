@@ -21,16 +21,15 @@
 <configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                xsi:schemaLocation="http://www.exoplatform.org/xml/ns/kernel_1_3.xsd http://www.exoplatform.org/xml/ns/kernel_1_3.xsd"
                xmlns="http://www.exoplatform.org/xml/ns/kernel_1_3.xsd">
-    <component>
-        <key>NewsListSettingFeatureProperties</key>
-        <type>org.exoplatform.container.ExtendedPropertyConfigurator</type>
-        <init-params>
-            <properties-param>
-                <name>NewsListSettingFeatureProperties</name>
-                <description>NewsList header setting Translation Feature enablement flag</description>
-                <property name="exo.feature.newsListTranslation.enabled"
-                          value="${exo.feature.newsListTranslation.enabled:true}"/>
-            </properties-param>
-        </init-params>
-    </component>
+  <component>
+    <key>NewsListSettingFeatureProperties</key>
+    <type>org.exoplatform.container.ExtendedPropertyConfigurator</type>
+    <init-params>
+      <properties-param>
+        <name>NewsListSettingFeatureProperties</name>
+        <description>NewsList header setting Translation Feature enablement flag</description>
+        <property name="exo.feature.newsListTranslation.enabled" value="${exo.feature.newsListTranslation.enabled:true}"/>
+      </properties-param>
+    </init-params>
+  </component>
 </configuration>
