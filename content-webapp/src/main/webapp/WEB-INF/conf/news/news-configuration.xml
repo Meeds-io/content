@@ -23,16 +23,6 @@
    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
    xsi:schemaLocation="http://www.exoplatform.org/xml/ns/kernel_1_2.xsd http://www.exoplatform.org/xml/ns/kernel_1_2.xsd"
    xmlns="http://www.exoplatform.org/xml/ns/kernel_1_2.xsd">
-  
-  <component>
-    <key>io.meeds.news.service.NewsService</key>
-    <type>io.meeds.news.service.impl.NewsServiceImpl</type>
-  </component>
-  
-  <component>
-    <key>io.meeds.news.service.NewsTargetingService</key>
-    <type>io.meeds.news.service.impl.NewsTargetingServiceImpl</type>
-  </component>
 
   <component>
     <type>io.meeds.news.rest.NewsRestResourcesV1</type>

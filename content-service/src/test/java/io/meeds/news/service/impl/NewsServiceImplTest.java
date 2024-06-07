@@ -57,8 +57,10 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
+import org.mockito.MockitoAnnotations;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import org.exoplatform.commons.file.services.FileService;
@@ -129,7 +131,8 @@ public class NewsServiceImplTest {
   @Mock
   private NewsSearchConnector newsSearchConnector;
 
-  private NewsService                                  newsService;
+  @InjectMocks
+  private NewsServiceImpl                                  newsService;
 
   private static final MockedStatic<CommonsUtils>      COMMONS_UTILS      = mockStatic(CommonsUtils.class);
 
@@ -143,17 +146,7 @@ public class NewsServiceImplTest {
 
   @Before
   public void setUp() {
-    this.newsService = new NewsServiceImpl(spaceService,
-                                           noteService,
-                                           metadataService,
-                                           fileService,
-                                           newsTargetingService,
-                                           indexingService,
-                                           identityManager,
-                                           activityManager,
-                                           wikiService,
-                                           uploadService,
-            newsSearchConnector);
+    MockitoAnnotations.openMocks(this);
 
     when(johnIdentity.getUserId()).thenReturn("john");
     ConversationState conversationState = mock(ConversationState.class);
