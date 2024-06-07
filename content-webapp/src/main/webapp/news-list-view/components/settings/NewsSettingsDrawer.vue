@@ -69,6 +69,7 @@
           </div>
           <div class="d-flex flex-row mt-2">
             <v-text-field
+              v-if="!newListTranslationEnabled"
               v-model="newsHeader"
               type="string"
               name="newsHeader"
@@ -79,6 +80,20 @@
               required
               outlined
               dense />
+            <translation-text-field
+              v-else
+              ref="headerNameInput"
+              id="headerNameInput"
+              v-model="newsHeader"
+              :default-language="defaultLanguage"
+              :placeholder="$t('news.list.settings.placeHolderName')"
+              drawer-title="news.list.settings.translation.header"
+              maxlength="100"
+              class="flex"
+              no-expand-icon
+              back-icon
+              autofocus
+              required />
           </div>
           <div class="d-flex flex-row">
             <label for="newsTarget" class="listViewLabel text-subtitle-1 mt-6">
@@ -195,7 +210,7 @@ export default {
     viewExtensions: {},
     newsTarget: null,
     limit: 5,
-    newsHeader: '',
+    newsHeader: null,
     showAdvancedSettings: false,
     showHeader: false,
     showSeeAll: false,
@@ -210,9 +225,29 @@ export default {
     seeAllUrl: '',
     isValidSeeAllUrl: false,
     saveSettingsURL: '',
-    canManageNewsPublishTargets: eXo.env.portal.canManageNewsPublishTargets
+    canManageNewsPublishTargets: eXo.env.portal.canManageNewsPublishTargets,
+    translationObjectType: 'newsListView',
+    defaultLanguage: 'en',
+    headerTitleFieldName: 'headerNameInput'
   }),
+  props: {
+    language: {
+      type: String,
+      default: 'en'
+    },
+    applicationId: {
+      type: String,
+      default: null,
+    },
+    savedHeaderTranslations: {
+      type: Object,
+      default: null
+    },
+  },
   computed: {
+    newListTranslationEnabled() {
+      return this.$root.newListTranslationEnabled;
+    },
     backgroundColor(){
       return this.newsTargets.length === 0 ? '#E1E8EE': '';
     },
@@ -228,8 +263,11 @@ export default {
     displayedViewTemplates() {
       return this.viewTemplates.filter(e=> !e.name.includes('EmptyTemplate'));
     },
+    hasNewsHeader() {
+      return this.newListTranslationEnabled && this.newsHeader?.[this.language]?.length || this.newsHeader?.length;
+    },
     disabled() {
-      return !this.newsHeader.length || (this.showSeeAll && !this.isValidSeeAllUrl);
+      return !this.hasNewsHeader || (this.showSeeAll && !this.isValidSeeAllUrl);
     },
     previewTemplate() {
       if ( this.viewTemplate === 'NewsLatest') {
@@ -310,7 +348,9 @@ export default {
       this.viewTemplate = this.$root.viewTemplate;
       this.viewExtensions = this.$root.viewExtensions;
       this.newsTarget = this.$root.newsTarget;
-      this.newsHeader = this.$root.header;
+      this.newsHeader = (this.newListTranslationEnabled && (this.savedHeaderTranslations
+                                                       || {[this.defaultLanguage]: this.$root.headerTitle}))
+                                                       || this.$root.headerTitle;
       this.limit = this.$root.limit;
       this.showHeader = this.viewTemplate === 'NewsSlider' || this.viewTemplate === 'NewsMosaic' || this.viewTemplate === 'NewsStories' ? false : this.$root.showHeader;
       this.showSeeAll = this.$root.showSeeAll;
@@ -342,10 +382,9 @@ export default {
     save() {
       this.saving = true;
       let selectedOptions = null;
-      this.$newsListService.saveSettings(this.saveSettingsURL ,{
+      const settings = {
         viewTemplate: this.viewTemplate,
         newsTarget: this.newsTarget,
-        header: this.newsHeader,
         showHeader: this.showHeader,
         showSeeAll: this.showSeeAll,
         showArticleTitle: this.showArticleTitle,
@@ -357,11 +396,18 @@ export default {
         showArticleDate: this.showArticleDate,
         seeAllUrl: this.seeAllUrl,
         limit: this.limit,
-      })
+      };
+      if (!this.newListTranslationEnabled) {
+        settings['header'] = this.newsHeader;
+      }
+      this.$newsListService.saveSettings(this.saveSettingsURL , settings)
         .then(() => {
+          this.saveHeaderTranslations();
           this.$root.viewTemplate = this.viewTemplate;
           this.$root.newsTarget = this.newsTarget;
-          this.$root.header = this.newsHeader;
+          this.$root.headerTranslations = this.newsHeader;
+          this.$root.headerTitle = this.newListTranslationEnabled && this.newsHeader?.[this.language]
+                                                                  || this.newsHeader;
           this.$root.limit = this.limit;
           this.$root.showHeader = this.showHeader;
           this.$root.showSeeAll = this.showSeeAll;
@@ -376,7 +422,9 @@ export default {
           selectedOptions = {
             limit: this.limit,
             showHeader: this.showHeader,
-            header: this.newsHeader,
+            headerTranslations: this.newsHeader,
+            headerTitle: this.newListTranslationEnabled && this.newsHeader?.[this.language]
+                                                        || this.newsHeader,
             showSeeAll: this.showSeeAll,
             showArticleTitle: this.showArticleTitle,
             showArticleSummary: this.showArticleSummary,
@@ -393,6 +441,13 @@ export default {
         .finally(() => {
           this.saving = false;
         });
+    },
+    saveHeaderTranslations() {
+      if (!this.newListTranslationEnabled) {
+        return;
+      }
+      return this.$translationService.saveTranslations(this.translationObjectType, this.applicationId,
+        this.headerTitleFieldName, this.newsHeader);
     },
     getLabel(label, defaultLabel) {
       if (label === this.$t(label)) {
