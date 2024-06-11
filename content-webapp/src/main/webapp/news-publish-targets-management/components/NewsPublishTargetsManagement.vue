@@ -20,8 +20,8 @@
 -->
 <template>
   <v-app class="newsTargetsAdminSettings">
-    <v-main class="white card-border-radius pa-5">
-      <div class="white">
+    <v-main class="card-border-radius app-background-color pa-5">
+      <div class="app-background-color">
         <div class="d-flex flex-row">
           <h4 class="pb-5 font-weight-bold">
             {{ $t('newsTargets.settings.title') }}
