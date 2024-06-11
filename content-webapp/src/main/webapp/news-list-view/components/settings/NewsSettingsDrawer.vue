@@ -169,7 +169,12 @@
           @selected-option="selectedOption" />
       </form>
       <div class="d-flex flex-row mt-4 mx-8 justify-end advancedSettings">
-        <span v-if="!showAdvancedSettings" @click="showAdvancedSettings = !showAdvancedSettings">{{ $t('news.list.settings.drawer.advancedSettings') }}</span>
+        <span
+          v-if="!showAdvancedSettings"
+          class="primary--text text-decoration-underline clickable"
+          @click="showAdvancedSettings = !showAdvancedSettings">
+          {{ $t('news.list.settings.drawer.advancedSettings') }}
+        </span>
       </div>
     </template>
     <template slot="footer">
