@@ -128,7 +128,7 @@ public class NewsRestResourcesV1 implements ResourceContainer, Startable {
   }
 
   private enum FilterType {
-    PINNED, MYPOSTED, ARCHIVED, DRAFTS, SCHEDULED, ALL
+    PINNED, MYPOSTED, DRAFTS, SCHEDULED, ALL
   }
 
   public NewsRestResourcesV1(NewsService newsService,
@@ -293,10 +293,9 @@ public class NewsRestResourcesV1 implements ResourceContainer, Startable {
                              @Parameter(description = "News id", required = true)
                              @PathParam("id")
                              String id,
-                             @Parameter(description = "Is draft to delete")
-                             @Schema(defaultValue = "false")
-                             @QueryParam("isDraft")
-                             boolean isDraft,
+                             @Parameter(description = "news object to be deleted", required = true)
+                             @QueryParam("type")
+                             String newsObjectType,
                              @Parameter(description = "Time to effectively delete news", required = false)
                              @QueryParam("delay")
                              long delay) {
@@ -308,8 +307,7 @@ public class NewsRestResourcesV1 implements ResourceContainer, Startable {
       News news = newsService.getNewsById(id,
                                           currentIdentity,
                                           false,
-                                          isDraft ? NewsObjectType.DRAFT.name().toLowerCase()
-                                                  : ARTICLE.name().toLowerCase());
+                                          newsObjectType);
       if (news == null) {
         return Response.status(Response.Status.NOT_FOUND).build();
       }
@@ -322,7 +320,7 @@ public class NewsRestResourcesV1 implements ResourceContainer, Startable {
             RequestLifeCycle.begin(container);
             try {
               newsToDeleteQueue.remove(id);
-              newsService.deleteNews(id, currentIdentity, isDraft);
+              newsService.deleteNews(id, currentIdentity, newsObjectType);
             } catch (IllegalAccessException e) {
               LOG.error("User '{}' attempts to delete a non authorized news", currentIdentity.getUserId(), e);
             } catch (Exception e) {
@@ -334,7 +332,7 @@ public class NewsRestResourcesV1 implements ResourceContainer, Startable {
         }, delay, TimeUnit.SECONDS);
       } else {
         newsToDeleteQueue.remove(id);
-        newsService.deleteNews(id, currentIdentity, isDraft);
+        newsService.deleteNews(id, currentIdentity, newsObjectType);
       }
       return Response.ok().build();
     } catch (IllegalAccessException e) {
@@ -541,9 +539,11 @@ public class NewsRestResourcesV1 implements ResourceContainer, Startable {
       }
       NewsFilter newsFilter = buildFilter(spacesList, filter, text, author, limit, offset);
       List<News> news;
+      org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
       // Set text to search news with
       if (StringUtils.isNotEmpty(text)) {
         String lang = request.getLocale().getLanguage();
+        newsFilter.setLang(lang);
         TagService tagService = CommonsUtils.getService(TagService.class);
         long userIdentityId = RestUtils.getCurrentUserIdentityId();
         if (text.indexOf("#") == 0) {
@@ -553,9 +553,9 @@ public class NewsRestResourcesV1 implements ResourceContainer, Startable {
             newsFilter.setTagNames(tagNames.stream().map(e -> e.getName()).toList());
         }
 
-        news = newsService.searchNews(newsFilter, lang);
+        Identity identity = identityManager.getOrCreateIdentity(OrganizationIdentityProvider.NAME, currentIdentity.getUserId());
+        news = newsService.searchNews(newsFilter, identity);
       } else {
-        org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
         news = newsService.getNews(newsFilter, currentIdentity);
       }
 
@@ -691,18 +691,22 @@ public class NewsRestResourcesV1 implements ResourceContainer, Startable {
       @ApiResponse(responseCode = "401", description = "User not authorized to schedule the news"),
       @ApiResponse(responseCode = "500", description = "Internal server error") })
   public Response scheduleNews(@Context
-  HttpServletRequest request, @RequestBody(description = "News object to be scheduled", required = true)
-  News scheduledNews) {
+                               HttpServletRequest request,
+                               @Parameter(description = "News object type to be fetched", required = false)
+                               @QueryParam("type")
+                               String newsObjectType,
+                               @RequestBody(description = "News object to be scheduled", required = true)
+                               News scheduledNews) {
     if (scheduledNews == null || StringUtils.isEmpty(scheduledNews.getId())) {
       return Response.status(Response.Status.BAD_REQUEST).build();
     }
     org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
     try {
-      News news = newsService.getNewsById(scheduledNews.getId(), currentIdentity, false);
+      News news = newsService.getNewsById(scheduledNews.getId(), currentIdentity, false, newsObjectType);
       if (news == null) {
         return Response.status(Response.Status.NOT_FOUND).build();
       }
-      news = newsService.scheduleNews(scheduledNews, currentIdentity);
+      news = newsService.scheduleNews(scheduledNews, currentIdentity, newsObjectType);
       return Response.ok(news).build();
     } catch (IllegalAccessException e) {
       LOG.warn("User '{}' is not autorized to schedule news", currentIdentity.getUserId(), e);
@@ -933,22 +937,6 @@ public class NewsRestResourcesV1 implements ResourceContainer, Startable {
       if (space == null) {
         return Response.status(Response.Status.NOT_FOUND).build();
       }
-
-      // TODO Move to service layer
-      if (updatedNews.isArchived() != news.isArchived()) {
-        boolean canArchiveOrUnarchiveNews = currentIdentity.isMemberOf(PLATFORM_WEB_CONTRIBUTORS_GROUP, PUBLISHER_MEMBERSHIP_NAME)
-            || currentIdentity.getUserId().equals(news.getAuthor());
-        if (!canArchiveOrUnarchiveNews) {
-          return Response.status(Response.Status.UNAUTHORIZED).build();
-        }
-        news.setArchived(updatedNews.isArchived());
-        if (news.isArchived()) {
-          newsService.archiveNews(id, currentIdentity.getUserId());
-        } else {
-          newsService.unarchiveNews(id, currentIdentity.getUserId());
-        }
-      }
-
       boolean isUpdatedTitle = (updatedNews.getTitle() != null) && !updatedNews.getTitle().equals(news.getTitle());
       boolean isUpdatedSummary = (updatedNews.getSummary() != null) && !updatedNews.getSummary().equals(news.getSummary());
       boolean isUpdatedBody = (updatedNews.getBody() != null) && !updatedNews.getBody().equals(news.getBody());
@@ -1056,11 +1044,6 @@ public class NewsRestResourcesV1 implements ResourceContainer, Startable {
         }
         break;
       }
-
-      case ARCHIVED: {
-        newsFilter.setArchivedNews(true);
-        break;
-      }
       case DRAFTS: {
         if (StringUtils.isNotEmpty(author)) {
           newsFilter.setAuthor(author);
@@ -1076,11 +1059,7 @@ public class NewsRestResourcesV1 implements ResourceContainer, Startable {
         break;
       }
       }
-      if ("DRAFTS".equals(filterType.toString())) {
-        newsFilter.setOrder("exo:dateModified");
-      } else {
-        newsFilter.setOrder("publication:liveDate");
-      }
+      newsFilter.setOrder("UPDATED_DATE");
     }
     // Set text to search news with
     if (StringUtils.isNotEmpty(text) && text.indexOf("#") != 0) {

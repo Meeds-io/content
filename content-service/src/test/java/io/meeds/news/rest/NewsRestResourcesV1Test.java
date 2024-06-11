@@ -444,133 +444,6 @@ public class NewsRestResourcesV1Test {
   }
 
   @Test
-  public void shouldGetOKWhenArchiveNewsAndNewsExistsAndUserIsAuthorized() throws Exception {
-    // Given
-    HttpServletRequest request = mock(HttpServletRequest.class);
-    lenient().when(request.getRemoteUser()).thenReturn(JOHN);
-
-    News oldnews = new News();
-    oldnews.setTitle("unarchived");
-    oldnews.setSummary("unarchived summary");
-    oldnews.setBody("unarchived body");
-    oldnews.setUploadId(null);
-    String sDate1 = "22/08/2019";
-    Date date1 = new SimpleDateFormat("dd/MM/yyyy").parse(sDate1);
-    oldnews.setCreationDate(date1);
-    oldnews.setPublished(false);
-    oldnews.setArchived(false);
-    oldnews.setId("id123");
-    oldnews.setSpaceId("space");
-    oldnews.setCanEdit(true);
-
-    News updatedNews = new News();
-    updatedNews.setArchived(true);
-
-    Identity currentIdentity = new Identity(JOHN);
-    ConversationState.setCurrent(new ConversationState(currentIdentity));
-    List<MembershipEntry> memberships = new LinkedList<MembershipEntry>();
-    memberships.add(new MembershipEntry("/platform/web-contributors", "publisher"));
-    currentIdentity.setMemberships(memberships);
-    Space space = mock(Space.class);
-
-    lenient().when(newsService.getNewsById("id123", currentIdentity, false)).thenReturn(oldnews);
-    lenient().when(spaceService.getSpaceById(anyString())).thenReturn(space);
-
-    // When
-    Response response = newsRestResourcesV1.patchNews(request, "id123", updatedNews);
-
-    // Then
-    verify(newsService, times(1)).archiveNews("id123", JOHN);
-    verify(newsService, times(0)).updateNews(oldnews, request.getRemoteUser(), null, oldnews.isPublished());
-    assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-  }
-
-  @Test
-  public void shouldGetOKWhenUnarchiveNewsAndNewsExistsAndUserIsAuthorized() throws Exception {
-    // Given
-    HttpServletRequest request = mock(HttpServletRequest.class);
-    lenient().when(request.getRemoteUser()).thenReturn(JOHN);
-
-    News oldnews = new News();
-    oldnews.setTitle("unarchived");
-    oldnews.setSummary("unarchived summary");
-    oldnews.setBody("unarchived body");
-    oldnews.setUploadId(null);
-    String sDate1 = "22/08/2019";
-    Date date1 = new SimpleDateFormat("dd/MM/yyyy").parse(sDate1);
-    oldnews.setCreationDate(date1);
-    oldnews.setPublished(false);
-    oldnews.setArchived(true);
-    oldnews.setId("id123");
-    oldnews.setSpaceId("space");
-    oldnews.setAuthor(JOHN);
-    oldnews.setCanEdit(true);
-
-    News updatedNews = new News();
-    updatedNews.setArchived(false);
-
-    Identity currentIdentity = new Identity(JOHN);
-    ConversationState.setCurrent(new ConversationState(currentIdentity));
-    List<MembershipEntry> memberships = new LinkedList<MembershipEntry>();
-    memberships.add(new MembershipEntry("/platform/web-contributors", "redactor"));
-    currentIdentity.setMemberships(memberships);
-    Space space = mock(Space.class);
-
-    lenient().when(newsService.getNewsById("id123", currentIdentity, false)).thenReturn(oldnews);
-    lenient().when(spaceService.getSpaceById(anyString())).thenReturn(space);
-
-    // When
-    Response response = newsRestResourcesV1.patchNews(request, "id123", updatedNews);
-
-    // Then
-    verify(newsService, times(1)).unarchiveNews("id123", JOHN);
-    verify(newsService, times(0)).updateNews(oldnews, request.getRemoteUser(), null, oldnews.isPublished());
-    assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-  }
-
-  @Test
-  public void shouldGetUnauthorizedWhenArchiveNewsAndNewsExistsAndUserIsNotAuthorized() throws Exception {
-    // Given
-    HttpServletRequest request = mock(HttpServletRequest.class);
-    lenient().when(request.getRemoteUser()).thenReturn(JOHN);
-
-    News oldnews = new News();
-    oldnews.setTitle("unarchived");
-    oldnews.setSummary("unarchived summary");
-    oldnews.setBody("unarchived body");
-    oldnews.setUploadId(null);
-    String sDate1 = "22/08/2019";
-    Date date1 = new SimpleDateFormat("dd/MM/yyyy").parse(sDate1);
-    oldnews.setCreationDate(date1);
-    oldnews.setPublished(false);
-    oldnews.setArchived(false);
-    oldnews.setId("id123");
-    oldnews.setSpaceId("space");
-    oldnews.setAuthor("test");
-    oldnews.setCanEdit(false);
-
-    News updatedNews = new News();
-    updatedNews.setArchived(true);
-
-    Identity currentIdentity = new Identity(JOHN);
-    ConversationState.setCurrent(new ConversationState(currentIdentity));
-    List<MembershipEntry> memberships = new LinkedList<MembershipEntry>();
-    memberships.add(new MembershipEntry("/platform/web-contributors", "redactor"));
-    currentIdentity.setMemberships(memberships);
-    Space space = mock(Space.class);
-    lenient().when(newsService.getNewsById("id123", currentIdentity, false)).thenReturn(oldnews);
-    lenient().when(spaceService.getSpaceById(anyString())).thenReturn(space);
-
-    // When
-    Response response = newsRestResourcesV1.patchNews(request, "id123", updatedNews);
-
-    // Then
-    verify(newsService, times(0)).archiveNews("id123", JOHN);
-    verify(newsService, times(0)).updateNews(oldnews, request.getRemoteUser(), null, oldnews.isPublished());
-    assertEquals(Response.Status.UNAUTHORIZED.getStatusCode(), response.getStatus());
-  }
-
-  @Test
   public void shouldGetOKWhenUpdatingAndPinNewsAndNewsExistsAndAndUserIsAuthorized() throws Exception {
     // Given
     News existingNews = new News();
@@ -875,13 +748,13 @@ public class NewsRestResourcesV1Test {
     Space space1 = new Space();
     space1.setId("1");
     space1.setPrettyName("space1");
-    lenient().when(newsService.getNewsById(anyString(), any(), anyBoolean())).thenReturn(news);
+    lenient().when(newsService.getNewsById(anyString(), any(), anyBoolean(),  anyString())).thenReturn(news);
     lenient().when(spaceService.getSpaceById(anyString())).thenReturn(space1);
     lenient().when(spaceService.isMember(any(Space.class), eq(JOHN))).thenReturn(true);
     lenient().when(spaceService.isSuperManager(eq(JOHN))).thenReturn(true);
 
     // When
-    Response response = newsRestResourcesV1.scheduleNews(request, news);
+    Response response = newsRestResourcesV1.scheduleNews(request, ARTICLE.name().toLowerCase(), news);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
@@ -1077,11 +950,11 @@ public class NewsRestResourcesV1Test {
     lenient().when(spaceService.isSuperManager(eq(JOHN))).thenReturn(true);
 
     // When
-    Response response = newsRestResourcesV1.deleteNews(request, "1", false, 0L);
+    Response response = newsRestResourcesV1.deleteNews(request, "1", ARTICLE.name().toLowerCase(), 0L);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-    verify(newsService).deleteNews("1", currentIdentity, false);
+    verify(newsService).deleteNews("1", currentIdentity, ARTICLE.name().toLowerCase());
   }
 
   @Test
@@ -1106,11 +979,11 @@ public class NewsRestResourcesV1Test {
     lenient().when(spaceService.isSuperManager(eq(JOHN))).thenReturn(true);
 
     // When
-    Response response = newsRestResourcesV1.deleteNews(request, "1", false, 0L);
+    Response response = newsRestResourcesV1.deleteNews(request, "1", ARTICLE.name().toLowerCase(), 0L);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-    verify(newsService).deleteNews("1", currentIdentity, false);
+    verify(newsService).deleteNews("1", currentIdentity, ARTICLE.name().toLowerCase());
   }
 
   @Test
@@ -1127,11 +1000,11 @@ public class NewsRestResourcesV1Test {
     lenient().when(spaceService.isSuperManager(eq(JOHN))).thenReturn(true);
 
     // When
-    Response response = newsRestResourcesV1.deleteNews(request, "1", false, 0L);
+    Response response = newsRestResourcesV1.deleteNews(request, "1", ARTICLE.name().toLowerCase(), 0L);
 
     // Then
     assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatus());
-    verify(newsService, never()).deleteNews("1", currentIdentity, false);
+    verify(newsService, never()).deleteNews("1", currentIdentity, ARTICLE.name().toLowerCase());
   }
 
   @Test
@@ -1149,11 +1022,11 @@ public class NewsRestResourcesV1Test {
     lenient().when(spaceService.isSuperManager(eq(JOHN))).thenReturn(true);
 
     // When
-    Response response = newsRestResourcesV1.deleteNews(request, null, false, 0L);
+    Response response = newsRestResourcesV1.deleteNews(request, null, ARTICLE.name().toLowerCase(), 0L);
 
     // Then
     assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
-    verify(newsService, never()).deleteNews("1", currentIdentity, false);
+    verify(newsService, never()).deleteNews("1", currentIdentity, ARTICLE.name().toLowerCase());
   }
 
   @Test
@@ -1738,7 +1611,7 @@ public class NewsRestResourcesV1Test {
     lenient().when(spaceService.isMember(any(Space.class), eq(JOHN))).thenReturn(true);
 
     // When
-    Response response = newsRestResourcesV1.deleteNews(request, news.getId(), false, 0);
+    Response response = newsRestResourcesV1.deleteNews(request, news.getId(), ARTICLE.name().toLowerCase(), 0);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());

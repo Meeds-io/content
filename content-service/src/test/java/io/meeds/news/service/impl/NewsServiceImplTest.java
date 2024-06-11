@@ -19,11 +19,7 @@
  */
 package io.meeds.news.service.impl;
 
-import static io.meeds.news.service.impl.NewsServiceImpl.DRAFT;
-import static io.meeds.news.service.impl.NewsServiceImpl.NEWS_ACTIVITIES;
-import static io.meeds.news.service.impl.NewsServiceImpl.NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME;
-import static io.meeds.news.service.impl.NewsServiceImpl.NEWS_SUMMARY;
-import static io.meeds.news.service.impl.NewsServiceImpl.POSTED;
+import static io.meeds.news.service.impl.NewsServiceImpl.*;
 import static io.meeds.news.utils.NewsUtils.NewsObjectType.ARTICLE;
 import static io.meeds.news.utils.NewsUtils.NewsObjectType.LATEST_DRAFT;
 import static io.meeds.news.utils.NewsUtils.NewsUpdateType.CONTENT;
@@ -33,7 +29,6 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -53,6 +48,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
+import io.meeds.news.search.NewsSearchConnector;
+import io.meeds.news.search.NewsESSearchResult;
+import org.exoplatform.services.security.ConversationState;
+import org.exoplatform.social.core.utils.MentionUtils;
+import org.exoplatform.wiki.WikiException;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
@@ -94,42 +94,52 @@ import io.meeds.news.utils.NewsUtils;
 public class NewsServiceImplTest {
 
   @Mock
-  private SpaceService                               spaceService;
+  private SpaceService                                 spaceService;
 
   @Mock
-  private NoteService                                noteService;
+  private NoteService                                  noteService;
 
   @Mock
-  private MetadataService                            metadataService;
+  private MetadataService                              metadataService;
 
   @Mock
-  private FileService                                fileService;
+  private FileService                                  fileService;
 
   @Mock
-  private UploadService                              uploadService;
+  private UploadService                                uploadService;
 
   @Mock
-  private IndexingService                            indexingService;
+  private IndexingService                              indexingService;
 
   @Mock
-  NewsTargetingService                               newsTargetingService;
+  NewsTargetingService                                 newsTargetingService;
 
   @Mock
-  IdentityManager                                    identityManager;
+  IdentityManager                                      identityManager;
 
   @Mock
-  ActivityManager                                    activityManager;
+  ActivityManager                                      activityManager;
 
   @Mock
-  WikiService                                        wikiService;
+  WikiService                                          wikiService;
 
-  private NewsService                                newsService;
+  @Mock
+  private Identity                                     johnIdentity;
 
-  private static final MockedStatic<CommonsUtils>    COMMONS_UTILS    = mockStatic(CommonsUtils.class);
+  @Mock
+  private NewsSearchConnector newsSearchConnector;
 
-  private static final MockedStatic<PortalContainer> PORTAL_CONTAINER = mockStatic(PortalContainer.class);
+  private NewsService                                  newsService;
 
-  private static final MockedStatic<NewsUtils>       NEWS_UTILS       = mockStatic(NewsUtils.class);
+  private static final MockedStatic<CommonsUtils>      COMMONS_UTILS      = mockStatic(CommonsUtils.class);
+
+  private static final MockedStatic<PortalContainer>   PORTAL_CONTAINER   = mockStatic(PortalContainer.class);
+
+  private static final MockedStatic<NewsUtils>         NEWS_UTILS         = mockStatic(NewsUtils.class);
+
+  private static final MockedStatic<ConversationState> CONVERSATION_STATE = mockStatic(ConversationState.class);
+
+  private static final MockedStatic<MentionUtils>      MENTION_UTILS      = mockStatic(MentionUtils.class);
 
   @Before
   public void setUp() {
@@ -142,7 +152,13 @@ public class NewsServiceImplTest {
                                            identityManager,
                                            activityManager,
                                            wikiService,
-                                           uploadService);
+                                           uploadService,
+            newsSearchConnector);
+
+    when(johnIdentity.getUserId()).thenReturn("john");
+    ConversationState conversationState = mock(ConversationState.class);
+    CONVERSATION_STATE.when(ConversationState::getCurrent).thenReturn(conversationState);
+    CONVERSATION_STATE.when(() -> ConversationState.getCurrent().getIdentity()).thenReturn(johnIdentity);
   }
 
   @AfterClass
@@ -150,6 +166,7 @@ public class NewsServiceImplTest {
     COMMONS_UTILS.close();
     PORTAL_CONTAINER.close();
     NEWS_UTILS.close();
+    MENTION_UTILS.close();
   }
 
   @Test
@@ -230,15 +247,7 @@ public class NewsServiceImplTest {
     draftPage.setAuthor("john");
     draftPage.setWikiOwner("/space/groupId");
 
-    Space space = mock(Space.class);
-    when(spaceService.getSpaceByGroupId(anyString())).thenReturn(space);
-    when(space.getGroupId()).thenReturn("/space/groupId");
-    when(space.getAvatarUrl()).thenReturn("space/avatar/url");
-    when(space.getDisplayName()).thenReturn("spaceDisplayName");
-    when(space.getVisibility()).thenReturn("public");
-    when(space.getId()).thenReturn("1");
-    when(spaceService.getSpaceById("1")).thenReturn(space);
-    when(spaceService.isSuperManager(anyString())).thenReturn(true);
+    Space space = mockSpace();
 
     when(noteService.getDraftNoteById(anyString(), anyString())).thenReturn(draftPage);
     MetadataItem metadataItem = mock(MetadataItem.class);
@@ -256,6 +265,8 @@ public class NewsServiceImplTest {
     when(activityManager.getActivity(nullable(String.class))).thenReturn(null);
     when(newsTargetingService.getTargetsByNews(any(News.class))).thenReturn(null);
     NEWS_UTILS.when(() -> NewsUtils.buildDraftUrl(any())).thenReturn("url");
+    MENTION_UTILS.when(() -> MentionUtils.substituteUsernames(anyString(), anyString())).thenReturn(draftPage.getContent());
+
     // When
     News news = newsService.getNewsById("1", identity, false, NewsUtils.NewsObjectType.DRAFT.name().toLowerCase());
 
@@ -281,15 +292,7 @@ public class NewsServiceImplTest {
     draftPage.setAuthor("john");
     draftPage.setWikiOwner("/space/groupId");
 
-    Space space = mock(Space.class);
-    when(space.getId()).thenReturn("1");
-    when(space.getGroupId()).thenReturn("/space/groupId");
-    when(space.getAvatarUrl()).thenReturn("space/avatar/url");
-    when(space.getDisplayName()).thenReturn("spaceDisplayName");
-    when(space.getVisibility()).thenReturn("public");
-    when(spaceService.isSuperManager(anyString())).thenReturn(true);
-    when(spaceService.getSpaceById(any())).thenReturn(space);
-    when(spaceService.getSpaceByGroupId(anyString())).thenReturn(space);
+    Space space = mockSpace();
 
     when(noteService.getDraftNoteById(anyString(), anyString())).thenReturn(draftPage);
     MetadataItem metadataItem = mock(MetadataItem.class);
@@ -355,15 +358,7 @@ public class NewsServiceImplTest {
     draftPage.setAuthor("john");
     draftPage.setWikiOwner("/space/groupId");
 
-    Space space = mock(Space.class);
-    when(space.getId()).thenReturn("1");
-    when(space.getGroupId()).thenReturn("/space/groupId");
-    when(space.getAvatarUrl()).thenReturn("space/avatar/url");
-    when(space.getDisplayName()).thenReturn("spaceDisplayName");
-    when(space.getVisibility()).thenReturn("public");
-    when(spaceService.isSuperManager(anyString())).thenReturn(true);
-    when(spaceService.getSpaceById(any())).thenReturn(space);
-    when(spaceService.getSpaceByGroupId(anyString())).thenReturn(space);
+    Space space = mockSpace();
 
     when(noteService.getDraftNoteById(anyString(), anyString())).thenReturn(draftPage);
     MetadataItem metadataItem = mock(MetadataItem.class);
@@ -386,11 +381,83 @@ public class NewsServiceImplTest {
     when(spaceService.canRedactOnSpace(space, identity)).thenReturn(true);
 
     // When
-    newsService.deleteNews(draftPage.getId(), identity, true);
+    newsService.deleteNews(draftPage.getId(), identity, NewsUtils.NewsObjectType.DRAFT.name().toLowerCase());
 
     // Then
     verify(noteService, times(1)).removeDraftById(draftPage.getId());
     verify(metadataService, times(1)).deleteMetadataItem(any(Long.class), anyBoolean());
+
+    // delete draft for existing page case
+    Page existingPage = mock(Page.class);
+    when(existingPage.getId()).thenReturn("1");
+    when(noteService.getNoteById(anyString())).thenReturn(existingPage);
+    when(noteService.getLatestDraftPageByUserAndTargetPageAndLang(anyLong(), anyString(), any())).thenReturn(draftPage);
+
+    // When
+    newsService.deleteNews(draftPage.getId(), identity, LATEST_DRAFT.name().toLowerCase());
+
+    // Then
+    verify(noteService, atLeast(1)).removeDraftById(draftPage.getId());
+    verify(metadataService, atLeast(1)).deleteMetadataItem(any(Long.class), anyBoolean());
+  }
+
+
+  @Test
+  public void testGetPublishedArticles() throws Exception {
+    NewsFilter newsFilter = new NewsFilter();
+    newsFilter.setPublishedNews(true);
+    Map<String, String> properties = new HashMap<>();
+    properties.put(PUBLISHED, "true");
+    MetadataItem metadataItem = mock(MetadataItem.class);
+    List<MetadataItem> metadataItems = List.of(metadataItem);
+    when(metadataItem.getObjectId()).thenReturn("1");
+    when(metadataItem.getProperties()).thenReturn(properties);
+
+    mockBuildArticle(metadataItems);
+
+    List<News> newsList = newsService.getNews(newsFilter, johnIdentity);
+    assertNotNull(newsList);
+    assertEquals(newsList.size(), 1);
+  }
+
+  @Test
+  public void testGetPostedArticles() throws Exception {
+    NewsFilter newsFilter = new NewsFilter();
+    newsFilter.setSpaces(List.of("1"));
+    Map<String, String> properties = new HashMap<>();
+    properties.put(NEWS_PUBLICATION_STATE, POSTED);
+    MetadataItem metadataItem = mock(MetadataItem.class);
+    List<MetadataItem> metadataItems = List.of(metadataItem);
+    when(metadataItem.getObjectId()).thenReturn("1");
+    when(metadataItem.getProperties()).thenReturn(properties);
+
+    mockBuildArticle(metadataItems);
+
+    List<News> newsList = newsService.getNews(newsFilter, johnIdentity);
+    assertNotNull(newsList);
+    assertEquals(newsList.size(), 1);
+  }
+
+  @Test
+  public void testGetMyPostedArticles() throws Exception {
+    NewsFilter newsFilter = new NewsFilter();
+    newsFilter.setSpaces(List.of("1"));
+    newsFilter.setAuthor("john");
+    Map<String, String> properties = new HashMap<>();
+    properties.put(NEWS_PUBLICATION_STATE, POSTED);
+    MetadataItem metadataItem = mock(MetadataItem.class);
+    List<MetadataItem> metadataItems = List.of(metadataItem);
+    when(metadataItem.getObjectId()).thenReturn("1");
+    when(metadataItem.getProperties()).thenReturn(properties);
+
+    org.exoplatform.social.core.identity.model.Identity identity = mock(org.exoplatform.social.core.identity.model.Identity.class);
+    when(identity.getId()).thenReturn("1");
+    when(identityManager.getOrCreateUserIdentity(newsFilter.getAuthor())).thenReturn(identity);
+    mockBuildArticle(metadataItems);
+
+    List<News> newsList = newsService.getNews(newsFilter, johnIdentity);
+    assertNotNull(newsList);
+    assertEquals(newsList.size(), 1);
   }
 
   @Test
@@ -404,15 +471,7 @@ public class NewsServiceImplTest {
     draftPage.setAuthor("john");
     draftPage.setWikiOwner("/space/groupId");
 
-    Space space1 = mock(Space.class);
-    when(space1.getId()).thenReturn("1");
-    when(spaceService.getSpaceByGroupId(anyString())).thenReturn(space1);
-    when(space1.getGroupId()).thenReturn("/space/groupId");
-    when(space1.getAvatarUrl()).thenReturn("space/avatar/url");
-    when(space1.getDisplayName()).thenReturn("spaceDisplayName");
-    when(space1.getVisibility()).thenReturn("public");
-    when(spaceService.getSpaceById("1")).thenReturn(space1);
-    when(spaceService.isSuperManager(anyString())).thenReturn(true);
+    Space space1 = mockSpace();
     when(noteService.getDraftNoteById(anyString(), anyString())).thenReturn(draftPage);
 
     Map<String, String> properties = new HashMap<>();
@@ -428,7 +487,7 @@ public class NewsServiceImplTest {
     Identity identity = mock(Identity.class);
     when(identity.getUserId()).thenReturn("john");
     List<Space> allowedDraftNewsSpaces = Arrays.asList(space1);
-    NEWS_UTILS.when(() -> NewsUtils.getAllowedDraftNewsSpaces(identity)).thenReturn(allowedDraftNewsSpaces);
+    NEWS_UTILS.when(() -> NewsUtils.getAllowedDraftArticleSpaceIds(identity, new ArrayList<>())).thenReturn(allowedDraftNewsSpaces);
     when(metadataService.getMetadataItemsByFilter(any(), anyLong(), anyLong())).thenReturn(metadataItems);
 
     when(activityManager.getActivity(nullable(String.class))).thenReturn(null);
@@ -459,19 +518,9 @@ public class NewsServiceImplTest {
     newsArticle.setId("1");
     newsArticle.setActivities("1:2;3:4");
 
-    Identity identity = mock(Identity.class);
-    when(identity.getUserId()).thenReturn("john");
-    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity(anyString())).thenReturn(identity);
+    Identity identity = mockIdentity();
 
-    Space space = mock(Space.class);
-    when(space.getId()).thenReturn("1");
-    when(space.getGroupId()).thenReturn("/space/groupId");
-    when(space.getAvatarUrl()).thenReturn("space/avatar/url");
-    when(space.getDisplayName()).thenReturn("spaceDisplayName");
-    when(space.getVisibility()).thenReturn("public");
-    when(spaceService.isSuperManager(anyString())).thenReturn(true);
-    when(spaceService.getSpaceById(any())).thenReturn(space);
-    when(spaceService.getSpaceByGroupId(anyString())).thenReturn(space);
+    Space space = mockSpace();
     NEWS_UTILS.when(() -> NewsUtils.canPublishNews(anyString(), any(Identity.class))).thenReturn(true);
     when(spaceService.canRedactOnSpace(any(Space.class), any(Identity.class))).thenReturn(true);
 
@@ -536,19 +585,9 @@ public class NewsServiceImplTest {
     when(pageVersion.getUpdatedDate()).thenReturn(new Date());
     when(pageVersion.getAuthorFullName()).thenReturn("full name");
 
-    Space space = mock(Space.class);
-    when(space.getId()).thenReturn("1");
-    when(space.getGroupId()).thenReturn("/space/groupId");
-    when(space.getAvatarUrl()).thenReturn("space/avatar/url");
-    when(space.getDisplayName()).thenReturn("spaceDisplayName");
-    when(space.getVisibility()).thenReturn("public");
-    when(spaceService.isSuperManager(anyString())).thenReturn(true);
-    when(spaceService.getSpaceById(any())).thenReturn(space);
-    when(spaceService.getSpaceByGroupId(anyString())).thenReturn(space);
+    Space space = mockSpace();
 
-    Identity identity = mock(Identity.class);
-    when(identity.getUserId()).thenReturn("john");
-    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity(anyString())).thenReturn(identity);
+    Identity identity = mockIdentity();
     NEWS_UTILS.when(() -> NewsUtils.canPublishNews(anyString(), any(Identity.class))).thenReturn(false);
     NEWS_UTILS.when(() -> NewsUtils.processMentions(anyString(), any())).thenReturn(new HashSet<>());
 
@@ -621,19 +660,9 @@ public class NewsServiceImplTest {
     Map<String, String> properties = new HashMap<>();
     when(metadataItem.getProperties()).thenReturn(properties);
 
-    Space space = mock(Space.class);
-    when(space.getId()).thenReturn("1");
-    when(space.getGroupId()).thenReturn("/space/groupId");
-    when(space.getAvatarUrl()).thenReturn("space/avatar/url");
-    when(space.getDisplayName()).thenReturn("spaceDisplayName");
-    when(space.getVisibility()).thenReturn("public");
-    when(spaceService.isSuperManager(anyString())).thenReturn(true);
-    when(spaceService.getSpaceById(any())).thenReturn(space);
-    when(spaceService.getSpaceByGroupId(anyString())).thenReturn(space);
+    Space space = mockSpace();
 
-    Identity identity = mock(Identity.class);
-    when(identity.getUserId()).thenReturn("john");
-    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity(anyString())).thenReturn(identity);
+    Identity identity = mockIdentity();
     NEWS_UTILS.when(() -> NewsUtils.canPublishNews(anyString(), any(Identity.class))).thenReturn(false);
     NEWS_UTILS.when(() -> NewsUtils.processMentions(anyString(), any())).thenReturn(new HashSet<>());
     when(newsTargetingService.getTargetsByNews(any(News.class))).thenReturn(null);
@@ -705,19 +734,9 @@ public class NewsServiceImplTest {
     Map<String, String> properties = new HashMap<>();
     when(metadataItem.getProperties()).thenReturn(properties);
 
-    Space space = mock(Space.class);
-    when(space.getId()).thenReturn("1");
-    when(space.getGroupId()).thenReturn("/space/groupId");
-    when(space.getAvatarUrl()).thenReturn("space/avatar/url");
-    when(space.getDisplayName()).thenReturn("spaceDisplayName");
-    when(space.getVisibility()).thenReturn("public");
-    when(spaceService.isSuperManager(anyString())).thenReturn(true);
-    when(spaceService.getSpaceById(any())).thenReturn(space);
-    when(spaceService.getSpaceByGroupId(anyString())).thenReturn(space);
+    Space space = mockSpace();
 
-    Identity identity = mock(Identity.class);
-    when(identity.getUserId()).thenReturn("john");
-    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity(anyString())).thenReturn(identity);
+    Identity identity = mockIdentity();
     NEWS_UTILS.when(() -> NewsUtils.canPublishNews(anyString(), any(Identity.class))).thenReturn(false);
     NEWS_UTILS.when(() -> NewsUtils.processMentions(anyString(), any())).thenReturn(new HashSet<>());
     when(newsTargetingService.getTargetsByNews(any(News.class))).thenReturn(null);
@@ -788,20 +807,8 @@ public class NewsServiceImplTest {
     Map<String, String> properties = new HashMap<>();
     properties.put(NEWS_ACTIVITIES, "1:1;");
     when(metadataItem.getProperties()).thenReturn(properties);
-
-    Space space = mock(Space.class);
-    when(space.getId()).thenReturn("1");
-    when(space.getGroupId()).thenReturn("/space/groupId");
-    when(space.getAvatarUrl()).thenReturn("space/avatar/url");
-    when(space.getDisplayName()).thenReturn("spaceDisplayName");
-    when(space.getVisibility()).thenReturn("public");
-    when(spaceService.isSuperManager(anyString())).thenReturn(true);
-    when(spaceService.getSpaceById(any())).thenReturn(space);
-    when(spaceService.getSpaceByGroupId(anyString())).thenReturn(space);
-
-    Identity identity = mock(Identity.class);
-    when(identity.getUserId()).thenReturn("john");
-    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity(anyString())).thenReturn(identity);
+    Space space = mockSpace();
+    Identity identity = mockIdentity();
     when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(new org.exoplatform.social.core.identity.model.Identity("1"));
     NEWS_UTILS.when(() -> NewsUtils.canPublishNews(anyString(), any(Identity.class))).thenReturn(false);
     when(newsTargetingService.getTargetsByNews(any(News.class))).thenReturn(null);
@@ -814,7 +821,7 @@ public class NewsServiceImplTest {
     when(pageVersion.getUpdatedDate()).thenReturn(new Date());
     when(pageVersion.getAuthorFullName()).thenReturn("full name");
     //
-    assertThrows(IllegalAccessException.class, () -> newsService.deleteNews(existingPage.getId(), identity, false));
+    assertThrows(IllegalAccessException.class, () -> newsService.deleteNews(existingPage.getId(), identity, ARTICLE.name().toLowerCase()));
 
     // when
     when(spaceService.canRedactOnSpace(space, identity)).thenReturn(true);
@@ -824,12 +831,200 @@ public class NewsServiceImplTest {
     when(noteService.getLatestDraftOfPage(existingPage, identity.getUserId())).thenReturn(draftPage);
     when(noteService.getDraftNoteById(anyString(), anyString())).thenReturn(draftPage);
 
-    newsService.deleteNews(existingPage.getId(), identity, false);
+    newsService.deleteNews(existingPage.getId(), identity, ARTICLE.name().toLowerCase());
 
     //Then
     verify(noteService, times(1)).deleteNote(existingPage.getWikiType(), existingPage.getWikiOwner(), existingPage.getName());
     verify(noteService, times(1)).removeDraftById("1");
     verify(activityManager, times(1)).deleteActivity("1");
     verify(metadataService, times(1)).updateMetadataItem(any(MetadataItem.class), anyLong());
+  }
+
+  @Test
+  public void testScheduleNews() throws Exception {
+    Space space = mockSpace();
+    Identity identity = mockIdentity();
+    when(spaceService.isManager(space, identity.getUserId())).thenReturn(true);
+    MetadataItem metadataItem = mock(MetadataItem.class);
+    List<MetadataItem> metadataItems = new ArrayList<>();
+    metadataItems.add(metadataItem);
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+            any(MetadataObject.class))).thenReturn(metadataItems);
+    Map<String, String> properties = new HashMap<>();
+    when(metadataItem.getProperties()).thenReturn(properties);
+
+    Wiki wiki = mock(Wiki.class);
+    when(wikiService.getWikiByTypeAndOwner(anyString(), anyString())).thenReturn(wiki);
+    org.exoplatform.wiki.model.Page rootPage = mock(org.exoplatform.wiki.model.Page.class);
+    when(rootPage.getName()).thenReturn(NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME);
+    when(rootPage.getId()).thenReturn("1");
+    when(noteService.getNoteOfNoteBookByName("group",
+            space.getGroupId(),
+            NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME)).thenReturn(rootPage);
+
+    News newsArticle = new News();
+    newsArticle.setAuthor("john");
+    newsArticle.setTitle("news article");
+    newsArticle.setSummary("news article summary");
+    newsArticle.setBody("news body");
+    newsArticle.setPublicationState("staged");
+    newsArticle.setId("1");
+    newsArticle.setSpaceId("1");
+    newsArticle.setPublished(false);
+    newsArticle.setSchedulePostDate("30/05/2024 08:00:00");
+
+    org.exoplatform.social.core.identity.model.Identity identity1 =
+            mock(org.exoplatform.social.core.identity.model.Identity.class);
+    when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(identity1);
+    when(identity1.getId()).thenReturn("1");
+
+    newsService.scheduleNews(newsArticle, identity, DRAFT);
+    verify(noteService, times(1)).createNote(any(Wiki.class), anyString(), any(Page.class), any(Identity.class));
+  }
+
+  @Test
+  public void testGetScheduledArticles() throws Exception {
+    NewsFilter newsFilter = new NewsFilter();
+    newsFilter.setScheduledNews(true);
+    Map<String, String> properties = new HashMap<>();
+    properties.put(NEWS_PUBLICATION_STATE, "staged");
+    properties.put(NEWS_DELETED, String.valueOf(false));
+    MetadataItem metadataItem = mock(MetadataItem.class);
+    List<MetadataItem> metadataItems = List.of(metadataItem);
+    when(metadataItem.getObjectId()).thenReturn("1");
+    when(metadataItem.getProperties()).thenReturn(properties);
+
+    mockBuildArticle(metadataItems);
+
+    List<News> newsList = newsService.getNews(newsFilter, johnIdentity);
+    assertNotNull(newsList);
+    assertEquals(newsList.size(), 1);
+  }
+
+  @Test
+  public void searchNews() throws Exception {
+    List<NewsESSearchResult> results = new ArrayList<>();
+    NewsESSearchResult newsESSearchResult = new NewsESSearchResult();
+    newsESSearchResult.setId("1");
+    results.add(newsESSearchResult);
+    when(newsSearchConnector.search(any(), any())).thenReturn(results);
+    Map<String, String> properties = new HashMap<>();
+    properties.put(NEWS_PUBLICATION_STATE, "staged");
+    properties.put(NEWS_DELETED, String.valueOf(false));
+    MetadataItem metadataItem = mock(MetadataItem.class);
+    List<MetadataItem> metadataItems = List.of(metadataItem);
+    when(metadataItem.getObjectId()).thenReturn("1");
+    when(metadataItem.getProperties()).thenReturn(properties);
+    mockBuildArticle(metadataItems);
+    org.exoplatform.social.core.identity.model.Identity currentIdentity = mock(org.exoplatform.social.core.identity.model.Identity.class);
+    List<News> news = newsService.searchNews(new NewsFilter(), currentIdentity);
+    assertNotNull(news);
+    assertEquals(news.size(), 1);
+  }
+
+  @Test
+  public void testUnScheduleNews() throws Exception {
+    NewsFilter newsFilter = new NewsFilter();
+    newsFilter.setScheduledNews(true);
+    Map<String, String> properties = new HashMap<>();
+    properties.put(SCHEDULE_POST_DATE, "05/05/2024 08:00:00 +0100");
+    MetadataItem metadataItem = mock(MetadataItem.class);
+    List<MetadataItem> metadataItems = List.of(metadataItem);
+    when(metadataItem.getProperties()).thenReturn(properties);
+
+    mockBuildArticle(metadataItems);
+    Space space = mockSpace();
+    Wiki wiki = mock(Wiki.class);
+    when(wikiService.getWikiByTypeAndOwner(anyString(), anyString())).thenReturn(wiki);
+    org.exoplatform.wiki.model.Page rootPage = mock(org.exoplatform.wiki.model.Page.class);
+    when(rootPage.getName()).thenReturn(NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME);
+    when(rootPage.getId()).thenReturn("1");
+    when(noteService.getNoteOfNoteBookByName("group",
+            space.getGroupId(),
+            NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME)).thenReturn(rootPage);
+
+    News newsArticle = mock(News.class);
+    when(newsArticle.getId()).thenReturn("1");
+
+    DraftPage draftPage = mock(DraftPage.class);
+    when(draftPage.getUpdatedDate()).thenReturn(new Date());
+    when(draftPage.getCreatedDate()).thenReturn(new Date());
+    when(draftPage.getAuthor()).thenReturn("john");
+    when(draftPage.getId()).thenReturn("1");
+    when(noteService.createDraftForNewPage(any(DraftPage.class), anyLong())).thenReturn(draftPage);
+
+    org.exoplatform.social.core.identity.model.Identity identity1 =
+            mock(org.exoplatform.social.core.identity.model.Identity.class);
+    when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(identity1);
+    when(identity1.getId()).thenReturn("1");
+
+    newsService.unScheduleNews(newsArticle, space.getGroupId(), "john");
+
+    verify(noteService, times(1)).createDraftForNewPage(any(DraftPage.class), anyLong());
+    verify(noteService, times(1)).deleteNote(anyString(), anyString(), anyString());
+  }
+
+  private void mockBuildArticle(List<MetadataItem> metadataItems) throws WikiException {
+    when(metadataService.getMetadataItemsByFilter(any(), anyLong(), anyLong())).thenReturn(metadataItems);
+    Page page = new Page();
+    page.setContent("article body");
+    page.setTitle("article");
+    page.setId("1");
+    page.setAuthor("john");
+    page.setWikiOwner("/space/groupId");
+    page.setName("article name");
+    page.setWikiType("group");
+    Space space = mock(Space.class);
+    when(space.getId()).thenReturn("1");
+    when(space.getGroupId()).thenReturn("/space/groupId");
+    when(space.getAvatarUrl()).thenReturn("space/avatar/url");
+    when(space.getDisplayName()).thenReturn("spaceDisplayName");
+    when(space.getVisibility()).thenReturn("public");
+    when(spaceService.isSuperManager(anyString())).thenReturn(true);
+    when(spaceService.getSpaceById(any())).thenReturn(space);
+    when(spaceService.getSpaceByGroupId(anyString())).thenReturn(space);
+
+    when(noteService.getNoteById(anyString())).thenReturn(page);
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+            any(MetadataObject.class))).thenReturn(metadataItems);
+    PORTAL_CONTAINER.when(PortalContainer::getCurrentPortalContainerName).thenReturn("portal");
+    COMMONS_UTILS.when(CommonsUtils::getCurrentPortalOwner).thenReturn("dw");
+    when(activityManager.getActivity(nullable(String.class))).thenReturn(null);
+    when(newsTargetingService.getTargetsByNews(any(News.class))).thenReturn(null);
+    org.exoplatform.wiki.model.Page rootPage = mock(org.exoplatform.wiki.model.Page.class);
+    when(rootPage.getName()).thenReturn(NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME);
+    when(noteService.getNoteById(anyString())).thenReturn(page);
+    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity(anyString())).thenReturn(johnIdentity);
+
+    PageVersion pageVersion = mock(PageVersion.class);
+
+    when(pageVersion.getTitle()).thenReturn("title");
+    when(pageVersion.getAuthor()).thenReturn("john");
+    when(pageVersion.getContent()).thenReturn("content");
+    when(pageVersion.getUpdatedDate()).thenReturn(new Date());
+    when(pageVersion.getAuthorFullName()).thenReturn("full name");
+
+    when(noteService.getPublishedVersionByPageIdAndLang(1L, null)).thenReturn(pageVersion);
+    MENTION_UTILS.when(() -> MentionUtils.substituteUsernames(anyString(), anyString())).thenReturn("content");
+  }
+
+  private Space mockSpace() {
+    Space space = mock(Space.class);
+    when(space.getId()).thenReturn("1");
+    when(space.getGroupId()).thenReturn("/space/groupId");
+    when(space.getAvatarUrl()).thenReturn("space/avatar/url");
+    when(space.getDisplayName()).thenReturn("spaceDisplayName");
+    when(space.getVisibility()).thenReturn("public");
+    when(spaceService.isSuperManager(anyString())).thenReturn(true);
+    when(spaceService.getSpaceById(any())).thenReturn(space);
+    when(spaceService.getSpaceByGroupId(anyString())).thenReturn(space);
+    return space;
+  }
+
+  private Identity mockIdentity() {
+    Identity identity = mock(Identity.class);
+    when(identity.getUserId()).thenReturn("john");
+    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity(anyString())).thenReturn(identity);
+    return identity;
   }
 }

@@ -39,7 +39,7 @@
       v-if="currentUser"
       @post-article="postNews"
       :news-id="newsId"
-      :news-type="newsType"/>
+      :news-type="processedNewsType"/>
     <exo-confirm-dialog
       v-if="currentUser"
       ref="deleteConfirmDialog"
@@ -126,6 +126,9 @@ export default {
     isMobile() {
       return this.$vuetify.breakpoint.name === 'xs' || this.$vuetify.breakpoint.name === 'sm';
     },
+    processedNewsType() {
+      return this.activityId && this.activityId !== '' ? this.$newsConstants.newsObjectType.ARTICLE : this.newsType;
+    }
   },
   created() {
     this.$root.$on('delete-news', this.deleteConfirmDialog);
@@ -179,7 +182,7 @@ export default {
     deleteNews() {
       const deleteDelay = 6;
       const redirectionTime = 6100;
-      this.$newsServices.deleteNews(this.newsId, false, deleteDelay)
+      this.$newsServices.deleteNews(this.newsId, this.$newsConstants.newsObjectType.ARTICLE, deleteDelay)
         .then(() => {
           this.$root.$emit('confirm-news-deletion', this.news);
           const clickMessage = this.$t('news.details.undoDelete');
@@ -209,7 +212,7 @@ export default {
       }
       if (postArticleMode === 'later') {
         this.news.schedulePostDate = schedulePostDate;
-        this.$newsServices.scheduleNews(this.news).then((scheduleNews) => {
+        this.$newsServices.scheduleNews(this.news, this.newsType).then((scheduleNews) => {
           if (scheduleNews) {
             window.location.href = scheduleNews.url;
           }
@@ -242,7 +245,7 @@ export default {
       }
     },
     getNewsById(newsId) {
-      this.$newsServices.getNewsById(newsId)
+      this.$newsServices.getNewsById(newsId, false, this.processedNewsType)
         .then(news => {
           this.spaceId = news.spaceId;
           this.getSpaceById(this.spaceId);
@@ -255,7 +258,7 @@ export default {
           return this.$nextTick();
         })
         .finally(() => {
-          document.title = this.$t('news.window.title', {0: this.news.title});
+          document.title = this.$root.$t('news.window.title', {0: this.news.title});
           this.$root.$emit('application-loaded');
         });
     },

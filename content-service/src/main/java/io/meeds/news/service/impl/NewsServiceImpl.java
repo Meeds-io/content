@@ -25,7 +25,11 @@ import static io.meeds.news.utils.NewsUtils.NewsUpdateType.CONTENT;
 
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.OffsetTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -33,10 +37,13 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.regex.Matcher;
 import java.util.stream.Stream;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 
@@ -49,7 +56,7 @@ import org.exoplatform.commons.file.services.FileStorageException;
 import org.exoplatform.commons.notification.impl.NotificationContextImpl;
 import org.exoplatform.commons.search.index.IndexingService;
 import org.exoplatform.commons.utils.CommonsUtils;
-import org.exoplatform.container.PortalContainer;
+import org.exoplatform.commons.utils.HTMLSanitizer;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
 import org.exoplatform.services.security.ConversationState;
@@ -58,17 +65,18 @@ import org.exoplatform.services.security.IdentityConstants;
 import org.exoplatform.social.common.RealtimeListAccess;
 import org.exoplatform.social.core.activity.model.ExoSocialActivity;
 import org.exoplatform.social.core.activity.model.ExoSocialActivityImpl;
+import org.exoplatform.social.core.identity.provider.OrganizationIdentityProvider;
 import org.exoplatform.social.core.manager.ActivityManager;
 import org.exoplatform.social.core.manager.IdentityManager;
 import org.exoplatform.social.core.space.model.Space;
 import org.exoplatform.social.core.space.spi.SpaceService;
 import org.exoplatform.social.core.utils.MentionUtils;
+import org.exoplatform.social.metadata.MetadataFilter;
 import org.exoplatform.social.metadata.MetadataService;
 import org.exoplatform.social.metadata.model.MetadataItem;
 import org.exoplatform.social.metadata.model.MetadataKey;
 import org.exoplatform.social.metadata.model.MetadataObject;
 import org.exoplatform.social.metadata.model.MetadataType;
-import org.exoplatform.social.metadata.MetadataFilter;
 import org.exoplatform.social.notification.LinkProviderUtils;
 import org.exoplatform.upload.UploadResource;
 import org.exoplatform.upload.UploadService;
@@ -94,11 +102,11 @@ import io.meeds.news.notification.utils.NotificationConstants;
 import io.meeds.news.notification.utils.NotificationUtils;
 import io.meeds.news.search.NewsESSearchResult;
 import io.meeds.news.search.NewsIndexingServiceConnector;
+import io.meeds.news.search.NewsSearchConnector;
 import io.meeds.news.service.NewsService;
 import io.meeds.news.service.NewsTargetingService;
 import io.meeds.news.utils.NewsUtils;
 import io.meeds.news.utils.NewsUtils.NewsObjectType;
-import org.exoplatform.commons.utils.HTMLSanitizer;
 
 public class NewsServiceImpl implements NewsService {
 
@@ -155,9 +163,6 @@ public class NewsServiceImpl implements NewsService {
   /** The Constant NEWS_ACTIVITY_POSTED. */
   public static final String         NEWS_ACTIVITY_POSTED                   = "activityPosted";
 
-  /** The Constant NEWS_PUBLICATION_DATE. */
-  public static final String         NEWS_PUBLICATION_DATE                  = "publicationDate";
-
   /** The Constant NEWS_METADATA_PAGE_OBJECT_TYPE. */
   public static final String         NEWS_METADATA_PAGE_OBJECT_TYPE         = "newsPage";
 
@@ -173,30 +178,36 @@ public class NewsServiceImpl implements NewsService {
   /** The Constant NEWS_METADATA_LATEST_DRAFT_OBJECT_TYPE. */
   public static final String         NEWS_METADATA_LATEST_DRAFT_OBJECT_TYPE = "newsLatestDraftPage";
 
+  public static final String         NEWS_ATTACHMENTS_IDS                   = "attachmentsIds";
+
+  public static final String         ARTICLE_CONTENT                        = "content";
+
   public static final MetadataKey    NEWS_METADATA_KEY                      =
                                                        new MetadataKey(NEWS_METADATA_TYPE.getName(), NEWS_METADATA_NAME, 0);
 
-  private static final Log           LOG                                    = ExoLogger.getLogger(NewsServiceImpl.class);
+  private static final Log            LOG                                   = ExoLogger.getLogger(NewsServiceImpl.class);
 
-  private final SpaceService         spaceService;
+  private final SpaceService          spaceService;
 
-  private final NoteService          noteService;
+  private final NoteService           noteService;
 
-  private final MetadataService      metadataService;
+  private final MetadataService       metadataService;
 
-  private final FileService          fileService;
+  private final FileService           fileService;
 
-  private final UploadService        uploadService;
+  private final UploadService         uploadService;
 
-  private final NewsTargetingService newsTargetingService;
+  private final NewsTargetingService  newsTargetingService;
 
-  private final IndexingService      indexingService;
+  private final IndexingService       indexingService;
 
-  private final IdentityManager      identityManager;
+  private final IdentityManager       identityManager;
 
-  private final ActivityManager      activityManager;
+  private final ActivityManager       activityManager;
 
-  private final WikiService          wikiService;
+  private final WikiService           wikiService;
+
+  private final NewsSearchConnector newsSearchConnector;
 
   public NewsServiceImpl(SpaceService spaceService,
                          NoteService noteService,
@@ -207,7 +218,8 @@ public class NewsServiceImpl implements NewsService {
                          IdentityManager identityManager,
                          ActivityManager activityManager,
                          WikiService wikiService,
-                         UploadService uploadService) {
+                         UploadService uploadService,
+                         NewsSearchConnector newsSearchConnector) {
     this.spaceService = spaceService;
     this.noteService = noteService;
     this.metadataService = metadataService;
@@ -218,6 +230,7 @@ public class NewsServiceImpl implements NewsService {
     this.identityManager = identityManager;
     this.activityManager = activityManager;
     this.wikiService = wikiService;
+    this.newsSearchConnector = newsSearchConnector;
   }
 
   /**
@@ -234,9 +247,9 @@ public class NewsServiceImpl implements NewsService {
       if (POSTED.equals(news.getPublicationState())) {
         createdNews = postNews(news, currentIdentity.getUserId());
       } else if (news.getSchedulePostDate() != null) {
-        createdNews = unScheduleNews(news, currentIdentity);
+        createdNews = unScheduleNews(news, space.getGroupId(), currentIdentity.getUserId());
       } else {
-        createdNews = createDraftArticleForNewPage(news, space.getGroupId(), currentIdentity.getUserId());
+        createdNews = createDraftArticleForNewPage(news, space.getGroupId(), currentIdentity.getUserId(), System.currentTimeMillis());
       }
       return createdNews;
     } catch (Exception e) {
@@ -247,7 +260,11 @@ public class NewsServiceImpl implements NewsService {
 
   @Override
   public News postNews(News news, String poster) throws Exception {
-    news = createNewsArticlePage(news, poster);
+    if (news.getPublicationState().equals(STAGED) || news.getSchedulePostDate() != null) {
+      news = postScheduledArticle(news);
+    } else {
+      news = createNewsArticlePage(news, poster);
+    }
     postNewsActivity(news);
     sendNotification(poster, news, NotificationConstants.NOTIFICATION_CONTEXT.POST_NEWS);
     if (news.isPublished()) {
@@ -303,7 +320,7 @@ public class NewsServiceImpl implements NewsService {
         unpublishNews(news.getId(), updater);
       }
     }
-    boolean displayed = !(StringUtils.equals(news.getPublicationState(), STAGED) || news.isArchived());
+    boolean displayed = !(StringUtils.equals(news.getPublicationState(), STAGED));
     if (publish == news.isPublished() && news.isPublished() && canPublish) {
       if (news.getTargets() != null && (oldTargets == null || !oldTargets.equals(news.getTargets()))) {
         newsTargetingService.deleteNewsTargets(news, updater);
@@ -347,18 +364,32 @@ public class NewsServiceImpl implements NewsService {
    * {@inheritDoc}
    */
   @Override
-  public void deleteNews(String newsId, Identity currentIdentity, boolean isDraft) throws Exception {
+  public void deleteNews(String newsId, Identity currentIdentity, String newsObjectType) throws Exception {
     News news = getNewsById(newsId,
                             currentIdentity,
                             false,
-                            isDraft ? NewsObjectType.DRAFT.name().toLowerCase() : NewsObjectType.ARTICLE.name().toLowerCase());
+                            newsObjectType);
     if (!news.isCanDelete()) {
       throw new IllegalAccessException("User " + currentIdentity.getUserId() + " is not authorized to delete news");
     }
-    if (isDraft) {
+    if (NewsObjectType.DRAFT.name().toLowerCase().equals(newsObjectType)) {
       deleteDraftArticle(newsId, currentIdentity.getUserId(), true);
+    } else if (LATEST_DRAFT.name().toLowerCase().equals(newsObjectType)) {
+      Page newsArticlePage = noteService.getNoteById(newsId);
+      if (newsArticlePage != null) {
+        DraftPage draft = noteService.getLatestDraftPageByUserAndTargetPageAndLang(Long.parseLong(newsArticlePage.getId()), currentIdentity.getUserId(), null);
+        if (draft != null) {
+          // check if the latest draft has the same illustration
+          // with the news article to do not remove it.
+          deleteDraftArticle(draft.getId(), currentIdentity.getUserId(), !isSameIllustration(draft.getId(), newsArticlePage.getId()));
+        }
+      }
     } else {
-      deleteArticle(news, currentIdentity);
+      deleteArticle(news, currentIdentity.getUserId());
+      if (news.getActivities() != null) {
+        String newsActivities = news.getActivities();
+        Stream.of(newsActivities.split(";")).map(activity -> activity.split(":")[1]).forEach(activityManager::deleteActivity);
+      }
       MetadataObject newsMetadataObject = new MetadataObject(NewsUtils.NEWS_METADATA_OBJECT_TYPE, newsId);
       metadataService.deleteMetadataItemsByObject(newsMetadataObject);
       indexingService.unindex(NewsIndexingServiceConnector.TYPE, String.valueOf(news.getId()));
@@ -373,7 +404,7 @@ public class NewsServiceImpl implements NewsService {
   public void publishNews(News newsToPublish, String publisher) throws Exception {
     Identity publisherIdentity = NewsUtils.getUserIdentity(publisher);
     News news = getNewsArticleById(newsToPublish.getId());
-    boolean displayed = !(StringUtils.equals(news.getPublicationState(), STAGED) || news.isArchived());
+    boolean displayed = !(StringUtils.equals(news.getPublicationState(), STAGED));
 
     // update page metadata
     NewsPageObject newsPageObject = new NewsPageObject(NEWS_METADATA_PAGE_OBJECT_TYPE, news.getId(), null, Long.parseLong(news.getSpaceId()));
@@ -384,10 +415,12 @@ public class NewsServiceImpl implements NewsService {
         properties = new HashMap<>();
       }
       properties.put(PUBLISHED, String.valueOf(true));
-      Calendar updateCalendar = Calendar.getInstance();
-      Date newsPublicationDate = updateCalendar.getTime();
-      properties.put(NEWS_PUBLICATION_DATE, String.valueOf(newsPublicationDate));
+      if (StringUtils.isNotEmpty(newsToPublish.getAudience())) {
+        properties.put(NEWS_AUDIENCE, news.getAudience());
+      }
       metadataItem.setProperties(properties);
+      Date updatedDate = Calendar.getInstance().getTime();
+      metadataItem.setUpdatedDate(updatedDate.getTime());
       String publisherId = identityManager.getOrCreateUserIdentity(publisherIdentity.getUserId()).getId();
       metadataService.updateMetadataItem(metadataItem, Long.parseLong(publisherId));
     }
@@ -422,10 +455,11 @@ public class NewsServiceImpl implements NewsService {
       Map<String, String> properties = newsMetadataItem.getProperties();
       if (properties != null) {
         properties.put(PUBLISHED, String.valueOf(false));
-        properties.remove(NEWS_PUBLICATION_DATE);
         properties.remove(NEWS_AUDIENCE);
       }
       newsMetadataItem.setProperties(properties);
+      Date updatedDate = Calendar.getInstance().getTime();
+      newsMetadataItem.setUpdatedDate(updatedDate.getTime());
       String publisherId = identityManager.getOrCreateUserIdentity(publisher).getId();
       metadataService.updateMetadataItem(newsMetadataItem, Long.parseLong(publisherId));
     }
@@ -481,7 +515,6 @@ public class NewsServiceImpl implements NewsService {
       news.setCanEdit(canEditNews(news, currentIdentity.getUserId()));
       news.setCanDelete(canDeleteNews(currentIdentity, news.getAuthor(), news.getSpaceId()));
       news.setCanPublish(NewsUtils.canPublishNews(news.getSpaceId(), currentIdentity));
-      news.setCanArchive(canArchiveNews(currentIdentity, news.getAuthor()));
       news.setTargets(newsTargetingService.getTargetsByNews(news));
       ExoSocialActivity activity = null;
       try {
@@ -517,37 +550,28 @@ public class NewsServiceImpl implements NewsService {
   public List<News> getNews(NewsFilter filter, Identity currentIdentity) throws Exception {
     List<News> newsList = new ArrayList<>();
     if (filter != null) {
-      if (filter.isArchivedNews()) {
-        // TODO
-      }
-      if (filter.getSearchText() != null && !filter.getSearchText().equals("")) {
-        // TODO
-      } else {
-        // TODO
-      }
-      if (filter.isPublishedNews()) {
-        // TODO
-      }
-
-      List<String> spaces = filter.getSpaces();
-      if (spaces != null && spaces.size() != 0) {
-        // TODO
-      }
-      if (filter.isDraftNews()) {
+      if (StringUtils.isNotBlank(filter.getSearchText())) {
+        newsList =
+                 searchNews(filter,
+                            identityManager.getOrCreateIdentity(OrganizationIdentityProvider.NAME, currentIdentity.getUserId()));
+      } else if (filter.isPublishedNews()) {
+        newsList = getPublishedArticles(filter, currentIdentity);
+      } else if (filter.isDraftNews()) {
         newsList = buildDraftArticles(filter, currentIdentity);
       } else if (filter.isScheduledNews()) {
-        // TODO
+        newsList = getScheduledArticles(filter, currentIdentity);
+      } else if (filter.getAuthor() != null) {
+        newsList = getMyPostedArticles(filter, currentIdentity);
       } else {
-        // TODO
+        newsList = getPostedArticles(filter, currentIdentity);
       }
     } else {
       throw new Exception("Unable to build query, filter is null");
     }
-    newsList.stream().forEach(news -> {
+    newsList.stream().filter(Objects::nonNull).forEach(news -> {
       news.setCanEdit(canEditNews(news, currentIdentity.getUserId()));
       news.setCanDelete(canDeleteNews(currentIdentity, news.getAuthor(), news.getSpaceId()));
       news.setCanPublish(NewsUtils.canPublishNews(news.getSpaceId(), currentIdentity));
-      news.setCanArchive(canArchiveNews(currentIdentity, news.getAuthor()));
     });
     return newsList;
   }
@@ -639,8 +663,16 @@ public class NewsServiceImpl implements NewsService {
    * {@inheritDoc}
    */
   @Override
-  public List<News> searchNews(NewsFilter filter, String lang) throws Exception {
-    return new ArrayList<>();
+  public List<News> searchNews(NewsFilter filter,
+                               org.exoplatform.social.core.identity.model.Identity currentIdentity) throws Exception {
+    return newsSearchConnector.search(currentIdentity, filter).stream().map(articleSearchResult -> {
+      try {
+        return buildArticle(articleSearchResult.getId());
+      } catch (Exception e) {
+        LOG.error("Error while building news article", e);
+        return null;
+      }
+    }).toList();
   }
 
   /**
@@ -683,7 +715,29 @@ public class NewsServiceImpl implements NewsService {
    * {@inheritDoc}
    */
   @Override
-  public News scheduleNews(News news, Identity currentIdentity) throws Exception {
+  public News scheduleNews(News news, Identity currentIdentity, String newsObjectType) throws Exception {
+    Space space = news.getSpaceId() == null ? null : spaceService.getSpaceById(news.getSpaceId());
+    if (!canScheduleNews(space, currentIdentity)) {
+      throw new IllegalArgumentException("User " + currentIdentity.getUserId() + " is not authorized to schedule news");
+    }
+    if (newsObjectType.equalsIgnoreCase(NewsObjectType.DRAFT.name())) {
+      // Create news article with the publication state STAGED without posting or publishing it ( displayed false news target)
+      // it will be posted and published by the news schedule job or the edit scheduling.
+      news = createNewsArticlePage(news, currentIdentity.getUserId());
+    } else if (newsObjectType.equalsIgnoreCase(ARTICLE.name())) {
+      updateNewsArticle(news, currentIdentity, NewsUtils.NewsUpdateType.SCHEDULE.name().toLowerCase());
+    }
+    if (news !=null) {
+      if (news.isPublished()) {
+        publishNews(news, currentIdentity.getUserId());
+      } else {
+        unpublishNews(news.getId(), currentIdentity.getUserId());
+      }
+      // set the url and the space url to the scheduled news
+      news.setUrl(NewsUtils.buildNewsArticleUrl(news, currentIdentity.getUserId()));
+      news.setSpaceUrl(NewsUtils.buildSpaceUrl(news.getSpaceId()));
+      return news;
+    }
     return null;
   }
 
@@ -691,7 +745,34 @@ public class NewsServiceImpl implements NewsService {
    * {@inheritDoc}
    */
   @Override
-  public News unScheduleNews(News news, Identity currentIdentity) throws Exception {
+  public News unScheduleNews(News news, String pageOwnerId, String articleCreator) throws Exception {
+    News existingNews = getNewsArticleById(news.getId());
+    if (existingNews != null) {
+      Map<String, String> illustrationInfo = getArticleIllustrationInfo(news);
+
+      news.setId(null);
+      news.setUploadId(null);
+      news = createDraftArticleForNewPage(news, pageOwnerId, articleCreator, System.currentTimeMillis());
+
+      if (!MapUtils.isEmpty(illustrationInfo)) {
+        MetadataItem draftMetadataItem = metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY, new NewsDraftObject(NEWS_METADATA_DRAFT_OBJECT_TYPE, news.getId(), null, Long.parseLong(news.getSpaceId()))).stream().findFirst().orElse(null);
+        Map<String, String> draftProperties = draftMetadataItem.getProperties();
+        if (draftProperties == null) {
+          draftProperties = new HashMap<>();
+        }
+        if (illustrationInfo.get(NEWS_UPLOAD_ID) != null) {
+          draftProperties.put(NEWS_UPLOAD_ID, illustrationInfo.get(NEWS_UPLOAD_ID));
+        }
+        if (illustrationInfo.get(NEWS_ILLUSTRATION_ID) != null) {
+          draftProperties.put(NEWS_ILLUSTRATION_ID, illustrationInfo.get(NEWS_ILLUSTRATION_ID));
+        }
+        draftMetadataItem.setProperties(draftProperties);
+        String draftArticleMetadataItemUpdaterIdentityId = identityManager.getOrCreateUserIdentity(articleCreator).getId();
+        metadataService.updateMetadataItem(draftMetadataItem, Long.parseLong(draftArticleMetadataItemUpdaterIdentityId));
+      }
+      deleteArticle(existingNews, articleCreator);
+      return buildDraftArticle(news.getId(), articleCreator);
+    }
     return null;
   }
 
@@ -700,7 +781,7 @@ public class NewsServiceImpl implements NewsService {
    */
   @Override
   public List<NewsESSearchResult> search(org.exoplatform.social.core.identity.model.Identity currentIdentity, NewsFilter filter) {
-    return new ArrayList<>();
+    return newsSearchConnector.search(currentIdentity, filter);
   }
 
   /**
@@ -780,36 +861,44 @@ public class NewsServiceImpl implements NewsService {
       metadataItem.setProperties(properties);
       metadataService.updateMetadataItem(metadataItem, Long.parseLong(userIdentity.getId()));
 
+      NewsUtils.broadcastEvent(NewsUtils.SHARE_CONTENT_ATTACHMENTS,
+                               Map.of(NEWS_ATTACHMENTS_IDS,
+                                      getArticleAttachmentIdsToShare(news,
+                                                                     Long.parseLong(space.getId()),
+                                                                     Long.parseLong(newsPageObject.getId())),
+                                      ARTICLE_CONTENT,
+                                      news.getBody()),
+                               space);
       NewsUtils.broadcastEvent(NewsUtils.SHARE_NEWS, userIdentity.getRemoteId(), news);
     }
 
   }
 
+  private List<String> getArticleAttachmentIdsToShare(News article, long spaceId, long articlePageId) {
+    List<String> attachmentIds = new ArrayList<>();
+    PageVersion pageVersion = noteService.getPublishedVersionByPageIdAndLang(articlePageId, null);
+    NewsPageVersionObject newsPageVersionObject = new NewsPageVersionObject(NEWS_METADATA_PAGE_VERSION_OBJECT_TYPE,
+                                                                            pageVersion.getId(),
+                                                                            null,
+                                                                            spaceId);
+    List<MetadataItem> newsPageVersionMetadataItems = metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY,
+                                                                                                          newsPageVersionObject);
+    Map<String, String> newsPageVersionMetadataItemProperties = newsPageVersionMetadataItems.get(0).getProperties();
+    if(!MapUtils.isEmpty(newsPageVersionMetadataItems.get(0).getProperties())) {
+
+      if (newsPageVersionMetadataItemProperties.containsKey(NEWS_ATTACHMENTS_IDS)
+              && newsPageVersionMetadataItemProperties.get(NEWS_ATTACHMENTS_IDS) != null) {
+        attachmentIds.addAll( List.of(newsPageVersionMetadataItemProperties.get(NEWS_ATTACHMENTS_IDS).split(";")));
+      }
+    }
+    return attachmentIds;
+  }
+  
   /**
    * {@inheritDoc}
    */
   @Override
-  public void archiveNews(String newsId, String currentUserName) throws Exception {
-
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public void unarchiveNews(String newsId, String currentUserName) throws Exception {
-
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public boolean canArchiveNews(Identity currentIdentity, String newsAuthor) {
-    return false;
-  }
-
-  private News createDraftArticleForNewPage(News draftArticle, String pageOwnerId, String draftArticleCreator) throws Exception {
+  public News createDraftArticleForNewPage(News draftArticle, String pageOwnerId, String draftArticleCreator, long creationDate) throws Exception {
     Wiki wiki = wikiService.getWikiByTypeAndOwner(WikiType.GROUP.name().toLowerCase(), pageOwnerId);
     Page newsArticlesRootNotePage = null;
     if (wiki != null) {
@@ -835,12 +924,13 @@ public class NewsServiceImpl implements NewsService {
       draftArticlePage.setContent(draftArticle.getBody());
       draftArticlePage.setParentPageId(newsArticlesRootNotePage.getId());
       draftArticlePage.setAuthor(draftArticle.getAuthor());
-      draftArticlePage = noteService.createDraftForNewPage(draftArticlePage, System.currentTimeMillis());
+      draftArticlePage = noteService.createDraftForNewPage(draftArticlePage, creationDate);
 
       draftArticle.setId(draftArticlePage.getId());
       draftArticle.setCreationDate(draftArticlePage.getCreatedDate());
       draftArticle.setUpdateDate(draftArticlePage.getUpdatedDate());
       Space draftArticleSpace = spaceService.getSpaceByGroupId(pageOwnerId);
+      draftArticle.setSpaceId(draftArticleSpace.getId());
       NewsDraftObject draftArticleMetaDataObject = new NewsDraftObject(NEWS_METADATA_DRAFT_OBJECT_TYPE,
                                                                        draftArticlePage.getId(),
                                                                        null,
@@ -865,6 +955,241 @@ public class NewsServiceImpl implements NewsService {
       return draftArticle;
     }
     return null;
+  }
+  
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public News createNewsArticlePage(News newsArticle, String newsArticleCreator) throws Exception {
+    // get the news draft article from the news model before setting the news
+    // article id to the news model
+    String draftNewsId = newsArticle.getId();
+
+    Identity poster = NewsUtils.getUserIdentity(newsArticleCreator);
+    Space space = spaceService.getSpaceById(newsArticle.getSpaceId());
+    String pageOwnerId = space.getGroupId();
+
+    Wiki wiki = wikiService.getWikiByTypeAndOwner(WikiType.GROUP.name().toLowerCase(), pageOwnerId);
+    Page newsArticlesRootNotePage = null;
+    if (wiki != null) {
+      newsArticlesRootNotePage = noteService.getNoteOfNoteBookByName(WikiType.GROUP.name().toLowerCase(),
+                                                                     pageOwnerId,
+                                                                     NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME);
+      // create the news root page if the wiki exist
+      if (newsArticlesRootNotePage == null) {
+        newsArticlesRootNotePage = createNewsArticlesNoteRootPage(wiki);
+      }
+    } else {
+      // create the wiki
+      pageOwnerId = formatWikiOwnerToGroupId(pageOwnerId);
+      wiki = wikiService.createWiki(WikiType.GROUP.name().toLowerCase(), pageOwnerId);
+      // create the news root page
+      newsArticlesRootNotePage = createNewsArticlesNoteRootPage(wiki);
+    }
+
+    if (newsArticlesRootNotePage != null) {
+      Page newsArticlePage = new Page();
+      newsArticlePage.setName(newsArticle.getName());
+      newsArticlePage.setTitle(newsArticle.getTitle());
+      newsArticlePage.setContent(newsArticle.getBody());
+      newsArticlePage.setParentPageId(newsArticlesRootNotePage.getId());
+      newsArticlePage.setAuthor(newsArticle.getAuthor());
+      newsArticlePage.setLang(null);
+      newsArticlePage = noteService.createNote(wiki, newsArticlesRootNotePage.getName(), newsArticlePage, poster);
+      // create the version
+      noteService.createVersionOfNote(newsArticlePage, poster.getUserId());
+      if (newsArticlePage != null) {
+        PageVersion pageVersion = noteService.getPublishedVersionByPageIdAndLang(Long.parseLong(newsArticlePage.getId()), null);
+        // set properties
+        newsArticle.setId(newsArticlePage.getId());
+        newsArticle.setCreationDate(pageVersion.getCreatedDate());
+
+        NewsPageVersionObject newsArticleVersionMetaDataObject = new NewsPageVersionObject(NEWS_METADATA_PAGE_VERSION_OBJECT_TYPE,
+                                                                                           pageVersion.getId(),
+                                                                                           null,
+                                                                                           Long.parseLong(space.getId()));
+        String newsArticleMetadataItemCreatorIdentityId = identityManager.getOrCreateUserIdentity(newsArticleCreator).getId();
+        Map<String, String> newsArticleVersionMetadataItemProperties = new HashMap<>();
+
+        NewsDraftObject newsDraftObject = new NewsDraftObject(NEWS_METADATA_DRAFT_OBJECT_TYPE,
+                                                              draftNewsId,
+                                                              null,
+                                                              Long.parseLong(space.getId()));
+        MetadataItem draftMetadataItem = metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY, newsDraftObject).stream().findFirst().orElse(null);
+
+        if (draftMetadataItem != null && draftMetadataItem.getProperties() != null && !draftMetadataItem.getProperties().isEmpty()) {
+          if (draftMetadataItem.getProperties().containsKey(NEWS_UPLOAD_ID)) {
+            newsArticleVersionMetadataItemProperties.put(NEWS_UPLOAD_ID, draftMetadataItem.getProperties().get(NEWS_UPLOAD_ID));
+          }
+          if (draftMetadataItem.getProperties().containsKey(NEWS_ILLUSTRATION_ID)) {
+            newsArticleVersionMetadataItemProperties.put(NEWS_ILLUSTRATION_ID, draftMetadataItem.getProperties().get(NEWS_ILLUSTRATION_ID));
+            setArticleIllustration(newsArticle, Long.parseLong(newsArticleVersionMetadataItemProperties.get(NEWS_ILLUSTRATION_ID)), ARTICLE.name().toLowerCase());
+          }
+        }
+        // create the page version metadata item
+        if (StringUtils.isNotEmpty(newsArticle.getSummary())) {
+          newsArticleVersionMetadataItemProperties.put(NEWS_SUMMARY, newsArticle.getSummary());
+        }
+        metadataService.createMetadataItem(newsArticleVersionMetaDataObject,
+                                           NEWS_METADATA_KEY,
+                                           newsArticleVersionMetadataItemProperties,
+                                           Long.parseLong(newsArticleMetadataItemCreatorIdentityId));
+
+        // create metadata item page
+        NewsPageObject newsPageObject = new NewsPageObject(NEWS_METADATA_PAGE_OBJECT_TYPE, newsArticlePage.getId(), null, Long.parseLong(space.getId()));
+        Map<String, String> newsPageProperties = new HashMap<>();
+        if (StringUtils.isNotEmpty(newsArticle.getAudience())) {
+          newsPageProperties.put(NEWS_AUDIENCE, newsArticle.getAudience());
+        }
+        if (StringUtils.isNotEmpty(newsArticle.getSchedulePostDate())) {
+          setSchedulePostDate(newsArticle, newsPageProperties);
+        }
+        if (StringUtils.isNotEmpty(newsArticle.getPublicationState())) {
+          newsPageProperties.put(NEWS_PUBLICATION_STATE, newsArticle.getPublicationState());
+        }
+        newsPageProperties.put(NEWS_ACTIVITY_POSTED, String.valueOf(newsArticle.isActivityPosted()));
+        newsPageProperties.put(PUBLISHED, String.valueOf(newsArticle.isPublished()));
+        newsPageProperties.put(NEWS_DELETED, String.valueOf(newsArticlePage.isDeleted()));
+        metadataService.createMetadataItem(newsPageObject, NEWS_METADATA_KEY, newsPageProperties, Long.parseLong(newsArticleMetadataItemCreatorIdentityId));
+        // delete the draft
+        deleteDraftArticle(draftNewsId, poster.getUserId(), newsArticle.getIllustration() == null);
+        return newsArticle;
+      }
+    }
+    return null;
+  }
+  
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public News createDraftForExistingPage(News draftArticle, String updater, Page targetArticlePage, long creationDate) throws Exception {
+    DraftPage draftArticlePage = new DraftPage();
+    draftArticlePage.setNewPage(false);
+    draftArticlePage.setTargetPageId(targetArticlePage.getId());
+    draftArticlePage.setTitle(draftArticle.getTitle());
+    draftArticlePage.setContent(draftArticle.getBody());
+    draftArticlePage.setParentPageId(targetArticlePage.getParentPageId());
+    draftArticlePage.setAuthor(draftArticle.getAuthor());
+    draftArticlePage.setLang(null);
+
+    draftArticlePage = noteService.createDraftForExistPage(draftArticlePage, targetArticlePage, null, creationDate, updater);
+
+    draftArticle.setDraftUpdateDate(draftArticlePage.getCreatedDate());
+    draftArticle.setDraftUpdater(draftArticlePage.getAuthor());
+    draftArticle.setId(draftArticlePage.getId());
+    NewsLatestDraftObject latestDraftObject = new NewsLatestDraftObject(NEWS_METADATA_LATEST_DRAFT_OBJECT_TYPE,
+                                                                        draftArticlePage.getId(),
+                                                                        targetArticlePage.getId(),
+                                                                        Long.parseLong(draftArticle.getSpaceId()));
+
+    Map<String, String> draftArticleMetadataItemProperties = new HashMap<>();
+    if (StringUtils.isNotEmpty(draftArticle.getSummary())) {
+      draftArticleMetadataItemProperties.put(NEWS_SUMMARY, draftArticle.getSummary());
+    }
+    draftArticleMetadataItemProperties.put(NEWS_ACTIVITY_POSTED, String.valueOf(draftArticle.isActivityPosted()));
+    // check if the article has an illustration to link it to the created draft
+    PageVersion latestPageVersion = noteService.getPublishedVersionByPageIdAndLang(Long.parseLong(targetArticlePage.getId()), null);
+    if (latestPageVersion != null) {
+      // fetch the version related metadata item
+      MetadataItem pageVersionMetadataItem =
+                                           metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY,
+                                                                                               new NewsPageVersionObject(NEWS_METADATA_PAGE_VERSION_OBJECT_TYPE,
+                                                                                                                         latestPageVersion.getId(),
+                                                                                                                         null,
+                                                                                                                         Long.parseLong(draftArticle.getSpaceId())))
+                                                          .stream()
+                                                          .findFirst()
+                                                          .orElse(null);
+      Map<String, String> pageVersionMetadataItemProperties = pageVersionMetadataItem.getProperties();
+      if (pageVersionMetadataItemProperties != null && !pageVersionMetadataItemProperties.isEmpty()) {
+        if (pageVersionMetadataItemProperties.containsKey(NEWS_ILLUSTRATION_ID)) {
+          draftArticleMetadataItemProperties.put(NEWS_ILLUSTRATION_ID,
+                                                 pageVersionMetadataItemProperties.get(NEWS_ILLUSTRATION_ID));
+        }
+        if (pageVersionMetadataItemProperties.containsKey(NEWS_UPLOAD_ID)) {
+          draftArticleMetadataItemProperties.put(NEWS_UPLOAD_ID, pageVersionMetadataItemProperties.get(NEWS_UPLOAD_ID));
+        }
+      }
+    }
+    String draftArticleMetadataItemCreatorIdentityId = identityManager.getOrCreateUserIdentity(updater).getId();
+    metadataService.createMetadataItem(latestDraftObject, NEWS_METADATA_KEY, draftArticleMetadataItemProperties, Long.parseLong(draftArticleMetadataItemCreatorIdentityId));
+    return draftArticle;
+  }
+  
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public void deleteArticle(News news, String articleCreator) throws Exception {
+    Page articlePage = noteService.getNoteById(news.getId());
+    if (articlePage != null && !articlePage.isDeleted()) {
+      boolean hasDraft = true;
+      while (hasDraft) {
+        try {
+          DraftPage latestDraftPage = noteService.getLatestDraftOfPage(articlePage, articleCreator);
+          if (latestDraftPage != null) {
+            deleteDraftArticle(latestDraftPage.getId(), articleCreator, true);
+          } else {
+            hasDraft = false;
+          }
+        } catch (Exception exception) {
+          hasDraft = false;
+        }
+      }
+      boolean isDeleted = noteService.deleteNote(articlePage.getWikiType(), articlePage.getWikiOwner(), articlePage.getName());
+      if (isDeleted) {
+        NewsPageObject newsPageMetadataObject = new NewsPageObject(NEWS_METADATA_PAGE_OBJECT_TYPE,
+                                                                   news.getId(),
+                                                                   null,
+                                                                   Long.parseLong(news.getSpaceId()));
+        MetadataItem metadataItem = metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY, newsPageMetadataObject)
+                                                   .stream()
+                                                   .findFirst()
+                                                   .orElse(null);
+        if (metadataItem != null) {
+          Map<String, String> properties = metadataItem.getProperties();
+          properties.put(NEWS_DELETED, String.valueOf(true));
+          metadataItem.setProperties(properties);
+          String currentIdentityId = identityManager.getOrCreateUserIdentity(articleCreator).getId();
+          metadataService.updateMetadataItem(metadataItem, Long.parseLong(currentIdentityId));
+        }
+      }
+    }
+  }
+  
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public void deleteDraftArticle(String draftArticleId,
+                                  String draftArticleCreator,
+                                  boolean deleteIllustration) throws Exception {
+    DraftPage draftArticlePage = noteService.getDraftNoteById(draftArticleId, draftArticleCreator);
+    if (draftArticlePage != null) {
+      noteService.removeDraftById(draftArticlePage.getId());
+      Space draftArticleSpace = spaceService.getSpaceByGroupId(draftArticlePage.getWikiOwner());
+      MetadataObject draftArticleMetaDataObject = new MetadataObject(draftArticlePage.getTargetPageId() != null ? NEWS_METADATA_LATEST_DRAFT_OBJECT_TYPE : NEWS_METADATA_DRAFT_OBJECT_TYPE,
+              draftArticlePage.getId(),
+              draftArticlePage.getTargetPageId(),
+              Long.parseLong(draftArticleSpace.getId()));
+      List<MetadataItem> draftArticleMetadataItems =
+                                                   metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY,
+                                                                                                       draftArticleMetaDataObject);
+      if (draftArticleMetadataItems != null && !draftArticleMetadataItems.isEmpty()) {
+        Map<String, String> draftArticleMetadataItemProperties = draftArticleMetadataItems.get(0).getProperties();
+        if (deleteIllustration) {
+          if (draftArticleMetadataItemProperties != null && draftArticleMetadataItemProperties.containsKey(NEWS_ILLUSTRATION_ID)
+              && draftArticleMetadataItemProperties.get(NEWS_ILLUSTRATION_ID) != null) {
+            FileItem draftArticleIllustrationFileItem =
+                                                      fileService.getFile(Long.parseLong(draftArticleMetadataItemProperties.get(NEWS_ILLUSTRATION_ID)));
+            fileService.deleteFile(draftArticleIllustrationFileItem.getFileInfo().getId());
+          }
+        }
+        metadataService.deleteMetadataItem(draftArticleMetadataItems.get(0).getId(), false);
+      }
+    }
   }
 
   private News updateDraftArticleForNewPage(News draftArticle, String draftArticleUpdater) throws WikiException,
@@ -966,9 +1291,7 @@ public class NewsServiceImpl implements NewsService {
                             spaceService.isSuperManager(currentUserId) || spaceService.isMember(draftArticleSpace, currentUserId);
       draftArticle.setSpaceMember(isSpaceMember);
       if (StringUtils.isNotEmpty(draftArticleSpace.getGroupId())) {
-        String spaceGroupId = draftArticleSpace.getGroupId().split("/")[2];
-        String spaceUrl = "/portal/g/:spaces:" + spaceGroupId + "/" + draftArticleSpace.getPrettyName();
-        draftArticle.setSpaceUrl(spaceUrl);
+        draftArticle.setSpaceUrl(NewsUtils.buildSpaceUrl(draftArticleSpace.getId()));
       }
 
       draftArticle.setUrl(NewsUtils.buildDraftUrl(draftArticlePage));
@@ -991,11 +1314,89 @@ public class NewsServiceImpl implements NewsService {
                                                              .findFirst()
                                                              .orElse(null);
       buildDraftArticleProperties(draftArticle, draftArticleMetadataItem);
+      if (draftArticlePage.getTargetPageId() != null) {
+        draftArticle.setPublicationDate(noteService.getNoteById(draftArticlePage.getTargetPageId()).getCreatedDate());
+      }
       return draftArticle;
     }
     return null;
   }
+
+  private void buildArticleVersionProperties(News article, List<MetadataItem> newsPageVersionMetadataItems) {
+    if (!CollectionUtils.isEmpty(newsPageVersionMetadataItems)) {
+      Map<String, String> newsPageVersionMetadataItemProperties = newsPageVersionMetadataItems.get(0).getProperties();
+      if (!MapUtils.isEmpty(newsPageVersionMetadataItemProperties)) {
+        if (newsPageVersionMetadataItemProperties.containsKey(NEWS_SUMMARY)) {
+          article.setSummary(newsPageVersionMetadataItemProperties.get(NEWS_SUMMARY));
+        }
+        if (newsPageVersionMetadataItemProperties.containsKey(NEWS_ILLUSTRATION_ID)
+            && newsPageVersionMetadataItemProperties.get(NEWS_ILLUSTRATION_ID) != null) {
+          setArticleIllustration(article,
+                                 Long.valueOf(newsPageVersionMetadataItemProperties.get(NEWS_ILLUSTRATION_ID)),
+                                 ARTICLE.name().toLowerCase());
+        }
+        if (newsPageVersionMetadataItemProperties.containsKey(NEWS_UPLOAD_ID)
+            && newsPageVersionMetadataItemProperties.get(NEWS_UPLOAD_ID) != null) {
+          article.setUploadId(newsPageVersionMetadataItemProperties.get(NEWS_UPLOAD_ID));
+        }
+        if (newsPageVersionMetadataItemProperties.containsKey(NEWS_ATTACHMENTS_IDS)
+            && newsPageVersionMetadataItemProperties.get(NEWS_ATTACHMENTS_IDS) != null) {
+          List<String> attachmentsIds = List.of(newsPageVersionMetadataItemProperties.get(NEWS_ATTACHMENTS_IDS).split(";"));
+          article.setAttachmentsIds(attachmentsIds);
+        }
+      }
+    }
+  }
   
+  private void buildArticleProperties(News article,
+                                      Page articlePage,
+                                      String currentUsername,
+                                      MetadataItem metadataItem) throws Exception {
+    if (metadataItem != null && !MapUtils.isEmpty(metadataItem.getProperties())) {
+      Map<String, String> properties = metadataItem.getProperties();
+      if (properties.containsKey(NEWS_ACTIVITIES) && properties.get(NEWS_ACTIVITIES) != null) {
+        String[] activities = properties.get(NEWS_ACTIVITIES).split(";");
+        StringBuilder memberSpaceActivities = new StringBuilder();
+        String newsActivityId = activities[0].split(":")[1];
+        article.setActivityId(newsActivityId);
+        memberSpaceActivities.append(activities[0]).append(";");
+        List<String> sharedInSpacesList = new ArrayList<>();
+        for (int i = 1; i < activities.length; i++) {
+          String sharedInSpaceId = activities[i].split(":")[0];
+          sharedInSpacesList.add(sharedInSpaceId);
+          Space sharedInSpace = spaceService.getSpaceById(sharedInSpaceId);
+          String activityId = activities[i].split(":")[1];
+          if (sharedInSpace != null && currentUsername != null && spaceService.isMember(sharedInSpace, currentUsername)
+              && activityManager.isActivityExists(activityId)) {
+            memberSpaceActivities.append(activities[i]).append(";");
+          }
+        }
+        article.setActivities(memberSpaceActivities.toString());
+        article.setSharedInSpacesList(sharedInSpacesList);
+      }
+      if (properties.containsKey(NEWS_AUDIENCE) && StringUtils.isNotEmpty(properties.get(NEWS_AUDIENCE))) {
+        article.setAudience(properties.get(NEWS_AUDIENCE));
+      }
+      if (properties.containsKey(SCHEDULE_POST_DATE) && StringUtils.isNotEmpty(properties.get(SCHEDULE_POST_DATE))) {
+        article.setSchedulePostDate(properties.get(SCHEDULE_POST_DATE));
+      }
+      if (properties.containsKey(NEWS_PUBLICATION_STATE) && StringUtils.isNotEmpty(properties.get(NEWS_PUBLICATION_STATE))) {
+        article.setPublicationState(properties.get(NEWS_PUBLICATION_STATE));
+      }
+      if (properties.containsKey(PUBLISHED) && StringUtils.isNotEmpty(properties.get(PUBLISHED))) {
+        article.setPublished(Boolean.parseBoolean(properties.get(PUBLISHED)));
+      }
+      if (properties.containsKey(NEWS_VIEWS) && StringUtils.isNotEmpty(properties.get(NEWS_VIEWS))) {
+        article.setViewsCount(Long.parseLong(properties.get(NEWS_VIEWS)));
+      }
+      if (properties.containsKey(NEWS_ACTIVITY_POSTED)) {
+        article.setActivityPosted(Boolean.parseBoolean(properties.get(NEWS_ACTIVITY_POSTED)));
+      } else {
+        article.setActivityPosted(false);
+      }
+    }
+  }
+
   private void buildDraftArticleProperties(News draftArticle, MetadataItem metadataItem) {
     if (metadataItem != null) {
       Map<String, String> draftArticleMetadataItemProperties = metadataItem.getProperties();
@@ -1028,21 +1429,136 @@ public class NewsServiceImpl implements NewsService {
           String newsActivityId = activities[0].split(":")[1];
           draftArticle.setActivityId(newsActivityId);
         }
+        if (properties.containsKey(NEWS_VIEWS) && StringUtils.isNotEmpty(properties.get(NEWS_VIEWS))) {
+          draftArticle.setViewsCount(Long.parseLong(properties.get(NEWS_VIEWS)));
+        }
       }
     }
   }
 
-  private List<News> buildDraftArticles(NewsFilter filter, Identity currentIdentity) throws Exception {
-    List<Long> allowedDraftNewsSpacesIds = NewsUtils.getAllowedDraftNewsSpaces(currentIdentity)
-                                                    .stream()
-                                                    .map(Space::getId)
-                                                    .map(spaceId -> Long.parseLong(spaceId))
-                                                    .toList();
+  private List<News> getPublishedArticles(NewsFilter filter, Identity currentIdentity) throws Exception {
     MetadataFilter metadataFilter = new MetadataFilter();
     metadataFilter.setMetadataName(NEWS_METADATA_NAME);
     metadataFilter.setMetadataTypeName(NEWS_METADATA_TYPE.getName());
+    metadataFilter.setMetadataObjectTypes(List.of(NEWS_METADATA_PAGE_OBJECT_TYPE));
+    metadataFilter.setSortField(filter.getOrder());
+    metadataFilter.setMetadataProperties(Map.of(PUBLISHED,
+                                                "true",
+                                                NEWS_AUDIENCE,
+                                                NewsUtils.SPACE_NEWS_AUDIENCE,
+                                                NEWS_DELETED,
+                                                "false",
+                                                NEWS_PUBLICATION_STATE,
+                                                POSTED));
+    metadataFilter.setMetadataSpaceIds(NewsUtils.getMyFilteredSpacesIds(currentIdentity, filter.getSpaces()));
+    metadataFilter.setCombinedMetadataProperties(Map.of(PUBLISHED,
+                                                        "true",
+                                                        NEWS_AUDIENCE,
+                                                        NewsUtils.ALL_NEWS_AUDIENCE,
+                                                        NEWS_DELETED,
+                                                        "false",
+                                                        NEWS_PUBLICATION_STATE,
+                                                        POSTED));
+    return metadataService.getMetadataItemsByFilter(metadataFilter, filter.getOffset(), filter.getLimit())
+                          .stream()
+                          .map(article -> {
+                            try {
+                              return buildArticle(article.getObjectId());
+                            } catch (Exception e) {
+                              LOG.error("Error while building published news article", e);
+                              return null;
+                            }
+                          })
+                          .toList();
+  }
+
+  private List<News> getPostedArticles(NewsFilter filter, Identity currentIdentity) throws Exception {
+    MetadataFilter metadataFilter = new MetadataFilter();
+    metadataFilter.setMetadataName(NEWS_METADATA_NAME);
+    metadataFilter.setMetadataTypeName(NEWS_METADATA_TYPE.getName());
+    metadataFilter.setMetadataObjectTypes(List.of(NEWS_METADATA_PAGE_OBJECT_TYPE));
+    metadataFilter.setMetadataProperties(Map.of(NEWS_PUBLICATION_STATE, POSTED, NEWS_DELETED, "false"));
+    metadataFilter.setMetadataSpaceIds(NewsUtils.getMyFilteredSpacesIds(currentIdentity, filter.getSpaces()));
+    metadataFilter.setSortField(filter.getOrder());
+    metadataFilter.setCombinedMetadataProperties(Map.of(PUBLISHED,
+                                                        "true",
+                                                        NEWS_AUDIENCE,
+                                                        NewsUtils.ALL_NEWS_AUDIENCE,
+                                                        NEWS_DELETED,
+                                                        "false",
+                                                        NEWS_PUBLICATION_STATE,
+                                                        POSTED));
+    return metadataService.getMetadataItemsByFilter(metadataFilter, filter.getOffset(), filter.getLimit())
+                          .stream()
+                          .map(article -> {
+                            try {
+                              return buildArticle(article.getObjectId());
+                            } catch (Exception e) {
+                              LOG.error("Error while building news article", e);
+                              return null;
+                            }
+                          })
+                          .toList();
+  }
+
+  private List<News> getScheduledArticles(NewsFilter filter, Identity currentIdentity) throws Exception {
+    MetadataFilter metadataFilter = new MetadataFilter();
+    metadataFilter.setMetadataName(NEWS_METADATA_NAME);
+    metadataFilter.setMetadataTypeName(NEWS_METADATA_TYPE.getName());
+    metadataFilter.setMetadataObjectTypes(List.of(NEWS_METADATA_PAGE_OBJECT_TYPE));
+    metadataFilter.setMetadataProperties(Map.of(NEWS_PUBLICATION_STATE, STAGED, NEWS_DELETED, "false"));
+    metadataFilter.setSortField(filter.getOrder());
+    metadataFilter.setMetadataSpaceIds(NewsUtils.getAllowedScheduledNewsSpacesIds(currentIdentity, filter.getSpaces()));
+    return metadataService.getMetadataItemsByFilter(metadataFilter, filter.getOffset(), filter.getLimit())
+            .stream()
+            .map(article -> {
+              try {
+                return buildArticle(article.getObjectId());
+              } catch (Exception e) {
+                LOG.error("Error while building news article", e);
+                return null;
+              }
+            })
+            .toList();
+  }
+
+  private List<News> getMyPostedArticles(NewsFilter filter, Identity currentIdentity) throws Exception {
+    MetadataFilter metadataFilter = new MetadataFilter();
+    metadataFilter.setMetadataName(NEWS_METADATA_NAME);
+    metadataFilter.setMetadataTypeName(NEWS_METADATA_TYPE.getName());
+    metadataFilter.setMetadataObjectTypes(List.of(NEWS_METADATA_PAGE_OBJECT_TYPE));
+    metadataFilter.setCreatorId(Long.parseLong(identityManager.getOrCreateUserIdentity(filter.getAuthor()).getId()));
+    metadataFilter.setMetadataProperties(Map.of(NEWS_PUBLICATION_STATE, POSTED, NEWS_DELETED, "false"));
+    metadataFilter.setMetadataSpaceIds(NewsUtils.getMyFilteredSpacesIds(currentIdentity, filter.getSpaces()));
+    metadataFilter.setSortField(filter.getOrder());
+    metadataFilter.setCombinedMetadataProperties(Map.of(PUBLISHED,
+                                                        "true",
+                                                        NEWS_AUDIENCE,
+                                                        NewsUtils.ALL_NEWS_AUDIENCE,
+                                                        NEWS_DELETED,
+                                                        "false",
+                                                        NEWS_PUBLICATION_STATE,
+                                                        POSTED));
+    return metadataService.getMetadataItemsByFilter(metadataFilter, filter.getOffset(), filter.getLimit())
+                          .stream()
+                          .map(article -> {
+                            try {
+                              return buildArticle(article.getObjectId());
+                            } catch (Exception e) {
+                              LOG.error("Error while building news article", e);
+                              return null;
+                            }
+                          })
+                          .toList();
+  }
+
+  private List<News> buildDraftArticles(NewsFilter filter, Identity currentIdentity) throws Exception {
+    MetadataFilter metadataFilter = new MetadataFilter();
+    metadataFilter.setMetadataName(NEWS_METADATA_NAME);
+    metadataFilter.setMetadataTypeName(NEWS_METADATA_TYPE.getName());
+    metadataFilter.setSortField(filter.getOrder());
     metadataFilter.setMetadataObjectTypes(List.of(NEWS_METADATA_DRAFT_OBJECT_TYPE, NEWS_METADATA_LATEST_DRAFT_OBJECT_TYPE));
-    metadataFilter.setMetadataSpaceIds(allowedDraftNewsSpacesIds);
+    metadataFilter.setMetadataSpaceIds(NewsUtils.getAllowedDraftArticleSpaceIds(currentIdentity, filter.getSpaces()));
     return metadataService.getMetadataItemsByFilter(metadataFilter, filter.getOffset(), filter.getLimit())
                           .stream()
                           .map(draftArticle -> {
@@ -1063,35 +1579,6 @@ public class NewsServiceImpl implements NewsService {
                           .toList();
   }
 
-  private void deleteDraftArticle(String draftArticleId,
-                                  String draftArticleCreator,
-                                  boolean deleteIllustration) throws Exception {
-    DraftPage draftArticlePage = noteService.getDraftNoteById(draftArticleId, draftArticleCreator);
-    if (draftArticlePage != null) {
-      noteService.removeDraftById(draftArticlePage.getId());
-      Space draftArticleSpace = spaceService.getSpaceByGroupId(draftArticlePage.getWikiOwner());
-      MetadataObject draftArticleMetaDataObject = new MetadataObject(draftArticlePage.getTargetPageId() != null ? NEWS_METADATA_LATEST_DRAFT_OBJECT_TYPE : NEWS_METADATA_DRAFT_OBJECT_TYPE,
-              draftArticlePage.getId(),
-              draftArticlePage.getTargetPageId(),
-              Long.parseLong(draftArticleSpace.getId()));
-      List<MetadataItem> draftArticleMetadataItems =
-                                                   metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY,
-                                                                                                       draftArticleMetaDataObject);
-      if (draftArticleMetadataItems != null && !draftArticleMetadataItems.isEmpty()) {
-        Map<String, String> draftArticleMetadataItemProperties = draftArticleMetadataItems.get(0).getProperties();
-        if (deleteIllustration) {
-          if (draftArticleMetadataItemProperties != null && draftArticleMetadataItemProperties.containsKey(NEWS_ILLUSTRATION_ID)
-              && draftArticleMetadataItemProperties.get(NEWS_ILLUSTRATION_ID) != null) {
-            FileItem draftArticleIllustrationFileItem =
-                                                      fileService.getFile(Long.parseLong(draftArticleMetadataItemProperties.get(NEWS_ILLUSTRATION_ID)));
-            fileService.deleteFile(draftArticleIllustrationFileItem.getFileInfo().getId());
-          }
-        }
-        metadataService.deleteMetadataItem(draftArticleMetadataItems.get(0).getId(), false);
-      }
-    }
-  }
-
   private boolean canEditNews(News news, String authenticatedUser) {
     String spaceId = news.getSpaceId();
     Space space = spaceId == null ? null : spaceService.getSpaceById(spaceId);
@@ -1110,7 +1597,7 @@ public class NewsServiceImpl implements NewsService {
   private void setArticleIllustration(News article, Long articleIllustrationId, String newsObjectType) {
     try {
       FileItem articleIllustrationFileItem = fileService.getFile(articleIllustrationId);
-      if (articleIllustrationFileItem != null) {
+      if (articleIllustrationFileItem != null && !articleIllustrationFileItem.getFileInfo().isDeleted()) {
         article.setIllustration(articleIllustrationFileItem.getAsByte());
         article.setIllustrationMimeType(articleIllustrationFileItem.getFileInfo().getMimetype());
         article.setIllustrationUpdateDate(articleIllustrationFileItem.getFileInfo().getUpdatedDate());
@@ -1370,6 +1857,8 @@ public class NewsServiceImpl implements NewsService {
           }
           metadataItem.setProperties(properties);
           String updaterId = identityManager.getOrCreateUserIdentity(news.getAuthor()).getId();
+          Date updateDate = Calendar.getInstance().getTime();
+          metadataItem.setUpdatedDate(updateDate.getTime());
           metadataService.updateMetadataItem(metadataItem, Long.parseLong(updaterId));
           news.setActivities(properties.get(NEWS_ACTIVITIES));
           news.setActivityId(activityId);
@@ -1402,114 +1891,6 @@ public class NewsServiceImpl implements NewsService {
     updateNewsActivities(activity.getId(), news);
   }
 
-  private News createNewsArticlePage(News newsArticle, String newsArticleCreator) throws Exception {
-    // get the news draft article from the news model before setting the news
-    // article id to the news model
-    String draftNewsId = newsArticle.getId();
-
-    Identity poster = NewsUtils.getUserIdentity(newsArticleCreator);
-    Space space = spaceService.getSpaceById(newsArticle.getSpaceId());
-    Wiki wiki = wikiService.getWikiByTypeAndOwner(WikiType.GROUP.name().toLowerCase(), space.getGroupId());
-    Page newsArticlesRootNotePage = noteService.getNoteOfNoteBookByName(WikiType.GROUP.name().toLowerCase(),
-                                                                        space.getGroupId(),
-                                                                        NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME);
-
-    if (newsArticlesRootNotePage != null) {
-      Page newsArticlePage = new Page();
-      newsArticlePage.setTitle(newsArticle.getTitle());
-      newsArticlePage.setContent(newsArticle.getBody());
-      newsArticlePage.setParentPageId(newsArticlesRootNotePage.getId());
-      newsArticlePage.setAuthor(newsArticle.getAuthor());
-      newsArticlePage.setLang(null);
-      newsArticlePage = noteService.createNote(wiki, newsArticlesRootNotePage.getName(), newsArticlePage, poster);
-      // create the version
-      noteService.createVersionOfNote(newsArticlePage, poster.getUserId());
-
-      if (newsArticlePage != null) {
-        PageVersion pageVersion = noteService.getPublishedVersionByPageIdAndLang(Long.parseLong(newsArticlePage.getId()), null);
-        // set properties
-        newsArticle.setId(newsArticlePage.getId());
-        newsArticle.setCreationDate(pageVersion.getCreatedDate());
-
-        NewsPageVersionObject newsArticleVersionMetaDataObject = new NewsPageVersionObject(NEWS_METADATA_PAGE_VERSION_OBJECT_TYPE,
-                                                                                           pageVersion.getId(),
-                                                                                           null,
-                                                                                           Long.parseLong(space.getId()));
-        String newsArticleMetadataItemCreatorIdentityId = identityManager.getOrCreateUserIdentity(newsArticleCreator).getId();
-        Map<String, String> newsArticleVersionMetadataItemProperties = new HashMap<>();
-
-        // save illustration
-        boolean hasIllustration = false;
-        Long oldIllustrationId = null;
-        String oldUploadId = null;
-
-        NewsDraftObject newsDraftObject = new NewsDraftObject(NEWS_METADATA_DRAFT_OBJECT_TYPE,
-                                                              draftNewsId,
-                                                              null,
-                                                              Long.parseLong(space.getId()));
-        List<MetadataItem> metadataItems =
-                                         metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY, newsDraftObject);
-        MetadataItem metadataItem = metadataItems.isEmpty() ? null : metadataItems.get(0);
-        if (metadataItem != null && metadataItem.getProperties() != null && !metadataItem.getProperties().isEmpty()) {
-          hasIllustration = metadataItem.getProperties().containsKey(NEWS_ILLUSTRATION_ID)
-              && StringUtils.isNotEmpty(metadataItem.getProperties().get(NEWS_ILLUSTRATION_ID));
-          if (hasIllustration) {
-            oldIllustrationId = Long.parseLong(metadataItem.getProperties().get(NEWS_ILLUSTRATION_ID));
-            oldUploadId = metadataItem.getProperties().get(NEWS_UPLOAD_ID);
-          }
-        }
-        if (StringUtils.isNotEmpty(newsArticle.getUploadId())) {
-          if (hasIllustration && oldUploadId.equals(newsArticle.getUploadId())) {
-            newsArticleVersionMetadataItemProperties.put(NEWS_ILLUSTRATION_ID, String.valueOf(oldIllustrationId));
-            newsArticleVersionMetadataItemProperties.put(NEWS_UPLOAD_ID, oldUploadId);
-            setArticleIllustration(newsArticle, oldIllustrationId, ARTICLE.name().toLowerCase());
-          } else {
-            Long newIllustrationId = saveArticleIllustration(newsArticle.getUploadId(), oldIllustrationId);
-            if (newIllustrationId != null) {
-              newsArticleVersionMetadataItemProperties.put(NEWS_ILLUSTRATION_ID, String.valueOf(newIllustrationId));
-              newsArticleVersionMetadataItemProperties.put(NEWS_UPLOAD_ID, newsArticle.getUploadId());
-              setArticleIllustration(newsArticle, newIllustrationId, ARTICLE.name().toLowerCase());
-            }
-          }
-        } else if (newsArticle.getUploadId() == null && hasIllustration) {
-          // link the illustration to the newly created version
-          newsArticleVersionMetadataItemProperties.put(NEWS_ILLUSTRATION_ID, String.valueOf(oldIllustrationId));
-          newsArticleVersionMetadataItemProperties.put(NEWS_UPLOAD_ID, oldUploadId);
-          setArticleIllustration(newsArticle, oldIllustrationId, ARTICLE.name().toLowerCase());
-        }
-        // create the page version metadata item
-        if (StringUtils.isNotEmpty(newsArticle.getSummary())) {
-          newsArticleVersionMetadataItemProperties.put(NEWS_SUMMARY, newsArticle.getSummary());
-        }
-        metadataService.createMetadataItem(newsArticleVersionMetaDataObject,
-                                           NEWS_METADATA_KEY,
-                                           newsArticleVersionMetadataItemProperties,
-                                           Long.parseLong(newsArticleMetadataItemCreatorIdentityId));
-
-        // create metadata item page
-        NewsPageObject newsPageObject = new NewsPageObject(NEWS_METADATA_PAGE_OBJECT_TYPE, newsArticlePage.getId(), null, Long.parseLong(space.getId()));
-        Map<String, String> newsPageProperties = new HashMap<>();
-        if (StringUtils.isNotEmpty(newsArticle.getAudience())) {
-          newsPageProperties.put(NEWS_AUDIENCE, newsArticle.getAudience());
-        }
-        if (StringUtils.isNotEmpty(newsArticle.getSchedulePostDate())) {
-          newsPageProperties.put(SCHEDULE_POST_DATE, newsArticle.getSchedulePostDate());
-        }
-        if (StringUtils.isNotEmpty(newsArticle.getPublicationState())) {
-          newsPageProperties.put(NEWS_PUBLICATION_STATE, newsArticle.getPublicationState());
-        }
-        newsPageProperties.put(NEWS_ACTIVITY_POSTED, String.valueOf(newsArticle.isActivityPosted()));
-        newsPageProperties.put(NEWS_DELETED, String.valueOf(newsArticlePage.isDeleted()));
-        metadataService.createMetadataItem(newsPageObject, NEWS_METADATA_KEY, newsPageProperties, Long.parseLong(newsArticleMetadataItemCreatorIdentityId));
-
-        // delete the draft
-        deleteDraftArticle(draftNewsId, poster.getUserId(), false);
-        return newsArticle;
-      }
-    }
-    return null;
-  }
-
   private News updateNewsArticle(News news, Identity updater, String newsUpdateType) throws Exception {
     Page existingPage = noteService.getNoteById(news.getId());
     if (existingPage != null) {
@@ -1538,13 +1919,18 @@ public class NewsServiceImpl implements NewsService {
           newsPageProperties.put(NEWS_AUDIENCE, news.getAudience());
         }
         if (StringUtils.isNotEmpty(news.getSchedulePostDate())) {
-          newsPageProperties.put(SCHEDULE_POST_DATE, news.getSchedulePostDate());
+          String existingSchedulePostDate = newsPageProperties.getOrDefault(SCHEDULE_POST_DATE, null);
+          if (existingSchedulePostDate == null || !existingSchedulePostDate.equals(news.getSchedulePostDate())) {
+            setSchedulePostDate(news, newsPageProperties);
+          }
         }
         if (StringUtils.isNotEmpty(news.getPublicationState())) {
           newsPageProperties.put(NEWS_PUBLICATION_STATE, news.getPublicationState());
         }
         newsPageProperties.put(NEWS_ACTIVITY_POSTED, String.valueOf(news.isActivityPosted()));
         existingPageMetadataItem.setProperties(newsPageProperties);
+        Date updateDate = Calendar.getInstance().getTime();
+        existingPageMetadataItem.setUpdatedDate(updateDate.getTime());
         metadataService.updateMetadataItem(existingPageMetadataItem, Long.parseLong(newsArticleUpdaterIdentityId));
       } else {
         throw new ObjectNotFoundException("No such news article metadata item exists with id " + news.getId());
@@ -1615,128 +2001,51 @@ public class NewsServiceImpl implements NewsService {
       news.setId(articlePage.getId());
       news.setCreationDate(articlePage.getCreatedDate());
       news.setAuthor(articlePage.getAuthor());
-      news.setUpdateDate(articlePage.getUpdatedDate());
       news.setUpdater(articlePage.getAuthor());
 
       // fetch related metadata item properties
-      NewsPageObject newsPageObject = new NewsPageObject(NEWS_METADATA_PAGE_OBJECT_TYPE, articlePage.getId(), null, Long.parseLong(space.getId()));
+      NewsPageObject newsPageObject = new NewsPageObject(NEWS_METADATA_PAGE_OBJECT_TYPE,
+                                                         articlePage.getId(),
+                                                         null,
+                                                         Long.parseLong(space.getId()));
       MetadataItem metadataItem = metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY, newsPageObject).get(0);
-      if (metadataItem != null && metadataItem.getProperties() != null && !metadataItem.getProperties().isEmpty()) {
-        Map<String, String> properties = metadataItem.getProperties();
-        if (properties.containsKey(NEWS_ACTIVITIES) && properties.get(NEWS_ACTIVITIES) != null) {
-          String[] activities = properties.get(NEWS_ACTIVITIES).split(";");
-          StringBuilder memberSpaceActivities = new StringBuilder();
-          String newsActivityId = activities[0].split(":")[1];
-          news.setActivityId(newsActivityId);
-          StringBuilder newsUrl = new StringBuilder();
-          Space newsPostedInSpace = spaceService.getSpaceById(activities[0].split(":")[0]);
-          if (currentUsername != null && spaceService.isMember(newsPostedInSpace, currentUsername)) {
-            newsUrl.append("/")
-                   .append(PortalContainer.getCurrentPortalContainerName())
-                   .append("/")
-                   .append(CommonsUtils.getCurrentPortalOwner())
-                   .append("/activity?id=")
-                   .append(newsActivityId);
-            news.setUrl(newsUrl.toString());
-          } else {
-            newsUrl.append("/")
-                   .append(PortalContainer.getCurrentPortalContainerName())
-                   .append("/")
-                   .append(CommonsUtils.getCurrentPortalOwner())
-                   .append("/news/detail?newsId=")
-                   .append(newsId)
-                   .append("&type=article");
-            news.setUrl(newsUrl.toString());
-          }
-          memberSpaceActivities.append(activities[0]).append(";");
-          List<String> sharedInSpacesList = new ArrayList<>();
-          for (int i = 1; i < activities.length; i++) {
-            String sharedInSpaceId = activities[i].split(":")[0];
-            sharedInSpacesList.add(sharedInSpaceId);
-            Space sharedInSpace = spaceService.getSpaceById(sharedInSpaceId);
-            String activityId = activities[i].split(":")[1];
-            if (sharedInSpace != null && currentUsername != null && spaceService.isMember(sharedInSpace, currentUsername)
-                && activityManager.isActivityExists(activityId)) {
-              memberSpaceActivities.append(activities[i]).append(";");
-            }
-          }
-          news.setActivities(memberSpaceActivities.toString());
-          news.setSharedInSpacesList(sharedInSpacesList);
-        }
-        if (properties.containsKey(NEWS_AUDIENCE) && StringUtils.isNotEmpty(properties.get(NEWS_AUDIENCE))) {
-          news.setAudience(properties.get(NEWS_AUDIENCE));
-        }
-        if (properties.containsKey(SCHEDULE_POST_DATE) && StringUtils.isNotEmpty(properties.get(SCHEDULE_POST_DATE))) {
-          news.setSchedulePostDate(properties.get(SCHEDULE_POST_DATE));
-        }
-        if (properties.containsKey(NEWS_PUBLICATION_STATE) && StringUtils.isNotEmpty(properties.get(NEWS_PUBLICATION_STATE))) {
-          news.setPublicationState(properties.get(NEWS_PUBLICATION_STATE));
-        }
-        if (properties.containsKey(PUBLISHED) && StringUtils.isNotEmpty(properties.get(PUBLISHED))) {
-          news.setPublished(Boolean.valueOf(properties.get(PUBLISHED)));
-        }
-        if (properties.containsKey(NEWS_PUBLICATION_DATE) && StringUtils.isNotEmpty(properties.get(NEWS_PUBLICATION_DATE))) {
-          try {
-            SimpleDateFormat format = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy");
-            Date date = format.parse(properties.get(NEWS_PUBLICATION_DATE));
-            news.setPublicationDate(date);
-          } catch (Exception exception) {
-            LOG.warn("failed to parse news published date for article with id " + news.getId());
-          }
-        } else {
-          news.setPublicationDate(articlePage.getCreatedDate());
-        }
-        if (properties.containsKey(NEWS_VIEWS) && StringUtils.isNotEmpty(properties.get(NEWS_VIEWS))) {
-          news.setViewsCount(Long.parseLong(properties.get(NEWS_VIEWS)));
-        }
-        if (properties.containsKey(NEWS_ACTIVITY_POSTED)) {
-          news.setActivityPosted(Boolean.valueOf(properties.get(NEWS_ACTIVITY_POSTED)));
-        } else {
-          news.setActivityPosted(false);
-        }
-        news.setDeleted(articlePage.isDeleted());
+      news.setSpaceId(space.getId());
+      news.setSpaceAvatarUrl(space.getAvatarUrl());
+      news.setSpaceDisplayName(space.getDisplayName());
+      boolean hiddenSpace = space.getVisibility().equals(Space.HIDDEN) && !spaceService.isMember(space, currentUsername)
+          && !spaceService.isSuperManager(currentUsername);
+      news.setHiddenSpace(hiddenSpace);
+      boolean isSpaceMember = spaceService.isSuperManager(currentUsername) || spaceService.isMember(space, currentUsername);
+      news.setSpaceMember(isSpaceMember);
+      if (StringUtils.isNotEmpty(space.getGroupId())) {
+        news.setSpaceUrl(NewsUtils.buildSpaceUrl(space.getId()));
       }
 
+      org.exoplatform.social.core.identity.model.Identity identity = identityManager.getOrCreateIdentity(OrganizationIdentityProvider.NAME, news.getAuthor());
+      if (identity != null && identity.getProfile() != null) {
+        news.setAuthorDisplayName(identity.getProfile().getFullName());
+        news.setAuthorAvatarUrl(identity.getProfile().getAvatarUrl());
+      }
+
+      buildArticleProperties(news, articlePage, currentUsername, metadataItem);
+      news.setDeleted(articlePage.isDeleted());
+      news.setUrl(NewsUtils.buildNewsArticleUrl(news, currentUsername));
+      news.setPublicationDate(articlePage.getCreatedDate());
+      news.setUpdateDate(new Date(metadataItem.getUpdatedDate()));
       // fetch the last version of the given lang
       PageVersion pageVersion = noteService.getPublishedVersionByPageIdAndLang(Long.parseLong(articlePage.getId()), null);
       news.setTitle(pageVersion.getTitle());
       processPageContent(pageVersion, news);
       news.setUpdaterFullName(pageVersion.getAuthorFullName());
-      if (space != null) {
-        news.setSpaceId(space.getId());
-        news.setSpaceAvatarUrl(space.getAvatarUrl());
-        news.setSpaceDisplayName(space.getDisplayName());
-        boolean hiddenSpace = space.getVisibility().equals(Space.HIDDEN) && !spaceService.isMember(space, currentUsername)
-                && !spaceService.isSuperManager(currentUsername);
-        news.setHiddenSpace(hiddenSpace);
-        boolean isSpaceMember = spaceService.isSuperManager(currentUsername) || spaceService.isMember(space, currentUsername);
-        news.setSpaceMember(isSpaceMember);
-        if (StringUtils.isNotEmpty(space.getGroupId())) {
-          String spaceGroupId = space.getGroupId().split("/")[2];
-          String spaceUrl = "/portal/g/:spaces:" + spaceGroupId + "/" + space.getPrettyName();
-          news.setSpaceUrl(spaceUrl);
-        }
-      }
-      NewsPageVersionObject newsArticleObject = new NewsPageVersionObject(NEWS_METADATA_PAGE_VERSION_OBJECT_TYPE,
-                                                                          pageVersion.getId(),
-                                                                          null,
-                                                                          Long.parseLong(space.getId()));
-      List<MetadataItem> metadataItems =
-                                       metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY, newsArticleObject);
-      if (metadataItems != null && !metadataItems.isEmpty()) {
-        Map<String, String> properties = metadataItems.get(0).getProperties();
-        if (properties != null && !properties.isEmpty()) {
-          if (properties.containsKey(NEWS_SUMMARY)) {
-            news.setSummary(properties.get(NEWS_SUMMARY));
-          }
-          if (properties.containsKey(NEWS_ILLUSTRATION_ID) && properties.get(NEWS_ILLUSTRATION_ID) != null) {
-            setArticleIllustration(news, Long.valueOf(properties.get(NEWS_ILLUSTRATION_ID)), ARTICLE.name().toLowerCase());
-          }
-          if (properties.containsKey(NEWS_UPLOAD_ID) && properties.get(NEWS_UPLOAD_ID) != null) {
-            news.setUploadId(properties.get(NEWS_UPLOAD_ID));
-          }
-        }
-      }
+
+      NewsPageVersionObject newsPageVersionObject = new NewsPageVersionObject(NEWS_METADATA_PAGE_VERSION_OBJECT_TYPE,
+                                                                              pageVersion.getId(),
+                                                                              null,
+                                                                              Long.parseLong(space.getId()));
+      List<MetadataItem> newsPageVersionMetadataItems =
+                                                      metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY,
+                                                                                                          newsPageVersionObject);
+      buildArticleVersionProperties(news, newsPageVersionMetadataItems);
       return news;
     }
     return null;
@@ -1750,77 +2059,10 @@ public class NewsServiceImpl implements NewsService {
     }
     DraftPage draftPage = noteService.getLatestDraftPageByUserAndTargetPageAndLang(Long.parseLong(pageId), updater, null);
     if (draftPage == null) {
-      news = createDraftForExistingPage(news, updater, existingPage);
+      news = createDraftForExistingPage(news, updater, existingPage, System.currentTimeMillis());
     } else {
       news = updateDraftForExistingPage(news, updater, existingPage, draftPage);
     }
-    return news;
-  }
-
-  private News createDraftForExistingPage(News news, String updater, Page page) throws Exception {
-    DraftPage draftArticlePage = new DraftPage();
-    draftArticlePage.setNewPage(false);
-    draftArticlePage.setTargetPageId(page.getId());
-    draftArticlePage.setTitle(news.getTitle());
-    draftArticlePage.setContent(news.getBody());
-    draftArticlePage.setParentPageId(page.getParentPageId());
-    draftArticlePage.setAuthor(news.getAuthor());
-    draftArticlePage.setLang(null);
-
-    draftArticlePage = noteService.createDraftForExistPage(draftArticlePage, page, null, System.currentTimeMillis(), updater);
-
-    news.setDraftUpdateDate(draftArticlePage.getCreatedDate());
-    news.setDraftUpdater(draftArticlePage.getAuthor());
-
-    NewsLatestDraftObject latestDraftObject = new NewsLatestDraftObject(NEWS_METADATA_LATEST_DRAFT_OBJECT_TYPE,
-                                                                        draftArticlePage.getId(),
-                                                                        page.getId(),
-                                                                        Long.parseLong(news.getSpaceId()));
-
-    Map<String, String> draftArticleMetadataItemProperties = new HashMap<>();
-    if (StringUtils.isNotEmpty(news.getSummary())) {
-      draftArticleMetadataItemProperties.put(NEWS_SUMMARY, news.getSummary());
-    }
-    draftArticleMetadataItemProperties.put(NEWS_ACTIVITY_POSTED, String.valueOf(news.isActivityPosted()));
-    // check if the article has an illustration to lik it to the created draft
-    PageVersion latestPageVersion = noteService.getPublishedVersionByPageIdAndLang(Long.parseLong(page.getId()), null);
-    if (latestPageVersion != null) {
-      // fetch the version related metadata item
-      MetadataItem metadataItem =
-                                metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY,
-                                                                                    new NewsPageVersionObject(NEWS_METADATA_PAGE_VERSION_OBJECT_TYPE,
-                                                                                                              latestPageVersion.getId(),
-                                                                                                              null,
-                                                                                                              Long.parseLong(news.getSpaceId())))
-                                               .get(0);
-      boolean hasIllustration = false;
-      Long oldIllustrationId = null;
-      String oldIllustrationUploadId = null;
-      if (metadataItem != null && metadataItem.getProperties() != null && !metadataItem.getProperties().isEmpty()) {
-        hasIllustration = metadataItem.getProperties().containsKey(NEWS_ILLUSTRATION_ID)
-            && StringUtils.isNotEmpty(metadataItem.getProperties().get(NEWS_ILLUSTRATION_ID));
-        if (hasIllustration) {
-          oldIllustrationId = Long.parseLong(metadataItem.getProperties().get(NEWS_ILLUSTRATION_ID));
-          oldIllustrationUploadId = metadataItem.getProperties().get(NEWS_UPLOAD_ID);
-        }
-      }
-      if (StringUtils.isNotEmpty(news.getUploadId())) {
-        // save the illustration
-        Long newIllustrationId = saveArticleIllustration(news.getUploadId(), null);
-        if (newIllustrationId != null) {
-          draftArticleMetadataItemProperties.put(NEWS_ILLUSTRATION_ID, String.valueOf(newIllustrationId));
-          draftArticleMetadataItemProperties.put(NEWS_UPLOAD_ID, news.getUploadId());
-          setArticleIllustration(news, newIllustrationId, NewsObjectType.DRAFT.name().toLowerCase());
-        }
-      } else if (news.getUploadId() == null && hasIllustration) {
-        // link the illustration to the newly created draft
-        draftArticleMetadataItemProperties.put(NEWS_ILLUSTRATION_ID, String.valueOf(oldIllustrationId));
-        draftArticleMetadataItemProperties.put(NEWS_UPLOAD_ID, oldIllustrationUploadId);
-        setArticleIllustration(news, oldIllustrationId, NewsObjectType.DRAFT.name().toLowerCase());
-      }
-    }
-    String draftArticleMetadataItemCreatorIdentityId = identityManager.getOrCreateUserIdentity(updater).getId();
-    metadataService.createMetadataItem(latestDraftObject, NEWS_METADATA_KEY, draftArticleMetadataItemProperties, Long.parseLong(draftArticleMetadataItemCreatorIdentityId));
     return news;
   }
 
@@ -1931,38 +2173,93 @@ public class NewsServiceImpl implements NewsService {
     news.setOriginalBody(sanitizedBody);
   }
 
-  private void deleteArticle(News news, Identity currentIdentity) throws Exception {
-    Page articlePage = noteService.getNoteById(news.getId());
-    if (articlePage != null && !articlePage.isDeleted()) {
-      boolean hasDraft = true;
-      while (hasDraft) {
-        try {
-          DraftPage latestDraftPage = noteService.getLatestDraftOfPage(articlePage, currentIdentity.getUserId());
-          if (latestDraftPage != null) {
-            deleteDraftArticle(latestDraftPage.getId(), currentIdentity.getUserId(), true);
-          } else {
-            hasDraft = false;
-          }
-        } catch (Exception exception) {
-          hasDraft = false;
-        }
+  private void setSchedulePostDate(News news, Map<String, String> newsProperties) throws ParseException {
+    String schedulePostDate = news.getSchedulePostDate();
+    ZoneId userTimeZone = StringUtils.isBlank(news.getTimeZoneId()) ? ZoneOffset.UTC : ZoneId.of(news.getTimeZoneId());
+    String offsetTimeZone = String.valueOf(OffsetTime.now(userTimeZone).getOffset()).replace(":", "");
+    schedulePostDate = schedulePostDate.concat(" ").concat(offsetTimeZone);
+
+    // Create a SimpleDateFormat object to parse the scheduled post date given by the front
+    SimpleDateFormat format = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss" + "Z");
+    Calendar startPublishedDate = Calendar.getInstance();
+    startPublishedDate.setTime(format.parse(schedulePostDate));
+
+    // create a SimpleDateFormat to format the parsed date and then save it as string
+    SimpleDateFormat defaultFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+    defaultFormat.setTimeZone(TimeZone.getTimeZone(ZoneOffset.UTC));
+    String startPublishedDateString = defaultFormat.format(startPublishedDate.getTime());
+
+    newsProperties.put(SCHEDULE_POST_DATE, startPublishedDateString);
+  }
+
+  private boolean isSameIllustration(String newsDraftId, String newsArticleId) throws ObjectNotFoundException, FileStorageException {
+
+    News news = getNewsArticleById(newsArticleId);
+    if (news == null || news.getIllustration() == null) {
+      return false;
+    }
+    NewsLatestDraftObject draftObject = new NewsLatestDraftObject(NEWS_METADATA_LATEST_DRAFT_OBJECT_TYPE,
+            newsDraftId, newsArticleId, Long.parseLong(news.getSpaceId()));
+    MetadataItem draftMetadataItem = metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY, draftObject).stream().findFirst().orElse(null);
+    if (draftMetadataItem == null) {
+      throw new ObjectNotFoundException("Metadata items not found for news draft " + newsDraftId);
+    }
+
+    // Retrieve illustration ID from metadata
+    Map<String, String> draftProperties = draftMetadataItem.getProperties();
+    if (draftProperties != null ) {
+      String draftIllustrationId = draftProperties.getOrDefault(NEWS_ILLUSTRATION_ID, null);
+      FileItem fileItem = fileService.getFile(Long.parseLong(draftIllustrationId));
+      if (fileItem != null) {
+        return Arrays.equals(fileItem.getAsByte(), news.getIllustration());
       }
-      boolean isDeleted = noteService.deleteNote(articlePage.getWikiType(), articlePage.getWikiOwner(), articlePage.getName());
-      if (isDeleted) {
-        if (news.getActivities() != null) {
-          String newsActivities = news.getActivities();
-          Stream.of(newsActivities.split(";")).map(activity -> activity.split(":")[1]).forEach(activityManager::deleteActivity);
-          NewsPageObject newsPageMetadataObject = new NewsPageObject(NEWS_METADATA_PAGE_OBJECT_TYPE, news.getId(), null, Long.parseLong(news.getSpaceId()));
-          MetadataItem metadataItem = metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY, newsPageMetadataObject).stream().findFirst().orElse(null);
-          if (metadataItem != null) {
-            Map<String, String> properties = metadataItem.getProperties();
-            properties.put(NEWS_DELETED, String.valueOf(true));
-            metadataItem.setProperties(properties);
-            String currentIdentityId = identityManager.getOrCreateUserIdentity(currentIdentity.getUserId()).getId();
-            metadataService.updateMetadataItem(metadataItem, Long.parseLong(currentIdentityId));
-          }
+    }
+    return false;
+  }
+
+  private News postScheduledArticle(News news) throws ObjectNotFoundException {
+    NewsPageObject newsPageObject = new NewsPageObject(NEWS_METADATA_PAGE_OBJECT_TYPE, news.getId(), null, Long.parseLong(news.getSpaceId()));
+    MetadataItem metadataItem = metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY, newsPageObject).stream().findFirst().orElse(null);
+    if (metadataItem == null) {
+      throw new ObjectNotFoundException("Metadata items not found for news " + news.getId());
+    }
+    Map<String, String> properties = metadataItem.getProperties();
+    if (properties != null) {
+      properties.put(NEWS_PUBLICATION_STATE, POSTED);
+      properties.remove(SCHEDULE_POST_DATE);
+      String poster = identityManager.getOrCreateUserIdentity(news.getAuthor()).getId();
+      Date updateDate = Calendar.getInstance().getTime();
+      metadataItem.setUpdatedDate(updateDate.getTime());
+      metadataService.updateMetadataItem(metadataItem, Long.parseLong(poster));
+      news.setSchedulePostDate(null);
+      return news;
+    }
+    if (!news.isPublished()) {
+      newsTargetingService.deleteNewsTargets(news);
+    }
+    return null;
+  }
+
+  private Map<String, String> getArticleIllustrationInfo(News news) {
+    Map<String, String> illustrationInfo = new HashMap<>();
+    if (news.getIllustration() != null) {
+      PageVersion pageVersion = noteService.getPublishedVersionByPageIdAndLang(Long.parseLong(news.getId()), null);
+      if (pageVersion != null) {
+        MetadataItem metadataItem =
+                metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY,
+                                new NewsPageVersionObject(NEWS_METADATA_PAGE_VERSION_OBJECT_TYPE,
+                                        pageVersion.getId(),
+                                        null,
+                                        Long.parseLong(news.getSpaceId())))
+                        .stream()
+                        .findFirst()
+                        .orElse(null);
+        if (metadataItem != null && metadataItem.getProperties() != null && !metadataItem.getProperties().isEmpty()) {
+          illustrationInfo.put(NEWS_ILLUSTRATION_ID, metadataItem.getProperties().get(NEWS_ILLUSTRATION_ID));
+          illustrationInfo.put(NEWS_UPLOAD_ID, metadataItem.getProperties().get(NEWS_UPLOAD_ID));
         }
       }
     }
+    return illustrationInfo;
   }
 }

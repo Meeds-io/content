@@ -25,7 +25,7 @@
    xmlns="http://www.exoplatform.org/xml/ns/kernel_1_2.xsd">
 
   <component>
-    <type>io.meeds.news.search.NewsESSearchConnector</type>
+    <type>io.meeds.news.search.NewsSearchConnector</type>
     <init-params>
       <value-param>
         <name>query.file.path</name>

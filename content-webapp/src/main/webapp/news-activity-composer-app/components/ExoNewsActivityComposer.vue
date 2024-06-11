@@ -91,8 +91,7 @@
                     <span v-on="on">
                       <v-btn
                         id="newsUpdateAndPost"
-                        :disabled="news.archived || !news.activityPosted ? true: updateDisabled"
-                        :class="[news.archived ? 'unauthorizedPublish' : '']"
+                        :disabled="!news.activityPosted ? true: updateDisabled"
                         class="btn ms-2 me-2"
                         v-bind="attrs"
                         v-on="on"
@@ -224,7 +223,6 @@ export default {
         targets: [],
         spaceId: '',
         published: false,
-        archived: false,
         audience: null,
       },
       originalNews: {
@@ -540,7 +538,6 @@ export default {
             this.news.summary = fetchedNode.summary;
             this.news.body = fetchedNode.body;
             this.news.published = fetchedNode.published;
-            this.news.archived = fetchedNode.archived;
             this.news.spaceId = fetchedNode.spaceId;
             this.news.publicationState = fetchedNode.publicationState;
             this.news.activityId = fetchedNode.activityId;
@@ -670,7 +667,7 @@ export default {
         news.uploadId = this.news.illustration[0].uploadId;
       }
       if (news.publicationState ==='staged') {
-        this.$newsServices.scheduleNews(news).then((scheduleNews) => {
+        this.$newsServices.scheduleNews(news, this.newsType).then((scheduleNews) => {
           if (scheduleNews) {
             history.replaceState(null,'',scheduleNews.spaceUrl);
             window.location.href = scheduleNews.url;

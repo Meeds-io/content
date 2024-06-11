@@ -17,38 +17,23 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
-package io.meeds.news.filter;
+import io.meeds.spring.AvailableIntegration;
+import io.meeds.spring.kernel.PortalApplicationContextInitializer;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.liquibase.LiquibaseAutoConfiguration;
+import org.springframework.context.annotation.PropertySource;
 
-import java.util.List;
+@SpringBootApplication(scanBasePackages = {
+    ContentApplication.MODULE_NAME,
+    AvailableIntegration.KERNEL_MODULE,
+    AvailableIntegration.JPA_MODULE,
+    AvailableIntegration.WEB_SECURITY_MODULE,
+  }, exclude = {
+    LiquibaseAutoConfiguration.class,
+})
+@PropertySource("classpath:application.properties")
+@PropertySource("classpath:application-common.properties")
+public class ContentApplication extends PortalApplicationContextInitializer {
+  public static final String MODULE_NAME = "io.meeds.news";
 
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
-@Data
-@NoArgsConstructor
-public class NewsFilter {
-
-  private boolean      publishedNews;
-
-  private boolean      draftNews;
-
-  private boolean      scheduledNews;
-
-  private String       searchText;
-
-  private String       order;
-
-  private List<String> spaces;
-
-  private List<String> tagNames;
-
-  private String       author;
-
-  private int          offset;
-
-  private int          limit;
-
-  private boolean      favorites;
-
-  private String       lang;
 }

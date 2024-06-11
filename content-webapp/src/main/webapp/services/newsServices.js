@@ -52,7 +52,7 @@ export function getNewsByActivityId(activityId) {
 }
 
 export function getNewsSpaces(newsId) {
-  return fetch(`${newsConstants.NEWS_API}/${newsId}?fields=spaces`, {
+  return fetch(`${newsConstants.NEWS_API}/${newsId}?fields=spaces&type=article`, {
     credentials: 'include',
     method: 'GET',
   }).then((resp) => resp.json()).then(resp => {
@@ -74,7 +74,7 @@ export function markNewsAsRead(newsId){
 }
 
 export function getNews(filter, spaces, searchText, offset, limit, returnSize) {
-  let url = `${newsConstants.NEWS_API}?author=${newsConstants.userName}&publicationState=published&filter=${filter}`;
+  let url = `${newsConstants.NEWS_API}?author=${newsConstants.userName}&filter=${filter}`;
   if (searchText) {
     if (searchText.indexOf('#') === 0) {
       searchText = searchText.replace('#', '%23');
@@ -120,8 +120,8 @@ export function saveNews(news) {
   });
 }
 
-export function scheduleNews(news) {
-  return fetch(`${newsConstants.NEWS_API}/schedule`, {
+export function scheduleNews(news, newsType) {
+  return fetch(`${newsConstants.NEWS_API}/schedule?type=${newsType || ''}`, {
     headers: {
       'Content-Type': 'application/json'
     },
@@ -243,11 +243,11 @@ export function canScheduleNews(spaceId) {
   }).then((resp) => resp && resp.ok && resp.json());
 }
 
-export function deleteNews(newsId, isDraft, delay) {
+export function deleteNews(newsId, newsObjectType, delay) {
   if (delay > 0) {
     localStorage.setItem('deletedNews', newsId);
   }
-  return fetch(`${newsConstants.NEWS_API}/${newsId}?isDraft=${isDraft || ''}&delay=${delay || 0}`, {
+  return fetch(`${newsConstants.NEWS_API}/${newsId}?type=${newsObjectType || ''}&delay=${delay || 0}`, {
     credentials: 'include',
     method: 'DELETE'
   }).then((resp) => {

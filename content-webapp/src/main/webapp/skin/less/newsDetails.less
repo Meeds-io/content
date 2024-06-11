@@ -114,18 +114,6 @@
     font-family: Helvetica, regular, sans-serif;
   }
 
-  .newsArchived {
-    display: flex;
-    justify-content: center;
-
-    .newsArchiveLabel {
-      font-weight: 100;
-      color: grey;
-      font-style: italic;
-      font-size: 14px;
-    }
-  }
-
   .newsBody {
     text-align: justify;
     line-height: initial;
@@ -139,7 +127,6 @@
   }
 
   .newsAttachmentsTitle {
-    width: 80%;
     margin: 0 auto;
     color: @headingColor;
     font-size: 18px;
@@ -242,15 +229,6 @@
     }
   }
 
-  .newsArchiveButton {
-    border: none;
-    padding: 8px 4px;
-    margin-top: -20px;
-    margin-bottom: 20px;
-    i:before {
-      font-size: 24px;
-    }
-  }
 }
 
 /*====================== Responsive ==========================*/
@@ -393,10 +371,6 @@
 
 @media screen and (min-width: 481px) {
   .newsDetails {
-    .newsAttachmentsTitle {
-      width: 80%;
-    }
-
     .newsAttachments {
       width: 80%;
     }

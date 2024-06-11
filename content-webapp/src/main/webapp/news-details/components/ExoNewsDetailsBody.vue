@@ -20,14 +20,6 @@
 -->
 <template>
   <div v-if="news">
-    <div v-if="archivedNews && !news.canArchive">
-      <div class="userNotAuthorized">
-        <div class="notAuthorizedIconDiv">
-          <img src="/content/images/notauthorized.png" class="iconNotAuthorized">
-        </div>
-        <h3>{{ $t('news.archive.text') }}</h3>
-      </div>
-    </div>
     <div class="newsDetails-description card-border-radius">
       <div :class="[illustrationURL ? 'newsDetails-header' : '']" class="newsDetails-header">
         <div v-if="illustrationURL" class="illustration center">
@@ -41,9 +33,6 @@
           <div class="news-top-information d-flex">
             <div id="titleNews" class="newsTitle newsTitleMobile">
               <a class="activityLinkColor newsTitleLink">{{ newsTitle }}</a>
-              <div v-if="archivedNews" class="newsArchived">
-                <span class="newsArchiveLabel"> ( {{ $t('news.archive.label') }} ) </span>
-              </div>
             </div>
           </div>
           <div class="newsInformationBackground center">
@@ -145,21 +134,11 @@
               class="rich-editor-content extended-rich-content"
               v-html="newsBody"></div>
           </div>
-
-          <div v-show="attachments && attachments.length" class="newsAttachmentsTitle">
-            {{ $t('news.details.attachments.title') }} ({{ attachments ? attachments.length : 0 }})
-          </div>
-          <div
-            v-show="attachments?.length"
-            class="newsAttachments">
-            <extension-registry-components
-              :params="attachments"
-              name="NewsDetails"
-              type="news-details-attachments"
-              element="div"
-              element-class="newsAttachment text-truncate"
-              class="d-flex" />
-          </div>
+          <extension-registry-components
+            :params="{attachmentsIds: attachmentsIds}"
+            name="NewsDetails"
+            type="news-details-attachments"
+            element="div" />
         </div>
       </div>
     </div>
@@ -213,9 +192,6 @@ export default {
         news: this.news,
       };
     },
-    archivedNews() {
-      return this.news && this.news.archived;
-    },
     illustrationURL() {
       return this.news && this.news.illustrationURL;
     },
@@ -261,8 +237,8 @@ export default {
     summary() {
       return this.news && this.news.summary;
     },
-    attachments() {
-      return this.news && this.news.attachments;
+    attachmentsIds() {
+      return this.news?.attachmentsIds;
     },
     publicationState() {
       return this.news && this.news.publicationState;

@@ -38,6 +38,8 @@ public class News {
 
   private String                          title;
 
+  private String                          name;
+
   private String                          summary;
 
   /* sanitizedBody with usernames */
@@ -88,10 +90,6 @@ public class News {
 
   private String                          audience;
 
-  private boolean                         archived;
-
-  private boolean                         canArchive;
-
   private String                          spaceId;
 
   private String                          spaceDisplayName;
@@ -112,7 +110,7 @@ public class News {
 
   private String                          activityId;
 
-  private List<NewsAttachment>            attachments;
+  private List<String>                    attachmentsIds;
 
   private String                          spaceAvatarUrl;
 

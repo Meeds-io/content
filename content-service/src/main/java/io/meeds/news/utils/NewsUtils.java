@@ -26,6 +26,8 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import io.meeds.news.model.News;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import org.exoplatform.commons.utils.CommonsUtils;
@@ -40,6 +42,7 @@ import org.exoplatform.services.security.IdentityRegistry;
 import org.exoplatform.social.core.identity.model.Identity;
 import org.exoplatform.social.core.identity.provider.OrganizationIdentityProvider;
 import org.exoplatform.social.core.identity.provider.SpaceIdentityProvider;
+import org.exoplatform.social.core.space.SpaceException;
 import org.exoplatform.social.core.space.model.Space;
 import org.exoplatform.social.core.space.spi.SpaceService;
 import org.exoplatform.social.core.storage.api.IdentityStorage;
@@ -59,10 +62,6 @@ public class NewsUtils {
   public static final String  VIEW_NEWS                       = "exo.news.viewArticle";
 
   public static final String  SHARE_NEWS                      = "exo.news.shareArticle";
-
-  public static final String  ARCHIVE_NEWS                    = "exo.news.archiveArticle";
-
-  public static final String  UNARCHIVE_NEWS                  = "exo.news.unarchiveArticle";
 
   public static final String  COMMENT_NEWS                    = "exo.news.commentArticle";
 
@@ -91,6 +90,9 @@ public class NewsUtils {
   private static final String MANAGER_MEMBERSHIP_NAME         = "manager";
 
   private static final String PLATFORM_WEB_CONTRIBUTORS_GROUP = "/platform/web-contributors";
+
+  public static final String  SHARE_CONTENT_ATTACHMENTS       = "content.share.attachments";
+
 
   public enum NewsObjectType {
     DRAFT, LATEST_DRAFT, ARTICLE;
@@ -145,25 +147,43 @@ public class NewsUtils {
     }).filter(Objects::nonNull).collect(Collectors.toSet());
   }
 
-  public static List<Space> getAllowedDraftNewsSpaces(org.exoplatform.services.security.Identity userIdentity) throws Exception {
-    SpaceService spaceService = CommonsUtils.getService(SpaceService.class);
-    ListAccess<Space> memberSpacesListAccess = spaceService.getMemberSpaces(userIdentity.getUserId());
-    List<Space> memberSpaces = Arrays.asList(memberSpacesListAccess.load(0, memberSpacesListAccess.getSize()));
-    return memberSpaces.stream()
-                       .filter(space -> (spaceService.canRedactOnSpace(space, userIdentity)
-                           || canPublishNews(space.getId(), userIdentity)))
-                       .toList();
+  public static List<Long> getMyFilteredSpacesIds(org.exoplatform.services.security.Identity userIdentity,
+                                                  List<String> filteredSpacesIds) throws Exception {
+    if (!CollectionUtils.isEmpty(filteredSpacesIds)) {
+      return filteredSpacesIds.stream().map(Long::parseLong).toList();
+    }
+    return getMySpaces(userIdentity).stream().map(space -> Long.valueOf(space.getId())).toList();
   }
 
-  public static List<Space> getAllowedScheduledNewsSpaces(org.exoplatform.services.security.Identity currentIdentity) throws Exception {
+  public static List<Long> getAllowedDraftArticleSpaceIds(org.exoplatform.services.security.Identity userIdentity, List<String> filteredSpacesIds) throws Exception {
     SpaceService spaceService = CommonsUtils.getService(SpaceService.class);
-    ListAccess<Space> memberSpacesListAccess = spaceService.getMemberSpaces(currentIdentity.getUserId());
-    List<Space> memberSpaces = Arrays.asList(memberSpacesListAccess.load(0, memberSpacesListAccess.getSize()));
-    return memberSpaces.stream()
-                       .filter(space -> (spaceService.isManager(space, currentIdentity.getUserId())
-                           || spaceService.isRedactor(space, currentIdentity.getUserId())
-                           || canPublishNews(space.getId(), currentIdentity)))
-                       .toList();
+    return getMySpaces(userIdentity).stream()
+                                    .filter(space -> {
+                                      boolean allowed = spaceService.canRedactOnSpace(space, userIdentity)
+                                          || canPublishNews(space.getId(), userIdentity);
+                                      if (!CollectionUtils.isEmpty(filteredSpacesIds)) {
+                                        return allowed && filteredSpacesIds.contains(space.getId());
+                                      }
+                                      return allowed;
+                                    })
+                                    .map(space -> Long.valueOf(space.getId()))
+                                    .toList();
+  }
+
+  public static List<Long> getAllowedScheduledNewsSpacesIds(org.exoplatform.services.security.Identity currentIdentity, List<String> filteredSpacesIds) throws Exception {
+    SpaceService spaceService = CommonsUtils.getService(SpaceService.class);
+    return getMySpaces(currentIdentity).stream()
+            .filter(space -> {
+              boolean allowed = (spaceService.isManager(space, currentIdentity.getUserId())
+                      || spaceService.isRedactor(space, currentIdentity.getUserId())
+                      || canPublishNews(space.getId(), currentIdentity));
+              if (!CollectionUtils.isEmpty(filteredSpacesIds)) {
+                return allowed && filteredSpacesIds.contains(space.getId());
+              }
+              return allowed;
+            })
+            .map(space -> Long.valueOf(space.getId()))
+            .toList();
   }
 
   public static boolean canPublishNews(String spaceId, org.exoplatform.services.security.Identity currentIdentity) {
@@ -206,9 +226,51 @@ public class NewsUtils {
                    .append(PortalContainer.getCurrentPortalContainerName())
                    .append("/")
                    .append(CommonsUtils.getCurrentPortalOwner())
-                   .append("/news/detail?newsId=")
+                   .append("/news-detail?newsId=")
                    .append(draftPage.getId())
                    .append(draftPage.getTargetPageId() != null ? "&type=latest_draft" : "&type=draft");
     return draftArticleUrl.toString();
+  }
+
+  public static String buildNewsArticleUrl(News news, String currentUsername) throws SpaceException {
+    StringBuilder newsArticleUrl = new StringBuilder();
+    SpaceService spaceService = CommonsUtils.getService(SpaceService.class);
+    if (currentUsername != null && spaceService.isMember(news.getSpaceId(), currentUsername) && news.getActivityId() != null) {
+      newsArticleUrl.append("/")
+              .append(PortalContainer.getCurrentPortalContainerName())
+              .append("/")
+              .append(CommonsUtils.getCurrentPortalOwner())
+              .append("/activity?id=")
+              .append(news.getActivityId());
+    } else {
+      newsArticleUrl.append("/")
+              .append(PortalContainer.getCurrentPortalContainerName())
+              .append("/")
+              .append(CommonsUtils.getCurrentPortalOwner())
+              .append("/news-detail?newsId=")
+              .append(news.getId())
+              .append("&type=article");
+    }
+    return newsArticleUrl.toString();
+  }
+  public static String buildSpaceUrl(String spaceId) {
+    StringBuilder spaceUrl = new StringBuilder();
+    SpaceService spaceService = CommonsUtils.getService(SpaceService.class);
+    Space space = spaceService.getSpaceById(spaceId);
+    if (space != null) {
+      String spaceGroupId = space.getGroupId().split("/")[2];
+      spaceUrl.append("/portal/g/:spaces:");
+      spaceUrl.append(spaceGroupId);
+      spaceUrl.append("/");
+      spaceUrl.append(space.getPrettyName());
+      return spaceUrl.toString();
+    }
+    return null;
+  }
+
+  private static List<Space> getMySpaces(org.exoplatform.services.security.Identity userIdentity) throws Exception {
+    SpaceService spaceService = CommonsUtils.getService(SpaceService.class);
+    ListAccess<Space> memberSpacesListAccess = spaceService.getMemberSpaces(userIdentity.getUserId());
+    return Arrays.asList(memberSpacesListAccess.load(0, memberSpacesListAccess.getSize()));
   }
 }

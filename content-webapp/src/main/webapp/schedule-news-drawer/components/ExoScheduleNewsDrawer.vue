@@ -149,7 +149,6 @@
                   <span slot="label" class="postModeText">{{ $t('news.composer.postImmediately') }}</span>
                 </v-radio>
                 <v-radio
-                  v-if="newsScheduleAndFilterDisplaying"
                   value="later"
                   class="mt-4">
                   <span slot="label" class="postModeText">{{ $t('news.composer.postLater') }}</span>
@@ -308,7 +307,6 @@ export default {
     audience: null,
     selectedAudience: null,
     disabled: true,
-    newsScheduleAndFilterDisplaying: false,
   }),
   watch: {
     postDate(newVal, oldVal) {
@@ -367,7 +365,7 @@ export default {
     },
     isActivityPosted() {
       if (this.editScheduledNews ==='editScheduledNews') {
-        if (this.visibilityActivity === !this.isActivityPosted) {
+        if (this.visibilityActivity === this.isActivityPosted) {
           this.disabled = true;
         } else {
           this.disabled = false;
@@ -426,7 +424,6 @@ export default {
     }
   },
   created() {
-    this.$featureService.isFeatureEnabled('newsScheduleAndFilterDisplaying').then(enabled => this.newsScheduleAndFilterDisplaying = enabled);
     this.selectedAudience= this.$t('news.composer.stepper.audienceSection.allUsers');
     this.disabled = true;
     this.getAllowedTargets();

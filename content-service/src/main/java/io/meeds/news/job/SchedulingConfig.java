@@ -17,22 +17,15 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
-package io.meeds.news.connector;
+package io.meeds.news.job;
 
-import java.util.ArrayList;
-import java.util.List;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
-import org.exoplatform.commons.search.es.client.ElasticSearchingClient;
-import org.exoplatform.container.xml.InitParams;
 
-import io.meeds.news.model.News;
-
-public class NewsSearchConnector {
-
-  public NewsSearchConnector(ElasticSearchingClient client, InitParams initParams) {
-  }
-
-  public List<News> search() {
-    return new ArrayList<News>();
-  }
+@Configuration
+@EnableScheduling
+@ComponentScan
+public class SchedulingConfig {
 }

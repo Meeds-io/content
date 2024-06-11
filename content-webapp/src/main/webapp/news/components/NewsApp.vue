@@ -125,7 +125,6 @@ export default {
       newsFilter: '',
       spacesFilter: [],
       newsStatusLabel: this.$t('news.app.filter.all'),
-      showArchiveButton: true,
       showShareButton: true,
       loadingNews: true,
       initialized: false,
@@ -143,18 +142,12 @@ export default {
   },
   computed: {
     filterOptions() {
-      if (this.newsScheduleAndFilterDisplaying) {
-        return [
-          { value: 'all', label: this.$t('news.app.filter.all') },
-          { value: 'pinned', label: this.$t('news.app.filter.pinned') },
-          { value: 'myPosted', label: this.$t('news.app.filter.myPosted') },
-          { value: 'archived', label: this.$t('news.app.filter.archived') },
-          { value: 'drafts', label: this.$t('news.app.filter.drafts') },
-          { value: 'scheduled', label: this.$t('news.app.filter.scheduled') }
-        ];
-      }
       return [
+        { value: 'all', label: this.$t('news.app.filter.all') },
+        { value: 'pinned', label: this.$t('news.app.filter.pinned') },
+        { value: 'myPosted', label: this.$t('news.app.filter.myPosted') },
         { value: 'drafts', label: this.$t('news.app.filter.drafts') },
+        { value: 'scheduled', label: this.$t('news.app.filter.scheduled') }
       ];
     },
     notFoundMessage() {
@@ -215,31 +208,28 @@ export default {
     }
   },
   created() {
-    this.$featureService.isFeatureEnabled('newsScheduleAndFilterDisplaying').then(enabled => {
-      this.newsScheduleAndFilterDisplaying = enabled;
-      const filterQueryParam = this.getQueryParam('filter');
-      const searchQueryParam = this.getQueryParam('search');
-      const spacesFilterParam = this.getQueryParam('spaces')?.split('_');
-      if (filterQueryParam || searchQueryParam || spacesFilterParam) {
-        if (filterQueryParam) {
-          // set filter value, which will trigger news fetching
-          this.newsFilter = filterQueryParam;
-        }
-        if (searchQueryParam) {
-          // set search value
-          this.searchText = searchQueryParam;
-        }
-        if (spacesFilterParam) {
-          // set search value
-          this.spacesFilter = spacesFilterParam;
-        }
-
-      } else if (filterQueryParam === null) {
-        this.newsFilter = this.filterOptions[0].value;
-      } else {
-        this.fetchNews();
+    const filterQueryParam = this.getQueryParam('filter');
+    const searchQueryParam = this.getQueryParam('search');
+    const spacesFilterParam = this.getQueryParam('spaces')?.split('_');
+    if (filterQueryParam || searchQueryParam || spacesFilterParam) {
+      if (filterQueryParam) {
+        // set filter value, which will trigger news fetching
+        this.newsFilter = filterQueryParam;
       }
-    });
+      if (searchQueryParam) {
+        // set search value
+        this.searchText = searchQueryParam;
+      }
+      if (spacesFilterParam) {
+        // set search value
+        this.spacesFilter = spacesFilterParam;
+      }
+
+    } else if (filterQueryParam === null) {
+      this.newsFilter = this.filterOptions[0].value;
+    } else {
+      this.fetchNews();
+    }
 
     this.$root.$on('activity-shared', (activityId, spaces, selectedApps) => {
       if (selectedApps === 'newsApp' && activityId && spaces && spaces.length > 0) {
@@ -285,7 +275,6 @@ export default {
       data.forEach((item) => {
         const newsPublicationDate = item.publicationDate != null ? new Date(item.publicationDate.time) : null;
         const newsUpdateDate = new Date(item.updateDate.time);
-        const activityId = item.activities ? item.activities.split(';')[0].split(':')[1] : '';
         result.push({
           newsId: item.id,
           newsText: this.getNewsText(item.summary, item.body),
@@ -298,14 +287,12 @@ export default {
           authorFullName: item.authorDisplayName,
           authorProfileURL: `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/profile/${item.author}`,
           viewsCount: item.viewsCount == null ? 0 : item.viewsCount,
-          activityId: activityId,
+          activityId: item.activityId,
           canEdit: item.canEdit,
           canDelete: item.canDelete,
-          archived: item.archived,
           draft: item.publicationState === 'draft',
           scheduled: item.publicationState === 'staged',
           schedulePostDate: item.schedulePostDate,
-          canArchive: item.canArchive,
           published: item.published,
           activities: item.activities,
           authorAvatarUrl: item.authorAvatarUrl,
@@ -355,7 +342,17 @@ export default {
     deleteNews(news) {
       const deleteDelay = 6;
       const redirectionTime = 8100;
-      this.$newsServices.deleteNews(news.newsId, this.newsFilter === 'drafts', deleteDelay)
+      let newsObjectType;
+      if (this.newsFilter === 'drafts') {
+        if (news.activityId) {
+          newsObjectType = 'latest_draft';
+        } else {
+          newsObjectType = 'draft';
+        }
+      } else  {
+        newsObjectType = 'article';
+      }
+      this.$newsServices.deleteNews(news.newsId, newsObjectType, deleteDelay)
         .then(() => {
           const clickMessage = this.$t('news.details.undoDelete');
           const message = this.isDraftsFilter ? this.$t('news.details.deleteDraftSuccess') : this.$t('news.details.deleteSuccess');
