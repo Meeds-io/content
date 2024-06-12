@@ -26,7 +26,7 @@
       <v-layout
         row
         mx-0
-        class="white">
+        class="card-border-radius app-background-color">
         <v-flex class="px-3 border-box-sizing">
           <v-layout class="d-flex mx-0 align-center border-box-sizing">
             <v-flex class="d-flex text-truncate">

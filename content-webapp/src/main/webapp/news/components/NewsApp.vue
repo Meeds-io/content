@@ -20,9 +20,9 @@
 -->
 <template>
   <v-app class="newsApp" role="main">
-    <div class="white card-border-radius pa-5">
+    <div class="card-border-radius app-background-color pa-5">
       <v-toolbar
-        color="white"
+        color="transparent"
         flat
         dense>
         <div class="flex d-flex flex-row">

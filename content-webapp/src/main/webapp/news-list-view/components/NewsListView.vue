@@ -22,9 +22,10 @@
   <v-hover v-slot="{ hover }">
     <v-app v-show="!hideEmptyNewsTemplateForNonPublisher" class="news-list-view-app position-relative">
       <v-card
-          height="100%"
-          flat
-          :class="newsListViewClass">
+        :class="newsListViewClass"
+        class="app-background-color"
+        height="100%"
+        flat>
         <v-card-text class="pa-0">
           <news-settings v-if="displayHeader" :is-hovering="hover" />
           <extension-registry-component
