@@ -99,7 +99,11 @@
         <h3>{{ notFoundMessage }}</h3>
       </div>
       <div v-if="showLoadMoreButton" class="newsListPagination">
-        <div class="btn btn-block" @click="loadMore">{{ $t('news.app.loadMore') }}</div>
+        <v-btn
+          class="btn full-width"
+          @click="loadMore">
+          {{ $t('news.app.loadMore') }}
+        </v-btn>
       </div>
       <news-activity-sharing-spaces-drawer />
       <activity-share-drawer />
