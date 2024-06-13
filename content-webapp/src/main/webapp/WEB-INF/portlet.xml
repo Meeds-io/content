@@ -105,6 +105,10 @@
       <name>preload.resource.bundles</name>
       <value>locale.portlet.news.News</value>
     </init-param>
+    <init-param>
+      <name>layout-content-editable</name>
+      <value>true</value>
+    </init-param>
     <supports>
       <mime-type>text/html</mime-type>
       <portlet-mode>view</portlet-mode>
