@@ -10,7 +10,7 @@
       "descriptions":{
         "en":"layout.portletInstance.NewsListView.description"
       },
-      "illustrationPath":"war:/../skin/DefaultSkin/portletIcons/NewsListView.png",
+      "illustrationPath":"war:/../images/portlets/NewsList.webp",
       "preferences":[
         
       ],
