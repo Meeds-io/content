@@ -19,6 +19,8 @@
  */
 package io.meeds.news.rest;
 
+import static io.meeds.news.utils.NewsUtils.NewsObjectType.ARTICLE;
+
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -81,7 +83,6 @@ import io.meeds.news.model.News;
 import io.meeds.news.search.NewsESSearchResult;
 import io.meeds.news.service.NewsService;
 import io.meeds.news.utils.NewsUtils;
-import io.meeds.news.utils.NewsUtils.NewsObjectType;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -91,17 +92,11 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 
-import static io.meeds.news.utils.NewsUtils.NewsObjectType.ARTICLE;
-
 @Path("v1/news")
 @Tag(name = "v1/news", description = "Managing news")
 public class NewsRestResourcesV1 implements ResourceContainer, Startable {
 
   private static final Log          LOG                             = ExoLogger.getLogger(NewsRestResourcesV1.class);
-
-  private static final String       PUBLISHER_MEMBERSHIP_NAME       = "publisher";
-
-  private final static String       PLATFORM_WEB_CONTRIBUTORS_GROUP = "/platform/web-contributors";
 
   private NewsService               newsService;
 
