@@ -23,7 +23,7 @@ export const newsConstants = {
   PORTAL_NAME: eXo.env.portal.portalName || '',
   CONTAINER_NAME: eXo.env.portal.containerName || '',
   PORTAL_REST: eXo.env.portal.rest,
-  NEWS_API: `${eXo.env.portal.context}/${eXo.env.portal.rest}/v1/news`,
+  NEWS_API: '/content/rest/contents',
   SOCIAL_ACTIVITY_API: `${eXo.env.portal.context}/${eXo.env.portal.rest}/v1/social/activities`,
   SOCIAL_SPACE_API: `${eXo.env.portal.context}/${eXo.env.portal.rest}/v1/social/spaces`,
   SOCIAL_SPACES_SUGGESTION_API: `${eXo.env.portal.context}/${eXo.env.portal.rest}${eXo.env.portal.context}/social/spaces/suggest.json`,

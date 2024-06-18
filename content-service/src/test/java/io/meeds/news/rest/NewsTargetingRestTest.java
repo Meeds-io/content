@@ -53,7 +53,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 @RunWith(MockitoJUnitRunner.class)
-public class NewsTargetingRestControllerTest {
+public class NewsTargetingRestTest {
 
   @Mock
   NewsTargetingService newsTargetingService;
@@ -65,7 +65,7 @@ public class NewsTargetingRestControllerTest {
   IdentityManager      identityManager;
 
   @InjectMocks
-  private NewsTargetingRestController newsTargetingRestController;
+  private NewsTargetingRest newsTargetingRestController;
 
 
 

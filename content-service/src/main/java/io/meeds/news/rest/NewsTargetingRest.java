@@ -45,7 +45,6 @@ import org.exoplatform.social.metadata.model.Metadata;
 import io.meeds.news.service.NewsTargetingService;
 import io.meeds.news.utils.NewsUtils;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -65,9 +64,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("targeting")
 @Tag(name = "targeting", description = "Manage targeting operations")
-public class NewsTargetingRestController {
+public class NewsTargetingRest {
 
-  private static final Log         LOG                     = ExoLogger.getLogger(NewsTargetingRestController.class);
+  private static final Log         LOG                     = ExoLogger.getLogger(NewsTargetingRest.class);
 
   @Autowired
   private NewsTargetingService     newsTargetingService;
@@ -130,10 +129,8 @@ public class NewsTargetingRestController {
       @ApiResponse(responseCode = "400", description = "Invalid query input"),
       @ApiResponse(responseCode = "401", description = "User not authorized to delete the news target"),
       @ApiResponse(responseCode = "500", description = "Internal server error") })
-  public Response deleteTarget(@Parameter(description = "Target name")
-                               @PathVariable("targetName")
+  public Response deleteTarget(@PathVariable("targetName")
                                String targetName,
-                               @Parameter(description = "Time to effectively delete news target")
                                @RequestParam(name = "delay", required = false)
                                long delay) {
     org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
@@ -177,8 +174,7 @@ public class NewsTargetingRestController {
   @Operation(summary = "Undo deleting news target if not yet effectively deleted", method = "POST", description = "Undo deleting news target if not yet effectively deleted")
   @ApiResponses(value = { @ApiResponse(responseCode = "400", description = "Invalid query input"),
       @ApiResponse(responseCode = "403", description = "Forbidden operation") })
-  public Response undoDeleteTarget(@Parameter(description = "News target name identifier")
-                                   @PathVariable("targetName")
+  public Response undoDeleteTarget(@PathVariable("targetName")
                                    String targetName) {
     if (StringUtils.isBlank(targetName)) {
       return Response.status(Response.Status.BAD_REQUEST).entity("Target name ist mandatory").build();
@@ -244,7 +240,6 @@ public class NewsTargetingRestController {
       @ApiResponse(responseCode = "409", description = "Conflict operation"),
       @ApiResponse(responseCode = "500", description = "Internal server error") })
   public Response updateNewsTarget(@RequestBody NewsTargetingEntity newsTargetingEntity,
-                                   @Parameter(description = "Original news target name")
                                    @PathVariable("originalTargetName")
                                    String originalTargetName) {
     if (newsTargetingEntity.getProperties() == null

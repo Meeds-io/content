@@ -1651,7 +1651,7 @@ public class NewsServiceImpl implements NewsService {
         article.setIllustrationMimeType(articleIllustrationFileItem.getFileInfo().getMimetype());
         article.setIllustrationUpdateDate(articleIllustrationFileItem.getFileInfo().getUpdatedDate());
         long lastModified = article.getIllustrationUpdateDate().getTime();
-        article.setIllustrationURL("/portal/rest/v1/news/" + article.getId() + "/illustration?v=" + lastModified + "&type="
+        article.setIllustrationURL("/content/rest/contents/" + article.getId() + "/illustration?v=" + lastModified + "&type="
             + newsObjectType);
       }
     } catch (Exception exception) {
@@ -1743,6 +1743,9 @@ public class NewsServiceImpl implements NewsService {
   private void sendNotification(String currentUserId,
                                 News news,
                                 NotificationConstants.NOTIFICATION_CONTEXT context) throws Exception {
+    if (news.getActivities() == null || news.getActivities().isEmpty()) {
+      return;
+    }
     String newsId = news.getId();
     String contentAuthor = news.getAuthor();
     String currentUser = currentUserId != null ? currentUserId : contentAuthor;

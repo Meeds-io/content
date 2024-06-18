@@ -136,7 +136,8 @@ export function scheduleNews(news, newsType) {
 export function importFileFromUrl(url) {
   return fetch(url, {
     headers: {
-      'Content-Type': 'blob'
+      'Content-Type': 'blob',
+      'If-None-Match': localStorage.getItem('illustrationEtagValue')
     },
     credentials: 'include',
     method: 'GET',
@@ -226,7 +227,7 @@ export function escapeHTML(unsafeText) {
 }
 
 export function canUserCreateNews(spaceId) {
-  return fetch(`${eXo.env.portal.context}/${eXo.env.portal.rest}/v1/news/canCreateNews/${eXo.env.portal.spaceId || spaceId}`, {
+  return fetch(`/content/rest/contents/canCreateNews/${eXo.env.portal.spaceId || spaceId}`, {
     headers: {
       'Content-Type': 'application/json'
     },
@@ -235,7 +236,7 @@ export function canUserCreateNews(spaceId) {
 }
 
 export function canScheduleNews(spaceId) {
-  return fetch(`${eXo.env.portal.context}/${eXo.env.portal.rest}/v1/news/canScheduleNews/${eXo.env.portal.spaceId || spaceId}`, {
+  return fetch(`/content/rest/contents/canScheduleNews/${eXo.env.portal.spaceId || spaceId}`, {
     headers: {
       'Content-Type': 'application/json'
     },
@@ -271,7 +272,7 @@ export function undoDeleteNews(newsId) {
 }
 
 export function canPublishNews() {
-  return fetch(`${eXo.env.portal.context}/${eXo.env.portal.rest}/v1/news/canPublishNews?spaceId=${eXo.env.portal.spaceId}`, {
+  return fetch(`/content/rest/contents/canPublishNews?spaceId=${eXo.env.portal.spaceId}`, {
     headers: {
       'Content-Type': 'application/json'
     },
