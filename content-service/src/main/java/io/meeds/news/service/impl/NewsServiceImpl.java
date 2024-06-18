@@ -2057,63 +2057,65 @@ public class NewsServiceImpl implements NewsService {
   }
 
   private News buildArticle(String newsId) throws Exception {
-    Page articlePage = noteService.getNoteById(newsId);
-    Identity userIdentity = getCurrentIdentity();
-    String currentUsername = userIdentity == null ? null : userIdentity.getUserId();
-    if (articlePage != null) {
-      Space space = spaceService.getSpaceByGroupId(articlePage.getWikiOwner());
-      News news = new News();
-      news.setId(articlePage.getId());
-      news.setCreationDate(articlePage.getCreatedDate());
-      news.setAuthor(articlePage.getAuthor());
-      news.setUpdater(articlePage.getAuthor());
+    if (StringUtils.isNumeric(newsId)) {
+      Page articlePage = noteService.getNoteById(newsId);
+      Identity userIdentity = getCurrentIdentity();
+      String currentUsername = userIdentity == null ? null : userIdentity.getUserId();
+      if (articlePage != null) {
+        Space space = spaceService.getSpaceByGroupId(articlePage.getWikiOwner());
+        News news = new News();
+        news.setId(articlePage.getId());
+        news.setCreationDate(articlePage.getCreatedDate());
+        news.setAuthor(articlePage.getAuthor());
+        news.setUpdater(articlePage.getAuthor());
 
-      // fetch related metadata item properties
-      NewsPageObject newsPageObject = new NewsPageObject(NEWS_METADATA_PAGE_OBJECT_TYPE,
-                                                         articlePage.getId(),
-                                                         null,
-                                                         Long.parseLong(space.getId()));
-      MetadataItem metadataItem = metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY, newsPageObject).get(0);
-      news.setSpaceId(space.getId());
-      news.setSpaceAvatarUrl(space.getAvatarUrl());
-      news.setSpaceDisplayName(space.getDisplayName());
-      boolean hiddenSpace = space.getVisibility().equals(Space.HIDDEN) && !spaceService.isMember(space, currentUsername)
-          && !spaceService.isSuperManager(currentUsername);
-      news.setHiddenSpace(hiddenSpace);
-      boolean isSpaceMember = spaceService.isSuperManager(currentUsername) || spaceService.isMember(space, currentUsername);
-      news.setSpaceMember(isSpaceMember);
-      if (StringUtils.isNotEmpty(space.getGroupId())) {
-        news.setSpaceUrl(NewsUtils.buildSpaceUrl(space.getId()));
+        // fetch related metadata item properties
+        NewsPageObject newsPageObject = new NewsPageObject(NEWS_METADATA_PAGE_OBJECT_TYPE,
+                                                           articlePage.getId(),
+                                                           null,
+                                                           Long.parseLong(space.getId()));
+        MetadataItem metadataItem = metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY, newsPageObject).get(0);
+        news.setSpaceId(space.getId());
+        news.setSpaceAvatarUrl(space.getAvatarUrl());
+        news.setSpaceDisplayName(space.getDisplayName());
+        boolean hiddenSpace = space.getVisibility().equals(Space.HIDDEN) && !spaceService.isMember(space, currentUsername)
+            && !spaceService.isSuperManager(currentUsername);
+        news.setHiddenSpace(hiddenSpace);
+        boolean isSpaceMember = spaceService.isSuperManager(currentUsername) || spaceService.isMember(space, currentUsername);
+        news.setSpaceMember(isSpaceMember);
+        if (StringUtils.isNotEmpty(space.getGroupId())) {
+          news.setSpaceUrl(NewsUtils.buildSpaceUrl(space.getId()));
+        }
+
+        org.exoplatform.social.core.identity.model.Identity identity =
+                                                                     identityManager.getOrCreateIdentity(OrganizationIdentityProvider.NAME,
+                                                                                                         news.getAuthor());
+        if (identity != null && identity.getProfile() != null) {
+          news.setAuthorDisplayName(identity.getProfile().getFullName());
+          news.setAuthorAvatarUrl(identity.getProfile().getAvatarUrl());
+        }
+
+        buildArticleProperties(news, articlePage, currentUsername, metadataItem);
+        news.setDeleted(articlePage.isDeleted());
+        news.setUrl(NewsUtils.buildNewsArticleUrl(news, currentUsername));
+        news.setPublicationDate(articlePage.getCreatedDate());
+        news.setUpdateDate(new Date(metadataItem.getUpdatedDate()));
+        // fetch the last version of the given lang
+        PageVersion pageVersion = noteService.getPublishedVersionByPageIdAndLang(Long.parseLong(articlePage.getId()), null);
+        news.setTitle(pageVersion.getTitle());
+        processPageContent(pageVersion, news);
+        news.setUpdaterFullName(pageVersion.getAuthorFullName());
+
+        NewsPageVersionObject newsPageVersionObject = new NewsPageVersionObject(NEWS_METADATA_PAGE_VERSION_OBJECT_TYPE,
+                                                                                pageVersion.getId(),
+                                                                                null,
+                                                                                Long.parseLong(space.getId()));
+        List<MetadataItem> newsPageVersionMetadataItems =
+                                                        metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY,
+                                                                                                            newsPageVersionObject);
+        buildArticleVersionProperties(news, newsPageVersionMetadataItems);
+        return news;
       }
-
-      org.exoplatform.social.core.identity.model.Identity identity =
-                                                                   identityManager.getOrCreateIdentity(OrganizationIdentityProvider.NAME,
-                                                                                                       news.getAuthor());
-      if (identity != null && identity.getProfile() != null) {
-        news.setAuthorDisplayName(identity.getProfile().getFullName());
-        news.setAuthorAvatarUrl(identity.getProfile().getAvatarUrl());
-      }
-
-      buildArticleProperties(news, articlePage, currentUsername, metadataItem);
-      news.setDeleted(articlePage.isDeleted());
-      news.setUrl(NewsUtils.buildNewsArticleUrl(news, currentUsername));
-      news.setPublicationDate(articlePage.getCreatedDate());
-      news.setUpdateDate(new Date(metadataItem.getUpdatedDate()));
-      // fetch the last version of the given lang
-      PageVersion pageVersion = noteService.getPublishedVersionByPageIdAndLang(Long.parseLong(articlePage.getId()), null);
-      news.setTitle(pageVersion.getTitle());
-      processPageContent(pageVersion, news);
-      news.setUpdaterFullName(pageVersion.getAuthorFullName());
-
-      NewsPageVersionObject newsPageVersionObject = new NewsPageVersionObject(NEWS_METADATA_PAGE_VERSION_OBJECT_TYPE,
-                                                                              pageVersion.getId(),
-                                                                              null,
-                                                                              Long.parseLong(space.getId()));
-      List<MetadataItem> newsPageVersionMetadataItems =
-                                                      metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY,
-                                                                                                          newsPageVersionObject);
-      buildArticleVersionProperties(news, newsPageVersionMetadataItems);
-      return news;
     }
     return null;
   }
