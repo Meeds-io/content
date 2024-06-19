@@ -85,7 +85,6 @@
               ref="headerNameInput"
               id="headerNameInput"
               v-model="newsHeader"
-              :default-language="defaultLanguage"
               :placeholder="$t('news.list.settings.placeHolderName')"
               drawer-title="news.list.settings.translation.header"
               maxlength="100"
@@ -227,8 +226,7 @@ export default {
     saveSettingsURL: '',
     canManageNewsPublishTargets: eXo.env.portal.canManageNewsPublishTargets,
     translationObjectType: 'newsListView',
-    defaultLanguage: 'en',
-    headerTitleFieldName: 'headerNameInput'
+    headerTitleFieldName: 'headerNameInput',
   }),
   props: {
     language: {
@@ -348,8 +346,8 @@ export default {
       this.viewTemplate = this.$root.viewTemplate;
       this.viewExtensions = this.$root.viewExtensions;
       this.newsTarget = this.$root.newsTarget;
-      this.newsHeader = (this.newListTranslationEnabled && (this.savedHeaderTranslations
-                                                       || {[this.defaultLanguage]: this.$root.headerTitle}))
+      this.newsHeader = (this.newListTranslationEnabled && (this.savedHeaderTranslations?.length && this.savedHeaderTranslations
+                                                       || {[this.$root.defaultLanguage]: this.$root.headerTitle}))
                                                        || this.$root.headerTitle;
       this.limit = this.$root.limit;
       this.showHeader = this.viewTemplate === 'NewsSlider' || this.viewTemplate === 'NewsMosaic' || this.viewTemplate === 'NewsStories' ? false : this.$root.showHeader;
