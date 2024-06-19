@@ -19,7 +19,7 @@
   <parent>
     <artifactId>addons-parent-pom</artifactId>
     <groupId>io.meeds.addons</groupId>
-    <version>18-mips-SNAPSHOT</version>
+    <version>18-M04</version>
   </parent>
   <groupId>io.meeds.content</groupId>
   <artifactId>content</artifactId>
@@ -35,10 +35,9 @@
   </modules>
 
   <properties>
-    <addon.meeds.notes.version>7.0.x--SNAPSHOT</addon.meeds.notes.version>
+    <addon.meeds.notes.version>7.0.x-SNAPSHOT</addon.meeds.notes.version>
     <pitest.version>1.4.10</pitest.version>
     <sonar.organization>meeds-io</sonar.organization>
-    <exo.snapshots.repo.url>https://repository.exoplatform.org/content/repositories/meeds-snapshots</exo.snapshots.repo.url>
   </properties>
 
   <dependencyManagement>
