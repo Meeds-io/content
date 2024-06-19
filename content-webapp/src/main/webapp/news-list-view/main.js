@@ -97,7 +97,8 @@ export function init(params) {
         showArticleSpace,
         showArticleReactions,
         showArticleDate,
-        seeAllUrl
+        seeAllUrl,
+        defaultLanguage: eXo?.env?.portal?.defaultLanguage
       },
       computed: {
         newListTranslationEnabled() {
@@ -111,7 +112,7 @@ export function init(params) {
         }
         Vue.prototype.$translationService.getTranslations('newsListView', applicationId, 'headerNameInput').then(translations => {
           this.headerTranslations = translations;
-          this.headerTitle = translations?.[lang] || translations?.en
+          this.headerTitle = translations?.[lang] || translations?.[this.defaultLanguage]
                                                   || params.headerTitle;
         });
       },
