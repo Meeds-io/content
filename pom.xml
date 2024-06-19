@@ -35,7 +35,7 @@
   </modules>
 
   <properties>
-    <addon.exo.notes.version>7.0.x-SNAPSHOT</addon.exo.notes.version>
+    <addon.meeds.notes.version>7.0.x--SNAPSHOT</addon.meeds.notes.version>
     <pitest.version>1.4.10</pitest.version>
     <sonar.organization>meeds-io</sonar.organization>
     <exo.snapshots.repo.url>https://repository.exoplatform.org/content/repositories/meeds-snapshots</exo.snapshots.repo.url>
@@ -45,9 +45,9 @@
     <dependencies>
       <!-- Import versions from notes project -->
       <dependency>
-        <groupId>org.exoplatform.addons.notes</groupId>
+        <groupId>io.meeds.addons.notes</groupId>
         <artifactId>notes</artifactId>
-        <version>${addon.exo.notes.version}</version>
+        <version>${addon.meeds.notes.version}</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
