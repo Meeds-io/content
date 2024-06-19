@@ -85,7 +85,6 @@
               ref="headerNameInput"
               id="headerNameInput"
               v-model="newsHeader"
-              :default-language="defaultLanguage"
               :placeholder="$t('news.list.settings.placeHolderName')"
               drawer-title="news.list.settings.translation.header"
               maxlength="100"
@@ -227,8 +226,7 @@ export default {
     saveSettingsURL: '',
     canManageNewsPublishTargets: eXo.env.portal.canManageNewsPublishTargets,
     translationObjectType: 'newsListView',
-    defaultLanguage: 'en',
-    headerTitleFieldName: 'headerNameInput'
+    headerTitleFieldName: 'headerNameInput',
   }),
   props: {
     language: {
@@ -263,11 +261,8 @@ export default {
     displayedViewTemplates() {
       return this.viewTemplates.filter(e=> !e.name.includes('EmptyTemplate'));
     },
-    hasNewsHeader() {
-      return this.newListTranslationEnabled && this.newsHeader?.[this.language]?.length || this.newsHeader?.length;
-    },
     disabled() {
-      return !this.hasNewsHeader || (this.showSeeAll && !this.isValidSeeAllUrl);
+      return this.showSeeAll && !this.isValidSeeAllUrl;
     },
     previewTemplate() {
       if ( this.viewTemplate === 'NewsLatest') {
@@ -348,8 +343,8 @@ export default {
       this.viewTemplate = this.$root.viewTemplate;
       this.viewExtensions = this.$root.viewExtensions;
       this.newsTarget = this.$root.newsTarget;
-      this.newsHeader = (this.newListTranslationEnabled && (this.savedHeaderTranslations
-                                                       || {[this.defaultLanguage]: this.$root.headerTitle}))
+      this.newsHeader = (this.newListTranslationEnabled && (Object.keys(this.savedHeaderTranslations || {})?.length && this.savedHeaderTranslations
+                                                       || {[this.$root.defaultLanguage]: this.$root.headerTitle}))
                                                        || this.$root.headerTitle;
       this.limit = this.$root.limit;
       this.showHeader = this.viewTemplate === 'NewsSlider' || this.viewTemplate === 'NewsMosaic' || this.viewTemplate === 'NewsStories' ? false : this.$root.showHeader;
@@ -406,8 +401,8 @@ export default {
           this.$root.viewTemplate = this.viewTemplate;
           this.$root.newsTarget = this.newsTarget;
           this.$root.headerTranslations = this.newsHeader;
-          this.$root.headerTitle = this.newListTranslationEnabled && this.newsHeader?.[this.language]
-                                                                  || this.newsHeader;
+          this.$root.headerTitle = this.newListTranslationEnabled ? this.newsHeader?.[this.language]
+              || this.newsHeader?.[this.$root.defaultLanguage] : this.newsHeader;
           this.$root.limit = this.limit;
           this.$root.showHeader = this.showHeader;
           this.$root.showSeeAll = this.showSeeAll;
@@ -423,8 +418,8 @@ export default {
             limit: this.limit,
             showHeader: this.showHeader,
             headerTranslations: this.newsHeader,
-            headerTitle: this.newListTranslationEnabled && this.newsHeader?.[this.language]
-                                                        || this.newsHeader,
+            headerTitle: this.newListTranslationEnabled ? this.newsHeader?.[this.language]
+                || this.newsHeader?.[this.$root.defaultLanguage] : this.newsHeader,
             showSeeAll: this.showSeeAll,
             showArticleTitle: this.showArticleTitle,
             showArticleSummary: this.showArticleSummary,
