@@ -279,8 +279,8 @@ export default {
       const result = [];
 
       data.forEach((item) => {
-        const newsPublicationDate = item.publicationDate != null ? new Date(item.publicationDate.time) : null;
-        const newsUpdateDate = new Date(item.updateDate.time);
+        const newsPublicationDate = item.publicationDate != null ? new Date(item.publicationDate) : null;
+        const newsUpdateDate = new Date(item.updateDate);
         result.push({
           newsId: item.id,
           newsText: this.getNewsText(item.summary, item.body),

@@ -20,7 +20,7 @@
 import {newsConstants} from '../../services/newsConstants.js';
 
 export function getNewsList(targetName, offset, limit, returnSize) {
-  return fetch(`${newsConstants.NEWS_API}/byTarget/${targetName}?offset=${offset}&limit=${limit}&returnSize=${returnSize}`, {
+  return fetch(`${newsConstants.CONTENT_API}/contents/byTarget/${targetName}?offset=${offset}&limit=${limit}&returnSize=${returnSize}`, {
     headers: {
       'Content-Type': 'application/json'
     },

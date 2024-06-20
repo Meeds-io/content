@@ -196,7 +196,7 @@ export default {
       return this.news && this.newsTitleContent;
     },
     showUpdateInfo() {
-      return this.news && this.news.updateDate && this.news.updater !=='__system' && this.news.updateDate !== 'null' && this.news.publicationDate && this.news.publicationDate !== 'null' && this.news.updateDate.time > this.news.publicationDate.time;
+      return this.news && this.news.updateDate && this.news.updater !=='__system' && this.news.updateDate !== 'null' && this.news.publicationDate && this.news.publicationDate !== 'null' && new Date(this.news.updateDate).getTime() > new Date(this.news.publicationDate).getTime();
     },
     authorProfile() {
       return this.news && this.news.author;
@@ -217,10 +217,10 @@ export default {
       return this.news && this.news.updater;
     },
     publicationDate() {
-      return this.news && this.news.publicationDate && this.news.publicationDate.time && new Date(this.news.publicationDate.time);
+      return this.news && this.news.publicationDate && new Date(this.news.publicationDate);
     },
     updatedDate() {
-      return this.news && this.news.updateDate && this.news.updateDate.time && new Date(this.news.updateDate.time);
+      return this.news && this.news.updateDate && new Date(this.news.updateDate);
     },
     newsSummary() {
       return this.news && this.newsSummaryContent;
