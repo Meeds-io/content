@@ -107,7 +107,12 @@ import io.meeds.news.service.NewsService;
 import io.meeds.news.service.NewsTargetingService;
 import io.meeds.news.utils.NewsUtils;
 import io.meeds.news.utils.NewsUtils.NewsObjectType;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Primary;
+import org.springframework.stereotype.Service;
 
+@Primary
+@Service
 public class NewsServiceImpl implements NewsService {
 
   public static final String         NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME      = "Articles";
@@ -187,51 +192,38 @@ public class NewsServiceImpl implements NewsService {
 
   private static final Log           LOG                                    = ExoLogger.getLogger(NewsServiceImpl.class);
 
-  private final SpaceService         spaceService;
+  @Autowired
+  private SpaceService          spaceService;
 
-  private final NoteService          noteService;
+  @Autowired
+  private NoteService           noteService;
 
-  private final MetadataService      metadataService;
+  @Autowired
+  private MetadataService       metadataService;
 
-  private final FileService          fileService;
+  @Autowired
+  private FileService           fileService;
 
-  private final UploadService        uploadService;
+  @Autowired
+  private UploadService         uploadService;
 
-  private final NewsTargetingService newsTargetingService;
+  @Autowired
+  private NewsTargetingService  newsTargetingService;
 
-  private final IndexingService      indexingService;
+  @Autowired
+  private IndexingService       indexingService;
 
-  private final IdentityManager      identityManager;
+  @Autowired
+  private IdentityManager       identityManager;
 
-  private final ActivityManager      activityManager;
+  @Autowired
+  private ActivityManager       activityManager;
 
-  private final WikiService          wikiService;
+  @Autowired
+  private WikiService           wikiService;
 
-  private final NewsSearchConnector  newsSearchConnector;
-
-  public NewsServiceImpl(SpaceService spaceService,
-                         NoteService noteService,
-                         MetadataService metadataService,
-                         FileService fileService,
-                         NewsTargetingService newsTargetingService,
-                         IndexingService indexingService,
-                         IdentityManager identityManager,
-                         ActivityManager activityManager,
-                         WikiService wikiService,
-                         UploadService uploadService,
-                         NewsSearchConnector newsSearchConnector) {
-    this.spaceService = spaceService;
-    this.noteService = noteService;
-    this.metadataService = metadataService;
-    this.fileService = fileService;
-    this.uploadService = uploadService;
-    this.newsTargetingService = newsTargetingService;
-    this.indexingService = indexingService;
-    this.identityManager = identityManager;
-    this.activityManager = activityManager;
-    this.wikiService = wikiService;
-    this.newsSearchConnector = newsSearchConnector;
-  }
+  @Autowired
+  private NewsSearchConnector newsSearchConnector;
 
   /**
    * {@inheritDoc}
@@ -1659,7 +1651,7 @@ public class NewsServiceImpl implements NewsService {
         article.setIllustrationMimeType(articleIllustrationFileItem.getFileInfo().getMimetype());
         article.setIllustrationUpdateDate(articleIllustrationFileItem.getFileInfo().getUpdatedDate());
         long lastModified = article.getIllustrationUpdateDate().getTime();
-        article.setIllustrationURL("/portal/rest/v1/news/" + article.getId() + "/illustration?v=" + lastModified + "&type="
+        article.setIllustrationURL("/content/rest/contents/" + article.getId() + "/illustration?v=" + lastModified + "&type="
             + newsObjectType);
       }
     } catch (Exception exception) {
@@ -1751,6 +1743,9 @@ public class NewsServiceImpl implements NewsService {
   private void sendNotification(String currentUserId,
                                 News news,
                                 NotificationConstants.NOTIFICATION_CONTEXT context) throws Exception {
+    if (news.getActivities() == null || news.getActivities().isEmpty()) {
+      return;
+    }
     String newsId = news.getId();
     String contentAuthor = news.getAuthor();
     String currentUser = currentUserId != null ? currentUserId : contentAuthor;

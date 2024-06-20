@@ -74,7 +74,7 @@
     ExoFeatureService featureService = CommonsUtils.getService(ExoFeatureService.class);
     PortalRequestContext rcontext = PortalRequestContext.getCurrentInstance();
     PortalHttpServletResponseWrapper responseWrapper = ( PortalHttpServletResponseWrapper ) rcontext.getResponse();
-    String newsListUrl = "/portal/rest/v1/news/byTarget/" + newsTarget + "?offset=0&limit=" + limit + "&returnSize=true";
+    String newsListUrl = "/content/rest/contents/byTarget/" + newsTarget + "?offset=0&limit=" + limit + "&returnSize=true";
     responseWrapper.addHeader("Link", "<" + newsListUrl + ">; rel=prefetch; as=fetch; crossorigin=use-credentials", false);
     boolean canManageNewsPublishTargets = NewsUtils.canManageNewsPublishTargets(currentIdentity);
     boolean newsListTranslationEnabled = featureService.isFeatureActiveForUser("newsListTranslation", request.getRemoteUser());

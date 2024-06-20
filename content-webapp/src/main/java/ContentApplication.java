@@ -27,7 +27,7 @@ import org.springframework.context.annotation.PropertySource;
     ContentApplication.MODULE_NAME,
     AvailableIntegration.KERNEL_MODULE,
     AvailableIntegration.JPA_MODULE,
-    AvailableIntegration.WEB_SECURITY_MODULE,
+    AvailableIntegration.WEB_MODULE,
   }, exclude = {
     LiquibaseAutoConfiguration.class,
 })
