@@ -402,7 +402,7 @@ export default {
     },
     minimumPostDateTime() {
       const currentDate = new Date();
-      return this.postDate && Number(new Date(this.postDate.getTime())) < currentDate.getTime() ? new Date(currentDate.getTime() + 1800000) : null;
+      return this.postDate && Number(new Date(this.postDate).getTime()) < currentDate.getTime() ? new Date(currentDate.getTime() + 1800000) : null;
     },
     showDontPostMessage() {
       return this.allowNotPost && this.postArticleMode !== 'later' && this.postArticleMode !== 'immediate';
