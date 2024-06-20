@@ -552,10 +552,7 @@ export default {
 
             if (fetchedNode.illustrationURL) {
               this.$newsServices.importFileFromUrl(fetchedNode.illustrationURL)
-                .then(resp => {
-                  localStorage.setItem('illustrationEtagValue', resp.headers.get('ETag'));
-                  resp.blob();
-                })
+                .then(resp => resp.blob())
                 .then(fileData => {
                   const illustrationFile = new File([fileData], `illustration${newsId}`);
                   const fileDetails = {

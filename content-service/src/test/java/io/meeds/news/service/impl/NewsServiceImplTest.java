@@ -146,8 +146,6 @@ public class NewsServiceImplTest {
 
   @Before
   public void setUp() {
-    MockitoAnnotations.openMocks(this);
-
     when(johnIdentity.getUserId()).thenReturn("john");
     ConversationState conversationState = mock(ConversationState.class);
     CONVERSATION_STATE.when(ConversationState::getCurrent).thenReturn(conversationState);

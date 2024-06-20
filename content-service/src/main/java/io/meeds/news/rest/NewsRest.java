@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -37,6 +38,7 @@ import javax.annotation.PreDestroy;
 import javax.ws.rs.core.Response;
 
 
+import io.swagger.v3.oas.annotations.Parameter;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 
@@ -77,7 +79,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.annotation.Secured;
@@ -95,7 +96,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("contents")
-@Tag(name = "contents", description = "Managing contents")
+@Tag(name = "content/rest/contents", description = "Managing contents")
 public class NewsRest {
 
   private static final Log          LOG                             = ExoLogger.getLogger(NewsRest.class);
@@ -203,10 +204,13 @@ public class NewsRest {
       @ApiResponse(responseCode = "500", description = "Internal server error") })
   public ResponseEntity<News> updateNews(@PathVariable("id")
                                          String id,
+                                         @Parameter(description = "Post news")
                                          @RequestParam(name = "post", required = false)
                                          boolean post,
+                                         @Parameter(description = "News object type to be updated")
                                          @RequestParam("type")
                                          String newsObjectType,
+                                         @Parameter(description = "News update action type to be done")
                                          @RequestParam(name = "newsUpdateType", defaultValue = "content", required = false)
                                          String newsUpdateType,
                                          @RequestBody
@@ -253,8 +257,10 @@ public class NewsRest {
       @ApiResponse(responseCode = "500", description = "Internal server error") })
   public Response deleteNews(@PathVariable("id")
                              String id,
+                             @Parameter(description = "news object to be deleted")
                              @RequestParam("type")
                              String newsObjectType,
+                             @Parameter(description = "Time to effectively delete news")
                              @RequestParam(name = "delay", required = false)
                              long delay) {
     org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
@@ -339,10 +345,13 @@ public class NewsRest {
       @ApiResponse(responseCode = "500", description = "Internal server error") })
   public ResponseEntity<News> getNewsById(@PathVariable("id")
                                           String id,
+                                          @Parameter(description = "fields")
                                           @RequestParam(name = "fields", required = false)
                                           String fields,
+                                          @Parameter(description = "News object type to be fetched")
                                           @RequestParam("type")
                                           String newsObjectType,
+                                          @Parameter(description = "Is edit mode")
                                           @RequestParam(name = "editMode", defaultValue = "false", required = false)
                                           boolean editMode) {
     String authenticatedUser = ConversationState.getCurrent().getIdentity().getUserId();
@@ -430,18 +439,25 @@ public class NewsRest {
       @ApiResponse(responseCode = "401", description = "User not authorized to get the news list"),
       @ApiResponse(responseCode = "404", description = "News list not found"),
       @ApiResponse(responseCode = "500", description = "Internal server error") })
-  public ResponseEntity<NewsEntity> getNews(@RequestParam("author")
+  public ResponseEntity<NewsEntity> getNews(@Parameter(description = "News author")
+                                            @RequestParam("author")
                                             String author,
+                                            @Parameter(description = "News spaces")
                                             @RequestParam(name = "spaces", required = false)
                                             String spaces,
+                                            @Parameter(description = "News filter")
                                             @RequestParam("filter")
                                             String filter,
+                                            @Parameter(description = "search text")
                                             @RequestParam(name = "text", required = false)
                                             String text,
+                                            @Parameter(description = "News pagination offset")
                                             @RequestParam(name = "offset", defaultValue = "0", required = false)
                                             int offset,
+                                            @Parameter(description = "News pagination limit")
                                             @RequestParam(name = "limit", defaultValue = "10")
                                             int limit,
+                                            @Parameter(description = "News total size")
                                             @RequestParam(name = "returnSize", defaultValue = "false", required = false)
                                             boolean returnSize,
                                             HttpServletRequest request) {
@@ -517,10 +533,13 @@ public class NewsRest {
       @ApiResponse(responseCode = "500", description = "Internal server error") })
   public ResponseEntity<NewsEntity> getNewsByTarget(@PathVariable("targetName")
                                                     String targetName,
+                                                    @Parameter(description = "News pagination offset")
                                                     @RequestParam(name = "offset", defaultValue = "0", required = false)
                                                     int offset,
+                                                    @Parameter(description = "News pagination limit")
                                                     @RequestParam(name = "limit", defaultValue = "10")
                                                     int limit,
+                                                    @Parameter(description = "News total size")
                                                     @RequestParam(name = "returnSize", required = false)
                                                     boolean returnSize) {
     try {
@@ -601,7 +620,8 @@ public class NewsRest {
       @ApiResponse(responseCode = "400", description = "Invalid query input"),
       @ApiResponse(responseCode = "401", description = "User not authorized to schedule the news"),
       @ApiResponse(responseCode = "500", description = "Internal server error") })
-  public ResponseEntity<News> scheduleNews(@RequestParam("type")
+  public ResponseEntity<News> scheduleNews(@Parameter(description = "News object type to be fetched")
+                                           @RequestParam("type")
                                            String newsObjectType,
                                            @RequestBody
                                            News scheduledNews) {
@@ -631,16 +651,22 @@ public class NewsRest {
   @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "Request fulfilled"),
       @ApiResponse(responseCode = "400", description = "Invalid query input"),
       @ApiResponse(responseCode = "500", description = "Internal server error"), })
-  public ResponseEntity<List<NewsSearchResultEntity>> search(@RequestParam(name = "query", required = false)
+  public ResponseEntity<List<NewsSearchResultEntity>> search(@Parameter(description = "Term to search")
+                                                             @RequestParam(name = "query", required = false)
                                                              String query,
+                                                             @Parameter(description = "Properties to expand")
                                                              @RequestParam(name = "expand", required = false)
                                                              String expand,
+                                                             @Parameter(description = "Offset")
                                                              @RequestParam(name = "offset", defaultValue = "0", required = false)
                                                              int offset,
+                                                             @Parameter(description = "Tag names used to search news")
                                                              @RequestParam(name = "tags", required = false)
                                                              List<String> tagNames,
+                                                             @Parameter(description = "Limit")
                                                              @RequestParam(name = "limit", defaultValue = "10")
                                                              int limit,
+                                                             @Parameter(description = "Favorites")
                                                              @RequestParam(name = "favorites", defaultValue = "false", required = false)
                                                              boolean favorites) {
 
@@ -684,8 +710,11 @@ public class NewsRest {
   })
   public ResponseEntity<byte[]> getNewsIllustration(HttpServletRequest request,
                                                     @PathVariable("id") String id,
+                                                    @Parameter(description = "last modified date")
                                                     @RequestParam(value = "v", required = false) Long lastModified,
+                                                    @Parameter(description = "News object type to be fetched")
                                                     @RequestParam(value = "type") String newsObjectType,
+                                                    @Parameter(description = "resized image size")
                                                     @RequestParam(value = "size", required = false) String size) {
     try {
       org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
@@ -705,18 +734,16 @@ public class NewsRest {
       long lastUpdated = news.getIllustrationUpdateDate().getTime();
       String eTagValue = (size == null || size.isBlank()) ? String.valueOf(lastUpdated) : lastUpdated + "-" + size;
 
-      if (request.getHeader("If-None-Match") != null && request.getHeader("If-None-Match").replace("\"", "").equals(eTagValue)) {
-        return ResponseEntity.status(HttpStatus.NOT_MODIFIED).build();
-      }
-
-      CacheControl cacheControl = CacheControl.maxAge(CACHE_DURATION_SECONDS, TimeUnit.SECONDS);
+      CacheControl cacheControl = CacheControl.maxAge(CACHE_DURATION_SECONDS, TimeUnit.SECONDS).cachePublic();
       ResponseEntity.BodyBuilder builder = ResponseEntity.ok()
-              .eTag(eTagValue)
-              .cacheControl(cacheControl)
               .contentType(new MediaType(MimeType.valueOf(news.getIllustrationMimeType())));
 
       if (lastModified != null && lastModified > 0) {
-        builder.lastModified(lastUpdated);
+        builder.lastModified(lastUpdated)
+               .eTag(String.valueOf(Objects.hash(eTagValue)))
+               .cacheControl(cacheControl);
+      } else {
+        builder.cacheControl(CacheControl.noStore());
       }
 
       return builder.body(news.getIllustration());

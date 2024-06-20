@@ -32,6 +32,7 @@ import javax.annotation.PreDestroy;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import io.swagger.v3.oas.annotations.Parameter;
 import org.apache.commons.lang3.StringUtils;
 
 import org.exoplatform.container.ExoContainerContext;
@@ -63,7 +64,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("targeting")
-@Tag(name = "targeting", description = "Manage targeting operations")
+@Tag(name = "content/rest/targeting", description = "Manage targeting operations")
 public class NewsTargetingRest {
 
   private static final Log         LOG                     = ExoLogger.getLogger(NewsTargetingRest.class);
@@ -131,6 +132,7 @@ public class NewsTargetingRest {
       @ApiResponse(responseCode = "500", description = "Internal server error") })
   public Response deleteTarget(@PathVariable("targetName")
                                String targetName,
+                               @Parameter(description = "Time to effectively delete news target")
                                @RequestParam(name = "delay", required = false)
                                long delay) {
     org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();

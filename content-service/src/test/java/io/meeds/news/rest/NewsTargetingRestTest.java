@@ -67,8 +67,6 @@ public class NewsTargetingRestTest {
   @InjectMocks
   private NewsTargetingRest newsTargetingRestController;
 
-
-
   @Before
   public void setup() {
     newsTargetingRestController.init();

@@ -22,7 +22,7 @@ import {newsConstants} from '../js/newsConstants.js';
 import {newsUpdateType} from '../js/newsConstants.js';
 
 export function getNewsById(id, editMode, type) {
-  return fetch(`${newsConstants.NEWS_API}/${id}?editMode=${editMode || ''}&type=${type || ''}`, {
+  return fetch(`${newsConstants.CONTENT_API}/contents/${id}?editMode=${editMode || ''}&type=${type || ''}`, {
     credentials: 'include',
     method: 'GET',
   }).then((resp) => {
@@ -39,7 +39,7 @@ export function getNewsById(id, editMode, type) {
 }
 
 export function getNewsByActivityId(activityId) {
-  return fetch(`${newsConstants.NEWS_API}/byActivity/${activityId}`, {
+  return fetch(`${newsConstants.CONTENT_API}/contents/byActivity/${activityId}`, {
     credentials: 'include',
     method: 'GET',
   }).then((resp) => {
@@ -52,7 +52,7 @@ export function getNewsByActivityId(activityId) {
 }
 
 export function getNewsSpaces(newsId) {
-  return fetch(`${newsConstants.NEWS_API}/${newsId}?fields=spaces&type=article`, {
+  return fetch(`${newsConstants.CONTENT_API}/contents/${newsId}?fields=spaces&type=article`, {
     credentials: 'include',
     method: 'GET',
   }).then((resp) => resp.json()).then(resp => {
@@ -61,7 +61,7 @@ export function getNewsSpaces(newsId) {
 }
 
 export function markNewsAsRead(newsId){
-  return fetch(`${newsConstants.NEWS_API}/markAsRead/${newsId}`, {
+  return fetch(`${newsConstants.CONTENT_API}/contents/markAsRead/${newsId}`, {
     credentials: 'include',
     method: 'POST',
   }).then((resp) => {
@@ -74,7 +74,7 @@ export function markNewsAsRead(newsId){
 }
 
 export function getNews(filter, spaces, searchText, offset, limit, returnSize) {
-  let url = `${newsConstants.NEWS_API}?author=${newsConstants.userName}&filter=${filter}`;
+  let url = `${newsConstants.CONTENT_API}/contents?author=${newsConstants.userName}&filter=${filter}`;
   if (searchText) {
     if (searchText.indexOf('#') === 0) {
       searchText = searchText.replace('#', '%23');
@@ -108,7 +108,7 @@ export function getNews(filter, spaces, searchText, offset, limit, returnSize) {
 }
 
 export function saveNews(news) {
-  return fetch(`${newsConstants.NEWS_API}`, {
+  return fetch(`${newsConstants.CONTENT_API}/contents`, {
     headers: {
       'Content-Type': 'application/json'
     },
@@ -121,7 +121,7 @@ export function saveNews(news) {
 }
 
 export function scheduleNews(news, newsType) {
-  return fetch(`${newsConstants.NEWS_API}/schedule?type=${newsType || ''}`, {
+  return fetch(`${newsConstants.CONTENT_API}/contents/schedule?type=${newsType || ''}`, {
     headers: {
       'Content-Type': 'application/json'
     },
@@ -137,7 +137,6 @@ export function importFileFromUrl(url) {
   return fetch(url, {
     headers: {
       'Content-Type': 'blob',
-      'If-None-Match': localStorage.getItem('illustrationEtagValue')
     },
     credentials: 'include',
     method: 'GET',
@@ -145,7 +144,7 @@ export function importFileFromUrl(url) {
 }
 
 export function updateNews(news, post, type, updateType) {
-  return fetch(`${newsConstants.NEWS_API}/${news.id}?post=${post}&type=${type || ''}&newsUpdateType=${updateType || newsUpdateType.CONTENT}`, {
+  return fetch(`${newsConstants.CONTENT_API}/contents/${news.id}?post=${post}&type=${type || ''}&newsUpdateType=${updateType || newsUpdateType.CONTENT}`, {
     headers: {
       'Content-Type': 'application/json'
     },
@@ -153,14 +152,6 @@ export function updateNews(news, post, type, updateType) {
     method: 'PUT',
     body: JSON.stringify(news)
   }).then(resp => resp.json());
-}
-
-export function clickOnEditButton(id) {
-  return fetch(`${newsConstants.NEWS_API}/${id}/click`, {
-    credentials: 'include',
-    method: 'POST',
-    body: 'edit'
-  });
 }
 
 export function findUserSpaces(spaceName) {
@@ -173,7 +164,7 @@ export function findUserSpaces(spaceName) {
 }
 
 export function deleteDraft(newsId) {
-  return fetch(`${newsConstants.NEWS_API}/${newsId}`, {
+  return fetch(`${newsConstants.CONTENT_API}/contents/${newsId}`, {
     credentials: 'include',
     method: 'DELETE'
   });
@@ -210,16 +201,6 @@ export function searchSpaces(searchText) {
   }).then(resp => resp.json());
 }
 
-export function fetchFoldersAndFiles(currentDrive, workspace, parentPath) {
-  return fetch(`/portal/rest/managedocument/getFoldersAndFiles/?driveName=${currentDrive}&workspaceName=${workspace}&currentFolder=${parentPath}`,
-    {})
-    .then(response => response.text())
-    .then(xmlStr => (new window.DOMParser()).parseFromString(xmlStr, 'text/xml'))
-    .then(xml => {
-      return xml;
-    });
-}
-
 export function escapeHTML(unsafeText) {
   const div = document.createElement('div');
   div.innerText = unsafeText;
@@ -227,7 +208,7 @@ export function escapeHTML(unsafeText) {
 }
 
 export function canUserCreateNews(spaceId) {
-  return fetch(`/content/rest/contents/canCreateNews/${eXo.env.portal.spaceId || spaceId}`, {
+  return fetch(`${newsConstants.CONTENT_API}/contents/canCreateNews/${eXo.env.portal.spaceId || spaceId}`, {
     headers: {
       'Content-Type': 'application/json'
     },
@@ -236,7 +217,7 @@ export function canUserCreateNews(spaceId) {
 }
 
 export function canScheduleNews(spaceId) {
-  return fetch(`/content/rest/contents/canScheduleNews/${eXo.env.portal.spaceId || spaceId}`, {
+  return fetch(`${newsConstants.CONTENT_API}/contents/canScheduleNews/${eXo.env.portal.spaceId || spaceId}`, {
     headers: {
       'Content-Type': 'application/json'
     },
@@ -248,7 +229,7 @@ export function deleteNews(newsId, newsObjectType, delay) {
   if (delay > 0) {
     localStorage.setItem('deletedNews', newsId);
   }
-  return fetch(`${newsConstants.NEWS_API}/${newsId}?type=${newsObjectType || ''}&delay=${delay || 0}`, {
+  return fetch(`${newsConstants.CONTENT_API}/contents/${newsId}?type=${newsObjectType || ''}&delay=${delay || 0}`, {
     credentials: 'include',
     method: 'DELETE'
   }).then((resp) => {
@@ -259,7 +240,7 @@ export function deleteNews(newsId, newsObjectType, delay) {
 }
 
 export function undoDeleteNews(newsId) {
-  return fetch(`${newsConstants.NEWS_API}/${newsId}/undoDelete`, {
+  return fetch(`${newsConstants.CONTENT_API}/contents/${newsId}/undoDelete`, {
     method: 'POST',
     credentials: 'include',
   }).then((resp) => {
@@ -272,7 +253,7 @@ export function undoDeleteNews(newsId) {
 }
 
 export function canPublishNews() {
-  return fetch(`/content/rest/contents/canPublishNews?spaceId=${eXo.env.portal.spaceId}`, {
+  return fetch(`${newsConstants.CONTENT_API}/contents/canPublishNews?spaceId=${eXo.env.portal.spaceId}`, {
     headers: {
       'Content-Type': 'application/json'
     },
