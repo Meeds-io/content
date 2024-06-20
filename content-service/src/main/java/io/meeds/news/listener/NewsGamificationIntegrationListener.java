@@ -22,6 +22,7 @@ package io.meeds.news.listener;
 import java.util.HashMap;
 import java.util.Map;
 
+import jakarta.annotation.PostConstruct;
 import org.apache.commons.lang3.StringUtils;
 
 import org.exoplatform.container.ExoContainerContext;
@@ -35,10 +36,15 @@ import org.exoplatform.services.log.Log;
 
 import io.meeds.news.model.News;
 import io.meeds.news.utils.NewsUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
+@Component
 public class NewsGamificationIntegrationListener extends Listener<String, News> {
   private static final Log   LOG                                          =
                                  ExoLogger.getLogger(NewsGamificationIntegrationListener.class);
+
+  private String[] LISTENERS = {"exo.news.gamification.postArticle", "exo.news.gamification.PublishArticle"};
 
   public static final String GAMIFICATION_GENERIC_EVENT                   = "exo.gamification.generic.action";
 
@@ -52,15 +58,18 @@ public class NewsGamificationIntegrationListener extends Listener<String, News> 
 
   String                     OBJECT_TYPE_PARAM                            = "objectType";
 
+  @Autowired
   private PortalContainer    container;
 
+  @Autowired
   private ListenerService    listenerService;
 
-  public NewsGamificationIntegrationListener(PortalContainer container, ListenerService listenerService) {
-    this.container = container;
-    this.listenerService = listenerService;
+  @PostConstruct
+  public void init() {
+    for (String listener : LISTENERS) {
+      listenerService.addListener(listener, this);
+    }
   }
-
   @Override
   public void onEvent(Event<String, News> event) throws Exception {
     ExoContainerContext.setCurrentContainer(container);

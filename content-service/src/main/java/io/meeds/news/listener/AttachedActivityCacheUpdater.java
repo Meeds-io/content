@@ -23,24 +23,42 @@ import org.apache.commons.lang3.StringUtils;
 
 import org.exoplatform.services.listener.Event;
 import org.exoplatform.services.listener.Listener;
+import org.exoplatform.services.listener.ListenerService;
 import org.exoplatform.social.core.activity.model.ExoSocialActivity;
 import org.exoplatform.social.core.storage.api.ActivityStorage;
 import org.exoplatform.social.core.storage.cache.CachedActivityStorage;
 
 import io.meeds.news.model.News;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import jakarta.annotation.PostConstruct;
 
 /**
  * A listener to clear cached news inside
  * {@link ExoSocialActivity#getLinkedProcessedEntities()} after any modification
  * made on {@link News}
  */
+@Component
 public class AttachedActivityCacheUpdater extends Listener<String, News> {
+
+  @Autowired
+  private ActivityStorage activityStorage;
+
+  @Autowired
+  private ListenerService listenerService;
 
   private CachedActivityStorage cachedActivityStorage;
 
-  public AttachedActivityCacheUpdater(ActivityStorage activityStorage) {
+  private String[] LISTENER_EVENTS = { "exo.news.postArticle", "exo.news.updateArticle", "exo.news.shareArticle", "exo.news.scheduleArticle", "exo.news.unscheduleArticle" };
+
+  @PostConstruct
+  public void init() {
     if (activityStorage instanceof CachedActivityStorage) {
       this.cachedActivityStorage = (CachedActivityStorage) activityStorage;
+    }
+    for (String listener : LISTENER_EVENTS) {
+      listenerService.addListener(listener, this);
     }
   }
 

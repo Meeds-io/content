@@ -24,11 +24,6 @@
   <external-component-plugins>
     <target-component>org.exoplatform.social.core.manager.ActivityManager</target-component>
     <component-plugin>
-      <name>NewsActivityListener</name>
-      <set-method>addActivityEventListener</set-method>
-      <type>io.meeds.news.listener.NewsActivityListener</type>
-    </component-plugin>
-    <component-plugin>
       <name>ActivityNewsProcessor</name>
       <set-method>addProcessorPlugin</set-method>
       <type>io.meeds.news.activity.processor.ActivityNewsProcessor</type>
@@ -78,35 +73,6 @@
       <name>exo.news.likeArticle</name>
       <set-method>addListener</set-method>
       <type>io.meeds.news.listener.AnalyticsNewsListener</type>
-    </component-plugin>
-  </external-component-plugins>
-
-  <external-component-plugins>
-    <target-component>org.exoplatform.services.listener.ListenerService</target-component>
-    <component-plugin>
-      <name>exo.news.postArticle</name>
-      <set-method>addListener</set-method>
-      <type>io.meeds.news.listener.AttachedActivityCacheUpdater</type>
-    </component-plugin>
-    <component-plugin>
-      <name>exo.news.updateArticle</name>
-      <set-method>addListener</set-method>
-      <type>io.meeds.news.listener.AttachedActivityCacheUpdater</type>
-    </component-plugin>
-    <component-plugin>
-      <name>exo.news.shareArticle</name>
-      <set-method>addListener</set-method>
-      <type>io.meeds.news.listener.AttachedActivityCacheUpdater</type>
-    </component-plugin>
-    <component-plugin>
-      <name>exo.news.scheduleArticle</name>
-      <set-method>addListener</set-method>
-      <type>io.meeds.news.listener.AttachedActivityCacheUpdater</type>
-    </component-plugin>
-    <component-plugin>
-      <name>exo.news.unscheduleArticle</name>
-      <set-method>addListener</set-method>
-      <type>io.meeds.news.listener.AttachedActivityCacheUpdater</type>
     </component-plugin>
   </external-component-plugins>
 </configuration>

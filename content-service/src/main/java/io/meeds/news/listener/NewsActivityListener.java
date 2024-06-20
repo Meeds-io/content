@@ -34,6 +34,9 @@ import org.exoplatform.social.core.space.spi.SpaceService;
 import io.meeds.news.model.News;
 import io.meeds.news.service.NewsService;
 import io.meeds.news.utils.NewsUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import jakarta.annotation.PostConstruct;
 
 import static io.meeds.news.utils.NewsUtils.NewsObjectType.ARTICLE;
 
@@ -48,24 +51,22 @@ public class NewsActivityListener extends ActivityListenerPlugin {
 
   private static final String NEWS_ID = "newsId";
 
+  @Autowired
   private ActivityManager     activityManager;
 
+  @Autowired
   private IdentityManager     identityManager;
 
+  @Autowired
   private SpaceService        spaceService;
 
+  @Autowired
   private NewsService         newsService;
 
-  public NewsActivityListener(ActivityManager activityManager,
-                              IdentityManager identityManager,
-                              SpaceService spaceService,
-                              NewsService newsService) {
-    this.newsService = newsService;
-    this.spaceService = spaceService;
-    this.identityManager = identityManager;
-    this.activityManager = activityManager;
+  @PostConstruct
+  public void init() {
+    activityManager.addActivityEventListener(this);
   }
-
   @Override
   public void shareActivity(ActivityLifeCycleEvent event) {
     ExoSocialActivity sharedActivity = event.getActivity();

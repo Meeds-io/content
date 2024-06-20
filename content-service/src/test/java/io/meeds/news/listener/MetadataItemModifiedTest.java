@@ -27,8 +27,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import org.exoplatform.services.listener.ListenerService;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
@@ -55,9 +58,19 @@ public class MetadataItemModifiedTest {
   @Mock
   private CachedActivityStorage activityStorage;
 
+  @Mock
+  private ListenerService        listenerService;
+
+  @InjectMocks
+  MetadataItemModified           metadataItemModified;
+
+  @Before
+  public void setUp() {
+    metadataItemModified.init();
+  }
+
   @Test
   public void testNoInteractionWhenMetadataNotForNews() throws Exception {
-    MetadataItemModified metadataItemModified = new MetadataItemModified(newsService, indexingService, activityStorage);
     MetadataItem metadataItem = mock(MetadataItem.class);
     Event<Long, MetadataItem> event = mock(Event.class);
     when(event.getData()).thenReturn(metadataItem);
@@ -71,7 +84,6 @@ public class MetadataItemModifiedTest {
 
   @Test
   public void testReindexNewsWhenNewsSetAsFavorite() throws Exception {
-    MetadataItemModified metadataItemModified = new MetadataItemModified(newsService, indexingService, activityStorage);
     String newsId = "100";
 
     MetadataItem metadataItem = mock(MetadataItem.class);
@@ -92,7 +104,6 @@ public class MetadataItemModifiedTest {
 
   @Test
   public void testCleanNewsActivityCacheWhenMarkAsFavorite() throws Exception {
-    MetadataItemModified metadataItemModified = new MetadataItemModified(newsService, indexingService, activityStorage);
     String newsId = "200";
 
     MetadataItem metadataItem = mock(MetadataItem.class);
