@@ -42,12 +42,12 @@
         <div class="grey-color">
           <div>
             {{ $t('search.news.card.author') }} :  <a
-              :href="posterProfile"
+              :href="posterProfileUrl"
               target="_blank">
-              {{ posterFullName }}
+              {{ this.result.posterFullName }}
             </a>
           </div>
-          <div>{{ $t('search.news.card.published') }} : {{ formatDate (this.result.postedTime) }}</div>
+          <div>{{ $t('search.news.card.published') }} : {{ formatDate (new Date(result.postedTime)) }}</div>
         </div>
       </v-list-item>
     </v-list>
@@ -92,14 +92,8 @@ export default {
     }
   }),
   computed: {
-    poster() {
-      return this.result && this.result.poster.profile;
-    },
-    posterFullName() {
-      return this.poster && this.poster.fullname;
-    },
-    posterProfile() {
-      return this.poster && `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/profile/${this.poster.username}`;
+    posterProfileUrl() {
+      return this.result && `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/profile/${this.result.posterUserName}`;
     },
     excerpts() {
       return this.result && this.result.excerpts;

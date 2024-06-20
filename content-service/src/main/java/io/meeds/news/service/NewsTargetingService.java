@@ -28,7 +28,9 @@ import org.exoplatform.social.metadata.model.MetadataType;
 
 import io.meeds.news.model.News;
 import io.meeds.news.rest.NewsTargetingEntity;
+import org.springframework.stereotype.Service;
 
+@Service
 public interface NewsTargetingService {
 
   public static final MetadataType METADATA_TYPE = new MetadataType(4, "newsTarget");
