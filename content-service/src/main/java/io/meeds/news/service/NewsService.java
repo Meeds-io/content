@@ -31,7 +31,9 @@ import org.exoplatform.wiki.model.Page;
 import io.meeds.news.filter.NewsFilter;
 import io.meeds.news.model.News;
 import io.meeds.news.search.NewsESSearchResult;
+import org.springframework.stereotype.Service;
 
+@Service
 public interface NewsService {
 
   /**

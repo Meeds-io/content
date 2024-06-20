@@ -55,7 +55,7 @@
               <string>news</string>
             </field>
             <field name="uri">
-              <string><![CDATA[/portal/rest/v1/news/search?query={keyword}&limit={limit}]]></string>
+              <string><![CDATA[/content/rest/contents/search?query={keyword}&limit={limit}]]></string>
             </field>
             <field name="enabled">
               <boolean>${exo.search.activity.enabled:true}</boolean>

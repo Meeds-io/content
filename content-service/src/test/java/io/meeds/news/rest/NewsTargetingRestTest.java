@@ -21,12 +21,14 @@ package io.meeds.news.rest;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.mock;
+
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+
 
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.RuntimeDelegate;
@@ -34,6 +36,7 @@ import javax.ws.rs.ext.RuntimeDelegate;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
@@ -46,10 +49,11 @@ import org.exoplatform.social.metadata.model.Metadata;
 
 import io.meeds.news.service.NewsTargetingService;
 import io.meeds.news.utils.NewsUtils;
-import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 
 @RunWith(MockitoJUnitRunner.class)
-public class NewsTargetingRestResourcesV1Test {
+public class NewsTargetingRestTest {
 
   @Mock
   NewsTargetingService newsTargetingService;
@@ -60,53 +64,52 @@ public class NewsTargetingRestResourcesV1Test {
   @Mock
   IdentityManager      identityManager;
 
+  @InjectMocks
+  private NewsTargetingRest newsTargetingRestController;
+
   @Before
   public void setup() {
+    newsTargetingRestController.init();
     RuntimeDelegate.setInstance(new RuntimeDelegateImpl());
   }
 
   @Test
   public void shouldReturnOkWhenGetTargets() {
     // Given
-    NewsTargetingRestResourcesV1 newsTargetingRestResourcesV1 = new NewsTargetingRestResourcesV1(newsTargetingService, container);
-    HttpServletRequest request = mock(HttpServletRequest.class);
-    lenient().when(request.getRemoteUser()).thenReturn("john");
+    when(newsTargetingService.getAllTargets()).thenReturn(new ArrayList<>());
 
     // When
-    Response response = newsTargetingRestResourcesV1.getAllTargets(request);
+    ResponseEntity response = newsTargetingRestController.getAllTargets();
 
     // Then
-    assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+    assertEquals(HttpStatus.OK.value(), response.getStatusCodeValue());
   }
 
   @Test
   public void shouldReturnOkWhenGetAllowedTargets() {
+    Identity currentIdentity = new Identity("john");
+    ConversationState.setCurrent(new ConversationState(currentIdentity));
     // Given
-    NewsTargetingRestResourcesV1 newsTargetingRestResourcesV1 = new NewsTargetingRestResourcesV1(newsTargetingService, container);
-    HttpServletRequest request = mock(HttpServletRequest.class);
-    lenient().when(request.getRemoteUser()).thenReturn("john");
-
+    lenient().when(newsTargetingService.getAllTargets()).thenReturn(new ArrayList<>());
     // When
-    Response response = newsTargetingRestResourcesV1.getAllowedTargets(request);
+    ResponseEntity response = newsTargetingRestController.getAllowedTargets();
 
     // Then
-    assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+    assertEquals(org.springframework.http.HttpStatus.OK.value(), response.getStatusCodeValue());
 
-    when(newsTargetingRestResourcesV1.getAllowedTargets(request)).thenThrow(RuntimeException.class);
+    when(newsTargetingRestController.getAllowedTargets()).thenThrow(RuntimeException.class);
 
     // When
-    response = newsTargetingRestResourcesV1.getAllowedTargets(request);
+    response = newsTargetingRestController.getAllowedTargets();
 
     // Then
-    assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
+    assertEquals(HttpStatus.INTERNAL_SERVER_ERROR.value(), response.getStatusCodeValue());
+
   }
 
   @Test
   public void shouldReturnOkWhenDeleteNewsTarget() {
     // Given
-    NewsTargetingRestResourcesV1 newsTargetingRestResourcesV1 = new NewsTargetingRestResourcesV1(newsTargetingService, container);
-    HttpServletRequest request = mock(HttpServletRequest.class);
-    lenient().when(request.getRemoteUser()).thenReturn("john");
     Identity currentIdentity = new Identity("john");
     ConversationState.setCurrent(new ConversationState(currentIdentity));
 
@@ -117,15 +120,15 @@ public class NewsTargetingRestResourcesV1Test {
     lenient().when(newsTargetingService.getAllTargets()).thenReturn(targets);
 
     // When
-    Response response = newsTargetingRestResourcesV1.deleteTarget(request, targets.get(0).getName(), 0);
+    Response response = newsTargetingRestController.deleteTarget(targets.get(0).getName(), 0);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
 
-    when(newsTargetingRestResourcesV1.deleteTarget(request, targets.get(0).getName(), 0)).thenThrow(RuntimeException.class);
+    when(newsTargetingRestController.deleteTarget(targets.get(0).getName(), 0)).thenThrow(RuntimeException.class);
 
     // When
-    response = newsTargetingRestResourcesV1.deleteTarget(request, targets.get(0).getName(), 0);
+    response = newsTargetingRestController.deleteTarget(targets.get(0).getName(), 0);
 
     // Then
     assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
@@ -134,9 +137,7 @@ public class NewsTargetingRestResourcesV1Test {
   @Test
   public void shouldReturnOkWhenCreateTargets() throws IllegalAccessException {
     // Given
-    NewsTargetingRestResourcesV1 newsTargetingRestResourcesV1 = new NewsTargetingRestResourcesV1(newsTargetingService, container);
-    HttpServletRequest request = mock(HttpServletRequest.class);
-    lenient().when(request.getRemoteUser()).thenReturn("john");
+
     Identity currentIdentity = new Identity("john");
     ConversationState.setCurrent(new ConversationState(currentIdentity));
     Metadata sliderNews = new Metadata();
@@ -153,15 +154,15 @@ public class NewsTargetingRestResourcesV1Test {
     lenient().when(newsTargetingService.createNewsTarget(newsTargetingEntity, currentIdentity)).thenReturn(sliderNews);
 
     // When
-    Response response = newsTargetingRestResourcesV1.createNewsTarget(request, newsTargetingEntity);
+    Response response = newsTargetingRestController.createNewsTarget(newsTargetingEntity);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
 
-    when(newsTargetingRestResourcesV1.createNewsTarget(request, newsTargetingEntity)).thenThrow(RuntimeException.class);
+    when(newsTargetingRestController.createNewsTarget(newsTargetingEntity)).thenThrow(RuntimeException.class);
 
     // When
-    response = newsTargetingRestResourcesV1.createNewsTarget(request, newsTargetingEntity);
+    response = newsTargetingRestController.createNewsTarget(newsTargetingEntity);
 
     // Then
     assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
@@ -171,9 +172,6 @@ public class NewsTargetingRestResourcesV1Test {
   @Test
   public void shouldReturnOkWhenUpdateTargets() throws IllegalAccessException {
     // Given
-    NewsTargetingRestResourcesV1 newsTargetingRestResourcesV1 = new NewsTargetingRestResourcesV1(newsTargetingService, container);
-    HttpServletRequest request = mock(HttpServletRequest.class);
-    lenient().when(request.getRemoteUser()).thenReturn("john");
     Identity currentIdentity = new Identity("john");
     ConversationState.setCurrent(new ConversationState(currentIdentity));
     Metadata sliderNews = new Metadata();
@@ -192,16 +190,16 @@ public class NewsTargetingRestResourcesV1Test {
              .thenReturn(sliderNews);
 
     // When
-    Response response = newsTargetingRestResourcesV1.updateNewsTarget(newsTargetingEntity, originalTargetName);
+    Response response = newsTargetingRestController.updateNewsTarget(newsTargetingEntity, originalTargetName);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
 
-    when(newsTargetingRestResourcesV1.updateNewsTarget(newsTargetingEntity,
+    when(newsTargetingRestController.updateNewsTarget(newsTargetingEntity,
                                                        originalTargetName)).thenThrow(RuntimeException.class);
 
     // When
-    response = newsTargetingRestResourcesV1.updateNewsTarget(newsTargetingEntity, originalTargetName);
+    response = newsTargetingRestController.updateNewsTarget(newsTargetingEntity, originalTargetName);
 
     // Then
     assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
