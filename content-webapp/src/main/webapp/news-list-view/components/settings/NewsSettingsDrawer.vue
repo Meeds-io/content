@@ -346,7 +346,7 @@ export default {
       this.viewTemplate = this.$root.viewTemplate;
       this.viewExtensions = this.$root.viewExtensions;
       this.newsTarget = this.$root.newsTarget;
-      this.newsHeader = (this.newListTranslationEnabled && (this.savedHeaderTranslations?.length && this.savedHeaderTranslations
+      this.newsHeader = (this.newListTranslationEnabled && (Object.keys(this.savedHeaderTranslations)?.length && this.savedHeaderTranslations
                                                        || {[this.$root.defaultLanguage]: this.$root.headerTitle}))
                                                        || this.$root.headerTitle;
       this.limit = this.$root.limit;
