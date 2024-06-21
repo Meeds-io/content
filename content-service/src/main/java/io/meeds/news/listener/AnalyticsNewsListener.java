@@ -1,10 +1,37 @@
+/**
+ * This file is part of the Meeds project (https://meeds.io/).
+ *
+ * Copyright (C) 2020 - 2024 Meeds Association contact@meeds.io
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ */
 package io.meeds.news.listener;
 
 import static io.meeds.analytics.utils.AnalyticsUtils.addSpaceStatistics;
+import static io.meeds.news.utils.NewsUtils.COMMENT_NEWS;
+import static io.meeds.news.utils.NewsUtils.DELETE_NEWS;
+import static io.meeds.news.utils.NewsUtils.LIKE_NEWS;
+import static io.meeds.news.utils.NewsUtils.POST_NEWS;
+import static io.meeds.news.utils.NewsUtils.SHARE_NEWS;
+import static io.meeds.news.utils.NewsUtils.UPDATE_NEWS;
+import static io.meeds.news.utils.NewsUtils.VIEW_NEWS;
 
 import jakarta.annotation.PostConstruct;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import org.exoplatform.container.ExoContainerContext;
@@ -25,7 +52,8 @@ import io.meeds.news.utils.NewsUtils;
 
 @Asynchronous
 @Component
-public class AnalyticsContentListener extends Listener<String, News> {
+@Profile("analytics")
+public class AnalyticsNewsListener extends Listener<String, News> {
 
   private static final String   CREATE_CONTENT_OPERATION_NAME  = "createContent";
 
@@ -41,9 +69,7 @@ public class AnalyticsContentListener extends Listener<String, News> {
 
   private static final String   COMMENT_CONTENT_OPERATION_NAME = "commentContent";
 
-  private static final String[] LISTENER_EVENTS                = { "exo.news.postArticle", "exo.news.updateArticle",
-      "exo.news.deleteArticle", "exo.news.viewArticle", "exo.news.shareArticle", "exo.news.commentArticle",
-      "exo.news.likeArticle" };
+  private static final String[] LISTENER_EVENTS                = { POST_NEWS, UPDATE_NEWS, DELETE_NEWS, VIEW_NEWS, SHARE_NEWS, COMMENT_NEWS, LIKE_NEWS };
 
   @Autowired
   private IdentityManager       identityManager;

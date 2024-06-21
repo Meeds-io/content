@@ -39,12 +39,15 @@ import io.meeds.news.utils.NewsUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import static io.meeds.news.utils.NewsUtils.POST_NEWS_ARTICLE;
+import static io.meeds.news.utils.NewsUtils.PUBLISH_NEWS;
+
 @Component
 public class NewsGamificationIntegrationListener extends Listener<String, News> {
   private static final Log   LOG                                          =
                                  ExoLogger.getLogger(NewsGamificationIntegrationListener.class);
 
-  private String[] LISTENERS = {"exo.news.gamification.postArticle", "exo.news.gamification.PublishArticle"};
+  private String[] LISTENERS = {POST_NEWS_ARTICLE, PUBLISH_NEWS};
 
   public static final String GAMIFICATION_GENERIC_EVENT                   = "exo.gamification.generic.action";
 
@@ -78,7 +81,7 @@ public class NewsGamificationIntegrationListener extends Listener<String, News> 
       String eventName = event.getEventName();
       News news = event.getData();
       String ruleTitle = "";
-      if (StringUtils.equals(eventName, NewsUtils.POST_NEWS_ARTICLE)) {
+      if (StringUtils.equals(eventName, POST_NEWS_ARTICLE)) {
         ruleTitle = GAMIFICATION_POST_NEWS_ARTICLE_RULE_TITLE;
       } else if (StringUtils.equals(eventName, NewsUtils.PUBLISH_NEWS)) {
         ruleTitle = GAMIFICATION_PUBLISH_NEWS_ARTICLE_RULE_TITLE;

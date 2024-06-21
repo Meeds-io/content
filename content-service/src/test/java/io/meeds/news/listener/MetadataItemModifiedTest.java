@@ -95,10 +95,10 @@ public class MetadataItemModifiedTest {
 
     News news = new News();
     news.setId(newsId);
-    when(newsService.getNewsById(eq(newsId), anyBoolean())).thenReturn(news);
+    when(newsService.getNewsArticleById(eq(newsId))).thenReturn(news);
 
     metadataItemModified.onEvent(event);
-    verify(newsService, times(1)).getNewsById(newsId, false);
+    verify(newsService, times(1)).getNewsArticleById(newsId);
     verify(indexingService, times(1)).reindex(NewsIndexingServiceConnector.TYPE, newsId);
   }
 
@@ -117,10 +117,10 @@ public class MetadataItemModifiedTest {
     News news = new News();
     news.setId(newsId);
     news.setActivityId(activityId);
-    when(newsService.getNewsById(eq(newsId), anyBoolean())).thenReturn(news);
+    when(newsService.getNewsArticleById(eq(newsId))).thenReturn(news);
 
     metadataItemModified.onEvent(event);
-    verify(newsService, times(1)).getNewsById(newsId, false);
+    verify(newsService, times(1)).getNewsArticleById(newsId);
     verify(indexingService, times(1)).reindex(NewsIndexingServiceConnector.TYPE, newsId);
     verify(activityStorage, times(1)).clearActivityCached(activityId);
   }

@@ -70,10 +70,6 @@ public class NewsActivityListenerTest {
   @InjectMocks
   NewsActivityListener    newsActivityListener;
 
-  @Before
-  public void setUp() {
-    newsActivityListener.init();
-  }
   @Test
   public void testNotShareWhenActivityNotFound() {
     ActivityLifeCycleEvent event = mock(ActivityLifeCycleEvent.class);

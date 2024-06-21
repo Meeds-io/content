@@ -67,16 +67,9 @@ public class NewsMetadataListenerTest {
   @Mock
   private TagService          tagService;
 
-  @Mock
-  private ListenerService     listenerService;
-
   @InjectMocks
   NewsMetadataListener        newsMetadataListener;
 
-  @Before
-  public void setUp() {
-    newsMetadataListener.init();
-  }
   @Test
   public void testCreateNewsTagsWhenNewsSaved() throws Exception {
     String newsId = "newsId";

@@ -34,6 +34,12 @@ import org.springframework.stereotype.Component;
 
 import jakarta.annotation.PostConstruct;
 
+import static io.meeds.news.utils.NewsUtils.POST_NEWS;
+import static io.meeds.news.utils.NewsUtils.SCHEDULE_NEWS;
+import static io.meeds.news.utils.NewsUtils.SHARE_NEWS;
+import static io.meeds.news.utils.NewsUtils.UNSCHEDULE_NEWS;
+import static io.meeds.news.utils.NewsUtils.UPDATE_NEWS;
+
 /**
  * A listener to clear cached news inside
  * {@link ExoSocialActivity#getLinkedProcessedEntities()} after any modification
@@ -50,7 +56,7 @@ public class AttachedActivityCacheUpdater extends Listener<String, News> {
 
   private CachedActivityStorage cachedActivityStorage;
 
-  private String[] LISTENER_EVENTS = { "exo.news.postArticle", "exo.news.updateArticle", "exo.news.shareArticle", "exo.news.scheduleArticle", "exo.news.unscheduleArticle" };
+  private String[] LISTENER_EVENTS = { POST_NEWS, UPDATE_NEWS, SHARE_NEWS, SCHEDULE_NEWS, UNSCHEDULE_NEWS };
 
   @PostConstruct
   public void init() {

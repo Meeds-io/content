@@ -41,6 +41,10 @@ import io.meeds.news.utils.NewsUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import static io.meeds.news.utils.NewsUtils.POST_NEWS;
+import static io.meeds.news.utils.NewsUtils.SHARE_NEWS;
+import static io.meeds.news.utils.NewsUtils.UPDATE_NEWS;
+
 @Component
 public class NewsMetadataListener extends Listener<String, News> {
 
@@ -59,7 +63,7 @@ public class NewsMetadataListener extends Listener<String, News> {
   @Autowired
   private ListenerService       listenerService;
 
-  private String[] LISTENERS = {"exo.news.postArticle", "exo.news.updateArticle", "exo.news.shareArticle"};
+  private String[] LISTENERS = {POST_NEWS, UPDATE_NEWS, SHARE_NEWS};
 
   @PostConstruct
   public void init() {

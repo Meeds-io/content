@@ -37,6 +37,7 @@ import io.meeds.news.utils.NewsUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import jakarta.annotation.PostConstruct;
+import org.springframework.stereotype.Component;
 
 import static io.meeds.news.utils.NewsUtils.NewsObjectType.ARTICLE;
 
@@ -45,6 +46,7 @@ import static io.meeds.news.utils.NewsUtils.NewsObjectType.ARTICLE;
  * propagate sharing activity in News elements to let targeted space members to
  * access News
  */
+@Component
 public class NewsActivityListener extends ActivityListenerPlugin {
 
   private static final Log    LOG     = ExoLogger.getLogger(NewsActivityListener.class);
