@@ -21,7 +21,7 @@
 <template>
   <v-hover v-slot="{ hover }">
     <v-app v-show="canPublishNews" class="newsEmptyTemplate border-box-sizing" flat>
-      <v-main class="white">
+      <v-main>
         <v-sheet height="32" class="news-empty-header d-flex mx-3 my-2">
           <v-spacer />
           <div class="d-flex flex-row newsSettingButton justify-end">
