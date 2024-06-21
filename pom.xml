@@ -18,8 +18,8 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <artifactId>addons-exo-parent-pom</artifactId>
-    <groupId>org.exoplatform.addons</groupId>
-    <version>18-M03</version>
+    <groupId>io.meeds.addons</groupId>
+    <version>18-mips-SNAPSHOT</version>
   </parent>
   <groupId>io.meeds.content</groupId>
   <artifactId>content</artifactId>
