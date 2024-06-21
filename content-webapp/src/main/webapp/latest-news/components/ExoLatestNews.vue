@@ -22,11 +22,10 @@
   <v-app
     class="VuetifyApp"
     flat>
-    <v-container pa-0>
+    <v-container class="application-body" pa-0>
       <v-layout
         row
-        mx-0
-        class="card-border-radius app-background-color">
+        mx-0>
         <v-flex class="px-3 border-box-sizing">
           <v-layout class="d-flex mx-0 align-center border-box-sizing">
             <v-flex class="d-flex text-truncate">
