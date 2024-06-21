@@ -23,7 +23,7 @@
     <v-app v-show="!hideEmptyNewsTemplateForNonPublisher" class="news-list-view-app position-relative">
       <v-card
         :class="newsListViewClass"
-        class="app-background-color"
+        class="application-body"
         height="100%"
         flat>
         <v-card-text class="pa-0">
