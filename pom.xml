@@ -45,7 +45,7 @@
     <dependencies>
       <!-- Import versions from notes project -->
       <dependency>
-        <groupId>io.meeds.addons.notes</groupId>
+        <groupId>io.meeds.notes</groupId>
         <artifactId>notes</artifactId>
         <version>${addon.meeds.notes.version}</version>
         <type>pom</type>

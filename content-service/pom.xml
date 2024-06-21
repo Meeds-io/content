@@ -61,7 +61,7 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>io.meeds.addons.notes</groupId>
+      <groupId>io.meeds.notes</groupId>
       <artifactId>notes-service</artifactId>
       <scope>provided</scope>
     </dependency>
