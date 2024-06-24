@@ -523,7 +523,6 @@ export default {
     },
     switchSettingsDrawer() {
       this.showAdvancedSettings = !this.showAdvancedSettings;
-      this.reset();
     },
     createNewTarget() {
       this.$root.$emit('open-news-publish-targets-management-drawer');
