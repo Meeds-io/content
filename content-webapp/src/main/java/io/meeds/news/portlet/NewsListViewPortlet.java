@@ -21,17 +21,31 @@ package io.meeds.news.portlet;
 
 import java.io.IOException;
 import java.util.Enumeration;
+import java.util.Random;
 
 import javax.portlet.ActionRequest;
 import javax.portlet.ActionResponse;
+import javax.portlet.PortletConfig;
 import javax.portlet.PortletException;
 import javax.portlet.PortletPreferences;
+import javax.portlet.RenderRequest;
+import javax.portlet.RenderResponse;
 
 import org.apache.commons.lang3.StringUtils;
 
-import org.exoplatform.commons.api.portlet.GenericDispatchedViewPortlet;
+import io.meeds.social.portlet.CMSPortlet;
 
-public class NewsListViewPortlet extends GenericDispatchedViewPortlet {
+public class NewsListViewPortlet extends CMSPortlet {
+
+  private static final String OBJECT_TYPE    = "newsListViewPortlet";
+
+  private static final String APPLICATION_ID = "applicationId";
+
+  @Override
+  public void init(PortletConfig config) throws PortletException {
+    super.init(config);
+    this.contentType = OBJECT_TYPE;
+  }
 
   @Override
   public void processAction(ActionRequest request, ActionResponse response) throws PortletException, IOException {
@@ -46,5 +60,21 @@ public class NewsListViewPortlet extends GenericDispatchedViewPortlet {
       preferences.setValue(name, value);
     }
     preferences.store();
+  }
+
+  @Override
+  public void doView(RenderRequest request, RenderResponse response) throws PortletException, IOException {
+    request.setAttribute(APPLICATION_ID, getOrCreateApplicationId(request.getPreferences()));
+    super.doView(request, response);
+  }
+
+  private String getOrCreateApplicationId(PortletPreferences preferences) {
+    String applicationId = preferences.getValue(APPLICATION_ID, null);
+    if (applicationId == null) {
+      Random random = new Random();
+      applicationId = String.valueOf(Math.abs(random.nextLong()));
+      savePreference(APPLICATION_ID, applicationId);
+    }
+    return applicationId;
   }
 }
