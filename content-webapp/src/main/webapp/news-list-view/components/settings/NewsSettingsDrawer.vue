@@ -261,11 +261,8 @@ export default {
     displayedViewTemplates() {
       return this.viewTemplates.filter(e=> !e.name.includes('EmptyTemplate'));
     },
-    hasNewsHeader() {
-      return this.newListTranslationEnabled && this.newsHeader?.[this.language]?.length || this.newsHeader?.length;
-    },
     disabled() {
-      return !this.hasNewsHeader || (this.showSeeAll && !this.isValidSeeAllUrl);
+      return this.showSeeAll && !this.isValidSeeAllUrl;
     },
     previewTemplate() {
       if ( this.viewTemplate === 'NewsLatest') {
