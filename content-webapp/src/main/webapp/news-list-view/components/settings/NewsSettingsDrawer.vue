@@ -343,7 +343,7 @@ export default {
       this.viewTemplate = this.$root.viewTemplate;
       this.viewExtensions = this.$root.viewExtensions;
       this.newsTarget = this.$root.newsTarget;
-      this.newsHeader = (this.newListTranslationEnabled && (Object.keys(this.savedHeaderTranslations)?.length && this.savedHeaderTranslations
+      this.newsHeader = (this.newListTranslationEnabled && (Object.keys(this.savedHeaderTranslations || {})?.length && this.savedHeaderTranslations
                                                        || {[this.$root.defaultLanguage]: this.$root.headerTitle}))
                                                        || this.$root.headerTitle;
       this.limit = this.$root.limit;
@@ -401,8 +401,7 @@ export default {
           this.$root.viewTemplate = this.viewTemplate;
           this.$root.newsTarget = this.newsTarget;
           this.$root.headerTranslations = this.newsHeader;
-          this.$root.headerTitle = this.newListTranslationEnabled && this.newsHeader?.[this.language]
-                                                                  || this.newsHeader;
+          this.$root.headerTitle = this.newListTranslationEnabled ? this.newsHeader?.[this.language] : this.newsHeader;
           this.$root.limit = this.limit;
           this.$root.showHeader = this.showHeader;
           this.$root.showSeeAll = this.showSeeAll;
@@ -418,8 +417,7 @@ export default {
             limit: this.limit,
             showHeader: this.showHeader,
             headerTranslations: this.newsHeader,
-            headerTitle: this.newListTranslationEnabled && this.newsHeader?.[this.language]
-                                                        || this.newsHeader,
+            headerTitle: this.newListTranslationEnabled ? this.newsHeader?.[this.language] : this.newsHeader,
             showSeeAll: this.showSeeAll,
             showArticleTitle: this.showArticleTitle,
             showArticleSummary: this.showArticleSummary,

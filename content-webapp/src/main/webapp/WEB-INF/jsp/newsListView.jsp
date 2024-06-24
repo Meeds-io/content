@@ -23,7 +23,6 @@
 <%@ page import="io.meeds.news.utils.NewsUtils" %>
 <%@ page import="org.exoplatform.web.PortalHttpServletResponseWrapper" %>
 <%@ page import="org.exoplatform.portal.application.PortalRequestContext" %>
-<%@ page import="org.exoplatform.portal.webui.application.UIPortlet" %>
 <%@ page import="org.exoplatform.commons.api.settings.ExoFeatureService" %>
 <%@ page import="org.exoplatform.commons.utils.CommonsUtils" %>
 <%@ taglib uri="http://java.sun.com/portlet_2_0" prefix="portlet" %>
@@ -33,7 +32,13 @@
 
 <div id="newsListViewApp" class="VuetifyApp">
   <%
-    String applicationId = UIPortlet.getCurrentUIPortlet().getStorageId();
+    String applicationId;
+    Object applicationIdParam = request.getAttribute("applicationId");
+    if (applicationIdParam instanceof String[]) {
+      applicationId = ((String[]) applicationIdParam)[0];
+    } else {
+      applicationId = (String) applicationIdParam;
+    }
     int generatedId = (int) (Math.random() * 1000000l);
     String appId = "news-list-view-" + generatedId;
     String[] viewTemplateParams = (String[]) request.getAttribute("viewTemplate");
