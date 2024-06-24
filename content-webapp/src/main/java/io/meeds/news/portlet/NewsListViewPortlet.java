@@ -23,11 +23,17 @@ import java.io.IOException;
 import java.util.Enumeration;
 import java.util.Random;
 
+import javax.portlet.ActionRequest;
+import javax.portlet.ActionResponse;
+import javax.portlet.PortletConfig;
+import javax.portlet.PortletException;
+import javax.portlet.PortletPreferences;
+import javax.portlet.RenderRequest;
+import javax.portlet.RenderResponse;
 
-import javax.portlet.*;
+import org.apache.commons.lang3.StringUtils;
 
 import io.meeds.social.portlet.CMSPortlet;
-import org.apache.commons.lang3.StringUtils;
 
 public class NewsListViewPortlet extends CMSPortlet {
 
