@@ -158,7 +158,7 @@
           </div>
         </div>
         <news-advanced-settings
-          v-else
+          v-show="showAdvancedSettings"
           :show-article-summary="showArticleSummary"
           :show-see-all="showSeeAll"
           :show-header="showHeader"
