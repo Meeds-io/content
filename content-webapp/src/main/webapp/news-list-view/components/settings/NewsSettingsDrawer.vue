@@ -158,7 +158,7 @@
           </div>
         </div>
         <news-advanced-settings
-          v-else
+          v-show="showAdvancedSettings"
           :show-article-summary="showArticleSummary"
           :show-see-all="showSeeAll"
           :show-header="showHeader"
@@ -528,7 +528,6 @@ export default {
     },
     switchSettingsDrawer() {
       this.showAdvancedSettings = !this.showAdvancedSettings;
-      this.reset();
     },
     createNewTarget() {
       this.$root.$emit('open-news-publish-targets-management-drawer');
