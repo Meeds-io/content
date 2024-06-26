@@ -64,7 +64,7 @@ public class NewsSearchConnector {
 
   public static final String           SEARCH_QUERY_TERM            = """
                                                                       "must":{ "query_string" :{
-                                                                              "fields": ["body", "posterName"],
+                                                                              "fields": ["body", "posterName", "summary","title"],
                                                                               "default_operator": "AND",
                                                                               "query": "@term@"}
                                                                               },""";
