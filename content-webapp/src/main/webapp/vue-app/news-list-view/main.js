@@ -119,7 +119,7 @@ export function init(params) {
         }
         Vue.prototype.$translationService.getTranslations('newsListView', applicationId, 'headerNameInput').then(translations => {
           this.headerTranslations = translations;
-          this.headerTitle = translations?.[lang] || translations?.en
+          this.headerTitle = translations?.[lang] || translations?.[this.defaultLanguage]
                                                   || params.headerTitle;
         });
       },

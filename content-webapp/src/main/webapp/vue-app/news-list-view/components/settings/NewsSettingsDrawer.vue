@@ -248,9 +248,6 @@ export default {
     displayedViewTemplates() {
       return this.viewTemplates.filter(e=> !e.name.includes('EmptyTemplate'));
     },
-    hasNewsHeader() {
-      return this.newListTranslationEnabled && this.newsHeader?.[this.language]?.length || this.newsHeader?.length;
-    },
     disabled() {
       return this.showSeeAll && !this.isValidSeeAllUrl;
     },
