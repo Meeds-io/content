@@ -401,7 +401,8 @@ export default {
           this.$root.viewTemplate = this.viewTemplate;
           this.$root.newsTarget = this.newsTarget;
           this.$root.headerTranslations = this.newsHeader;
-          this.$root.headerTitle = this.newListTranslationEnabled ? this.newsHeader?.[this.language] : this.newsHeader;
+          this.$root.headerTitle = this.newListTranslationEnabled ? this.newsHeader?.[this.language]
+              || this.newsHeader?.[this.$root.defaultLanguage] : this.newsHeader;
           this.$root.limit = this.limit;
           this.$root.showHeader = this.showHeader;
           this.$root.showSeeAll = this.showSeeAll;
@@ -417,7 +418,8 @@ export default {
             limit: this.limit,
             showHeader: this.showHeader,
             headerTranslations: this.newsHeader,
-            headerTitle: this.newListTranslationEnabled ? this.newsHeader?.[this.language] : this.newsHeader,
+            headerTitle: this.newListTranslationEnabled ? this.newsHeader?.[this.language]
+                || this.newsHeader?.[this.$root.defaultLanguage] : this.newsHeader,
             showSeeAll: this.showSeeAll,
             showArticleTitle: this.showArticleTitle,
             showArticleSummary: this.showArticleSummary,
