@@ -35,9 +35,9 @@
         style="min-height:50px">
         fa-newspaper
       </v-icon>
-      <v-span class="caption font-weight-bold ms-5">
+      <span class="font-weight-bold ms-5">
         {{ $t('news.composer.write') }}
-      </v-span>
+      </span>
     </div>
   </v-card>
 </template>
