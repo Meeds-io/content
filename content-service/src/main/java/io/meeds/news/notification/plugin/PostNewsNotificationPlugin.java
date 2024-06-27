@@ -185,7 +185,7 @@ public class PostNewsNotificationPlugin extends BaseNotificationPlugin {
   private boolean mustSendNotification(String newsId) {
     News news = null;
     try {
-      news = newsService.getNewsById(newsId, false);
+      news = newsService.getNewsArticleById(newsId);
     } catch (Exception e) {
       LOG.warn("Error retrieving news by id {}", newsId, e);
       return false;

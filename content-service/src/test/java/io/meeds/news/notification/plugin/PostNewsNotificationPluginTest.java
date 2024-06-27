@@ -155,7 +155,7 @@ public class PostNewsNotificationPluginTest {
 
     News news = mock(News.class);
     when(news.getActivityId()).thenReturn("12345");
-    when(newsService.getNewsById(Mockito.anyString(), Mockito.anyBoolean())).thenReturn(news);
+    when(newsService.getNewsArticleById(Mockito.anyString())).thenReturn(news);
 
     ExoSocialActivity activity = mock(ExoSocialActivity.class);
     when(activity.isHidden()).thenReturn(false);
@@ -230,7 +230,7 @@ public class PostNewsNotificationPluginTest {
 
     News news = mock(News.class);
     when(news.getActivityId()).thenReturn("12345");
-    when(newsService.getNewsById(Mockito.anyString(), Mockito.anyBoolean())).thenReturn(news);
+    when(newsService.getNewsArticleById(Mockito.anyString())).thenReturn(news);
 
     ExoSocialActivity activity = mock(ExoSocialActivity.class);
     when(activity.isHidden()).thenReturn(false);
@@ -306,7 +306,7 @@ public class PostNewsNotificationPluginTest {
 
     News news = mock(News.class);
     when(news.getActivityId()).thenReturn("12345");
-    when(newsService.getNewsById(Mockito.anyString(), Mockito.anyBoolean())).thenReturn(news);
+    when(newsService.getNewsArticleById(Mockito.anyString())).thenReturn(news);
 
     ExoSocialActivity activity = mock(ExoSocialActivity.class);
     when(activity.isHidden()).thenReturn(false);
