@@ -22,20 +22,6 @@
 <configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://www.exoplatform.org/xml/ns/kernel_1_2.xsd http://www.exoplatform.org/xml/ns/kernel_1_2.xsd"
   xmlns="http://www.exoplatform.org/xml/ns/kernel_1_2.xsd">
-  
-  <external-component-plugins>
-    <target-component>org.exoplatform.services.listener.ListenerService</target-component>
-    <component-plugin>
-      <name>exo.news.gamification.postArticle</name>
-      <set-method>addListener</set-method>
-      <type>io.meeds.news.listener.NewsGamificationIntegrationListener</type>
-    </component-plugin>
-    <component-plugin>
-      <name>exo.news.gamification.PublishArticle</name>
-      <set-method>addListener</set-method>
-      <type>io.meeds.news.listener.NewsGamificationIntegrationListener</type>
-    </component-plugin>
-  </external-component-plugins>
 
   <external-component-plugins>
     <target-component>io.meeds.gamification.service.EventRegistry</target-component>

@@ -21,11 +21,13 @@ package io.meeds.news.listener;
 
 import java.util.Set;
 
+import jakarta.annotation.PostConstruct;
 import org.apache.commons.lang3.StringUtils;
 
 import org.exoplatform.commons.search.index.IndexingService;
 import org.exoplatform.services.listener.Event;
 import org.exoplatform.services.listener.Listener;
+import org.exoplatform.services.listener.ListenerService;
 import org.exoplatform.social.core.manager.IdentityManager;
 import org.exoplatform.social.core.space.model.Space;
 import org.exoplatform.social.core.space.spi.SpaceService;
@@ -36,27 +38,39 @@ import org.exoplatform.social.metadata.tag.model.TagObject;
 import io.meeds.news.model.News;
 import io.meeds.news.search.NewsIndexingServiceConnector;
 import io.meeds.news.utils.NewsUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
+import static io.meeds.news.utils.NewsUtils.POST_NEWS;
+import static io.meeds.news.utils.NewsUtils.SHARE_NEWS;
+import static io.meeds.news.utils.NewsUtils.UPDATE_NEWS;
+
+@Component
 public class NewsMetadataListener extends Listener<String, News> {
 
-  private final IndexingService indexingService;
+  @Autowired
+  private IndexingService indexingService;
 
-  private final IdentityManager identityManager;
+  @Autowired
+  private IdentityManager identityManager;
 
-  private final SpaceService    spaceService;
+  @Autowired
+  private SpaceService    spaceService;
 
+  @Autowired
   private TagService            tagService;
 
-  public NewsMetadataListener(IndexingService indexingService,
-                              SpaceService spaceService,
-                              IdentityManager identityManager,
-                              TagService tagService) {
-    this.indexingService = indexingService;
-    this.identityManager = identityManager;
-    this.spaceService = spaceService;
-    this.tagService = tagService;
-  }
+  @Autowired
+  private ListenerService       listenerService;
 
+  private String[] LISTENERS = {POST_NEWS, UPDATE_NEWS, SHARE_NEWS};
+
+  @PostConstruct
+  public void init() {
+    for (String listener : LISTENERS) {
+      listenerService.addListener(listener, this);
+    }
+  }
   @Override
   public void onEvent(Event<String, News> event) throws Exception {
     News news = event.getData();
