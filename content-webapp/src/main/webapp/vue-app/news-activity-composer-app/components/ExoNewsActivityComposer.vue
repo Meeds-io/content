@@ -279,6 +279,7 @@ export default {
       desktopToolbar: null,
       oembedMinWidth: 300,
       spaceUrl: null,
+      autoSaveDone: false,
     };
   },
   computed: {
@@ -328,8 +329,7 @@ export default {
                  && this.news.publicationState !== 'draft') {
         return true;
       }
-
-      return false;
+      return !this.autoSaveDone;
     },
     draftWarningText() {
       return this.$t('news.drafts.warning.youAreEditingDraft').replace('{0}', this.news.draftUpdaterDisplayName).replace('{1}', this.formatDate(this.news.draftUpdateDate.time));
@@ -341,22 +341,26 @@ export default {
   watch: {
     'news.title': function() {
       if (this.news.title !== this.originalNews.title) {
+        this.autoSaveDone = false;
         this.autoSave();
       } 
     },
     'news.summary': function() {
       if (this.news.summary !== this.originalNews.summary) {
+        this.autoSaveDone = false;
         this.autoSave();
       } 
     },
     'news.body': function() {
       if (this.getContent(this.news.body) !== this.getContent(this.originalNews.body)) {
+        this.autoSaveDone = false;
         this.autoSave();
       } 
     },
     'news.illustration': function() {
       if (this.initIllustrationDone) {
         this.illustrationChanged = true;
+        this.autoSaveDone = false;
         this.autoSave();
       }
     }
@@ -601,6 +605,7 @@ export default {
             this.saveNewsDraft();
           }
         });
+        this.autoSaveDone = true;
       }, this.autoSaveDelay);
     },
     newsActions() {
