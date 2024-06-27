@@ -30,6 +30,7 @@ const lang = typeof eXo !== 'undefined' ? eXo.env.portal.language : 'en';
 
 // should expose the locale resources as REST API
 const urls = [
+  `${eXo.env.portal.context}/${eXo.env.portal.rest}/i18n/bundle/locale.portlet.notes.notesPortlet-${lang}.json`,
   `${newsConstants.PORTAL}/${newsConstants.PORTAL_REST}/i18n/bundle/locale.portlet.news.News-${lang}.json`,
 ];
 
@@ -50,17 +51,37 @@ export function init(maxToUpload, maxFileSize) {
     // init Vue app when locale resources are ready
     newsActivityComposerApp = new Vue({
       el: '#NewsComposerApp',
+      computed: {
+        contentUnifiedEditorEnabled() {
+          return eXo?.env?.portal?.contentUnifiedEditorEnabled;
+        },
+      },
       data: function() {
         return {
-          newsId: getURLQueryParam('newsId'),
+          articleId: getURLQueryParam('newsId'),
           spaceId: getURLQueryParam('spaceId'),
           activityId: getURLQueryParam('activityId'),
-          newsType: getURLQueryParam('type'),
+          articleType: getURLQueryParam('type'),
+          selectedLanguage: getURLQueryParam('translation'),
           maxToUpload: maxToUpload,
           maxFileSize: maxFileSize
         };
       },
-      template: '<exo-news-activity-composer :news-id="newsId" :space-id="spaceId" :activity-id="activityId" :max-to-upload="maxToUpload" :max-file-size="maxFileSize" :news-type="newsType"></exo-news-activity-composer>',
+      template: `<exo-news-activity-composer 
+                   v-if="!contentUnifiedEditorEnabled" 
+                   :news-id="articleId" 
+                   :space-id="spaceId" 
+                   :activity-id="activityId" 
+                   :max-to-upload="maxToUpload" 
+                   :max-file-size="maxFileSize" 
+                   :news-type="articleType" />
+                 <content-rich-editor
+                   v-else
+                   :article-id="articleId"
+                   :selected-language="selectedLanguage"
+                   :article-type="articleType"
+                   :activity-id="activityId"
+                   :space-id="spaceId" />`,
       i18n,
       vuetify
     });
