@@ -28,9 +28,12 @@ import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import org.exoplatform.commons.search.domain.Document;
+import org.exoplatform.commons.search.index.IndexingOperationProcessor;
 import org.exoplatform.commons.search.index.impl.ElasticIndexingServiceConnector;
 import org.exoplatform.commons.utils.HTMLSanitizer;
 import org.exoplatform.container.xml.InitParams;
+import org.exoplatform.container.xml.PropertiesParam;
+import org.exoplatform.container.xml.ValueParam;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
 import org.exoplatform.social.core.activity.model.ActivityStream;
@@ -47,31 +50,51 @@ import org.exoplatform.social.metadata.model.MetadataObject;
 import io.meeds.news.model.News;
 import io.meeds.news.service.NewsService;
 import io.meeds.news.utils.NewsUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
+
+@Component
 public class NewsIndexingServiceConnector extends ElasticIndexingServiceConnector {
 
-  public static final String    TYPE = "news";
+  public static final String         TYPE                        = "news";
 
-  private static final Log      LOG  = ExoLogger.getLogger(NewsIndexingServiceConnector.class);
+  private static final Log           LOG                         = ExoLogger.getLogger(NewsIndexingServiceConnector.class);
 
-  private final NewsService     newsService;
+  private static final String        INDEX_ALIAS_PROPERTY_NAME   = "index_alias";
 
-  private final IdentityManager identityManager;
+  private static final String        INDEX_CURRENT_PROPERTY_NAME = "index_current";
 
-  private final ActivityManager activityManager;
+  private static final String        FILE_PATH_PROPERTY_NAME     = "mapping.file.path";
 
-  private final MetadataService metadataService;
+  private static final String        INDEX_ALIAS_VALUE           = "news_alias";
 
-  public NewsIndexingServiceConnector(IdentityManager identityManager,
-                                      InitParams initParams,
-                                      NewsService newsService,
-                                      ActivityManager activityManager,
-                                      MetadataService metadataService) {
-    super(initParams);
-    this.newsService = newsService;
-    this.identityManager = identityManager;
-    this.activityManager = activityManager;
-    this.metadataService = metadataService;
+  private static final String        INDEX_CURRENT_VALUE         = "news_v1";
+
+  @Autowired
+  private NewsService                newsService;
+
+  @Autowired
+  private IdentityManager            identityManager;
+
+  @Autowired
+  private ActivityManager            activityManager;
+
+  @Autowired
+  private MetadataService            metadataService;
+
+  @Autowired
+  private IndexingOperationProcessor indexingOperationProcessor;
+
+  public NewsIndexingServiceConnector(@Value("${content.es.mapping.path:jar:/news-es-mapping.json}") String mappingFilePath) {
+    super(getInitParams(mappingFilePath));
+  }
+
+  @PostConstruct
+  public void init() {
+    indexingOperationProcessor.addConnector(this);
   }
 
   @Override
@@ -218,6 +241,20 @@ public class NewsIndexingServiceConnector extends ElasticIndexingServiceConnecto
     MetadataObject metadataObject = new MetadataObject(NewsUtils.NEWS_METADATA_OBJECT_TYPE, documentId);
     List<MetadataItem> metadataItems = metadataService.getMetadataItemsByObject(metadataObject);
     document.setMetadataItems(metadataItems);
+  }
+
+  private static InitParams getInitParams(String mappingFilePath) {
+    InitParams initParams = new InitParams();
+    ValueParam valueParam = new ValueParam();
+    valueParam.setName(FILE_PATH_PROPERTY_NAME);
+    valueParam.setValue(mappingFilePath);
+    PropertiesParam propertiesParam = new PropertiesParam();
+    propertiesParam.setName("constructor.params");
+    propertiesParam.setProperty(INDEX_ALIAS_PROPERTY_NAME, INDEX_ALIAS_VALUE);
+    propertiesParam.setProperty(INDEX_CURRENT_PROPERTY_NAME, INDEX_CURRENT_VALUE);
+    initParams.addParameter(valueParam);
+    initParams.addParameter(propertiesParam);
+    return initParams;
   }
 
 }

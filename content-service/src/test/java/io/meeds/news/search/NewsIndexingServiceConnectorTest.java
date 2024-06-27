@@ -22,12 +22,17 @@ package io.meeds.news.search;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
+import static org.mockito.MockitoAnnotations.openMocks;
 
 import java.util.Date;
 
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
@@ -50,8 +55,6 @@ import io.meeds.news.service.NewsService;
 @RunWith(MockitoJUnitRunner.class)
 public class NewsIndexingServiceConnectorTest {
 
-  NewsIndexingServiceConnector newsIndexingServiceConnector = null;
-
   @Mock
   NewsService                  newsService;
 
@@ -64,13 +67,16 @@ public class NewsIndexingServiceConnectorTest {
   @Mock
   MetadataService              metadataService;
 
+  @InjectMocks
+  NewsIndexingServiceConnector newsIndexingServiceConnector;
+
+  @Before
+  public void setUp() {
+    openMocks(this);
+  }
+
   @Test
   public void testGetAllIds() {
-    newsIndexingServiceConnector = new NewsIndexingServiceConnector(identityManager,
-                                                                    getParams(),
-                                                                    newsService,
-                                                                    activityManager,
-                                                                    metadataService);
     try {
       newsIndexingServiceConnector.getAllIds(0, 10);
       fail("getAllIds shouldn't be supported");
@@ -81,12 +87,6 @@ public class NewsIndexingServiceConnectorTest {
 
   @Test
   public void testCreate() {
-    newsIndexingServiceConnector = new NewsIndexingServiceConnector(identityManager,
-                                                                    getParams(),
-                                                                    newsService,
-                                                                    activityManager,
-                                                                    metadataService);
-
     try {
       newsIndexingServiceConnector.create(null);
       fail("IllegalArgumentException should be thrown");
@@ -129,7 +129,7 @@ public class NewsIndexingServiceConnectorTest {
     posterProfile.setProperty("fullName", "Root Root");
     posterIdentity.setProfile(posterProfile);
     try {
-      when(newsService.getNewsArticleById("1")).thenReturn(news);
+      when(newsService.getNewsArticleById(anyString())).thenReturn(news);
     } catch (Exception e) {
       e.printStackTrace();
     }
@@ -148,14 +148,4 @@ public class NewsIndexingServiceConnectorTest {
     assertNotNull(document.getPermissions());
     assertEquals(1, document.getPermissions().size());
   }
-
-  private InitParams getParams() {
-    InitParams params = new InitParams();
-    PropertiesParam propertiesParam = new PropertiesParam();
-    propertiesParam.setName("constructor.params");
-    params.addParameter(propertiesParam);
-    propertiesParam.setProperty("index_current", "index_name");
-    return params;
-  }
-
 }

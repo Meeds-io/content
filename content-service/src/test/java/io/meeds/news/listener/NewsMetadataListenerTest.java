@@ -27,8 +27,11 @@ import static org.mockito.Mockito.when;
 import java.util.Arrays;
 import java.util.HashSet;
 
+import org.exoplatform.services.listener.ListenerService;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
@@ -64,12 +67,11 @@ public class NewsMetadataListenerTest {
   @Mock
   private TagService          tagService;
 
+  @InjectMocks
+  NewsMetadataListener        newsMetadataListener;
+
   @Test
   public void testCreateNewsTagsWhenNewsSaved() throws Exception {
-    NewsMetadataListener newsMetadataListener = new NewsMetadataListener(indexingService,
-                                                                         spaceService,
-                                                                         identityManager,
-                                                                         tagService);
     String newsId = "newsId";
     String spaceId = "spaceId";
     String content = "Test #tag1 Test #tag2.";
