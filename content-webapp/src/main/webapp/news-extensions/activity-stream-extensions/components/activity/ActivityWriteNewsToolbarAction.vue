@@ -30,9 +30,9 @@
       size="27">
       fa-newspaper
     </v-icon>
-    <v-span class="body-2 font-weight-bold ms-5 dark-grey-color">
+    <span class="font-weight-bold ms-5 dark-grey-color">
       {{ $t('news.title') }}
-    </v-span>
+    </span>
   </v-btn>
 </template>
 <script>
