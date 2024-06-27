@@ -32,4 +32,32 @@
       </properties-param>
     </init-params>
   </component>
+
+  <component>
+    <key>ContentFeatureProperties</key>
+    <type>org.exoplatform.container.ExtendedPropertyConfigurator</type>
+    <init-params>
+      <properties-param>
+        <name>ContentFeatureProperties</name>
+        <description>unified editor Feature enablement flag</description>
+        <property name="exo.feature.contentUnifiedEditor.enabled" value="${exo.feature.contentUnifiedEditor.enabled:false}"/>
+      </properties-param>
+    </init-params>
+  </component>
+
+  <external-component-plugins>
+  <target-component>org.exoplatform.groovyscript.text.TemplateService</target-component>
+  <component-plugin>
+    <name>UIPortalApplication-head</name>
+    <set-method>addTemplateExtension</set-method>
+    <type>org.exoplatform.groovyscript.text.TemplateExtensionPlugin</type>
+    <init-params>
+      <values-param>
+        <name>templates</name>
+        <description>The list of templates to include in HTML Page Header with UIPortalApplication.gtmpl</description>
+        <value>war:/groovy/content/webui/UIContentHeadTemplate.gtmpl</value>
+      </values-param>
+    </init-params>
+  </component-plugin>
+  </external-component-plugins>
 </configuration>
