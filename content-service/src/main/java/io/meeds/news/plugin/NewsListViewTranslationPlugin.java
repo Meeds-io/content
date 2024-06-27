@@ -20,16 +20,23 @@
 package io.meeds.news.plugin;
 
 import io.meeds.social.translation.plugin.TranslationPlugin;
+import io.meeds.social.translation.service.TranslationService;
+import jakarta.annotation.PostConstruct;
+import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 import org.exoplatform.commons.exception.ObjectNotFoundException;
+import org.exoplatform.container.ExoContainerContext;
 import org.exoplatform.services.organization.OrganizationService;
 import org.exoplatform.services.security.Identity;
 import org.exoplatform.services.security.IdentityRegistry;
 import org.exoplatform.services.security.MembershipEntry;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Objects;
 
+@Component
 public class NewsListViewTranslationPlugin extends TranslationPlugin {
 
   public static final String        NEWS_LIST_VIEW_OBJECT_TYPE      = "newsListView";
@@ -38,13 +45,24 @@ public class NewsListViewTranslationPlugin extends TranslationPlugin {
 
   private static final String       PLATFORM_WEB_CONTRIBUTORS_GROUP = "/platform/web-contributors";
 
-  private final IdentityRegistry    identityRegistry;
+  @Setter
+  private IdentityRegistry    identityRegistry;
 
-  private final OrganizationService organizationService;
+  @Autowired
+  private OrganizationService organizationService;
 
-  public NewsListViewTranslationPlugin(IdentityRegistry identityRegistry, OrganizationService organizationService) {
-    this.identityRegistry = identityRegistry;
-    this.organizationService = organizationService;
+  @Autowired
+  private TranslationService  translationService;
+
+  @PostConstruct
+  public void init() {
+    setIdentityRegistry(ExoContainerContext.getService(IdentityRegistry.class));
+    translationService.addPlugin(this);
+  }
+
+  @Override
+  public String getName() {
+    return NEWS_LIST_VIEW_OBJECT_TYPE;
   }
 
   @Override

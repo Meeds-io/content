@@ -91,7 +91,7 @@ public class NewsSpaceWebNotificationPluginTest {
     String metadataObjectType = ExoSocialActivityImpl.DEFAULT_ACTIVITY_METADATA_OBJECT_TYPE;
     String metadataObjectId = activityId;
     when(notificationInfo.getValueOwnerParameter(NotificationConstants.NEWS_ID)).thenReturn(newsId);
-    when(newsService.getNewsById(newsId, false)).thenReturn(news);
+    when(newsService.getNewsArticleById(newsId)).thenReturn(news);
     when(news.getActivityId()).thenReturn(activityId);
     when(identityManager.getOrCreateUserIdentity(USERNAME)).thenReturn(userIdentity);
     when(userIdentity.getId()).thenReturn(String.valueOf(userIdentityId));

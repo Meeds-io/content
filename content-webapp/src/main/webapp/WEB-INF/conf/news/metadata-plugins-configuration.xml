@@ -106,38 +106,4 @@
       </init-params>
     </component-plugin>
   </external-component-plugins>
-
-  <external-component-plugins>
-    <target-component>org.exoplatform.services.listener.ListenerService</target-component>
-    <component-plugin>
-      <name>exo.news.postArticle</name>
-      <set-method>addListener</set-method>
-      <type>io.meeds.news.listener.NewsMetadataListener</type>
-    </component-plugin>
-    <component-plugin>
-      <name>exo.news.updateArticle</name>
-      <set-method>addListener</set-method>
-      <type>io.meeds.news.listener.NewsMetadataListener</type>
-    </component-plugin>
-    <component-plugin>
-      <name>exo.news.shareArticle</name>
-      <set-method>addListener</set-method>
-      <type>io.meeds.news.listener.NewsMetadataListener</type>
-    </component-plugin>
-    <component-plugin>
-      <name>social.metadataItem.deleted</name>
-      <set-method>addListener</set-method>
-      <type>io.meeds.news.listener.MetadataItemModified</type>
-    </component-plugin>
-    <component-plugin>
-      <name>social.metadataItem.updated</name>
-      <set-method>addListener</set-method>
-      <type>io.meeds.news.listener.MetadataItemModified</type>
-    </component-plugin>
-    <component-plugin>
-      <name>social.metadataItem.created</name>
-      <set-method>addListener</set-method>
-      <type>io.meeds.news.listener.MetadataItemModified</type>
-    </component-plugin>
-  </external-component-plugins>
 </configuration>

@@ -478,22 +478,6 @@ public class NewsServiceImpl implements NewsService {
    * {@inheritDoc}
    */
   @Override
-  public News getNewsById(String newsId, boolean editMode) throws Exception {
-    return null;
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public News getNewsById(String newsId, Identity currentIdentity, boolean editMode) throws IllegalAccessException {
-    return null;
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
   public News getNewsById(String newsId,
                           Identity currentIdentity,
                           boolean editMode,
