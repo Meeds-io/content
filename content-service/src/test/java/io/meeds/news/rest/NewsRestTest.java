@@ -460,7 +460,7 @@ public class NewsRestTest {
     news.setId("1");
     news.setSpaceId("1");
 
-    lenient().when(newsService.getNewsById(anyString(), any(), anyBoolean())).thenReturn(news);
+    lenient().when(newsService.getNewsById(anyString(), any(), anyBoolean(), anyString())).thenReturn(news);
     Space space1 = new Space();
     space1.setId("1");
     space1.setPrettyName("space1");
@@ -495,7 +495,7 @@ public class NewsRestTest {
     Space space1 = new Space();
     space1.setId("1");
     space1.setPrettyName("space1");
-    lenient().when(newsService.getNewsById(anyString(), any(), anyBoolean())).thenReturn(news);
+    lenient().when(newsService.getNewsById(anyString(), any(), anyBoolean(), anyString())).thenReturn(news);
     lenient().when(spaceService.getSpaceById(anyString())).thenReturn(space1);
     lenient().when(spaceService.isMember(any(Space.class), eq(JOHN))).thenReturn(true);
     lenient().when(spaceService.isSuperManager(eq(JOHN))).thenReturn(true);
@@ -539,7 +539,7 @@ public class NewsRestTest {
     news.setId("1");
     Identity currentIdentity = new Identity(JOHN);
     ConversationState.setCurrent(new ConversationState(currentIdentity));
-    lenient().when(newsService.getNewsById(anyString(), any(), anyBoolean())).thenReturn(null);
+    lenient().when(newsService.getNewsById(anyString(), any(), anyBoolean(), anyString())).thenReturn(null);
     lenient().when(spaceService.getSpaceById(anyString())).thenReturn(new Space());
     lenient().when(spaceService.isMember(any(Space.class), eq(JOHN))).thenReturn(false);
     lenient().when(spaceService.isSuperManager(eq(JOHN))).thenReturn(true);
@@ -575,7 +575,7 @@ public class NewsRestTest {
     
     Identity currentIdentity = new Identity(JOHN);
     ConversationState.setCurrent(new ConversationState(currentIdentity));
-    lenient().when(newsService.getNewsById(anyString(), any(), anyBoolean())).thenReturn(null);
+    lenient().when(newsService.getNewsById(anyString(), any(), anyBoolean(), anyString())).thenReturn(null);
     lenient().when(spaceService.getSpaceById(anyString())).thenReturn(new Space());
     lenient().when(spaceService.isMember(any(Space.class), eq(JOHN))).thenReturn(true);
     lenient().when(spaceService.isSuperManager(eq(JOHN))).thenReturn(true);
@@ -592,7 +592,7 @@ public class NewsRestTest {
     // Given
     Identity currentIdentity = new Identity(JOHN);
     ConversationState.setCurrent(new ConversationState(currentIdentity));
-    lenient().when(newsService.getNewsById(anyString(), any(), anyBoolean())).thenReturn(null);
+    lenient().when(newsService.getNewsById(anyString(), any(), anyBoolean(), anyString())).thenReturn(null);
     lenient().when(spaceService.getSpaceById(anyString())).thenReturn(new Space());
     lenient().when(spaceService.isMember(any(Space.class), eq(JOHN))).thenReturn(true);
     lenient().when(spaceService.isSuperManager(eq(JOHN))).thenReturn(true);

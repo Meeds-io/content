@@ -22,9 +22,11 @@ package io.meeds.news.search;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.MockitoAnnotations.openMocks;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -37,17 +39,14 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.runners.MockitoJUnitRunner;
 
 import org.exoplatform.commons.search.es.client.ElasticSearchingClient;
 import org.exoplatform.commons.utils.IOUtil;
 import org.exoplatform.commons.utils.PropertyManager;
 import org.exoplatform.container.configuration.ConfigurationManager;
-import org.exoplatform.container.xml.InitParams;
-import org.exoplatform.container.xml.PropertiesParam;
-import org.exoplatform.container.xml.ValueParam;
 import org.exoplatform.social.core.identity.model.Identity;
 import org.exoplatform.social.core.identity.provider.OrganizationIdentityProvider;
 import org.exoplatform.social.core.jpa.search.ActivitySearchConnector;
@@ -55,6 +54,8 @@ import org.exoplatform.social.core.manager.IdentityManager;
 import org.exoplatform.social.core.storage.api.ActivityStorage;
 
 import io.meeds.news.filter.NewsFilter;
+import org.mockito.junit.MockitoJUnitRunner;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @RunWith(MockitoJUnitRunner.class)
 public class NewsSearchConnectorTest {
@@ -76,17 +77,25 @@ public class NewsSearchConnectorTest {
   @Mock
   ElasticSearchingClient      client;
 
+  @InjectMocks
+  NewsSearchConnector         newsSearchConnector;
+
   String                      searchResult    = null;
 
   boolean                     developingValue = false;
 
   @Before
   public void setUp() throws Exception {// NOSONAR
+    openMocks(this);
+    // set filed injected by the @Value annotation
+    ReflectionTestUtils.setField(newsSearchConnector, "index", "news_alias");
+    ReflectionTestUtils.setField(newsSearchConnector, "searchType", "news");
+    ReflectionTestUtils.setField(newsSearchConnector, "searchQueryFilePath", "jar:/news-search-query.json");
     searchResult = IOUtil.getStreamContentAsString(getClass().getClassLoader().getResourceAsStream("news-search-result.json"));
 
     try {
       Mockito.reset(configurationManager);
-      lenient().when(configurationManager.getInputStream("FILE_PATH"))
+      lenient().when(configurationManager.getInputStream(anyString()))
                .thenReturn(new ByteArrayInputStream(FAKE_ES_QUERY.getBytes()));
     } catch (Exception e) {
       throw new IllegalStateException("Error retrieving ES Query content", e);
@@ -94,6 +103,7 @@ public class NewsSearchConnectorTest {
     developingValue = PropertyManager.isDevelopping();
     PropertyManager.setProperty(PropertyManager.DEVELOPING, "false");
     PropertyManager.refresh();
+    newsSearchConnector.init();
   }
 
   @After
@@ -104,11 +114,6 @@ public class NewsSearchConnectorTest {
 
   @Test
   public void testSearchArguments() {
-    NewsSearchConnector newsSearchConnector = new NewsSearchConnector(configurationManager,
-                                                                            identityManager,
-                                                                            activityStorage,
-                                                                            client,
-                                                                            getParams());
     NewsFilter filter = new NewsFilter();
     filter.setSearchText("term");
     filter.setLimit(0);
@@ -145,12 +150,6 @@ public class NewsSearchConnectorTest {
 
   @Test
   public void testSearchNoResult() {
-    NewsSearchConnector newsSearchConnector = new NewsSearchConnector(configurationManager,
-                                                                            identityManager,
-                                                                            activityStorage,
-                                                                            client,
-                                                                            getParams());
-
     NewsFilter filter = new NewsFilter();
     filter.setSearchText("term");
     filter.setLimit(10);
@@ -178,12 +177,6 @@ public class NewsSearchConnectorTest {
 
   @Test
   public void testSearchWithResult() {
-    NewsSearchConnector newsSearchConnector = new NewsSearchConnector(configurationManager,
-                                                                            identityManager,
-                                                                            activityStorage,
-                                                                            client,
-                                                                            getParams());
-
     NewsFilter filter = new NewsFilter();
     filter.setSearchText("term");
     filter.setLimit(10);
@@ -220,12 +213,6 @@ public class NewsSearchConnectorTest {
 
   @Test
   public void testSearchWithIdentityResult() throws IOException {// NOSONAR
-    NewsSearchConnector newsSearchConnector = new NewsSearchConnector(configurationManager,
-                                                                            identityManager,
-                                                                            activityStorage,
-                                                                            client,
-                                                                            getParams());
-
     NewsFilter filter = new NewsFilter();
     filter.setSearchText("john");
     filter.setLimit(10);
@@ -263,19 +250,5 @@ public class NewsSearchConnectorTest {
     assertEquals(0, newsESSearchResult.getExcerpts().size());
   }
 
-  private InitParams getParams() {
-    InitParams params = new InitParams();
-    PropertiesParam propertiesParam = new PropertiesParam();
-    propertiesParam.setName("constructor.params");
-    propertiesParam.setProperty("index", ES_INDEX);
-
-    ValueParam valueParam = new ValueParam();
-    valueParam.setName("query.file.path");
-    valueParam.setValue("FILE_PATH");
-
-    params.addParameter(propertiesParam);
-    params.addParameter(valueParam);
-    return params;
-  }
 
 }

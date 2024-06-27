@@ -60,7 +60,7 @@ public class NewsSpaceWebNotificationPlugin extends SpaceWebNotificationPlugin {
     String newsId = notification.getValueOwnerParameter(NotificationConstants.NEWS_ID);
     News news = null;
     try {
-      news = newsService.getNewsById(newsId, false);
+      news = newsService.getNewsArticleById(newsId);
     } catch (Exception e) {
       LOG.warn("Error retrieving news by id {}", newsId, e);
       return null;

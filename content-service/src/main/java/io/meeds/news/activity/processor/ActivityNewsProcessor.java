@@ -21,8 +21,10 @@ package io.meeds.news.activity.processor;
 
 import java.util.HashMap;
 
+import jakarta.annotation.PostConstruct;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.exoplatform.container.xml.InitParams;
+import org.exoplatform.container.xml.ValueParam;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
 import org.exoplatform.social.common.RealtimeListAccess;
@@ -33,21 +35,36 @@ import org.exoplatform.social.core.manager.ActivityManager;
 import io.meeds.news.model.News;
 import io.meeds.news.service.NewsService;
 import io.meeds.news.utils.NewsUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
-import static io.meeds.news.utils.NewsUtils.NewsObjectType.ARTICLE;
-
+@Component
 public class ActivityNewsProcessor extends BaseActivityProcessorPlugin {
 
-  private static final Log LOG = ExoLogger.getLogger(ActivityNewsProcessor.class);
+  private static final Log    LOG                     = ExoLogger.getLogger(ActivityNewsProcessor.class);
 
-  private NewsService      newsService;
+  private static final String ACTIVITY_PROCESSOR_NAME = "ActivityNewsProcessor";
 
-  private ActivityManager  activityManager;
+  private static final int    processorPriority       = 30;
 
-  public ActivityNewsProcessor(ActivityManager activityManager, NewsService newsService, InitParams initParams) {
-    super(initParams);
-    this.newsService = newsService;
-    this.activityManager = activityManager;
+  @Autowired
+  private NewsService         newsService;
+
+  @Autowired
+  private ActivityManager     activityManager;
+
+  public ActivityNewsProcessor() {
+    super(getInitParams());
+  }
+
+  @PostConstruct
+  public void init() {
+    activityManager.addProcessorPlugin(this);
+  }
+
+  @Override
+  public String getName() {
+    return ACTIVITY_PROCESSOR_NAME;
   }
 
   @Override
@@ -80,4 +97,12 @@ public class ActivityNewsProcessor extends BaseActivityProcessorPlugin {
     }
   }
 
+  private static InitParams getInitParams() {
+    InitParams initParams = new InitParams();
+    ValueParam param = new ValueParam();
+    param.setName("priority");
+    param.setValue(String.valueOf(processorPriority));
+    initParams.addParameter(param);
+    return initParams;
+  }
 }
