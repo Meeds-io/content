@@ -35,14 +35,15 @@
       :translations="translations"
       :selected-language="selectedLanguage"
       :lang-button-tooltip-text="langButtonTooltipText"
-      :publish-and-post-button-text="$t('news.edit.update.post')"
-      :publish-button-text="!editMode && $t('news.composer.post') || $t('news.edit.update')"
-      :enable-publish-and-post="editMode"
+      :publish-button-text="publishButtonText"
       :is-mobile="isMobile"
       :editor-body-input-ref="editorBodyInputRef"
       :editor-title-input-ref="editorTitleInputRef"
       :space-group-id="spaceGroupId"
       :space-url="spaceUrl"
+      :save-button-icon="saveButtonIcon"
+      :editor-icon="editorIcon"
+      @editor-closed="editorClosed"
       @open-treeview="openTreeView"
       @post-note="postArticleActions"
       @auto-save="autoSave"
@@ -81,7 +82,6 @@ export default {
         illustration: []
       },
       autoSaveDelay: 1000,
-      newsFormTitle: '',
       newsFormTitlePlaceholder: `${this.$t('news.composer.placeholderTitleInput')}*`,
       newsFormContentPlaceholder: `${this.$t('news.composer.placeholderContentInput')}*`,
       appName: 'content',
@@ -105,6 +105,7 @@ export default {
       imagesURLs: new Map(),
       canScheduleArticle: false,
       postKey: 1,
+      editorIcon: 'fas fa-newspaper',
     };
   },
   props: {
@@ -169,6 +170,19 @@ export default {
       return this.articleId && this.$t('content.label.button.translations.options')
                             || this.$t('content.message.firstVersionShouldBeCreated');
     },
+    newsFormTitle() {
+      if (!this.editMode) {
+        return this.$t('news.editor.label.create');
+      } else {
+        return this.$t('news.editor.label.edit');
+      }
+    },
+    publishButtonText() {
+      return !this.editMode && this.$t('news.editor.publish') || this.$t('news.editor.save');
+    },
+    saveButtonIcon() {
+      return this.editMode && 'fas fa-save' || 'fa-solid fa-paper-plane';
+    }
   },
   created() {
     this.getArticle();
@@ -184,6 +198,9 @@ export default {
     this.initEditor();
   },
   methods: {
+    editorClosed() {
+      window.close();
+    },
     openTreeView(/*noteId, source, includeDisplay, filter*/) {
       // TO DO
     },
@@ -418,17 +435,6 @@ export default {
       }
       return articleType;
     },
-    displayFormTitle(space) {
-      if (this.isMobile && !this.editMode) {
-        this.newsFormTitle = `${this.$t('news.composer.mobile.createNews')}`;
-        this.spaceDisplayName = space.displayName;
-      } else if (!this.editMode) {
-        this.newsFormTitle = this.newsFormTitle = this.$t('news.composer.createNews', {0: space.displayName});
-      } else {
-        this.newsFormTitle = this.$t('news.edit.editNews');
-        this.spaceDisplayName = space.displayName;
-      }
-    },
     replaceImagesURLs: function(content) {
       let updatedContent = content;
       const specialCharactersRegex = /[-/\\^$*+?.()|[\]{}]/g;
@@ -459,8 +465,8 @@ export default {
     getArticle() {
       this.loading = true;
       this.$newsServices.getSpaceById(this.spaceId).then(space => {
-        this.displayFormTitle(space);
         this.currentSpace = space;
+        this.spaceDisplayName = space.displayName;
         this.spaceUrl = this.currentSpace?.prettyName;
         this.$newsServices.canUserCreateNews(this.currentSpace.id).then(canCreateArticle => {
           this.canCreateArticle = canCreateArticle || this.articleId;
