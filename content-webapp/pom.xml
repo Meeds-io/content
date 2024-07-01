@@ -34,13 +34,13 @@
   <dependencies>
     <!-- Platform-ui for Less Variables use-->
     <dependency>
-      <groupId>org.exoplatform.platform-ui</groupId>
+      <groupId>io.meeds.platform-ui</groupId>
       <artifactId>platform-ui-skin</artifactId>
       <classifier>sources</classifier>
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>org.exoplatform.commons</groupId>
+      <groupId>io.meeds.commons</groupId>
       <artifactId>commons-api</artifactId>
       <scope>provided</scope>
     </dependency>
@@ -55,7 +55,7 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>org.exoplatform.commons</groupId>
+      <groupId>io.meeds.commons</groupId>
       <artifactId>commons-extension-webapp</artifactId>
       <classifier>sources</classifier>
       <scope>provided</scope>
