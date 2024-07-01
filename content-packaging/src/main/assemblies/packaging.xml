@@ -26,9 +26,9 @@
     <dependencySet>
       <useProjectArtifact>false</useProjectArtifact>
       <outputDirectory>/</outputDirectory>
-      <outputFileNameMapping>content.war</outputFileNameMapping>
+      <outputFileNameMapping>${artifact.build.finalName}.${artifact.extension}</outputFileNameMapping>
       <includes>
-        <include>io.meeds.content:content-webapp</include>
+        <include>${project.groupId}:*:war</include>
       </includes>
       <scope>provided</scope>
     </dependencySet>
@@ -37,7 +37,7 @@
       <outputDirectory>/</outputDirectory>
       <outputFileNameMapping>${artifact.artifactId}${dashClassifier?}.${artifact.extension}</outputFileNameMapping>
       <includes>
-        <include>io.meeds.content:content-service</include>
+        <include>${project.groupId}:*:jar</include>
       </includes>
       <scope>provided</scope>
     </dependencySet>

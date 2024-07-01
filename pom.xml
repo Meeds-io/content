@@ -19,7 +19,7 @@
   <parent>
     <artifactId>addons-exo-parent-pom</artifactId>
     <groupId>org.exoplatform.addons</groupId>
-    <version>18-M03</version>
+    <version>18-M04</version>
   </parent>
   <groupId>io.meeds.content</groupId>
   <artifactId>content</artifactId>
@@ -35,19 +35,18 @@
   </modules>
 
   <properties>
-    <addon.exo.notes.version>7.0.x-SNAPSHOT</addon.exo.notes.version>
+    <addon.meeds.notes.version>7.0.x-SNAPSHOT</addon.meeds.notes.version>
     <pitest.version>1.4.10</pitest.version>
     <sonar.organization>meeds-io</sonar.organization>
-    <exo.snapshots.repo.url>https://repository.exoplatform.org/content/repositories/meeds-snapshots</exo.snapshots.repo.url>
   </properties>
 
   <dependencyManagement>
     <dependencies>
       <!-- Import versions from notes project -->
       <dependency>
-        <groupId>org.exoplatform.addons.notes</groupId>
+        <groupId>io.meeds.notes</groupId>
         <artifactId>notes</artifactId>
-        <version>${addon.exo.notes.version}</version>
+        <version>${addon.meeds.notes.version}</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
