@@ -75,13 +75,7 @@ export function init(maxToUpload, maxFileSize) {
                    :max-to-upload="maxToUpload" 
                    :max-file-size="maxFileSize" 
                    :news-type="articleType" />
-                 <content-rich-editor
-                   v-else
-                   :article-id="articleId"
-                   :selected-language="selectedLanguage"
-                   :article-type="articleType"
-                   :activity-id="activityId"
-                   :space-id="spaceId" />`,
+                 <content-rich-editor v-else />`,
       i18n,
       vuetify
     });
@@ -94,7 +88,7 @@ export function destroy() {
   }
 }
 
-function getURLQueryParam(paramName) {
+export function getURLQueryParam(paramName) {
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.has(paramName)) {
     return urlParams.get(paramName);
