@@ -20,12 +20,15 @@
  
 import ExoNewsActivityComposer  from './components/ExoNewsActivityComposer.vue';
 import ExoNewsFileDrop from './components/ExoNewsFileDrop.vue';
+import ContentRichEditor from './components/ContentRichEditor.vue';
+
 import * as  newsServices from '../services/newsServices.js';
 import * as newsConstants from '../js/newsConstants.js';
 
 const components = {
   'exo-news-activity-composer': ExoNewsActivityComposer,
   'exo-news-file-drop': ExoNewsFileDrop,
+  'content-rich-editor': ContentRichEditor
 };
 
 for (const key in components) {

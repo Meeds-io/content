@@ -1,0 +1,12 @@
+<%
+  import org.exoplatform.commons.api.settings.ExoFeatureService;
+  import org.exoplatform.portal.application.PortalRequestContext;
+  def rcontext = _ctx.getRequestContext();
+  ExoFeatureService featureService = uicomponent.getApplicationComponent(ExoFeatureService.class);
+  def userName = rcontext.getRemoteUser();
+%>
+
+<script type="text/javascript" id="contentHeadScripts">
+     eXo.env.portal.newsListTranslationEnabled = <%=featureService.isFeatureActiveForUser("newsListTranslation", userName)%>;
+     eXo.env.portal.contentUnifiedEditorEnabled = <%=featureService.isFeatureActiveForUser("contentUnifiedEditor", userName)%>;
+</script>
