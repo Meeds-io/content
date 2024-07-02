@@ -21,7 +21,7 @@
 <template>
   <div>
     <v-overlay
-      z-index="1000"
+      z-index="3000"
       :value="drawer"
       @click.native="drawer = false" />
     <exo-drawer
