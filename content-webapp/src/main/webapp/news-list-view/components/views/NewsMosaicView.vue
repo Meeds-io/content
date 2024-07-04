@@ -21,30 +21,31 @@
 <template>
   <v-hover v-slot="{ hover }">
     <div id="top-news-mosaic" ref="top-news-mosaic">
-      <news-settings :is-hovering="hover"
-                     v-if="!isSmallBreakpoint"
-                     :class="isMobile ? '' : 'settingNewsContainer'"
-                     class="mt-3 mr-1" />
+      <news-settings
+        :is-hovering="hover"
+        v-if="!isSmallBreakpoint"
+        :class="isMobile ? '' : 'settingNewsContainer'"
+        class="mt-3 mr-1" />
       <div :class="`mosaic-container ${smallHeightClass}`">
         <div
-            v-for="(item, index) of news"
-            :key="index"
-            :class="isSmallWidth ? 'articleSmallWidth' : 'article'"
-            :id="`articleItem-${index}`">
+          v-for="(item, index) of news"
+          :key="index"
+          :class="isSmallWidth ? 'articleSmallWidth' : 'article'"
+          :id="`articleItem-${index}`">
           <a
-              class="articleLink d-block"
-              target="_self"
-              :href="articleUrl(item)">
+            class="articleLink d-block"
+            target="_self"
+            :href="articleUrl(item)">
             <img :src="showArticleImage && item.illustrationURL !== null ? illustrationURL(item,index) : '/content/images/news.png'" :alt="$t('news.latest.alt.articleImage')">
             <div class="titleArea">
               <div v-if="showArticleDate" class="articleDate">
                 <date-format
-                    :value="new Date(item.publishDate.time)"
-                    :format="dateFormat" />
+                  :value="new Date(item.publishDate.time)"
+                  :format="dateFormat" />
               </div>
               <div
-                  v-if="showArticleTitle"
-                  :class="styleArticleTitle()">
+                v-if="showArticleTitle"
+                :class="styleArticleTitle()">
                 {{ item.title }}
               </div>
             </div>

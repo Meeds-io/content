@@ -20,7 +20,10 @@
 -->
 <template>
   <v-hover v-slot="{ hover }">
-    <div class="card-border-radius" id="critical-alerts-slider" v-show="!emptyTemplate">
+    <div
+      class="card-border-radius"
+      id="critical-alerts-slider"
+      v-show="!emptyTemplate">
       <div class="alerts-header">
         <div class="alerts-icon">
           <v-icon>warning</v-icon>
@@ -30,22 +33,22 @@
 
       <div class="alerts-viewer ps-5 flex-grow-1">
         <v-carousel
-            v-model="slider"
-            hide-delimiters
-            cycle
-            :show-arrows="false"
-            interval="10000"
-            height="20">
+          v-model="slider"
+          hide-delimiters
+          cycle
+          :show-arrows="false"
+          interval="10000"
+          height="20">
           <v-carousel-item
-              v-for="(item,i) in news"
-              :key="i">
+            v-for="(item,i) in news"
+            :key="i">
             <a :href="articleUrl(item)" class="article-link flex-grow-1">
               <div class="alerts-article">
-              <span v-if="showArticleDate" class="alerts-article-date">
-                <date-format
+                <span v-if="showArticleDate" class="alerts-article-date">
+                  <date-format
                     :value="new Date(item.publishDate.time)"
                     :format="dateFormat" />
-              </span>
+                </span>
                 <span v-if="showArticleDate && showArticleTitle" class="alerts-article-seperator">|</span>
                 <span v-if="showArticleTitle" class="alerts-article-title">{{ item.title }}</span>
               </div>
