@@ -88,7 +88,7 @@ export function destroy() {
   }
 }
 
-export function getURLQueryParam(paramName) {
+function getURLQueryParam(paramName) {
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.has(paramName)) {
     return urlParams.get(paramName);

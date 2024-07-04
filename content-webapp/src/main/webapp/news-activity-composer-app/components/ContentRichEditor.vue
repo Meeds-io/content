@@ -65,8 +65,6 @@
 
 <script>
 
-import {getURLQueryParam} from '../main';
-
 export default {
   data() {
     return {
@@ -595,16 +593,22 @@ export default {
       }}));
     },
     initDataPropertiesFromUrl() {
-      this.articleId = getURLQueryParam('newsId');
-      this.activityId = getURLQueryParam('activityId');
-      this.articleType = getURLQueryParam('type');
-      this.spaceId = getURLQueryParam('spaceId');
-      this.selectedLanguage = getURLQueryParam('translation');
+      this.articleId = this.getURLQueryParam('newsId');
+      this.activityId = this.getURLQueryParam('activityId');
+      this.articleType = this.getURLQueryParam('type');
+      this.spaceId = this.getURLQueryParam('spaceId');
+      this.selectedLanguage = this.getURLQueryParam('translation');
     },
     enableClickOnce() {
       this.postingNews = false;
       this.postKey++;
     },
+    getURLQueryParam(paramName) {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.has(paramName)) {
+        return urlParams.get(paramName);
+      }
+    }
   },
 };
 </script>
