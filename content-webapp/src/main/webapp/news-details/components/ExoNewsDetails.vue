@@ -39,7 +39,7 @@
       v-if="currentUser"
       @post-article="postNews"
       :news-id="newsId"
-      :news-type="processedNewsType"/>
+      :news-type="processedNewsType" />
     <exo-confirm-dialog
       v-if="currentUser"
       ref="deleteConfirmDialog"

@@ -46,7 +46,10 @@
             <select
               v-model="newsFilter"
               class="width-auto my-auto ms-4 subtitle-1 ignore-vuetify-classes">
-              <option v-for="(option, index) in filterOptions" :key="index" :value="option.value">
+              <option
+                v-for="(option, index) in filterOptions"
+                :key="index"
+                :value="option.value">
                 {{ option.label }}
               </option>
             </select>

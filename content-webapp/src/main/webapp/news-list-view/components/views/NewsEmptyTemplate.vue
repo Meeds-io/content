@@ -20,15 +20,18 @@
 -->
 <template>
   <v-hover v-slot="{ hover }">
-    <v-app v-show="canPublishNews" class="newsEmptyTemplate border-box-sizing" flat>
+    <v-app
+      v-show="canPublishNews"
+      class="newsEmptyTemplate border-box-sizing"
+      flat>
       <v-main>
         <v-sheet height="32" class="news-empty-header d-flex mx-3 my-2">
           <v-spacer />
           <div class="d-flex flex-row newsSettingButton justify-end">
             <v-btn
-                v-if="hover"
-                icon
-                @click="openDrawer">
+              v-if="hover"
+              icon
+              @click="openDrawer">
               <v-icon>mdi-cog</v-icon>
             </v-btn>
           </div>
@@ -36,13 +39,13 @@
         <v-flex class="d-flex news-empty-template noNews">
           <div class="ma-auto py-5 d-flex flex-column align-center noNewsContent mb-10">
             <span v-if="isNewsSettingDefined" class="title">
-            {{ $t('news.latest.noNews') }}
-          </span>
+              {{ $t('news.latest.noNews') }}
+            </span>
             <v-btn
-                v-else
-                class="btn btn-primary"
-                outlined
-                @click="openDrawer">
+              v-else
+              class="btn btn-primary"
+              outlined
+              @click="openDrawer">
               {{ $t('news.latest.openSettings') }}
             </v-btn>
           </div>
