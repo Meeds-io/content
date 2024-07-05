@@ -517,6 +517,7 @@ export default {
         if (article === 401){
           this.unAuthorizedAccess = true;
         } else {
+          this.originalArticle = structuredClone(article);
           this.article.id = article.id;
           this.article.title = article.title;
           this.article.summary = article.summary;
