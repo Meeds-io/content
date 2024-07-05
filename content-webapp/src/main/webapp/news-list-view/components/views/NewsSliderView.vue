@@ -22,22 +22,22 @@
   <v-hover v-slot="{ hover }">
     <div class="newsSlider">
       <v-carousel
-          cycle
-          show-arrows-on-hover
-          interval="10000"
-          height="220"
-          hide-delimiter-background
-          class="sliderNewsItems fill-height card-border-radius">
+        cycle
+        show-arrows-on-hover
+        interval="10000"
+        height="220"
+        hide-delimiter-background
+        class="sliderNewsItems fill-height card-border-radius">
         <v-carousel-item
-            v-for="(item,i) in news"
-            :key="i"
-            class="carouselItem"
-            eager
-            dark>
+          v-for="(item,i) in news"
+          :key="i"
+          class="carouselItem"
+          eager
+          dark>
           <v-img
-              class="articleImage fill-height"
-              :src="showArticleImage && item.illustrationURL !== null ? item.illustrationURL.concat('&size=1420x222').toString() : '/content/images/news.png'"
-              eager />
+            class="articleImage fill-height"
+            :src="showArticleImage && item.illustrationURL !== null ? item.illustrationURL.concat('&size=1420x222').toString() : '/content/images/news.png'"
+            eager />
           <v-container class="slide-text-container d-flex text-center body-2">
             <div class="flex flex-column carouselNewsInfo">
               <div class="flex flex-row">
@@ -51,32 +51,32 @@
                 </v-btn>
               </div>
               <a
-                  v-if="showArticleTitle"
-                  :href="articleUrl(item)"
-                  class="flex flex-row flex-grow-1 align-center justify-center headLinesTruncate"
-                  :class="extraClass.concat(canPublishNews && !hover ? 'mt-12' : '')">
-              <span class="text-h4 font-weight-medium white--text text-truncate-2">
-                {{ item.title }}
-              </span>
+                v-if="showArticleTitle"
+                :href="articleUrl(item)"
+                class="flex flex-row flex-grow-1 align-center justify-center headLinesTruncate"
+                :class="extraClass.concat(canPublishNews && !hover ? 'mt-12' : '')">
+                <span class="text-h4 font-weight-medium white--text text-truncate-2">
+                  {{ item.title }}
+                </span>
               </a>
               <div class="flex flex-row flex-grow-1 align-center mx-4 my-2">
                 <span v-if="showArticleSummary" class="white--text articleSummary"> {{ item.summary }}</span>
                 <news-slider-view-item
-                    :author="item.author"
-                    :author-display-name="item.authorDisplayName"
-                    :space-display-name="item.spaceDisplayName"
-                    :space-url="item.spaceUrl"
-                    :space-avatar-url="item.spaceAvatarUrl"
-                    :publish-date="item.publishDate"
-                    :author-avatar-url="item.authorAvatarUrl"
-                    :activity-id="item.activityId"
-                    :likes-count="item.likesCount"
-                    :comments-count="item.commentsCount"
-                    :views-count="item.viewsCount"
-                    :hidden-space="item.hiddenSpace"
-                    :space-member="item.spaceMember"
-                    :selected-option="selectedOption"
-                    class="d-flex flex-row newsSliderItem align-center justify-center pa-2 ms-2" />
+                  :author="item.author"
+                  :author-display-name="item.authorDisplayName"
+                  :space-display-name="item.spaceDisplayName"
+                  :space-url="item.spaceUrl"
+                  :space-avatar-url="item.spaceAvatarUrl"
+                  :publish-date="item.publishDate"
+                  :author-avatar-url="item.authorAvatarUrl"
+                  :activity-id="item.activityId"
+                  :likes-count="item.likesCount"
+                  :comments-count="item.commentsCount"
+                  :views-count="item.viewsCount"
+                  :hidden-space="item.hiddenSpace"
+                  :space-member="item.spaceMember"
+                  :selected-option="selectedOption"
+                  class="d-flex flex-row newsSliderItem align-center justify-center pa-2 ms-2" />
               </div>
             </div>
           </v-container>

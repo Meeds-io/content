@@ -23,16 +23,16 @@
     <v-app v-show="!hideEmptyNewsTemplateForNonPublisher" class="news-list-view-app position-relative">
       <v-card
         :class="newsListViewClass"
-        class="app-background-color"
+        class="application-body"
         height="100%"
         flat>
         <v-card-text class="pa-0">
           <news-settings v-if="displayHeader" :is-hovering="hover" />
           <extension-registry-component
-              v-if="selectedViewExtension"
-              element-class="news-list-view"
-              :component="selectedViewComponent"
-              :params="viewComponentParams" />
+            v-if="selectedViewExtension"
+            element-class="news-list-view"
+            :component="selectedViewComponent"
+            :params="viewComponentParams" />
         </v-card-text>
       </v-card>
       <news-settings-drawer v-if="canPublishNews" />
@@ -172,12 +172,8 @@ export default {
       let newsListViewClass = 'list-view-card';
       const displayPadding = this.viewTemplate && !['NewsStories', 'NewsSlider', 'NewsAlert', 'NewsMosaic'].includes(this.viewTemplate) || this.selectedViewExtension?.id === 'NewsEmptyTemplate';
       const backgroundTransparent = this.viewTemplate === 'NewsStories' && this.selectedViewExtension?.id !== 'NewsEmptyTemplate';
-      const borderRadius = this.viewTemplate && !['NewsStories', 'NewsMosaic'].includes(this.viewTemplate) || this.selectedViewExtension?.id === 'NewsEmptyTemplate';
       if (displayPadding) {
-        newsListViewClass = `${newsListViewClass} pa-4`;
-      }
-      if (borderRadius) {
-        newsListViewClass = `${newsListViewClass} card-border-radius`;
+        newsListViewClass = `${newsListViewClass} border-box-sizing pa-4`;
       }
       if (backgroundTransparent) {
         newsListViewClass = `${newsListViewClass} background-transparent`;

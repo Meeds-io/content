@@ -88,10 +88,11 @@
         @click.stop
         class="mr-3">
         <v-tooltip bottom>
-          <template v-slot:activator="{ on }">
+          <template #activator="{ on }">
             <v-sheet
-                height="40"
-                :class="[disableAudienceChoiceSelect ? 'select-audience-block grey lighten-3' : 'select-audience-block']" v-on="on">
+              height="40"
+              :class="[disableAudienceChoiceSelect ? 'select-audience-block grey lighten-3' : 'select-audience-block']"
+              v-on="on">
               <v-select
                 v-on="on"
                 id="chooseAudience"
@@ -107,8 +108,6 @@
           </template>
           <span>{{ selectAudienceTooltipText }}</span>
         </v-tooltip>
-
-
       </div>
       <div class="d-flex flex-row grey--text ms-2 mt-2">
         <i class="fas fa-exclamation-triangle mx-2 pt-1"></i>

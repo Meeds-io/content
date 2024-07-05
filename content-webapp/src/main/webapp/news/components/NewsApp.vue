@@ -20,7 +20,7 @@
 -->
 <template>
   <v-app class="newsApp" role="main">
-    <div class="card-border-radius app-background-color pa-5">
+    <div class="application-body pa-5">
       <v-toolbar
         color="transparent"
         flat
@@ -46,7 +46,10 @@
             <select
               v-model="newsFilter"
               class="width-auto my-auto ms-4 subtitle-1 ignore-vuetify-classes">
-              <option v-for="(option, index) in filterOptions" :key="index" :value="option.value">
+              <option
+                v-for="(option, index) in filterOptions"
+                :key="index"
+                :value="option.value">
                 {{ option.label }}
               </option>
             </select>
@@ -72,15 +75,14 @@
         <news-filter-space-drawer
           v-model="spacesFilter" />
       </div>
-      <v-app
-        class="VuetifyApp">
+      <div>
         <v-progress-circular
           v-if="loadingNews && newsList.length === 0"
           :size="40"
           :width="4"
           indeterminate
           class="loadingRing" />
-      </v-app>
+      </div>
       <div
         v-if="newsList.length"
         id="newsListItems"
