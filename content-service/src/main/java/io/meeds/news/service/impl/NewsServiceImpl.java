@@ -723,10 +723,12 @@ public class NewsServiceImpl implements NewsService {
       updateNewsArticle(news, currentIdentity, NewsUtils.NewsUpdateType.SCHEDULE.name().toLowerCase());
     }
     if (news != null) {
-      if (news.isPublished()) {
-        publishNews(news, currentIdentity.getUserId());
-      } else {
-        unpublishNews(news.getId(), currentIdentity.getUserId());
+      if (NewsUtils.canPublishNews(space.getId(), currentIdentity)) {
+        if (news.isPublished()) {
+          publishNews(news, currentIdentity.getUserId());
+        } else {
+          unpublishNews(news.getId(), currentIdentity.getUserId());
+        }
       }
       // set the url and the space url to the scheduled news
       news.setUrl(NewsUtils.buildNewsArticleUrl(news, currentIdentity.getUserId()));
