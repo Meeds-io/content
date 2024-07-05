@@ -19,17 +19,16 @@
 
 -->
 <template>
-  <div
-    class="card">
+  <div class="card card-border-radius">
     <a
       class="articleLink"
       target="_self"
       :href="articleUrl">
       <div class="imgContainer">
         <img
-          class="article-illustration-img"
           :src="articleImage"
-          :alt="$t('news.latest.alt.articleImage')">
+          :alt="$t('news.latest.alt.articleImage')"
+          class="article-illustration-img">
       </div>
     </a>
     <div class="text-area">

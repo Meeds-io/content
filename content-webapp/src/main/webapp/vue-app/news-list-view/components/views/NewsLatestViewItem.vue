@@ -27,7 +27,8 @@
     <div class="articleImage" v-if="showImage">
       <img 
         :src="articleImg"
-        :alt="$t('news.latest.alt.articleImage')">
+        :alt="$t('news.latest.alt.articleImage')"
+        class="card-border-radius">
     </div>
     <div class="articleInfos">
       <div class="articleSpace" v-if="!isHiddenSpace && showArticleSpace">

@@ -24,7 +24,10 @@
     target="_self"
     :href="articleUrl">
     <div v-if="showArticleImage" class="article-item-image">
-      <img :src="articleImage" :alt="$t('news.latest.alt.articleImage')">
+      <img
+        :src="articleImage"
+        :alt="$t('news.latest.alt.articleImage')"
+        class="card-border-radius">
     </div>
     <div class="article-item-content">
       <span
