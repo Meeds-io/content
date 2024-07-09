@@ -114,7 +114,9 @@ export default {
       articleType: null,
       selectedLanguage: null,
       currentArticleInitDone: false,
-      isSpaceMember: false
+      isSpaceMember: false,
+      spacePrettyName: null,
+      illustrationChanged: false
     };
   },
   watch: {
@@ -129,7 +131,7 @@ export default {
       }
     },
     'article.body': function() {
-      if (this.article.body !== this.originalArticle.body) {
+      if (this.getContent(this.article.body) !== this.getContent(this.originalArticle.body)) {
         this.autoSave();
       }
     },
@@ -155,11 +157,7 @@ export default {
                             || this.$t('content.message.firstVersionShouldBeCreated');
     },
     newsFormTitle() {
-      if (!this.editMode) {
-        return this.$t('news.editor.label.create');
-      } else {
-        return this.$t('news.editor.label.edit');
-      }
+      return this.$t('news.editor.label.create');
     },
     publishButtonText() {
       return !this.editMode && this.$t('news.editor.publish') || this.$t('news.editor.save');
@@ -171,7 +169,8 @@ export default {
       return !this.article.title || !this.article.body || this.articleNotChanged && this.article.publicationState !== 'draft';
     },
     articleNotChanged() {
-      return this.originalArticle?.title === this.article.title && this.originalArticle?.body === this.article.body;
+      return this.originalArticle?.title === this.article.title && this.getContent(this.article.body) === this.getContent(this.originalArticle.body) &&
+        this.originalArticle?.summary === this.article.summary && !this.illustrationChanged  ;
     },
   },
   created() {
@@ -265,8 +264,7 @@ export default {
           alertLinkText: this.$t('news.view.label'),
           alertLink: this.isSpaceMember ? `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/activity?id=${createdArticle.activityId}` : `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news-detail?newsId=${createdArticle.id}`
         });
-      }).then(() => this.$emit('draftUpdated'))
-        .then(() => this.draftSavingStatus = this.$t('news.composer.draft.savedDraftStatus'));
+      }).then(() => this.draftSavingStatus = '');
     },
     getArticleToBeUpdated() {
       const updatedArticle = {
@@ -397,7 +395,7 @@ export default {
           this.initDataPropertiesFromUrl();
           this.fillArticle(createdArticle.id);
           this.displayAlert({
-            message: this.$t('news.save.success.message'),
+            message: this.$t('news.publish.success.message'),
             type: 'success',
             alertLinkText: this.$t('news.view.label'),
             alertLink: this.isSpaceMember ? `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/activity?id=${createdArticle.activityId}` : `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news-detail?newsId=${createdArticle.id}`
@@ -405,7 +403,7 @@ export default {
         }).catch(error => {
           this.displayAlert({type: 'error', message: this.$t('news.save.error.message', error.message)});
           this.enableClickOnce();
-        });
+        }).finally(() => this.draftSavingStatus = '');
       }
     },
     updateUrl(article){
@@ -519,7 +517,6 @@ export default {
         if (article === 401){
           this.unAuthorizedAccess = true;
         } else {
-          this.originalArticle = structuredClone(article);
           this.article.id = article.id;
           this.article.title = article.title;
           this.article.summary = article.summary;
@@ -538,7 +535,7 @@ export default {
           this.article.url = article.url;
           this.article.publicationState = article.publicationState;
           this.parseIllustration(article);
-          this.setEditorData(this.article?.content);
+          this.originalArticle = structuredClone(this.article);
         }
         this.initDone = true;
       });
@@ -608,7 +605,10 @@ export default {
       if (urlParams.has(paramName)) {
         return urlParams.get(paramName);
       }
-    }
+    },
+    getContent(body) {
+      return new DOMParser().parseFromString(body, 'text/html').documentElement.textContent.replace(/&nbsp;/g, '').trim();
+    },
   },
 };
 </script>
