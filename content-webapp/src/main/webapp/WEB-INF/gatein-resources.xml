@@ -42,6 +42,7 @@
     <portlet-name>NewsComposer</portlet-name>
     <skin-name>Enterprise</skin-name>
     <css-path>/skin/css/newsComposer.css</css-path>
+    <additional-module>Notes</additional-module>
   </portlet-skin>
 
   <portal-skin>
