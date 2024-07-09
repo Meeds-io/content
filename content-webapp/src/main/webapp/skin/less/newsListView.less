@@ -66,7 +66,6 @@
     #newsSettingsDrawer {
       .listViewLabel {
         cursor: default;
-        color: @textColorDefault;
       }
 
       .infosLabel {
@@ -283,7 +282,6 @@
   height: 100%;
   #news-latest-view {
     overflow: hidden;
-    background: #fff;
     .article-container {
       display: -ms-grid;
       display: grid;
@@ -372,7 +370,6 @@
           flex-direction: column;
           justify-content: start;
           height: 96px;
-          background: #fff;
           margin: 0;
           padding: 0 0 0 12px;
         }
@@ -513,7 +510,6 @@
           flex-direction: column;
           justify-content: start;
           height: 96px;
-          background: #fff;
           margin: 0;
           padding: 0 0 0 12px;
         }
@@ -1334,7 +1330,6 @@ p.caption-title:after {
     color: @greyColorLighten1;
   }
   .article-summary {
-    color: transparent;
     font-size: 13px;
     line-height: 17px;
     display: -webkit-box;
@@ -1433,7 +1428,6 @@ p.caption-title:after {
   position: relative;
   margin: 0 0 20px 0;
   overflow: hidden;
-  background: white;
   padding: 15px;
   .article {
     position: relative;
@@ -1481,6 +1475,10 @@ p.caption-title:after {
     line-height: 12px;
     overflow: hidden;
     margin-left: 15px;
+    .text-body {
+      line-height: normal;
+      letter-spacing: normal;
+    }
   }
   .article-preTitle {
     display: block;
@@ -1493,8 +1491,8 @@ p.caption-title:after {
   }
   .article-title {
     width: 100%;
-    font-size: 14px;
-    color:  @textColorDefault;
+    font-size: @textFontSize;
+    color:  @textColor;
     transition: 0.3s;
     line-height: 20px;
     overflow: hidden;
@@ -1552,7 +1550,6 @@ p.caption-title:after {
 }
 
 #top-news-mosaic {
-  background-color: white;
   overflow: hidden;
   .settingNewsContainer {
     position: absolute;
