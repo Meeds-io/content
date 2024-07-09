@@ -28,6 +28,15 @@
     <skin-module>newsDetails</skin-module>
     <css-path>/skin/css/newsDetails.css</css-path>
     <css-priority>30</css-priority>
+    <filtered>true</filtered>
+  </portal-skin>
+
+  <portal-skin>
+    <skin-name>Enterprise</skin-name>
+    <skin-module>NewsComposerActivityStreamExtensions</skin-module>
+    <css-path>/skin/css/newsExtensions.css</css-path>
+    <css-priority>11</css-priority>
+    <filtered>true</filtered>
   </portal-skin>
 
   <portlet-skin>
@@ -44,13 +53,6 @@
     <css-path>/skin/css/newsComposer.css</css-path>
   </portlet-skin>
 
-  <portal-skin>
-    <skin-name>Enterprise</skin-name>
-    <skin-module>NewsComposerActivityStreamExtensions</skin-module>
-    <css-path>/skin/css/newsExtensions.css</css-path>
-    <css-priority>11</css-priority>
-  </portal-skin>
-
   <portlet-skin>
     <application-name>content</application-name>
     <portlet-name>NewsListView</portlet-name>
@@ -63,6 +65,22 @@
     <portlet-name>newsPublishTargetsManagement</portlet-name>
     <skin-name>Enterprise</skin-name>
     <css-path>/skin/css/newsPublishTargetsManagement.css</css-path>
+  </portlet-skin>
+
+  <portlet-skin>
+    <application-name>social-portlet</application-name>
+    <portlet-name>UserActivityStreamPortlet</portlet-name>
+    <skin-name>Enterprise</skin-name>
+    <additional-module>NewsComposerActivityStreamExtensions</additional-module>
+    <additional-module>newsDetails</additional-module>
+  </portlet-skin>
+
+  <portlet-skin>
+    <application-name>social-portlet</application-name>
+    <portlet-name>SpaceActivityStreamPortlet</portlet-name>
+    <skin-name>Enterprise</skin-name>
+    <additional-module>NewsComposerActivityStreamExtensions</additional-module>
+    <additional-module>newsDetails</additional-module>
   </portlet-skin>
 
   <portlet>
