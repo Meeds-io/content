@@ -175,6 +175,9 @@ export default {
       if (news.activityId) {
         editUrl += `&activityId=${news.activityId}`;
       }
+      if (news.spaceUrl) {
+        editUrl += `&spaceName=${news.spaceUrl.substring(news.spaceUrl.lastIndexOf('/') + 1)}`;
+      }
       editUrl += `&type=${news.activityId && 'latest_draft' || 'draft'}`;
       return editUrl;
     },
