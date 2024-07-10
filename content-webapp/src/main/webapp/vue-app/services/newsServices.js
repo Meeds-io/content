@@ -252,8 +252,8 @@ export function undoDeleteNews(newsId) {
   });
 }
 
-export function canPublishNews() {
-  return fetch(`${newsConstants.CONTENT_API}/contents/canPublishNews?spaceId=${eXo.env.portal.spaceId}`, {
+export function canPublishNews(spaceId) {
+  return fetch(`${newsConstants.CONTENT_API}/contents/canPublishNews?spaceId=${spaceId || eXo.env.portal.spaceId}`, {
     headers: {
       'Content-Type': 'application/json'
     },

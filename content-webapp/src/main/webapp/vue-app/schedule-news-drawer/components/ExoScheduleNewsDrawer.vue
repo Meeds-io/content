@@ -279,6 +279,11 @@ export default {
       required: false,
       default: null
     },
+    spaceId: {
+      type: String,
+      required: false,
+      default: null
+    },
     newsType: {
       type: String,
       required: false,
@@ -427,7 +432,7 @@ export default {
     this.selectedAudience= this.$t('news.composer.stepper.audienceSection.allUsers');
     this.disabled = true;
     this.getAllowedTargets();
-    this.$newsServices.canPublishNews().then(canPublishNews => {
+    this.$newsServices.canPublishNews(this.spaceId).then(canPublishNews => {
       this.canPublishNews = canPublishNews;
     });
     if (this.newsId) {
@@ -480,8 +485,8 @@ export default {
             if (this.news.publicationState !== this.$newsConstants.newsObjectType.DRAFT) {
               this.isActivityPosted = this.news.activityPosted;
             }
-            this.schedulePostDate = news.schedulePostDate;
-            this.selectedTargets = news.targets;
+            this.schedulePostDate = news?.schedulePostDate;
+            this.selectedTargets = news?.targets;
             this.audience = news.audience ? news.audience : 'all';
             this.$root.$emit('news-space-url',news.spaceUrl);
           }
@@ -489,6 +494,7 @@ export default {
     },
     postArticle() {
       this.$emit('post-article', this.postArticleMode !== 'later' ? null : this.$newsUtils.convertDate(this.postDate), this.postArticleMode, this.publish, this.isActivityPosted, this.selectedTargets, this.publish ? this.selectedAudience : null);
+      this.closeDrawer();
     },
     closeDrawer() {
       if (this.news) {
