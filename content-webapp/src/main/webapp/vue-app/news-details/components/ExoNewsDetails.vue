@@ -173,7 +173,7 @@ export default {
     },
     editLink() {
       const newsType = this.activityId && this.activityId !== '' ? this.$newsConstants.newsObjectType.LATEST_DRAFT : this.newsType;
-      const editUrl = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news/editor?spaceId=${this.spaceId}&newsId=${this.newsId}&activityId=${this.activityId}&type=${newsType}`;
+      const editUrl = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news/editor?spaceId=${this.spaceId}&newsId=${this.newsId}&activityId=${this.activityId}&spaceName=${this.currentSpace.prettyName}&type=${newsType}`;
       window.open(editUrl, '_target');
     },
     deleteConfirmDialog() {

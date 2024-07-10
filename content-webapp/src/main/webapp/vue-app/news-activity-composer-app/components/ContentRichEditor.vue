@@ -28,6 +28,7 @@
       :body-placeholder="newsFormContentPlaceholder"
       :title-placeholder="newsFormTitlePlaceholder"
       :form-title="newsFormTitle"
+      :suggester-space-url="spacePrettyName"
       :app-name="appName"
       :web-page-note="false"
       :web-page-url="false"
@@ -40,7 +41,6 @@
       :editor-body-input-ref="editorBodyInputRef"
       :editor-title-input-ref="editorTitleInputRef"
       :space-group-id="spaceGroupId"
-      :space-url="spaceUrl"
       :save-button-icon="saveButtonIcon"
       :save-button-disabled="disableSaveButton"
       :editor-icon="editorIcon"
@@ -595,6 +595,7 @@ export default {
       this.articleType = this.getURLQueryParam('type');
       this.spaceId = this.getURLQueryParam('spaceId');
       this.selectedLanguage = this.getURLQueryParam('translation');
+      this.spacePrettyName = this.getURLQueryParam('spaceName');
     },
     enableClickOnce() {
       this.postingNews = false;

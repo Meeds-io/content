@@ -258,6 +258,9 @@ export default {
       if (item.activityId) {
         draftUrl += `&activityId=${item.activityId}`;
       }
+      if (item.spaceUrl) {
+        draftUrl += `&spaceName=${item.spaceUrl.substring(item.spaceUrl.lastIndexOf('/') + 1)}`;
+      }
       draftUrl += `&type=${item.activityId && 'latest_draft' || 'draft'}`;
       return draftUrl;
     },
