@@ -42,11 +42,12 @@
       :space-group-id="spaceGroupId"
       :space-url="spaceUrl"
       :save-button-icon="saveButtonIcon"
+      :save-button-disabled="disableSaveButton"
       :editor-icon="editorIcon"
       @editor-closed="editorClosed"
       @open-treeview="openTreeView"
       @post-note="postArticleActions"
-      @auto-save="autoSave"
+      @auto-save="autoSaveActions"
       @editor-ready="editorReady"
       @update-data="updateArticleData" />
     <note-treeview-drawer
@@ -57,6 +58,7 @@
       :posting-news="postingNews"
       :news-id="articleId"
       :news-type="articleType"
+      :space-id="spaceId"
       @post-article="postArticle" />
   </v-app>
 </template>
@@ -106,32 +108,16 @@ export default {
       canScheduleArticle: false,
       postKey: 1,
       editorIcon: 'fas fa-newspaper',
+      articleId: null,
+      spaceId: null,
+      activityId: null,
+      articleType: null,
+      selectedLanguage: null,
+      currentArticleInitDone: false,
+      isSpaceMember: false,
+      spacePrettyName: null,
+      illustrationChanged: false
     };
-  },
-  props: {
-    articleId: {
-      type: String,
-      required: false,
-      default: null
-    },
-    spaceId: {
-      type: String,
-      required: true
-    },
-    activityId: {
-      type: String,
-      required: false,
-      default: null
-    },
-    articleType: {
-      type: String,
-      required: false,
-      default: null
-    },
-    selectedLanguage: {
-      type: String,
-      default: null
-    }
   },
   watch: {
     'article.title': function() {
@@ -145,7 +131,7 @@ export default {
       }
     },
     'article.body': function() {
-      if (this.article.body !== this.originalArticle.body) {
+      if (this.getContent(this.article.body) !== this.getContent(this.originalArticle.body)) {
         this.autoSave();
       }
     },
@@ -171,20 +157,24 @@ export default {
                             || this.$t('content.message.firstVersionShouldBeCreated');
     },
     newsFormTitle() {
-      if (!this.editMode) {
-        return this.$t('news.editor.label.create');
-      } else {
-        return this.$t('news.editor.label.edit');
-      }
+      return this.$t('news.editor.label.create');
     },
     publishButtonText() {
       return !this.editMode && this.$t('news.editor.publish') || this.$t('news.editor.save');
     },
     saveButtonIcon() {
       return this.editMode && 'fas fa-save' || 'fa-solid fa-paper-plane';
-    }
+    },
+    disableSaveButton() {
+      return !this.article.title || !this.article.body || this.articleNotChanged && this.article.publicationState !== 'draft';
+    },
+    articleNotChanged() {
+      return this.originalArticle?.title === this.article.title && this.getContent(this.article.body) === this.getContent(this.originalArticle.body) &&
+        this.originalArticle?.summary === this.article.summary && !this.illustrationChanged  ;
+    },
   },
   created() {
+    this.initDataPropertiesFromUrl();
     this.getArticle();
     this.getAvailableLanguages();
     this.$root.$on('display-treeview-items', (/*filter*/) => {
@@ -213,114 +203,17 @@ export default {
     deleteTranslation(/*translation*/) {
       // TO DO
     },
-    postArticle(schedulePostDate, postArticleMode, publish, isActivityPosted, selectedTargets, selectedAudience) {
-      if (typeof isActivityPosted === 'undefined') {
-        this.article.activityPosted = true;
-      } else {
-        this.article.activityPosted = isActivityPosted;
+    autoSaveActions() {
+      if (!this.articleNotChanged || !this.currentArticleInitDone) {
+        this.autoSave();
       }
-      this.article.published = publish;
-      this.article.targets = selectedTargets;
-      if (selectedAudience !== null) {
-        this.article.audience = selectedAudience === this.$t('news.composer.stepper.audienceSection.allUsers') ? 'all' : 'space';
-      }
-      this.doPostArticle(schedulePostDate);
-    },
-    doPostArticle(schedulePostDate) {
-      this.postingNews = true;
-      if (this.savingDraft) {
-        this.$on('draftCreated', this.saveArticle);
-        this.$on('draftUpdated', this.saveArticle);
-      } else {
-        this.saveArticle(schedulePostDate);
-      }
-    },
-    saveArticle(schedulePostDate) {
-      clearTimeout(this.saveDraft);
-      this.$off('draftCreated', this.saveNews);
-      this.$off('draftUpdated', this.saveNews);
-
-      const article = {
-        id: this.article.id,
-        title: this.article.title,
-        summary: this.article.summary,
-        body: this.replaceImagesURLs(this.$noteUtils.getContentToSave(this.editorBodyInputRef, this.oembedMinWidth)),
-        author: this.currentUser,
-        published: this.article.published,
-        targets: this.article.targets,
-        spaceId: this.spaceId,
-        publicationState: 'posted',
-        schedulePostDate: null,
-        timeZoneId: null,
-        activityPosted: this.article.activityPosted,
-        audience: this.article.audience,
-      };
-
-      if (schedulePostDate){
-        article.publicationState ='staged';
-        article.schedulePostDate = schedulePostDate;
-        article.timeZoneId = new window.Intl.DateTimeFormat().resolvedOptions().timeZone;
-      }
-      if (this.article?.illustration?.length) {
-        article.uploadId = this.article.illustration[0].uploadId;
-      }
-      if (article.publicationState ==='staged') {
-        this.$newsServices.scheduleNews(article, this.articleType).then((scheduleArticle) => {
-          if (scheduleArticle) {
-            history.replaceState(null,'',scheduleArticle.spaceUrl);
-            window.location.href = scheduleArticle.url;
-          }
-        });
-      } else {
-        this.$newsServices.saveNews(article).then((createdArticle) => {
-          let createdArticleActivity = null;
-          if (createdArticle.activities) {
-            const createdArticleActivities = createdArticle.activities.split(';')[0].split(':');
-            if (createdArticleActivities.length > 1) {
-              createdArticleActivity = createdArticleActivities[1];
-            }
-          }
-          if (createdArticleActivity) {
-            history.replaceState(null, '', this.spaceUrl);
-            window.location.href = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/activity?id=${createdArticleActivity}`;
-          } else {
-            window.location.href = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}`;
-          }
-        });
-      }
-    },
-    postArticleActions(publish) {
-      if (publish) {
-        this.updateAndPostArticle(true);
-        return;
-      }
-      if (this.editMode) {
-        this.updateAndPostArticle(false);
-        return;
-      }
-      if (this.canScheduleArticle) {
-        this.scheduleMode = 'postScheduledNews';
-        this.$root.$emit('open-schedule-drawer', this.scheduleMode);
-        this.postKey++;
-      } else {
-        this.postArticle();
-        this.postKey = 1;
-      }
-    },
-    updateArticleData(article) {
-      this.article.title = article.title;
-      this.article.content = article.content;
-      this.article.body = article.content;
-    },
-    editorReady(editor) {
-      this.editor = editor;
-    },
-    initEditor() {
-      this.$refs.editor.initCKEditor();
     },
     autoSave: function() {
       // No draft saving if init not done or in edit mode for the moment
       if (!this.initDone) {
+        return;
+      }
+      if (!this.currentArticleInitDone) {
         return;
       }
       // if the News is being posted, no need to autosave anymore
@@ -333,12 +226,63 @@ export default {
         this.draftSavingStatus = this.$t('news.composer.draft.savingDraftStatus');
         this.$nextTick(() => {
           if (this.activityId) {
-            this.doUpdateArticle('draft', false);
+            this.saveDraftForExistingArticle();
           } else {
             this.saveArticleDraft();
           }
         });
       }, this.autoSaveDelay);
+    },
+    saveDraftForExistingArticle() {
+      const updatedArticle = this.getArticleToBeUpdated();
+      updatedArticle.publicationState = 'draft';
+      return this.$newsServices.updateNews(updatedArticle, false, this.articleType).then((createdArticle) => {
+        this.spaceUrl = createdArticle.spaceUrl;
+        if (this.article.body !== createdArticle.body) {
+          this.imagesURLs = this.extractImagesURLsDiffs(this.article.body, createdArticle.body);
+        }
+      }).then(() => this.$emit('draftUpdated'))
+        .then(() => this.draftSavingStatus = this.$t('news.composer.draft.savedDraftStatus'))
+        .finally(() => {
+          this.fillArticle(updatedArticle.id);
+          this.enableClickOnce();
+        });
+    },
+    updateAndPostArticle() {
+      const updatedArticle = this.getArticleToBeUpdated();
+      updatedArticle.publicationState = 'posted';
+      return this.$newsServices.updateNews(updatedArticle, true, 'article').then((createdArticle) => {
+        this.spaceUrl = createdArticle.spaceUrl;
+        if (this.article.body !== createdArticle.body) {
+          this.imagesURLs = this.extractImagesURLsDiffs(this.article.body, createdArticle.body);
+        }
+        this.fillArticle(createdArticle.id);
+        this.enableClickOnce();
+        this.displayAlert({
+          message: this.$t('news.save.success.message'),
+          type: 'success',
+          alertLinkText: this.$t('news.view.label'),
+          alertLink: this.isSpaceMember ? `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/activity?id=${createdArticle.activityId}` : `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news-detail?newsId=${createdArticle.id}`
+        });
+      }).then(() => this.draftSavingStatus = '');
+    },
+    getArticleToBeUpdated() {
+      const updatedArticle = {
+        id: this.article.id,
+        title: this.article.title,
+        summary: this.article.summary != null ? this.article.summary : '',
+        body: this.replaceImagesURLs(this.$noteUtils.getContentToSave(this.editorBodyInputRef, this.oembedMinWidth)),
+        published: this.article.published,
+        activityPosted: this.article.activityPosted,
+        audience: this.article.audience,
+      };
+      if (this.article?.illustration?.length) {
+        updatedArticle.uploadId = this.article.illustration[0].uploadId;
+      } else if (this.originalArticle.illustrationURL !== null) {
+        // an empty uploadId means the illustration must be deleted
+        updatedArticle.uploadId = '';
+      }
+      return updatedArticle;
     },
     saveArticleDraft() {
       const article = {
@@ -388,52 +332,127 @@ export default {
         this.draftSavingStatus = '';
       }
     },
-    doUpdateArticle: function (publicationState, post) {
-      const updatedArticle = {
+    postArticle(schedulePostDate, postArticleMode, publish, isActivityPosted, selectedTargets, selectedAudience) {
+      if (typeof isActivityPosted === 'undefined') {
+        this.article.activityPosted = true;
+      } else {
+        this.article.activityPosted = isActivityPosted;
+      }
+      this.article.published = publish;
+      this.article.targets = selectedTargets;
+      if (selectedAudience !== null) {
+        this.article.audience = selectedAudience === this.$t('news.composer.stepper.audienceSection.allUsers') ? 'all' : 'space';
+      }
+      this.doPostArticle(schedulePostDate);
+    },
+    doPostArticle(schedulePostDate) {
+      if (this.savingDraft) {
+        this.$on('draftCreated', this.saveArticle);
+        this.$on('draftUpdated', this.saveArticle);
+      } else {
+        this.saveArticle(schedulePostDate);
+      }
+    },
+    saveArticle(schedulePostDate) {
+      clearTimeout(this.saveDraft);
+      this.$off('draftCreated', this.saveNews);
+      this.$off('draftUpdated', this.saveNews);
+
+      const article = {
         id: this.article.id,
         title: this.article.title,
-        summary: this.article.summary != null ? this.article.summary : '',
+        summary: this.article.summary,
         body: this.replaceImagesURLs(this.$noteUtils.getContentToSave(this.editorBodyInputRef, this.oembedMinWidth)),
+        author: this.currentUser,
         published: this.article.published,
-        publicationState: publicationState,
+        targets: this.article.targets,
+        spaceId: this.spaceId,
+        publicationState: 'posted',
+        schedulePostDate: null,
+        timeZoneId: null,
         activityPosted: this.article.activityPosted,
         audience: this.article.audience,
       };
+
+      if (schedulePostDate){
+        article.publicationState ='staged';
+        article.schedulePostDate = schedulePostDate;
+        article.timeZoneId = new window.Intl.DateTimeFormat().resolvedOptions().timeZone;
+      }
       if (this.article?.illustration?.length) {
-        updatedArticle.uploadId = this.article.illustration[0].uploadId;
-      } else if (this.originalArticle.illustrationURL !== null) {
-        // an empty uploadId means the illustration must be deleted
-        updatedArticle.uploadId = '';
+        article.uploadId = this.article.illustration[0].uploadId;
       }
-      return this.updateArticle(updatedArticle, post, publicationState);
-    },
-    updateAndPostArticle(post) {
-      this.doUpdateArticle('posted', post).then(() => {
-        history.replaceState(null,'',this.spaceUrl);
-        window.location.href = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/activity?id=${this.activityId}`;
-      }).catch (() =>{
-        window.location.href = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/activity?id=${this.activityId}`;
-      });
-    },
-    updateArticle(updatedArticle, post, publicationState) {
-      const activityType = this.parseActivityType(publicationState);
-      return this.$newsServices.updateNews(updatedArticle, post, activityType).then((createdArticle) => {
-        this.spaceUrl = createdArticle.spaceUrl;
-        if (this.article.body !== createdArticle.body) {
-          this.imagesURLs = this.extractImagesURLsDiffs(this.article.body, createdArticle.body);
-        }
-      }).then(() => this.$emit('draftUpdated'))
-        .then(() => this.draftSavingStatus = this.$t('news.composer.draft.savedDraftStatus'));
-    },
-    parseActivityType(publicationState) {
-      let articleType = this.articleType;
-      if (this.activityId && publicationState === this.$newsConstants.newsObjectType.DRAFT) {
-        articleType = this.$newsConstants.newsObjectType.LATEST_DRAFT;
+      if (article.publicationState ==='staged') {
+        this.$newsServices.scheduleNews(article, this.articleType).then((scheduleArticle) => {
+          if (scheduleArticle) {
+            history.replaceState(null,'',scheduleArticle.spaceUrl);
+            window.location.href = scheduleArticle.url;
+          }
+        });
+      } else {
+        this.$newsServices.saveNews(article).then((createdArticle) => {
+          this.updateUrl(createdArticle);
+          this.initDataPropertiesFromUrl();
+          this.fillArticle(createdArticle.id);
+          this.displayAlert({
+            message: this.$t('news.publish.success.message'),
+            type: 'success',
+            alertLinkText: this.$t('news.view.label'),
+            alertLink: this.isSpaceMember ? `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/activity?id=${createdArticle.activityId}` : `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news-detail?newsId=${createdArticle.id}`
+          });
+        }).catch(error => {
+          this.displayAlert({type: 'error', message: this.$t('news.save.error.message', error.message)});
+          this.enableClickOnce();
+        }).finally(() => this.draftSavingStatus = '');
       }
-      if (this.activityId && publicationState === 'posted') {
-        articleType = this.$newsConstants.newsObjectType.ARTICLE;
+    },
+    updateUrl(article){
+      const url = new URL(window.location.href);
+      const params = new URLSearchParams(url.search);
+      params.delete('newsId');
+      params.delete('type');
+      if (params.has('activityId')) {
+        params.delete('activityId');
       }
-      return articleType;
+      params.append('newsId', article.id);
+      if (article.activityId){
+        params.append('activityId', article.activityId);
+        params.append('type', 'latest_draft');
+      } else {
+        params.append('type', 'draft');
+      }
+      window.history.pushState('news', '', `${url.origin}${url.pathname}?${params.toString()}`);
+
+    },
+    postArticleActions() {
+      if (this.editMode) {
+        this.updateAndPostArticle();
+        return;
+      }
+      if (this.canScheduleArticle) {
+        this.scheduleMode = 'postScheduledNews';
+        this.$root.$emit('open-schedule-drawer', this.scheduleMode);
+        this.postKey++;
+      } else {
+        this.postingNews = true;
+        this.postArticle();
+        this.enableClickOnce();
+      }
+    },
+    updateArticleData(article) {
+      if (this.currentArticleInitDone) {
+        this.article.title = article.title;
+        this.article.content = article.content;
+        this.article.body = article.content;
+      }
+    },
+    editorReady(editor) {
+      this.editor = editor;
+      this.setEditorData(this.article?.content);
+      this.currentArticleInitDone = true;
+    },
+    initEditor() {
+      this.$refs.editor.initCKEditor();
     },
     replaceImagesURLs: function(content) {
       let updatedContent = content;
@@ -467,6 +486,7 @@ export default {
       this.$newsServices.getSpaceById(this.spaceId).then(space => {
         this.currentSpace = space;
         this.spaceDisplayName = space.displayName;
+        this.isSpaceMember = space.isMember;
         this.spaceUrl = this.currentSpace?.prettyName;
         this.$newsServices.canUserCreateNews(this.currentSpace.id).then(canCreateArticle => {
           this.canCreateArticle = canCreateArticle || this.articleId;
@@ -512,9 +532,10 @@ export default {
           this.article.draftUpdateDate = article.draftUpdateDate;
           this.article.activityPosted = article.activityPosted;
           this.article.audience = article.audience;
+          this.article.url = article.url;
+          this.article.publicationState = article.publicationState;
           this.parseIllustration(article);
           this.originalArticle = structuredClone(this.article);
-          this.setEditorData(this.article?.content);
         }
         this.initDone = true;
       });
@@ -560,6 +581,34 @@ export default {
         }
       });
     },
-  }
+    displayAlert(detail) {
+      document.dispatchEvent(new CustomEvent('alert-message-html', {detail: {
+        alertType: detail?.type,
+        alertMessage: detail?.message,
+        alertLinkText: detail?.alertLinkText,
+        alertLink: detail?.alertLink
+      }}));
+    },
+    initDataPropertiesFromUrl() {
+      this.articleId = this.getURLQueryParam('newsId');
+      this.activityId = this.getURLQueryParam('activityId');
+      this.articleType = this.getURLQueryParam('type');
+      this.spaceId = this.getURLQueryParam('spaceId');
+      this.selectedLanguage = this.getURLQueryParam('translation');
+    },
+    enableClickOnce() {
+      this.postingNews = false;
+      this.postKey++;
+    },
+    getURLQueryParam(paramName) {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.has(paramName)) {
+        return urlParams.get(paramName);
+      }
+    },
+    getContent(body) {
+      return new DOMParser().parseFromString(body, 'text/html').documentElement.textContent.replace(/&nbsp;/g, '').trim();
+    },
+  },
 };
 </script>
