@@ -204,7 +204,7 @@ export default {
       // TO DO
     },
     autoSaveActions() {
-      if (!this.articleNotChanged || !this.currentArticleInitDone) {
+      if (!this.articleNotChanged) {
         this.autoSave();
       }
     },
@@ -440,7 +440,7 @@ export default {
       }
     },
     updateArticleData(article) {
-      if (this.currentArticleInitDone) {
+      if (this.initDone && this.currentArticleInitDone) {
         this.article.title = article.title;
         this.article.content = article.content;
         this.article.body = article.content;
@@ -490,29 +490,27 @@ export default {
         this.spaceUrl = this.currentSpace?.prettyName;
         this.$newsServices.canUserCreateNews(this.currentSpace.id).then(canCreateArticle => {
           this.canCreateArticle = canCreateArticle || this.articleId;
-          this.$nextTick(() => {
-            if (this.canCreateArticle) {
-              if (this.articleId) {
-                this.fillArticle(this.articleId);
-              } else {
-                const message = localStorage.getItem('exo-activity-composer-message');
-                if (message) {
-                  this.article.content = message;
-                  this.setEditorData(this.article?.content);
-                  localStorage.removeItem('exo-activity-composer-message');
-                }
-                this.initDone = true;
+          if (this.canCreateArticle) {
+            if (this.articleId) {
+              this.fillArticle(this.articleId, true);
+            } else {
+              const message = localStorage.getItem('exo-activity-composer-message');
+              if (message) {
+                this.article.content = message;
+                this.setEditorData(this.article?.content);
+                localStorage.removeItem('exo-activity-composer-message');
               }
+              this.initDone = true;
             }
-            this.loading = false;
-          });
+          }
+          this.loading = false;
         });
         this.$newsServices.canScheduleNews(this.currentSpace.id).then(canScheduleArticle => {
           this.canScheduleArticle = canScheduleArticle;
         });
       });
     },
-    fillArticle(articleId) {
+    fillArticle(articleId, setData) {
       this.$newsServices.getNewsById(articleId, true, this.articleType).then(article => {
         if (article === 401){
           this.unAuthorizedAccess = true;
@@ -536,6 +534,9 @@ export default {
           this.article.publicationState = article.publicationState;
           this.parseIllustration(article);
           this.originalArticle = structuredClone(this.article);
+          if (setData) {
+            this.setEditorData(this.article?.content);
+          }
         }
         this.initDone = true;
       });
