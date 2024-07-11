@@ -19,7 +19,6 @@
  */
  
 import './initComponents.js';
-import { newsConstants } from '../services/newsConstants.js';
 
 // get overridden components if exists
 if (extensionRegistry) {
@@ -42,7 +41,7 @@ export function initLatestNews(params) {
   // getting language of the PLF
   const lang = typeof eXo !== 'undefined' ? eXo.env.portal.language : 'en';
   // should expose the locale resources as REST API
-  const url = `${newsConstants.PORTAL}/${newsConstants.PORTAL_REST}/i18n/bundle/locale.portlet.news.News-${lang}.json`;
+  const url = `/content/i18n/locale.portlet.news.News?lang=${lang}`;
   exoi18n.loadLanguageAsync(lang, url).then(i18n => {  
   // init Vue app when locale resources are ready
     latestNewsDetails = Vue.createApp({
