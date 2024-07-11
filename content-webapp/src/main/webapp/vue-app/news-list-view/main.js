@@ -56,7 +56,7 @@ if (extensionRegistry) {
 const lang = eXo && eXo.env && eXo.env.portal.language || 'en';
 
 // should expose the locale resources as REST API
-const url = `${eXo.env.portal.context}/${eXo.env.portal.rest}/i18n/bundle/locale.portlet.news.News-${lang}.json`;
+const url = `/content/i18n/locale.portlet.news.News?lang=${lang}`;
 
 // getting locale resources
 export function init(params) {

@@ -21,7 +21,7 @@ import './initComponents.js';
 import './extensions.js';
 
 const lang = eXo.env.portal.language;
-const url = `${eXo.env.portal.context}/${eXo.env.portal.rest}/i18n/bundle/locale.portlet.news.News-${lang}.json`;
+const url = `/content/i18n/locale.portlet.news.News?lang=${lang}`;
 
 export function init() {
   return exoi18n.loadLanguageAsync(lang, url)
