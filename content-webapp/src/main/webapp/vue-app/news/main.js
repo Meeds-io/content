@@ -20,8 +20,6 @@
  
 import './initComponents.js';
 
-import {newsConstants} from '../services/newsConstants.js';
-
 Vue.use(Vuetify);
 
 const vuetify = new Vuetify(eXo.env.portal.vuetifyPreset);
@@ -40,8 +38,7 @@ if (extensionRegistry) {
 const lang = typeof eXo !== 'undefined' ? eXo.env.portal.language : 'en';
 // should expose the locale resources as REST API
 const urls = [
-  `${newsConstants.PORTAL}/${newsConstants.PORTAL_REST}/i18n/bundle/locale.portlet.news.News-${lang}.json`,
-  `${newsConstants.PORTAL}/${newsConstants.PORTAL_REST}/i18n/bundle/locale.social.Webui-${lang}.json`
+  `/content/i18n/locale.portlet.news.News?lang=${lang}`,
 ];
 
 document.dispatchEvent(new CustomEvent('displayTopBarLoading'));
