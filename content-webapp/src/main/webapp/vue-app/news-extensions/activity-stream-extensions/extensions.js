@@ -19,7 +19,7 @@
  */
 
 const lang = eXo.env.portal.language || 'en';
-const url = `${eXo.env.portal.context}/${eXo.env.portal.rest}/i18n/bundle/locale.portlet.news.News-${lang}.json`;
+const url = `/content/i18n/locale.portlet.news.News?lang=${lang}`;
 
 const i18nPromise = exoi18n.loadLanguageAsync(lang, url).then(i18n => new Vue({i18n}));
 
