@@ -175,7 +175,6 @@ export default {
   },
   created() {
     this.initDataPropertiesFromUrl();
-    this.getArticle();
     this.getAvailableLanguages();
     this.$root.$on('display-treeview-items', (/*filter*/) => {
       // TO DO
@@ -186,6 +185,7 @@ export default {
   },
   mounted() {
     this.initEditor();
+    this.getArticle();
   },
   methods: {
     editorClosed() {
@@ -204,7 +204,7 @@ export default {
       // TO DO
     },
     autoSaveActions() {
-      if (!this.articleNotChanged || !this.currentArticleInitDone) {
+      if (!this.articleNotChanged) {
         this.autoSave();
       }
     },
@@ -448,7 +448,13 @@ export default {
     },
     editorReady(editor) {
       this.editor = editor;
-      this.setEditorData(this.article?.content);
+      if (this.articleId || this.getURLQueryParam('newsId')) {
+        if (this.initDone) {
+          this.setEditorData(this.article?.content);
+        } else {
+          this.waitToInitDone();
+        }
+      }
       this.currentArticleInitDone = true;
     },
     initEditor() {
@@ -609,6 +615,16 @@ export default {
     },
     getContent(body) {
       return new DOMParser().parseFromString(body, 'text/html').documentElement.textContent.replace(/&nbsp;/g, '').trim();
+    },
+    waitToInitDone() {
+      setTimeout(() => {
+        if (this.initDone) {
+          this.setEditorData(this.article?.content);
+          this.currentArticleInitDone = true;
+        } else {
+          this.waitToInitDone();
+        }
+      }, 200);
     },
   },
 };
