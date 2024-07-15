@@ -24,7 +24,7 @@
       <div :class="[illustrationURL ? 'newsDetails-header' : '']" class="newsDetails-header">
         <div v-if="illustrationURL" class="illustration center">
           <img
-            :src="illustrationURL.concat('&size=0x400').toString()"
+            :src="`${illustrationURL}&size=0x400`"
             class="newsDetailsImage illustrationPicture"
             :alt="newsTitle"
             longdesc="#newsSummary">
@@ -169,11 +169,12 @@ export default {
     translateExtension: null,
     newsTitleContent: null,
     newsSummaryContent: null,
-    newsBodyContent: null
+    newsBodyContent: null,
+    illustrationBaseUrl: `${eXo.env.portal.context}/${eXo.env.portal.rest}/notes/illustration/`,
   }),
   created() {
     this.setNewsTitle(this.news?.title);
-    this.setNewsSummary(this.news?.summary);
+    this.setNewsSummary(this.news?.properties?.summary);
     this.setNewsContent(this.news?.body);
     this.refreshTranslationExtensions();
     document.addEventListener('automatic-translation-extensions-updated', () => {
@@ -189,8 +190,21 @@ export default {
         news: this.news,
       };
     },
+    isDraft() {
+      return this.news?.publicationState === 'draft';
+    },
+    lang() {
+      return this.news?.lang;
+    },
+    hasFeaturedImage() {
+      return this.news?.properties?.featuredImageId;
+    },
+    featureImageUpdatedDate() {
+      return this.news?.properties?.featuredImageUpdatedDate;
+    },
     illustrationURL() {
-      return this.news && this.news.illustrationURL;
+      const langParam = this.lang && `&lang=${this.lang}` || '';
+      return this.hasFeaturedImage && `${this.illustrationBaseUrl}${this.news?.id}?v=${this.featureImageUpdatedDate}&isDraft=${this.isDraft}${langParam}` || '';
     },
     newsTitle() {
       return this.news && this.newsTitleContent;

@@ -167,7 +167,6 @@ public class NewsServiceImplTest {
     News draftArticle = new News();
     draftArticle.setAuthor("john");
     draftArticle.setTitle("draft article for new page");
-    draftArticle.setSummary("draft article summary for new page");
     draftArticle.setBody("draft body");
     draftArticle.setPublicationState("draft");
 
@@ -247,7 +246,6 @@ public class NewsServiceImplTest {
     when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
                                                              any(MetadataObject.class))).thenReturn(metadataItems);
     Map<String, String> properties = new HashMap<>();
-    properties.put(NEWS_SUMMARY, draftPage.getContent());
     when(metadataItem.getProperties()).thenReturn(properties);
     PORTAL_CONTAINER.when(PortalContainer::getCurrentPortalContainerName).thenReturn("portal");
     COMMONS_UTILS.when(CommonsUtils::getCurrentPortalOwner).thenReturn("dw");
@@ -310,7 +308,6 @@ public class NewsServiceImplTest {
     news.setId("1");
     news.setPublicationState("draft");
     news.setSpaceId(space.getId());
-    news.setSummary("news summary");
 
     DraftPage expecteddraftPage = new DraftPage();
     expecteddraftPage.setTitle(news.getTitle());
@@ -335,7 +332,6 @@ public class NewsServiceImplTest {
 
     // Then
     verify(noteService, times(1)).updateDraftForNewPage(eq(expecteddraftPage), anyLong());
-    verify(metadataService, times(1)).updateMetadataItem(any(MetadataItem.class), anyLong());
   }
 
   @Test
@@ -466,7 +462,6 @@ public class NewsServiceImplTest {
     when(noteService.getDraftNoteById(anyString(), anyString())).thenReturn(draftPage);
 
     Map<String, String> properties = new HashMap<>();
-    properties.put(NEWS_SUMMARY, draftPage.getContent());
     MetadataItem metadataItem = mock(MetadataItem.class);
     List<MetadataItem> metadataItems = Arrays.asList(metadataItem);
     when(metadataItem.getObjectId()).thenReturn("1");
@@ -503,7 +498,6 @@ public class NewsServiceImplTest {
     News newsArticle = new News();
     newsArticle.setAuthor("john");
     newsArticle.setTitle("news article for new page");
-    newsArticle.setSummary("news article summary for new page");
     newsArticle.setBody("news body");
     newsArticle.setPublicationState(POSTED);
     newsArticle.setId("1");
@@ -594,7 +588,6 @@ public class NewsServiceImplTest {
     news.setId("1");
     news.setPublicationState("draft");
     news.setSpaceId("1");
-    news.setSummary("news summary");
     news.setOriginalBody("body");
 
     // When, Then
@@ -677,7 +670,6 @@ public class NewsServiceImplTest {
     news.setId("1");
     news.setPublicationState("draft");
     news.setSpaceId("1");
-    news.setSummary("news summary");
     news.setOriginalBody("body");
 
     // When, Then
@@ -754,7 +746,6 @@ public class NewsServiceImplTest {
     news.setId("1");
     news.setPublicationState(POSTED);
     news.setSpaceId("1");
-    news.setSummary("news summary");
     news.setOriginalBody("body");
 
     // When, Then
@@ -776,8 +767,7 @@ public class NewsServiceImplTest {
     // Then
     verify(noteService, times(1)).updateNote(any(Page.class));
     verify(noteService, times(1)).createVersionOfNote(existingPage, identity.getUserId());
-    verify(noteService, times(2)).getPublishedVersionByPageIdAndLang(1L, null);
-    verify(metadataService, times(1)).updateMetadataItem(any(MetadataItem.class), anyLong());
+    verify(noteService, times(1)).getPublishedVersionByPageIdAndLang(1L, null);
   }
 
   @Test
@@ -856,7 +846,6 @@ public class NewsServiceImplTest {
     News newsArticle = new News();
     newsArticle.setAuthor("john");
     newsArticle.setTitle("news article");
-    newsArticle.setSummary("news article summary");
     newsArticle.setBody("news body");
     newsArticle.setPublicationState("staged");
     newsArticle.setId("1");

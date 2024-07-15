@@ -9,7 +9,7 @@
       id="newsFullDetails"
       :news="news"
       :news-id="newsId"
-      :activity-id="news.activityId"
+      :activity-id="news?.activityId"
       :news-type="newsType"
       :show-edit-button="showEditButton"
       :show-publish-button="showPublishButton"
