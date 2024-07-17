@@ -137,14 +137,14 @@ export default {
         this.autoSave();
       }
     },
-    'article.body': function() {
-      if (this.getContent(this.article.body) !== this.getContent(this.originalArticle.body)) {
-        this.autoSave();
-      }
-    },
     'article.illustration': function() {
       if (this.initIllustrationDone) {
         this.illustrationChanged = true;
+        this.autoSave();
+      }
+    },
+    'article.content': function() {
+      if (!this.isSameArticleContent()) {
         this.autoSave();
       }
     }
@@ -173,11 +173,14 @@ export default {
       return this.editMode && 'fas fa-save' || 'fa-solid fa-paper-plane';
     },
     disableSaveButton() {
-      return !this.article.title || !this.article.body || this.articleNotChanged && this.article.publicationState !== 'draft';
+      return !this.article.title || this.isEmptyArticleContent || this.articleNotChanged && this.article.publicationState !== 'draft';
     },
     articleNotChanged() {
-      return this.originalArticle?.title === this.article.title && this.getContent(this.article.body) === this.getContent(this.originalArticle.body) &&
+      return this.originalArticle?.title === this.article.title && this.isSameArticleContent() &&
         this.originalArticle?.summary === this.article.summary && !this.illustrationChanged  ;
+    },
+    isEmptyArticleContent() {
+      return this.article.content === '' || Array.from(new DOMParser().parseFromString(this.article.content, 'text/html').body.childNodes).every(node => (node.nodeName === 'P' && !node.textContent.trim() && node.children.length === 0) || (node.nodeType === Node.TEXT_NODE && !node.textContent.trim()));
     },
   },
   created() {
@@ -450,7 +453,6 @@ export default {
       if (this.initDone && this.currentArticleInitDone) {
         this.article.title = article.title;
         this.article.content = article.content;
-        this.article.body = article.content;
       }
     },
     editorReady(editor) {
@@ -615,9 +617,9 @@ export default {
         return urlParams.get(paramName);
       }
     },
-    getContent(body) {
-      return new DOMParser().parseFromString(body, 'text/html').documentElement.textContent.replace(/&nbsp;/g, '').trim();
-    },
+    isSameArticleContent() {
+      return this.$noteUtils.isSameContent(this.article.content, this.originalArticle.content);
+    }
   },
 };
 </script>
