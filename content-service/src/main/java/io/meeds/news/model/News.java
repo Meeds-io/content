@@ -36,11 +36,11 @@ public class News {
 
   private String                          id;
 
+  private String                          targetPageId;
+
   private String                          title;
 
   private String                          name;
-
-  private String                          summary;
 
   /* sanitizedBody with usernames */
   private String                          body;
@@ -67,14 +67,6 @@ public class News {
   private Date                            draftUpdateDate;
 
   private String                          uploadId;
-
-  private byte[]                          illustration;
-
-  private Date                            illustrationUpdateDate;
-
-  private String                          illustrationMimeType;
-
-  private String                          illustrationURL;
 
   private Date                            creationDate;
 
@@ -139,4 +131,8 @@ public class News {
   private boolean                         favorite;
 
   private boolean                         deleted;
+
+  private String                          lang;
+
+  private Map<String, String>             properties;
 }
