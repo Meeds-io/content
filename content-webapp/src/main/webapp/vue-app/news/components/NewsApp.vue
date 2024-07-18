@@ -251,7 +251,8 @@ export default {
   },
   methods: {
     getDraftUrl(item) {
-      let draftUrl = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news/editor?newsId=${item.id}`;
+      let draftUrl = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news/editor`;
+      draftUrl += `?newsId=${item.activityId && item.targetPageId || item.id}`;
       if (item.spaceId) {
         draftUrl += `&spaceId=${item.spaceId}`;
       }
