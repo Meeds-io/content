@@ -39,7 +39,7 @@
             :href="articleUrl(item)">
             <img
               :src="showArticleImage && item.illustrationURL !== null ? illustrationURL(item,index) : '/content/images/news.png'"
-              :alt="$t('news.latest.alt.articleImage')"
+              :alt="item?.properties?.featuredImage?.altText || $t('news.latest.alt.articleImage')"
               class="card-border-radius">
             <div class="titleArea">
               <div v-if="showArticleDate" class="articleDate">

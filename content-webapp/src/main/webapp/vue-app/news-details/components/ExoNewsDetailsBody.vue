@@ -24,9 +24,9 @@
       <div :class="[illustrationURL ? 'newsDetails-header' : '']" class="newsDetails-header">
         <div v-if="illustrationURL" class="illustration center">
           <img
-            :src="illustrationURL.concat('&size=0x400').toString()"
+            :src="`${illustrationURL}&size=0x400`"
+            :alt="featuredImageAltText"
             class="newsDetailsImage illustrationPicture"
-            :alt="newsTitle"
             longdesc="#newsSummary">
         </div>
         <div class="newsDetails">
@@ -173,7 +173,7 @@ export default {
   }),
   created() {
     this.setNewsTitle(this.news?.title);
-    this.setNewsSummary(this.news?.summary);
+    this.setNewsSummary(this.news?.properties?.summary);
     this.setNewsContent(this.news?.body);
     this.refreshTranslationExtensions();
     document.addEventListener('automatic-translation-extensions-updated', () => {
@@ -190,7 +190,10 @@ export default {
       };
     },
     illustrationURL() {
-      return this.news && this.news.illustrationURL;
+      return this?.news.illustrationURL;
+    },
+    featuredImageAltText() {
+      return this.news?.properties?.featuredImage?.altText || this.newsTitle;
     },
     newsTitle() {
       return this.news && this.newsTitleContent;
@@ -232,7 +235,7 @@ export default {
       return this.news && this.news.postedDate;
     },
     summary() {
-      return this.news && this.news.summary;
+      return this.news?.properties?.summary;
     },
     attachmentsIds() {
       return this.news?.attachmentsIds;

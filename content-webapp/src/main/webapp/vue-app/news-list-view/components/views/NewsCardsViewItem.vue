@@ -27,7 +27,7 @@
       <div class="imgContainer">
         <img
           :src="articleImage"
-          :alt="$t('news.latest.alt.articleImage')"
+          :alt="featuredImageAltText"
           class="article-illustration-img">
       </div>
     </a>
@@ -64,7 +64,7 @@
             </div>
                 
           </div>
-          <div v-if="showArticleSummary" class="article-summary"> {{ item.summary }} </div>
+          <div v-if="showArticleSummary" class="article-summary"> {{ item?.properties?.summary }} </div>
           <div class="read-more">{{ $t('news.cards.readMore') }}</div>
         </a>
       </div>
@@ -149,6 +149,9 @@ export default {
     },
     showArticleSpace() {
       return this.selectedOption && this.selectedOption.showArticleSpace;
+    },
+    featuredImageAltText() {
+      return this.item?.properties?.featuredImage?.altText || this.$t('news.latest.alt.articleImage');
     },
     articleImage() {
       return this.showArticleImage && this.item

@@ -140,7 +140,6 @@ public class NewsRestTest {
     ConversationState.setCurrent(new ConversationState(currentIdentity));
     News news = new News();
     news.setId("1");
-    news.setIllustration("illustration".getBytes());
     lenient().when(newsService.getNewsById(nullable(String.class), any(), nullable(Boolean.class), nullable(String.class)))
              .thenReturn(news);
     lenient().when(spaceService.getSpaceById(nullable(String.class))).thenReturn(new Space());
@@ -154,7 +153,6 @@ public class NewsRestTest {
     assertEquals(200, response.getStatusCodeValue());
     News fetchedNews = (News) response.getBody();
     assertNotNull(fetchedNews);
-    assertNull(fetchedNews.getIllustration());
   }
 
   @Test
@@ -318,7 +316,6 @@ public class NewsRestTest {
     ConversationState.setCurrent(new ConversationState(currentIdentity));
     News news = new News();
     news.setId("1");
-    news.setIllustration("illustration".getBytes());
     news.setActivities("1:1;2:2");
     news.setSpaceId("1");
     Space space1 = new Space();
@@ -348,14 +345,12 @@ public class NewsRestTest {
     ConversationState.setCurrent(new ConversationState(currentIdentity));
     News existingNews = new News();
     existingNews.setTitle("Title");
-    existingNews.setSummary("Summary");
     existingNews.setBody("Body");
     existingNews.setPublicationState("draft");
     existingNews.setCanEdit(true);
     lenient().when(newsService.getNewsById(anyString(), any(), anyBoolean(), eq(null))).thenReturn(existingNews);
     News updatedNews = new News();
     updatedNews.setTitle("Updated Title");
-    updatedNews.setSummary("Updated Summary");
     updatedNews.setBody("Updated Body");
     updatedNews.setPublicationState(POSTED);
     lenient().when(newsService.updateNews(existingNews, JOHN, false, updatedNews.isPublished(), null, CONTENT.name().toLowerCase())).then(returnsFirstArg());
@@ -368,7 +363,6 @@ public class NewsRestTest {
     News returnedNews = (News) response.getBody();
     assertNotNull(returnedNews);
     assertEquals("Updated Title", returnedNews.getTitle());
-    assertEquals("Updated Summary", returnedNews.getSummary());
     assertEquals("Updated Body", returnedNews.getBody());
     assertEquals(POSTED, returnedNews.getPublicationState());
 
@@ -400,7 +394,6 @@ public class NewsRestTest {
     // Given
     News existingNews = new News();
     existingNews.setTitle("unpinned title");
-    existingNews.setSummary("unpinned summary");
     existingNews.setBody("unpinned body");
     existingNews.setUploadId(null);
     String sDate1 = "22/08/2019";
@@ -414,7 +407,6 @@ public class NewsRestTest {
     News updatedNews = new News();
     updatedNews.setPublished(true);
     updatedNews.setTitle("pinned title");
-    updatedNews.setSummary("pinned summary");
     updatedNews.setBody("pinned body");
 
     Identity currentIdentity = new Identity(JOHN);
@@ -434,7 +426,6 @@ public class NewsRestTest {
     News returnedNews = (News) response.getBody();
     assertNotNull(returnedNews);
     assertEquals("pinned title", returnedNews.getTitle());
-    assertEquals("pinned summary", returnedNews.getSummary());
     assertEquals("pinned body", returnedNews.getBody());
   }
 
@@ -1353,49 +1344,6 @@ public class NewsRestTest {
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-  }
-
-  @Test
-  public void getNewsIllustrationTest() throws Exception {
-    // Given
-    HttpServletRequest request = mock(HttpServletRequest.class);
-    Identity currentIdentity = new Identity(JOHN);
-    ConversationState.setCurrent(new ConversationState(currentIdentity));
-    News news = new News();
-    news.setSpaceId("1");
-    news.setAuthor(JOHN);
-    news.setPublished(true);
-    news.setIllustrationUpdateDate(new Date());
-    news.setIllustration("illustration".getBytes());
-    news.setIllustrationMimeType("image/jpeg");
-    News news1 = new News();
-    news1.setSpaceId("2");
-    news1.setAuthor(JOHN);
-    news1.setPublished(true);
-    news1.setIllustrationUpdateDate(new Date());
-    news1.setIllustration("illustration".getBytes());
-    news1.setIllustrationMimeType("image/gif");
-
-    lenient().when(request.getHeader(anyString())).thenReturn(null);
-    lenient().when(newsService.getNewsById("1", currentIdentity, false, null)).thenReturn(news);
-    lenient().when(newsService.getNewsById("2", currentIdentity, false, null)).thenReturn(news1);
-
-    
-    
-
-    // When
-    ResponseEntity response = newsRestController.getNewsIllustration(request, "1", 2316465L, null, "300x300");
-    ResponseEntity response1 = newsRestController.getNewsIllustration(request, "2", 2316465L, null, "300x300");
-    // Then
-    assertEquals(Response.Status.OK.getStatusCode(), response.getStatusCode().value());
-    byte[] illustration = (byte[]) response.getBody();
-    assertNotNull(illustration);
-    assertEquals("illustration", new String(illustration));
-    assertEquals(Response.Status.OK.getStatusCode(), response1.getStatusCode().value());
-    byte[] illustration1 = (byte[]) response1.getBody();
-    assertNotNull(illustration1);
-    assertEquals("illustration", new String(illustration1));
-
   }
 
   @Test

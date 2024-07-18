@@ -72,18 +72,18 @@ export default {
     return {
       editor: null,
       article: {
+        id: 0,
         title: '',
         content: '',
         body: '',
-        summary: '',
-        illustration: []
+        properties: {}
       },
       originalArticle: {
+        id: 0,
         title: '',
         content: '',
         body: '',
-        summary: '',
-        illustration: []
+        properties: {}
       },
       autoSaveDelay: 1000,
       contentFormTitlePlaceholder: `${this.$t('news.composer.placeholderTitleInput')}*`,
@@ -119,7 +119,6 @@ export default {
       currentArticleInitDone: false,
       isSpaceMember: false,
       spacePrettyName: null,
-      illustrationChanged: false
     };
   },
   props: {
@@ -134,22 +133,11 @@ export default {
         this.autoSave();
       }
     },
-    'article.summary': function() {
-      if (this.article.summary !== this.originalArticle.summary) {
-        this.autoSave();
-      }
-    },
-    'article.illustration': function() {
-      if (this.initIllustrationDone) {
-        this.illustrationChanged = true;
-        this.autoSave();
-      }
-    },
     'article.content': function() {
       if (!this.isSameArticleContent()) {
         this.autoSave();
       }
-    }
+    },
   },
   computed: {
     editMode() {
@@ -172,14 +160,20 @@ export default {
       return this.editMode && 'fas fa-save' || 'fa-solid fa-paper-plane';
     },
     disableSaveButton() {
-      return !this.article.title || this.isEmptyArticleContent || this.articleNotChanged && this.article.publicationState !== 'draft';
+      return !this.article.title || this.isEmptyArticleContent
+                                 || (!this.propertiesModified
+                                 && this.articleNotChanged
+                                 && this.article.publicationState !== 'draft');
     },
     articleNotChanged() {
-      return this.originalArticle?.title === this.article.title && this.isSameArticleContent() &&
-        this.originalArticle?.summary === this.article.summary && !this.illustrationChanged  ;
+      return this.originalArticle?.title === this.article.title && this.isSameArticleContent()
+                                                                && !this.propertiesModified;
     },
     isEmptyArticleContent() {
       return this.article.content === '' || Array.from(new DOMParser().parseFromString(this.article.content, 'text/html').body.childNodes).every(node => (node.nodeName === 'P' && !node.textContent.trim() && node.children.length === 0) || (node.nodeType === Node.TEXT_NODE && !node.textContent.trim()));
+    },
+    propertiesModified() {
+      return JSON.stringify(this.article?.properties) !== JSON.stringify(this.originalArticle?.properties);
     },
   },
   created() {
@@ -253,6 +247,9 @@ export default {
     },
     saveDraftForExistingArticle() {
       const updatedArticle = this.getArticleToBeUpdated();
+      if (updatedArticle?.properties) {
+        updatedArticle.properties.draft = true;
+      }
       updatedArticle.publicationState = 'draft';
       return this.$newsServices.updateNews(updatedArticle, false, this.articleType).then((createdArticle) => {
         this.spaceUrl = createdArticle.spaceUrl;
@@ -286,39 +283,32 @@ export default {
     },
     getArticleToBeUpdated() {
       const updatedArticle = {
-        id: this.article.id,
+        id: this.article.activityId && this.article.targetPageId || this.article.id,
         title: this.article.title,
-        summary: this.article.summary != null ? this.article.summary : '',
         body: this.replaceImagesURLs(this.$noteUtils.getContentToSave(this.editorBodyInputRef, this.oembedMinWidth)),
         published: this.article.published,
         activityPosted: this.article.activityPosted,
         audience: this.article.audience,
+        properties: this.article?.properties
       };
-      if (this.article?.illustration?.length) {
-        updatedArticle.uploadId = this.article.illustration[0].uploadId;
-      } else if (this.originalArticle.illustrationURL !== null) {
-        // an empty uploadId means the illustration must be deleted
-        updatedArticle.uploadId = '';
-      }
       return updatedArticle;
     },
     saveArticleDraft() {
+      const properties = this.article?.properties;
+      if (properties) {
+        properties.draft = true;
+      }
       const article = {
         title: this.article.title,
-        summary: this.article.summary,
         body: this.replaceImagesURLs(this.$noteUtils.getContentToSave(this.editorBodyInputRef, this.oembedMinWidth)),
         author: this.currentUser,
         published: false,
         spaceId: this.spaceId,
-        publicationState: ''
+        publicationState: '',
+        properties: properties
       };
-      if (this.article?.illustration?.length) {
-        article.uploadId = this.article.illustration[0].uploadId;
-      } else {
-        article.uploadId = '';
-      }
       if (this.article.id) {
-        if (this.article.title || this.article.summary || this.article.body || this.article.illustration?.length) {
+        if (this.article.title || this.article.body) {
           article.id = this.article.id;
           this.$newsServices.updateNews(article, false, this.articleType)
             .then((updatedArticle) => {
@@ -335,13 +325,14 @@ export default {
           this.article.id = null;
         }
         this.savingDraft = false;
-      } else if (this.article.title || this.article.summary || this.article.body || this.article.illustration?.length) {
+      } else if (this.article.title || this.article.body) {
         article.publicationState = 'draft';
         this.$newsServices.saveNews(article).then((createdArticle) => {
           this.draftSavingStatus = this.$t('news.composer.draft.savedDraftStatus');
           this.article.id = createdArticle.id;
+          this.article.properties = createdArticle?.properties;
           if (!this.articleId) {
-            this.$root.articleId = createdArticle.id;
+            this.articleId = createdArticle.id;
           }
           this.savingDraft = false;
           this.$emit('draftCreated');
@@ -379,7 +370,6 @@ export default {
       const article = {
         id: this.article.id,
         title: this.article.title,
-        summary: this.article.summary,
         body: this.replaceImagesURLs(this.$noteUtils.getContentToSave(this.editorBodyInputRef, this.oembedMinWidth)),
         author: this.currentUser,
         published: this.article.published,
@@ -390,15 +380,14 @@ export default {
         timeZoneId: null,
         activityPosted: this.article.activityPosted,
         audience: this.article.audience,
+        draftPage: this.article.publicationState === 'draft',
+        properties: this.article?.properties
       };
 
       if (schedulePostDate){
         article.publicationState ='staged';
         article.schedulePostDate = schedulePostDate;
         article.timeZoneId = new window.Intl.DateTimeFormat().resolvedOptions().timeZone;
-      }
-      if (this.article?.illustration?.length) {
-        article.uploadId = this.article.illustration[0].uploadId;
       }
       if (article.publicationState ==='staged') {
         this.$newsServices.scheduleNews(article, this.articleType).then((scheduleArticle) => {
@@ -461,6 +450,7 @@ export default {
       if (this.initDone && this.currentArticleInitDone) {
         this.article.title = article.title;
         this.article.content = article.content;
+        this.article.properties = article.properties;
       }
     },
     editorReady(editor) {
@@ -529,17 +519,18 @@ export default {
     },
     fillArticle(articleId, setData) {
       this.$newsServices.getNewsById(articleId, true, this.articleType).then(article => {
-        if (article === 401){
+        if (article === 401) {
           this.unAuthorizedAccess = true;
         } else {
-          this.article.id = article.id;
+          this.article.id = article?.id;
+          this.article.targetPageId = article?.targetPageId;
           this.article.title = article.title;
-          this.article.summary = article.summary;
           this.article.content = this.$noteUtils.getContentToEdit(article.body);
           this.article.body = article.body;
           this.article.published = article.published;
           this.article.spaceId = article.spaceId;
           this.article.publicationState = article.publicationState;
+          this.article.draftPage =  article.publicationState === 'draft';
           this.article.activityId = article.activityId;
           this.article.updater = article.updater;
           this.article.draftUpdaterDisplayName = article.draftUpdaterDisplayName;
@@ -549,7 +540,7 @@ export default {
           this.article.audience = article.audience;
           this.article.url = article.url;
           this.article.publicationState = article.publicationState;
-          this.parseIllustration(article);
+          this.article.properties = article.properties;
           this.originalArticle = structuredClone(this.article);
           if (setData) {
             this.setEditorData(this.article?.content);
@@ -560,30 +551,6 @@ export default {
     },
     setEditorData(content) {
       this.$refs.editor.setEditorData(content);
-    },
-    parseIllustration(article) {
-      if (article.illustrationURL) {
-        this.$newsServices.importFileFromUrl(article.illustrationURL)
-          .then(resp => resp.blob())
-          .then(fileData => {
-            const illustrationFile = new File([fileData], `illustration${this.articleId}`);
-            const fileDetails = {
-              id: null,
-              uploadId: null,
-              name: illustrationFile.name,
-              size: illustrationFile.size,
-              src: article.illustrationURL,
-              progress: null,
-              file: illustrationFile,
-              finished: true,
-            };
-            this.article.illustration.push(fileDetails);
-            this.originalArticle.illustration.push(fileDetails);
-          })
-          .then(() => this.initIllustrationDone = true);
-      } else {
-        this.initIllustrationDone = true;
-      }
     },
     closePluginsDrawer() {
       this.$refs.editor.closePluginsDrawer();

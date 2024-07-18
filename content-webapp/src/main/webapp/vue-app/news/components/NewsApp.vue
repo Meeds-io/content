@@ -251,7 +251,8 @@ export default {
   },
   methods: {
     getDraftUrl(item) {
-      let draftUrl = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news/editor?newsId=${item.id}`;
+      let draftUrl = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news/editor`;
+      draftUrl += `?newsId=${item.activityId && item.targetPageId || item.id}`;
       if (item.spaceId) {
         draftUrl += `&spaceId=${item.spaceId}`;
       }
@@ -286,7 +287,7 @@ export default {
         const newsUpdateDate = new Date(item.updateDate);
         result.push({
           newsId: item.id,
-          newsText: this.getNewsText(item.summary, item.body),
+          newsText: this.getNewsText(item?.properties?.summary, item.body),
           illustrationURL: item.illustrationURL,
           title: item.title,
           updatedDate: this.isDraftsFilter ? newsPublicationDate : newsUpdateDate,

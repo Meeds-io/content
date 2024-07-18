@@ -26,7 +26,7 @@
     <div v-if="showArticleImage" class="article-item-image">
       <img
         :src="articleImage"
-        :alt="$t('news.latest.alt.articleImage')"
+        :alt="featuredImageAltText"
         class="card-border-radius">
     </div>
     <div class="article-item-content">
@@ -36,7 +36,7 @@
         class="text-body">{{ item.title }}</span>
       <span
         v-if="showArticleSummary"
-        :class="extraClass">{{ item.summary }}</span>
+        :class="extraClass">{{ item?.properties?.summary }}</span>
       <div class="d-flex">
         <span v-if="showArticleAuthor" class="article-preTitle">{{ item.authorDisplayName }}</span>
         <v-icon
@@ -119,6 +119,9 @@ export default {
     },
     showArticleReactions() {
       return this.selectedOption?.showArticleReactions;
+    },
+    featuredImageAltText() {
+      return this.item?.properties?.featuredImage?.altText || this.$t('news.latest.alt.articleImage');
     },
     articleImage() {
       return this.item?.illustrationURL?.concat('&size=70x70').toString() || '/content/images/news.png';

@@ -33,12 +33,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
-import static org.mockito.Mockito.atLeast;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -50,6 +45,8 @@ import java.util.Map;
 
 import io.meeds.news.search.NewsSearchConnector;
 import io.meeds.news.search.NewsESSearchResult;
+import io.meeds.notes.model.NoteFeaturedImage;
+import io.meeds.notes.model.NotePageProperties;
 import org.exoplatform.services.security.ConversationState;
 import org.exoplatform.social.core.utils.MentionUtils;
 import org.exoplatform.wiki.WikiException;
@@ -167,7 +164,6 @@ public class NewsServiceImplTest {
     News draftArticle = new News();
     draftArticle.setAuthor("john");
     draftArticle.setTitle("draft article for new page");
-    draftArticle.setSummary("draft article summary for new page");
     draftArticle.setBody("draft body");
     draftArticle.setPublicationState("draft");
 
@@ -202,7 +198,7 @@ public class NewsServiceImplTest {
     when(noteService.getNoteOfNoteBookByName("group",
                                              space.getGroupId(),
                                              NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME)).thenReturn(rootPage);
-    when(noteService.createDraftForNewPage(any(DraftPage.class), anyLong())).thenReturn(draftPage);
+    when(noteService.createDraftForNewPage(any(DraftPage.class), anyLong(), anyLong())).thenReturn(draftPage);
     when(rootPage.getId()).thenReturn("1");
     org.exoplatform.social.core.identity.model.Identity identity1 =
                                                                   mock(org.exoplatform.social.core.identity.model.Identity.class);
@@ -247,7 +243,6 @@ public class NewsServiceImplTest {
     when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
                                                              any(MetadataObject.class))).thenReturn(metadataItems);
     Map<String, String> properties = new HashMap<>();
-    properties.put(NEWS_SUMMARY, draftPage.getContent());
     when(metadataItem.getProperties()).thenReturn(properties);
     PORTAL_CONTAINER.when(PortalContainer::getCurrentPortalContainerName).thenReturn("portal");
     COMMONS_UTILS.when(CommonsUtils::getCurrentPortalOwner).thenReturn("dw");
@@ -310,7 +305,6 @@ public class NewsServiceImplTest {
     news.setId("1");
     news.setPublicationState("draft");
     news.setSpaceId(space.getId());
-    news.setSummary("news summary");
 
     DraftPage expecteddraftPage = new DraftPage();
     expecteddraftPage.setTitle(news.getTitle());
@@ -328,14 +322,13 @@ public class NewsServiceImplTest {
                                                                   mock(org.exoplatform.social.core.identity.model.Identity.class);
     when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(identity1);
     when(identity1.getId()).thenReturn("1");
-    when(noteService.updateDraftForNewPage(any(DraftPage.class), anyLong())).thenReturn(expecteddraftPage);
+    when(noteService.updateDraftForNewPage(any(DraftPage.class), anyLong(), anyLong())).thenReturn(expecteddraftPage);
 
     // When
     newsService.updateNews(news, "john", false, false, NewsUtils.NewsObjectType.DRAFT.name().toLowerCase(), CONTENT.name().toLowerCase());
 
     // Then
-    verify(noteService, times(1)).updateDraftForNewPage(eq(expecteddraftPage), anyLong());
-    verify(metadataService, times(1)).updateMetadataItem(any(MetadataItem.class), anyLong());
+    verify(noteService, times(1)).updateDraftForNewPage(eq(expecteddraftPage), anyLong(), anyLong());
   }
 
   @Test
@@ -466,7 +459,6 @@ public class NewsServiceImplTest {
     when(noteService.getDraftNoteById(anyString(), anyString())).thenReturn(draftPage);
 
     Map<String, String> properties = new HashMap<>();
-    properties.put(NEWS_SUMMARY, draftPage.getContent());
     MetadataItem metadataItem = mock(MetadataItem.class);
     List<MetadataItem> metadataItems = Arrays.asList(metadataItem);
     when(metadataItem.getObjectId()).thenReturn("1");
@@ -503,7 +495,6 @@ public class NewsServiceImplTest {
     News newsArticle = new News();
     newsArticle.setAuthor("john");
     newsArticle.setTitle("news article for new page");
-    newsArticle.setSummary("news article summary for new page");
     newsArticle.setBody("news body");
     newsArticle.setPublicationState(POSTED);
     newsArticle.setId("1");
@@ -594,7 +585,6 @@ public class NewsServiceImplTest {
     news.setId("1");
     news.setPublicationState("draft");
     news.setSpaceId("1");
-    news.setSummary("news summary");
     news.setOriginalBody("body");
 
     // When, Then
@@ -677,7 +667,6 @@ public class NewsServiceImplTest {
     news.setId("1");
     news.setPublicationState("draft");
     news.setSpaceId("1");
-    news.setSummary("news summary");
     news.setOriginalBody("body");
 
     // When, Then
@@ -754,7 +743,6 @@ public class NewsServiceImplTest {
     news.setId("1");
     news.setPublicationState(POSTED);
     news.setSpaceId("1");
-    news.setSummary("news summary");
     news.setOriginalBody("body");
 
     // When, Then
@@ -768,16 +756,15 @@ public class NewsServiceImplTest {
     when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(identity1);
     when(identity1.getId()).thenReturn("1");
 
-    when(noteService.updateNote(any(Page.class))).thenReturn(existingPage);
+    when(noteService.updateNote(any(Page.class), any(), any())).thenReturn(existingPage);
 
     // When
     newsService.updateNews(news, "john", false, false, ARTICLE.name().toLowerCase(), CONTENT.name().toLowerCase());
 
     // Then
-    verify(noteService, times(1)).updateNote(any(Page.class));
+    verify(noteService, times(1)).updateNote(any(Page.class), any(), any());
     verify(noteService, times(1)).createVersionOfNote(existingPage, identity.getUserId());
-    verify(noteService, times(2)).getPublishedVersionByPageIdAndLang(1L, null);
-    verify(metadataService, times(1)).updateMetadataItem(any(MetadataItem.class), anyLong());
+    verify(noteService, times(1)).getPublishedVersionByPageIdAndLang(1L, null);
   }
 
   @Test
@@ -818,9 +805,16 @@ public class NewsServiceImplTest {
     when(spaceService.canRedactOnSpace(space, identity)).thenReturn(true);
     when(noteService.deleteNote(existingPage.getWikiType(), existingPage.getWikiOwner(), existingPage.getName())).thenReturn(true);
     DraftPage draftPage = mock(DraftPage.class);
+    NotePageProperties draftProperties = new NotePageProperties();
+    NoteFeaturedImage noteFeaturedImage = new NoteFeaturedImage();
+    noteFeaturedImage.setId(123L);
+    draftProperties.setFeaturedImage(noteFeaturedImage);
     when(draftPage.getId()).thenReturn("1");
+    when(draftPage.getProperties()).thenReturn(draftProperties);
     when(noteService.getLatestDraftOfPage(existingPage, identity.getUserId())).thenReturn(draftPage);
     when(noteService.getDraftNoteById(anyString(), anyString())).thenReturn(draftPage);
+    when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(new org.exoplatform.social.core.identity.model.Identity("1"));
+    doNothing().when(noteService).removeNoteFeaturedImage(anyLong(), anyLong(), anyString(), anyBoolean(), anyLong());
 
     newsService.deleteNews(existingPage.getId(), identity, ARTICLE.name().toLowerCase());
 
@@ -856,7 +850,6 @@ public class NewsServiceImplTest {
     News newsArticle = new News();
     newsArticle.setAuthor("john");
     newsArticle.setTitle("news article");
-    newsArticle.setSummary("news article summary");
     newsArticle.setBody("news body");
     newsArticle.setPublicationState("staged");
     newsArticle.setId("1");
@@ -942,7 +935,7 @@ public class NewsServiceImplTest {
     when(draftPage.getCreatedDate()).thenReturn(new Date());
     when(draftPage.getAuthor()).thenReturn("john");
     when(draftPage.getId()).thenReturn("1");
-    when(noteService.createDraftForNewPage(any(DraftPage.class), anyLong())).thenReturn(draftPage);
+    when(noteService.createDraftForNewPage(any(DraftPage.class), anyLong(), anyLong())).thenReturn(draftPage);
 
     org.exoplatform.social.core.identity.model.Identity identity1 =
             mock(org.exoplatform.social.core.identity.model.Identity.class);
@@ -951,7 +944,7 @@ public class NewsServiceImplTest {
 
     newsService.unScheduleNews(newsArticle, space.getGroupId(), "john");
 
-    verify(noteService, times(1)).createDraftForNewPage(any(DraftPage.class), anyLong());
+    verify(noteService, times(1)).createDraftForNewPage(any(DraftPage.class), anyLong(), anyLong());
     verify(noteService, times(1)).deleteNote(anyString(), anyString(), anyString());
   }
 

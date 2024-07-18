@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.commons.lang3.StringUtils;
 
@@ -72,6 +73,8 @@ public class NewsIndexingServiceConnector extends ElasticIndexingServiceConnecto
   private static final String        INDEX_ALIAS_VALUE           = "news_alias";
 
   private static final String        INDEX_CURRENT_VALUE         = "news_v1";
+  
+  private static final String        SUMMARY_PROPERTY            = "summary";
 
   @Autowired
   private NewsService                newsService;
@@ -137,7 +140,10 @@ public class NewsIndexingServiceConnector extends ElasticIndexingServiceConnecto
     fields.put("title", news.getTitle());
 
     String body = news.getBody();
-    String summary = news.getSummary();
+    String summary = "";
+    if (news.getProperties() != null) {
+      summary = news.getProperties().getSummary();
+    }
     if (StringUtils.isBlank(body)) {
       body = news.getTitle();
     }
@@ -161,7 +167,7 @@ public class NewsIndexingServiceConnector extends ElasticIndexingServiceConnecto
         LOG.warn("Error sanitizing news '{}' summary", news.getId());
       }
       summary = htmlToText(summary);
-      fields.put("summary", summary);
+      fields.put(SUMMARY_PROPERTY, summary);
     }
 
     if (StringUtils.isNotBlank(news.getAuthor())) {

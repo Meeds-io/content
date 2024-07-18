@@ -323,10 +323,11 @@ public interface NewsService {
   void deleteArticle(News news, String articleCreator) throws Exception;
 
   /**
-   * @param draftArticleId
-   * @param draftArticleCreator
-   * @param deleteIllustration
+   * Deletes a draft article by its given id
+   *
+   * @param draftArticleId draft article id
+   * @param draftArticleCreator creator
    * @throws Exception when error occurs
    */
-  void deleteDraftArticle(String draftArticleId, String draftArticleCreator, boolean deleteIllustration) throws Exception;
+  void deleteDraftArticle(String draftArticleId, String draftArticleCreator) throws Exception;
 }
