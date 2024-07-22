@@ -9,4 +9,5 @@
 <script type="text/javascript" id="contentHeadScripts">
      eXo.env.portal.newsListTranslationEnabled = <%=featureService.isFeatureActiveForUser("newsListTranslation", userName)%>;
      eXo.env.portal.contentUnifiedEditorEnabled = <%=featureService.isFeatureActiveForUser("contentUnifiedEditor", userName)%>;
+     eXo.env.portal.contentTranslateOptionEnabled = <%=featureService.isFeatureActiveForUser("contentTranslateOption", userName)%>;
 </script>

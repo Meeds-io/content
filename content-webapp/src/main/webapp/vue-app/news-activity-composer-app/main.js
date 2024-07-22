@@ -54,6 +54,9 @@ export function init(maxToUpload, maxFileSize) {
         contentUnifiedEditorEnabled() {
           return eXo?.env?.portal?.contentUnifiedEditorEnabled;
         },
+        contentTranslateOptionEnabled() {
+          return eXo?.env?.portal?.contentTranslateOptionEnabled;
+        },
       },
       data: function() {
         return {
@@ -74,7 +77,9 @@ export function init(maxToUpload, maxFileSize) {
                    :max-to-upload="maxToUpload" 
                    :max-file-size="maxFileSize" 
                    :news-type="articleType" />
-                 <content-rich-editor v-else />`,
+                 <content-rich-editor
+                   v-else
+                   :translation-option-enabled="contentTranslateOptionEnabled" />`,
       i18n,
       vuetify
     });
