@@ -25,9 +25,9 @@
       :draft-saving-status="draftSavingStatus"
       :note-id-param="articleId"
       :post-key="postKey"
-      :body-placeholder="newsFormContentPlaceholder"
-      :title-placeholder="newsFormTitlePlaceholder"
-      :form-title="newsFormTitle"
+      :body-placeholder="contentFormContentPlaceholder"
+      :title-placeholder="contentFormTitlePlaceholder"
+      :form-title="contentFormTitle"
       :suggester-space-url="spacePrettyName"
       :app-name="appName"
       :web-page-note="false"
@@ -85,8 +85,9 @@ export default {
         illustration: []
       },
       autoSaveDelay: 1000,
-      newsFormTitlePlaceholder: `${this.$t('news.composer.placeholderTitleInput')}*`,
-      newsFormContentPlaceholder: `${this.$t('news.composer.placeholderContentInput')}*`,
+      contentFormTitlePlaceholder: `${this.$t('news.composer.placeholderTitleInput')}*`,
+      contentFormContentPlaceholder: `${this.$t('news.composer.placeholderContentInput')}*`,
+      contentFormTitle: '',
       appName: 'content',
       translations: [],
       languages: [],
@@ -163,9 +164,6 @@ export default {
       return this.articleId && this.$t('content.label.button.translations.options')
                             || this.$t('content.message.firstVersionShouldBeCreated');
     },
-    newsFormTitle() {
-      return this.$t('news.editor.label.create');
-    },
     publishButtonText() {
       return !this.editMode && this.$t('news.editor.publish') || this.$t('news.editor.save');
     },
@@ -193,6 +191,7 @@ export default {
     this.$root.$on('add-translation', this.addTranslation);
     this.$root.$on('lang-translation-changed', this.changeTranslation);
     this.$root.$on('delete-lang-translation', this.deleteTranslation);
+    this.contentFormTitle = this.articleId && this.$t('news.editor.label.edit') || this.$t('news.editor.label.create');
   },
   mounted() {
     this.initEditor();
