@@ -44,6 +44,7 @@
       :save-button-icon="saveButtonIcon"
       :save-button-disabled="disableSaveButton"
       :editor-icon="editorIcon"
+      :translation-option-enabled="translationOptionEnabled"
       @editor-closed="editorClosed"
       @open-treeview="openTreeView"
       @post-note="postArticleActions"
@@ -118,6 +119,12 @@ export default {
       spacePrettyName: null,
       illustrationChanged: false
     };
+  },
+  props: {
+    translationOptionEnabled: {
+      type: Boolean,
+      default: false
+    }
   },
   watch: {
     'article.title': function() {

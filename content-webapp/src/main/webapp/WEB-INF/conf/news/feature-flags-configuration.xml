@@ -41,6 +41,7 @@
         <name>ContentFeatureProperties</name>
         <description>unified editor Feature enablement flag</description>
         <property name="exo.feature.contentUnifiedEditor.enabled" value="${exo.feature.contentUnifiedEditor.enabled:false}"/>
+        <property name="exo.feature.contentTranslateOption.enabled" value="${exo.feature.contentTranslateOption.enabled:false}"/>
       </properties-param>
     </init-params>
   </component>
