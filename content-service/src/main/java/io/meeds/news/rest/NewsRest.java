@@ -234,7 +234,7 @@ public class NewsRest {
       news.setActivityPosted(updatedNews.isActivityPosted());
       news.setTargets(updatedNews.getTargets());
       news.setAudience(updatedNews.getAudience());
-
+      news.setProperties(updatedNews.getProperties());
       news = newsService.updateNews(news, currentIdentity.getUserId(), post, updatedNews.isPublished(), newsObjectType, newsUpdateType);
 
       return ResponseEntity.ok(news);

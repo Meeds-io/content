@@ -37,6 +37,7 @@
           <v-img
             class="articleImage fill-height"
             :src="showArticleImage && item.illustrationURL !== null ? item.illustrationURL.concat('&size=1420x222').toString() : '/content/images/news.png'"
+            :alt="item?.properties?.featuredImage?.altText"
             eager />
           <v-container class="slide-text-container d-flex text-center">
             <div class="flex flex-column carouselNewsInfo">

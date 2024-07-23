@@ -63,11 +63,6 @@
 </template>
 <script>
 export default {
-  data() {
-    return {
-      illustrationBaseUrl: `${eXo.env.portal.context}/${eXo.env.portal.rest}/notes/illustration/`
-    };
-  },
   props: {
     news: {
       type: Object,
@@ -94,24 +89,11 @@ export default {
     backURL() {
       return this.news && this.news.spaceMember ? this.news.spaceUrl : `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}`;
     },
-    isDraft() {
-      return this.publicationState === 'draft';
-    },
-    lang() {
-      return this.news?.lang;
-    },
-    hasFeaturedImage() {
-      return this.news?.properties?.featuredImageId;
-    },
-    featureImageUpdatedDate() {
-      return this.news?.properties?.featuredImageUpdatedDate;
-    },
     featuredImageAltText() {
-      return this.news?.properties?.featuredImageAltText;
+      return this.news?.properties?.featuredImage?.altText;
     },
     illustrationUrl() {
-      const langParam = this.lang && `&lang=${this.lang}` || '';
-      return this.hasFeaturedImage && `${this.illustrationBaseUrl}${this.news?.id}?v=${this.featureImageUpdatedDate}&isDraft=${this.isDraft}${langParam}` || '';
+      return this?.news.illustrationURL ? this.news.illustrationURL.concat('&size=315x128').toString() : '/content/images/news.png';
     },
     publicationState() {
       return this.news?.publicationState;
