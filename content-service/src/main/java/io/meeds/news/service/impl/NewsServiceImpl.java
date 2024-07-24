@@ -23,8 +23,6 @@ import static io.meeds.news.utils.NewsUtils.NewsObjectType.ARTICLE;
 import static io.meeds.news.utils.NewsUtils.NewsObjectType.LATEST_DRAFT;
 import static io.meeds.news.utils.NewsUtils.NewsUpdateType.CONTENT;
 
-import java.io.FileInputStream;
-import java.io.InputStream;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.OffsetTime;
@@ -50,9 +48,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.exoplatform.commons.api.notification.NotificationContext;
 import org.exoplatform.commons.api.notification.model.PluginKey;
 import org.exoplatform.commons.exception.ObjectNotFoundException;
-import org.exoplatform.commons.file.model.FileItem;
 import org.exoplatform.commons.file.services.FileService;
-import org.exoplatform.commons.file.services.FileStorageException;
 import org.exoplatform.commons.notification.impl.NotificationContextImpl;
 import org.exoplatform.commons.search.index.IndexingService;
 import org.exoplatform.commons.utils.CommonsUtils;
@@ -61,7 +57,6 @@ import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
 import org.exoplatform.services.security.ConversationState;
 import org.exoplatform.services.security.Identity;
-import org.exoplatform.services.security.IdentityConstants;
 import org.exoplatform.social.common.RealtimeListAccess;
 import org.exoplatform.social.core.activity.model.ExoSocialActivity;
 import org.exoplatform.social.core.activity.model.ExoSocialActivityImpl;
@@ -78,7 +73,6 @@ import org.exoplatform.social.metadata.model.MetadataKey;
 import org.exoplatform.social.metadata.model.MetadataObject;
 import org.exoplatform.social.metadata.model.MetadataType;
 import org.exoplatform.social.notification.LinkProviderUtils;
-import org.exoplatform.upload.UploadResource;
 import org.exoplatform.upload.UploadService;
 import org.exoplatform.wiki.WikiException;
 import org.exoplatform.wiki.model.DraftPage;
@@ -434,9 +428,13 @@ public class NewsServiceImpl implements NewsService {
       newsTargetingService.deleteNewsTargets(news, publisher);
       newsTargetingService.saveNewsTarget(news, displayed, newsToPublish.getTargets(), publisher);
     }
+    news.setAudience(newsToPublish.getAudience());
     NewsUtils.broadcastEvent(NewsUtils.PUBLISH_NEWS, news.getId(), news);
+    Space space = spaceService.getSpaceById(news.getSpaceId());
+    Map<String, Object> shareArticleEventListenerData = new HashMap<>();
+    shareArticleEventListenerData.putAll(Map.of(NEWS_ATTACHMENTS_IDS, getArticleAttachmentIdsToShare(Long.parseLong(news.getSpaceId()), Long.parseLong(newsPageObject.getId())),"space", space, NEWS_AUDIENCE, news.getAudience(),ARTICLE_CONTENT, news.getBody()));
+    NewsUtils.broadcastEvent(NewsUtils.SHARE_CONTENT_ATTACHMENTS,this, shareArticleEventListenerData);
     try {
-      news.setAudience(newsToPublish.getAudience());
       sendNotification(publisher, news, NotificationConstants.NOTIFICATION_CONTEXT.PUBLISH_NEWS);
     } catch (Error | Exception e) {
       LOG.warn("Error sending notification when publishing news with Id " + news.getId(), e);
@@ -873,20 +871,18 @@ public class NewsServiceImpl implements NewsService {
       metadataItem.setProperties(properties);
       metadataService.updateMetadataItem(metadataItem, Long.parseLong(userIdentity.getId()));
 
-      NewsUtils.broadcastEvent(NewsUtils.SHARE_CONTENT_ATTACHMENTS,
-                               Map.of(NEWS_ATTACHMENTS_IDS,
-                                      getArticleAttachmentIdsToShare(news,
-                                                                     Long.parseLong(space.getId()),
-                                                                     Long.parseLong(newsPageObject.getId())),
-                                      ARTICLE_CONTENT,
-                                      news.getBody()),
-                               space);
+      Map<String, Object> shareArticleEventListenerData = new HashMap<>();
+      shareArticleEventListenerData.put(NEWS_ATTACHMENTS_IDS, getArticleAttachmentIdsToShare(
+              Long.parseLong(space.getId()),
+              Long.parseLong(newsPageObject.getId())));
+      shareArticleEventListenerData.putAll(Map.of("space", space, NEWS_AUDIENCE, news.getAudience(),ARTICLE_CONTENT, news.getBody()));
+      NewsUtils.broadcastEvent(NewsUtils.SHARE_CONTENT_ATTACHMENTS,this, shareArticleEventListenerData);
       NewsUtils.broadcastEvent(NewsUtils.SHARE_NEWS, userIdentity.getRemoteId(), news);
     }
 
   }
 
-  private List<String> getArticleAttachmentIdsToShare(News article, long spaceId, long articlePageId) {
+  private List<String> getArticleAttachmentIdsToShare(long spaceId, long articlePageId) {
     List<String> attachmentIds = new ArrayList<>();
     PageVersion pageVersion = noteService.getPublishedVersionByPageIdAndLang(articlePageId, null);
     NewsPageVersionObject newsPageVersionObject = new NewsPageVersionObject(NEWS_METADATA_PAGE_VERSION_OBJECT_TYPE,
