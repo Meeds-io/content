@@ -29,7 +29,7 @@
     <div :class="[showHeader && newsHeader ? 'd-flex flex-column me-2 mt-1' : 'd-flex flex-column me-2']">
       <v-icon
         v-if="canPublishNews && showSettingsIcon"
-        class="button-open-settings"
+        :class="classButtonOpenSettings"
         :aria-label="$t('news.latest.openSettings')"
         size="24"
         icon
@@ -66,6 +66,10 @@ export default {
       required: false,
       default: false
     },
+    classButtonOpenSettings: {
+      type: String,
+      default: 'button-open-settings'
+    }
   },
   data: () => ({
     newsHeader: '',
