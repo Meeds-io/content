@@ -141,8 +141,8 @@ public class NewsIndexingServiceConnector extends ElasticIndexingServiceConnecto
 
     String body = news.getBody();
     String summary = "";
-    if (!MapUtils.isEmpty(news.getProperties())) {
-      summary = news.getProperties().get(SUMMARY_PROPERTY);
+    if (news.getProperties() != null) {
+      summary = news.getProperties().getSummary();
     }
     if (StringUtils.isBlank(body)) {
       body = news.getTitle();

@@ -23,6 +23,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
+import io.meeds.notes.model.NotePageProperties;
 import org.exoplatform.social.metadata.model.MetadataItem;
 
 import lombok.AllArgsConstructor;
@@ -134,5 +135,7 @@ public class News {
 
   private String                          lang;
 
-  private Map<String, String>             properties;
+  private String                          illustrationURL;
+
+  private NotePageProperties              properties;
 }

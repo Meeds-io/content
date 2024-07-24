@@ -45,6 +45,8 @@ import java.util.Map;
 
 import io.meeds.news.search.NewsSearchConnector;
 import io.meeds.news.search.NewsESSearchResult;
+import io.meeds.notes.model.NoteFeaturedImage;
+import io.meeds.notes.model.NotePageProperties;
 import org.exoplatform.services.security.ConversationState;
 import org.exoplatform.social.core.utils.MentionUtils;
 import org.exoplatform.wiki.WikiException;
@@ -196,7 +198,7 @@ public class NewsServiceImplTest {
     when(noteService.getNoteOfNoteBookByName("group",
                                              space.getGroupId(),
                                              NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME)).thenReturn(rootPage);
-    when(noteService.createDraftForNewPage(any(DraftPage.class), anyLong())).thenReturn(draftPage);
+    when(noteService.createDraftForNewPage(any(DraftPage.class), anyLong(), anyLong())).thenReturn(draftPage);
     when(rootPage.getId()).thenReturn("1");
     org.exoplatform.social.core.identity.model.Identity identity1 =
                                                                   mock(org.exoplatform.social.core.identity.model.Identity.class);
@@ -320,13 +322,13 @@ public class NewsServiceImplTest {
                                                                   mock(org.exoplatform.social.core.identity.model.Identity.class);
     when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(identity1);
     when(identity1.getId()).thenReturn("1");
-    when(noteService.updateDraftForNewPage(any(DraftPage.class), anyLong())).thenReturn(expecteddraftPage);
+    when(noteService.updateDraftForNewPage(any(DraftPage.class), anyLong(), anyLong())).thenReturn(expecteddraftPage);
 
     // When
     newsService.updateNews(news, "john", false, false, NewsUtils.NewsObjectType.DRAFT.name().toLowerCase(), CONTENT.name().toLowerCase());
 
     // Then
-    verify(noteService, times(1)).updateDraftForNewPage(eq(expecteddraftPage), anyLong());
+    verify(noteService, times(1)).updateDraftForNewPage(eq(expecteddraftPage), anyLong(), anyLong());
   }
 
   @Test
@@ -803,8 +805,10 @@ public class NewsServiceImplTest {
     when(spaceService.canRedactOnSpace(space, identity)).thenReturn(true);
     when(noteService.deleteNote(existingPage.getWikiType(), existingPage.getWikiOwner(), existingPage.getName())).thenReturn(true);
     DraftPage draftPage = mock(DraftPage.class);
-    Map<String,String> draftProperties = new HashMap<>();
-    draftProperties.put("featuredImageId", "123");
+    NotePageProperties draftProperties = new NotePageProperties();
+    NoteFeaturedImage noteFeaturedImage = new NoteFeaturedImage();
+    noteFeaturedImage.setId(123L);
+    draftProperties.setFeaturedImage(noteFeaturedImage);
     when(draftPage.getId()).thenReturn("1");
     when(draftPage.getProperties()).thenReturn(draftProperties);
     when(noteService.getLatestDraftOfPage(existingPage, identity.getUserId())).thenReturn(draftPage);
@@ -931,7 +935,7 @@ public class NewsServiceImplTest {
     when(draftPage.getCreatedDate()).thenReturn(new Date());
     when(draftPage.getAuthor()).thenReturn("john");
     when(draftPage.getId()).thenReturn("1");
-    when(noteService.createDraftForNewPage(any(DraftPage.class), anyLong())).thenReturn(draftPage);
+    when(noteService.createDraftForNewPage(any(DraftPage.class), anyLong(), anyLong())).thenReturn(draftPage);
 
     org.exoplatform.social.core.identity.model.Identity identity1 =
             mock(org.exoplatform.social.core.identity.model.Identity.class);
@@ -940,7 +944,7 @@ public class NewsServiceImplTest {
 
     newsService.unScheduleNews(newsArticle, space.getGroupId(), "john");
 
-    verify(noteService, times(1)).createDraftForNewPage(any(DraftPage.class), anyLong());
+    verify(noteService, times(1)).createDraftForNewPage(any(DraftPage.class), anyLong(), anyLong());
     verify(noteService, times(1)).deleteNote(anyString(), anyString(), anyString());
   }
 

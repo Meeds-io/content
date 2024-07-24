@@ -891,8 +891,15 @@ public class NewsServiceImpl implements NewsService {
       draftArticlePage.setContent(draftArticle.getBody());
       draftArticlePage.setParentPageId(newsArticlesRootNotePage.getId());
       draftArticlePage.setAuthor(draftArticle.getAuthor());
-      draftArticlePage = noteService.createDraftForNewPage(draftArticlePage, creationDate);
+      draftArticlePage.setProperties(draftArticle.getProperties());
+      draftArticlePage =
+                       noteService.createDraftForNewPage(draftArticlePage,
+                                                         creationDate,
+                                                         Long.parseLong(identityManager.getOrCreateUserIdentity(draftArticleCreator)
+                                                                                       .getId()));
 
+
+      draftArticle.setIllustrationURL(NewsUtils.buildIllustrationUrl(draftArticle.getProperties(), draftArticlePage.getLang()));
       draftArticle.setId(draftArticlePage.getId());
       draftArticle.setCreationDate(draftArticlePage.getCreatedDate());
       draftArticle.setUpdateDate(draftArticlePage.getUpdatedDate());
@@ -953,6 +960,7 @@ public class NewsServiceImpl implements NewsService {
       newsArticlePage.setParentPageId(newsArticlesRootNotePage.getId());
       newsArticlePage.setAuthor(newsArticle.getAuthor());
       newsArticlePage.setLang(null);
+      newsArticlePage.setProperties(newsArticle.getProperties());
       newsArticlePage = noteService.createNote(wiki, newsArticlesRootNotePage.getName(), newsArticlePage, poster);
       // create the version
       noteService.createVersionOfNote(newsArticlePage, poster.getUserId());
@@ -961,6 +969,7 @@ public class NewsServiceImpl implements NewsService {
         // set properties
         newsArticle.setId(newsArticlePage.getId());
         newsArticle.setCreationDate(pageVersion.getCreatedDate());
+        newsArticle.setIllustrationURL(NewsUtils.buildIllustrationUrl(newsArticlePage.getProperties(), newsArticle.getLang()));
 
         NewsPageVersionObject newsArticleVersionMetaDataObject = new NewsPageVersionObject(NEWS_METADATA_PAGE_VERSION_OBJECT_TYPE,
                                                                                            pageVersion.getId(),
@@ -1021,6 +1030,7 @@ public class NewsServiceImpl implements NewsService {
     draftArticlePage.setParentPageId(targetArticlePage.getParentPageId());
     draftArticlePage.setAuthor(draftArticle.getAuthor());
     draftArticlePage.setLang(null);
+    draftArticlePage.setProperties(draftArticle.getProperties());
 
     draftArticlePage = noteService.createDraftForExistPage(draftArticlePage, targetArticlePage, null, creationDate, updater);
 
@@ -1091,11 +1101,11 @@ public class NewsServiceImpl implements NewsService {
   public void deleteDraftArticle(String draftArticleId, String draftArticleCreator) throws Exception {
     DraftPage draftArticlePage = noteService.getDraftNoteById(draftArticleId, draftArticleCreator);
     if (draftArticlePage != null) {
-      if (draftArticlePage.getProperties() != null) {
-        String featuredImageId = draftArticlePage.getProperties().get(FEATURED_IMAGE_ID);
+      if (draftArticlePage.getProperties() != null && draftArticlePage.getProperties().getFeaturedImage() != null) {
+        long featuredImageId = draftArticlePage.getProperties().getFeaturedImage().getId();
         String userIdentityId = identityManager.getOrCreateUserIdentity(draftArticleCreator).getId();
         noteService.removeNoteFeaturedImage(Long.parseLong(draftArticlePage.getId()),
-                                            Long.parseLong(featuredImageId),
+                                            featuredImageId,
                                             null,
                                             true,
                                             Long.parseLong(userIdentityId));
@@ -1121,8 +1131,12 @@ public class NewsServiceImpl implements NewsService {
     if (draftArticlePage != null) {
       draftArticlePage.setTitle(draftArticle.getTitle());
       draftArticlePage.setContent(draftArticle.getBody());
+      draftArticlePage.setProperties(draftArticle.getProperties());
       // created and updated date set by default during the draft creation
-      noteService.updateDraftForNewPage(draftArticlePage, System.currentTimeMillis());
+      DraftPage draftPage = noteService.updateDraftForNewPage(draftArticlePage,
+                                        System.currentTimeMillis(),
+                                        Long.parseLong(identityManager.getOrCreateUserIdentity(draftArticleUpdater).getId()));
+      draftArticle.setIllustrationURL(NewsUtils.buildIllustrationUrl(draftPage.getProperties(), draftArticle.getLang()));
       return draftArticle;
     }
     return null;
@@ -1141,6 +1155,8 @@ public class NewsServiceImpl implements NewsService {
       draftArticle.setDraftUpdaterUserName(draftArticlePage.getAuthor());
       draftArticle.setLang(draftArticlePage.getLang());
       draftArticle.setProperties(draftArticlePage.getProperties());
+      draftArticle.setIllustrationURL(NewsUtils.buildIllustrationUrl(draftArticlePage.getProperties(),
+                                                                     draftArticlePage.getLang()));
       org.exoplatform.social.core.identity.model.Identity draftUpdaterIdentity =
                                                                                identityManager.getOrCreateUserIdentity(currentUserId);
       if (draftUpdaterIdentity != null && draftUpdaterIdentity.getProfile() != null) {
@@ -1702,10 +1718,12 @@ public class NewsServiceImpl implements NewsService {
         existingPage.setTitle(news.getTitle());
         existingPage.setContent(news.getBody());
       }
+      existingPage.setProperties(news.getProperties());
       existingPage = noteService.updateNote(existingPage, PageUpdateType.EDIT_PAGE_CONTENT, updater);
       news.setUpdateDate(existingPage.getUpdatedDate());
       news.setUpdater(existingPage.getAuthor());
       news.setUpdaterFullName(existingPage.getAuthorFullName());
+      news.setIllustrationURL(NewsUtils.buildIllustrationUrl(existingPage.getProperties(), news.getLang()));
 
       String newsArticleUpdaterIdentityId = identityManager.getOrCreateUserIdentity(updater.getUserId()).getId();
 
@@ -1772,6 +1790,7 @@ public class NewsServiceImpl implements NewsService {
         news.setUpdater(articlePage.getAuthor());
         news.setLang(articlePage.getLang());
         news.setProperties(articlePage.getProperties());
+        news.setIllustrationURL(NewsUtils.buildIllustrationUrl(articlePage.getProperties(), news.getLang()));
         // fetch related metadata item properties
         NewsPageObject newsPageObject = new NewsPageObject(NEWS_METADATA_PAGE_OBJECT_TYPE,
                                                            articlePage.getId(),
@@ -1845,11 +1864,13 @@ public class NewsServiceImpl implements NewsService {
       draftPage.setAuthor(news.getAuthor());
       draftPage.setTargetPageId(page.getId());
       draftPage.setLang(null);
+      draftPage.setProperties(news.getProperties());
 
       draftPage = noteService.updateDraftForExistPage(draftPage, page, null, System.currentTimeMillis(), updater);
 
       news.setDraftUpdateDate(draftPage.getUpdatedDate());
       news.setDraftUpdater(draftPage.getAuthor());
+      news.setIllustrationURL(NewsUtils.buildIllustrationUrl(draftPage.getProperties(), news.getLang()));
 
       NewsLatestDraftObject latestDraftObject = new NewsLatestDraftObject(NEWS_METADATA_LATEST_DRAFT_OBJECT_TYPE,
                                                                           draftPage.getId(),
@@ -1931,19 +1952,6 @@ public class NewsServiceImpl implements NewsService {
     String startPublishedDateString = defaultFormat.format(startPublishedDate.getTime());
 
     newsProperties.put(SCHEDULE_POST_DATE, startPublishedDateString);
-  }
-
-  private boolean isSameIllustration(Page newsDraft, Page newsArticle) {
-
-    if (newsArticle == null || newsArticle.getProperties() == null
-        || newsArticle.getProperties().get(FEATURED_IMAGE_ID) == null) {
-      return false;
-    }
-    Map<String, String> draftProperties = newsDraft.getProperties();
-    Map<String, String> articleProperties = newsArticle.getProperties();
-    String draftFeaturedImageId = draftProperties != null ? draftProperties.get(FEATURED_IMAGE_ID) : null;
-    String articleFeaturedImageId = articleProperties.get(FEATURED_IMAGE_ID);
-    return articleFeaturedImageId != null && articleFeaturedImageId.equals(draftFeaturedImageId);
   }
 
   private News postScheduledArticle(News news) throws ObjectNotFoundException {
