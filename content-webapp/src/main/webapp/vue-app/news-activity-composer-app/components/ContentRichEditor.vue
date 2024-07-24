@@ -185,9 +185,7 @@ export default {
     this.initDataPropertiesFromUrl();
     this.getArticle();
     this.getAvailableLanguages();
-    this.$root.$on('display-treeview-items', (/*filter*/) => {
-      // TO DO
-    });
+    this.$root.$on('display-treeview-items', filter => this.openTreeView(filter));
     this.$root.$on('add-translation', this.addTranslation);
     this.$root.$on('lang-translation-changed', this.changeTranslation);
     this.$root.$on('delete-lang-translation', this.deleteTranslation);
@@ -200,8 +198,18 @@ export default {
     editorClosed() {
       window.close();
     },
-    openTreeView(/*noteId, source, includeDisplay, filter*/) {
-      // TO DO
+    openTreeView(filter) {
+      if (this.initDone) {
+        this.$notesService.getNote('group', this.spaceGroupId, 'Home').then(note => {
+          this.$refs.noteTreeview.open(note, 'includePages', null, filter);
+        });
+      } else if (this.spaceId) {
+        this.$newsServices.getSpaceById(this.spaceId).then(space => {
+          this.$notesService.getNote('group', space.groupId, 'Home').then(note => {
+            this.$refs.noteTreeview.open(note, 'includePages', null, filter);
+          });
+        });
+      }
     },
     addTranslation(/*lang*/) {
       // TO DO
