@@ -287,7 +287,7 @@ export default {
         const newsUpdateDate = new Date(item.updateDate);
         result.push({
           newsId: item.id,
-          newsText: this.getNewsText(item.summary, item.body),
+          newsText: this.getNewsText(item?.properties?.summary, item.body),
           illustrationURL: item.illustrationURL,
           title: item.title,
           updatedDate: this.isDraftsFilter ? newsPublicationDate : newsUpdateDate,

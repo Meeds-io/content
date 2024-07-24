@@ -27,6 +27,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import io.meeds.news.model.News;
+import io.meeds.notes.model.NoteFeaturedImage;
+import io.meeds.notes.model.NotePageProperties;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 
@@ -268,9 +270,30 @@ public class NewsUtils {
     return null;
   }
 
+  public static String buildIllustrationUrl(NotePageProperties properties, String lang) {
+    if (properties == null || properties.getFeaturedImage() == null) {
+      return null;
+    }
+    NoteFeaturedImage featuredImage = properties.getFeaturedImage();
+    StringBuilder illustrationUrl = new StringBuilder();
+    illustrationUrl.append("/portal/rest/notes/illustration/");
+    illustrationUrl.append(properties.getNoteId());
+    illustrationUrl.append("?v=");
+    illustrationUrl.append(featuredImage.getLastUpdated());
+    illustrationUrl.append("&isDraft=");
+    illustrationUrl.append(properties.isDraft());
+    if (lang != null) {
+      illustrationUrl.append("&lang=");
+      illustrationUrl.append(lang);
+    }
+    return illustrationUrl.toString();
+  }
+
   private static List<Space> getMySpaces(org.exoplatform.services.security.Identity userIdentity) throws Exception {
     SpaceService spaceService = CommonsUtils.getService(SpaceService.class);
     ListAccess<Space> memberSpacesListAccess = spaceService.getMemberSpaces(userIdentity.getUserId());
     return Arrays.asList(memberSpacesListAccess.load(0, memberSpacesListAccess.getSize()));
   }
+
+
 }

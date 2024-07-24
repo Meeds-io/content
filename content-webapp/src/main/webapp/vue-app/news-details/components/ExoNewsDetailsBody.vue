@@ -25,8 +25,8 @@
         <div v-if="illustrationURL" class="illustration center">
           <img
             :src="`${illustrationURL}&size=0x400`"
-            class="newsDetailsImage illustrationPicture"
             :alt="featuredImageAltText"
+            class="newsDetailsImage illustrationPicture"
             longdesc="#newsSummary">
         </div>
         <div class="newsDetails">
@@ -169,8 +169,7 @@ export default {
     translateExtension: null,
     newsTitleContent: null,
     newsSummaryContent: null,
-    newsBodyContent: null,
-    illustrationBaseUrl: `${eXo.env.portal.context}/${eXo.env.portal.rest}/notes/illustration/`,
+    newsBodyContent: null
   }),
   created() {
     this.setNewsTitle(this.news?.title);
@@ -190,24 +189,11 @@ export default {
         news: this.news,
       };
     },
-    isDraft() {
-      return this.news?.publicationState === 'draft';
-    },
-    lang() {
-      return this.news?.lang;
-    },
-    hasFeaturedImage() {
-      return this.news?.properties?.featuredImageId;
+    illustrationURL() {
+      return this?.news.illustrationURL;
     },
     featuredImageAltText() {
-      return this.news?.properties?.featuredImageAltText || this.newsTitle;
-    },
-    featureImageUpdatedDate() {
-      return this.news?.properties?.featuredImageUpdatedDate;
-    },
-    illustrationURL() {
-      const langParam = this.lang && `&lang=${this.lang}` || '';
-      return this.hasFeaturedImage && `${this.illustrationBaseUrl}${this.news?.id}?v=${this.featureImageUpdatedDate}&isDraft=${this.isDraft}${langParam}` || '';
+      return this.news?.properties?.featuredImage?.altText || this.newsTitle;
     },
     newsTitle() {
       return this.news && this.newsTitleContent;
@@ -249,7 +235,7 @@ export default {
       return this.news && this.news.postedDate;
     },
     summary() {
-      return this.news && this.news.summary;
+      return this.news?.properties?.summary;
     },
     attachmentsIds() {
       return this.news?.attachmentsIds;
