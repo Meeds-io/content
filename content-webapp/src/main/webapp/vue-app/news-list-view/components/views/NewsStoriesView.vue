@@ -33,7 +33,6 @@
           class="card">
           <news-settings 
             :hide-see-all-button="true"
-            class-button-open-settings="settingNewsButton"
             :is-hovering="hover" />
           <a
             class="see-all-link"
