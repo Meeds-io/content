@@ -25,10 +25,15 @@
         v-for="(item, index) in news"
         :key="index"
         :item="item"
+        :last-item="news.length-1 == index"
         :selected-option="selectedOption" />
       <v-hover v-slot="{ hover }">
-        <div class="card">
-          <news-settings :hide-see-all-button="true" :is-hovering="hover" />
+        <div 
+          v-if="showSeeAll"
+          class="card">
+          <news-settings 
+            :hide-see-all-button="true"
+            :is-hovering="hover" />
           <a
             class="see-all-link"
             target="_self"
