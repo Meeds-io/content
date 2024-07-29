@@ -21,6 +21,7 @@ package io.meeds.news.rest;
 
 import static io.meeds.news.utils.NewsUtils.NewsObjectType.ARTICLE;
 
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -225,7 +226,6 @@ public class NewsRest {
       if (news == null) {
         return ResponseEntity.notFound().build();
       }
-
       news.setTitle(updatedNews.getTitle());
       news.setBody(updatedNews.getBody());
       news.setUploadId(updatedNews.getUploadId());
@@ -235,6 +235,7 @@ public class NewsRest {
       news.setTargets(updatedNews.getTargets());
       news.setAudience(updatedNews.getAudience());
       news.setProperties(updatedNews.getProperties());
+      news.setLang(updatedNews.getLang());
       news = newsService.updateNews(news, currentIdentity.getUserId(), post, updatedNews.isPublished(), newsObjectType, newsUpdateType);
 
       return ResponseEntity.ok(news);
@@ -352,14 +353,17 @@ public class NewsRest {
                                           String newsObjectType,
                                           @Parameter(description = "Is edit mode")
                                           @RequestParam(name = "editMode", defaultValue = "false", required = false)
-                                          boolean editMode) {
+                                          boolean editMode,
+                                          @Parameter(description = "article translation")
+                                          @RequestParam(name = "lang", required = false)
+                                          String lang) {
     String authenticatedUser = ConversationState.getCurrent().getIdentity().getUserId();
     try {
       if (StringUtils.isBlank(id)) {
         return ResponseEntity.badRequest().build();
       }
       org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
-      News news = newsService.getNewsById(id, currentIdentity, editMode, newsObjectType);
+      News news = newsService.getNewsByIdAndLang(id, currentIdentity, editMode, newsObjectType, StringUtils.isBlank(lang) ? null : lang);
       if (news == null || news.isDeleted()) {
         return ResponseEntity.notFound().build();
       }

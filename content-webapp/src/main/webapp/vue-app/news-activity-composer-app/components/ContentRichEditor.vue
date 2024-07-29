@@ -44,7 +44,7 @@
       :save-button-icon="saveButtonIcon"
       :save-button-disabled="disableSaveButton"
       :editor-icon="editorIcon"
-      :translation-option-enabled="translationOptionEnabled"
+      :translation-option-enabled="true"
       :images-download-folder="'DRIVE_ROOT_NODE/News/images'"
       @editor-closed="editorClosed"
       @open-treeview="openTreeView"
@@ -119,6 +119,7 @@ export default {
       currentArticleInitDone: false,
       isSpaceMember: false,
       spacePrettyName: null,
+      addingTranslation: false,
     };
   },
   props: {
@@ -206,11 +207,35 @@ export default {
         });
       }
     },
-    addTranslation(/*lang*/) {
-      // TO DO
+    addTranslation(lang) {
+      this.addingTranslation = true;
+      const originNoteContent = {
+        title: this.article.title,
+        content: this.article.content,
+        properties: structuredClone(this.article?.properties),
+        lang: lang?.value
+      };
+      this.languages = this.languages.filter(item => item.value !== lang?.value);
+      this.selectedLanguage = lang?.value;
+      this.translations.unshift(lang);
+      this.article.title = '';
+      this.article.content = '';
+      this.article.properties.summary = '';
+      this.article.lang = this.selectedLanguage;
+      this.$refs.editor.resetEditorData();
+      document.dispatchEvent(new CustomEvent('translation-added',{ detail: originNoteContent }));
+      this.$nextTick(() => {
+        this.addingTranslation = false;
+      });
     },
-    changeTranslation(/*lang*/) {
-      // TO DO
+    changeTranslation(lang) {
+      this.selectedLanguage = lang.value;
+      if (lang.value || this.isMobile) {
+        this.translations=this.translations.filter(item => item.value !== lang.value);
+        this.translations.unshift(lang);
+      }
+      const articleId = !this.article.targetPageId ? this.article.id : this.article.targetPageId;
+      return this.fillArticle(articleId, true,lang.value).then(() => this.updateUrl());
     },
     deleteTranslation(/*translation*/) {
       // TO DO
@@ -222,14 +247,7 @@ export default {
     },
     autoSave: function() {
       // No draft saving if init not done or in edit mode for the moment
-      if (!this.initDone) {
-        return;
-      }
-      if (!this.currentArticleInitDone) {
-        return;
-      }
-      // if the News is being posted, no need to autosave anymore
-      if (this.postingNews) {
+      if (!this.initDone || this.addingTranslation || !this.currentArticleInitDone || this.postingNews || (!this.article && !this.article.content && !this.article.properties.summary && !this.article.properties.featuredImage.id)) {
         return;
       }
       clearTimeout(this.saveDraft);
@@ -253,14 +271,17 @@ export default {
       updatedArticle.publicationState = 'draft';
       return this.$newsServices.updateNews(updatedArticle, false, this.articleType).then((createdArticle) => {
         this.spaceUrl = createdArticle.spaceUrl;
+        this.article.lang = createdArticle.lang;
         if (this.article.body !== createdArticle.body) {
           this.imagesURLs = this.extractImagesURLsDiffs(this.article.body, createdArticle.body);
         }
       }).then(() => this.$emit('draftUpdated'))
         .then(() => this.draftSavingStatus = this.$t('news.composer.draft.savedDraftStatus'))
         .finally(() => {
-          this.fillArticle(updatedArticle.id);
           this.enableClickOnce();
+          if (this.articleType === 'latest_draft' && this.selectedLanguage) {
+            this.updateUrl();
+          }
         });
     },
     updateAndPostArticle() {
@@ -271,7 +292,7 @@ export default {
         if (this.article.body !== createdArticle.body) {
           this.imagesURLs = this.extractImagesURLsDiffs(this.article.body, createdArticle.body);
         }
-        this.fillArticle(createdArticle.id);
+        this.fillArticle(createdArticle.id, false, createdArticle.lang || this.selectedLanguage);
         this.enableClickOnce();
         this.displayAlert({
           message: this.$t('news.save.success.message'),
@@ -289,7 +310,8 @@ export default {
         published: this.article.published,
         activityPosted: this.article.activityPosted,
         audience: this.article.audience,
-        properties: this.article?.properties
+        properties: this.article?.properties,
+        lang: this.article?.lang
       };
       return updatedArticle;
     },
@@ -398,9 +420,8 @@ export default {
         });
       } else {
         this.$newsServices.saveNews(article).then((createdArticle) => {
-          this.updateUrl(createdArticle);
           this.initDataPropertiesFromUrl();
-          this.fillArticle(createdArticle.id);
+          this.fillArticle(createdArticle.id).then(() => this.updateUrl());
           this.displayAlert({
             message: this.$t('news.publish.success.message'),
             type: 'success',
@@ -413,7 +434,7 @@ export default {
         }).finally(() => this.draftSavingStatus = '');
       }
     },
-    updateUrl(article){
+    updateUrl(){
       const url = new URL(window.location.href);
       const params = new URLSearchParams(url.search);
       params.delete('newsId');
@@ -421,12 +442,18 @@ export default {
       if (params.has('activityId')) {
         params.delete('activityId');
       }
-      params.append('newsId', article.id);
-      if (article.activityId){
-        params.append('activityId', article.activityId);
+      params.append('newsId', this.article?.targetPageId ? this.article?.targetPageId : this.article?.id);
+      if (this.article.activityId){
+        params.append('activityId', this.article.activityId);
         params.append('type', 'latest_draft');
       } else {
         params.append('type', 'draft');
+      }
+      if (params.has('lang')) {
+        params.delete('lang');
+      }
+      if (this.article.lang) {
+        params.append('lang', this.article.lang);
       }
       window.history.pushState('news', '', `${url.origin}${url.pathname}?${params.toString()}`);
 
@@ -499,7 +526,7 @@ export default {
           this.canCreateArticle = canCreateArticle || this.articleId;
           if (this.canCreateArticle) {
             if (this.articleId) {
-              this.fillArticle(this.articleId, true);
+              this.fillArticle(this.articleId, true, this.selectedLanguage);
             } else {
               const message = localStorage.getItem('exo-activity-composer-message');
               if (message) {
@@ -517,8 +544,8 @@ export default {
         });
       });
     },
-    fillArticle(articleId, setData) {
-      this.$newsServices.getNewsById(articleId, true, this.articleType).then(article => {
+    fillArticle(articleId, setData, lang) {
+      return this.$newsServices.getNewsById(articleId, true, this.articleType, lang).then(article => {
         if (article === 401) {
           this.unAuthorizedAccess = true;
         } else {
@@ -541,12 +568,36 @@ export default {
           this.article.url = article.url;
           this.article.publicationState = article.publicationState;
           this.article.properties = article.properties;
+          this.article.lang = article.lang;
           this.originalArticle = structuredClone(this.article);
           if (setData) {
             this.setEditorData(this.article?.content);
           }
         }
         this.initDone = true;
+      }).finally(() => {
+        this.getArticleLanguages();
+      });
+    },
+    getArticleLanguages(){
+      const articleId= this.article.targetPageId ? this.article.targetPageId : this.article.id;
+      return this.$notesService.getNoteLanguages(articleId,true).then(data => {
+        this.translations =  data || [];
+        if (this.translations.length>0) {
+          this.translations = this.allLanguages.filter(item1 => this.translations.some(item2 => item2 === item1.value));
+          this.translations.sort((a, b) => a.text.localeCompare(b.text));
+          this.languages = this.allLanguages.filter(item1 => !this.translations.some(item2 => item2.value === item1.value));
+        }
+        if (this.isMobile) {
+          //TODO
+        }
+        if (!this.selectedLanguage){
+          const lang = this.translations.find(item => item.value === this.selectedLanguage);
+          if (lang){
+            this.translations=this.translations.filter(item => item.value !== lang.value);
+            this.translations.unshift(lang);
+          }
+        }
       });
     },
     setEditorData(content) {
@@ -581,6 +632,7 @@ export default {
       this.spaceId = this.getURLQueryParam('spaceId');
       this.selectedLanguage = this.getURLQueryParam('translation');
       this.spacePrettyName = this.getURLQueryParam('spaceName');
+      this.selectedLanguage = this.getURLQueryParam('lang');
     },
     enableClickOnce() {
       this.postingNews = false;

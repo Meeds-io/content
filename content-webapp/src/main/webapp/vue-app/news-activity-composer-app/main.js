@@ -71,7 +71,7 @@ export function init(maxToUpload, maxFileSize) {
         };
       },
       template: `<exo-news-activity-composer 
-                   v-if="!contentUnifiedEditorEnabled" 
+                   v-if="contentUnifiedEditorEnabled" 
                    :news-id="articleId" 
                    :space-id="spaceId" 
                    :activity-id="activityId" 

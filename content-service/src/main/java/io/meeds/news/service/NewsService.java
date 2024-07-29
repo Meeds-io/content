@@ -19,7 +19,6 @@
  */
 package io.meeds.news.service;
 
-import java.util.Date;
 import java.util.List;
 
 import org.exoplatform.commons.exception.ObjectNotFoundException;
@@ -69,20 +68,6 @@ public interface NewsService {
    * @throws Exception if an error occurred
    */
   boolean canCreateNews(Space space, org.exoplatform.services.security.Identity currentIdentity) throws Exception;
-
-  /**
-   * Update a news If the uploadId of the news is null, the illustration is not
-   * updated. If the uploadId of the news is empty, the illustration is removed
-   * (if any).
-   * 
-   * @param news
-   * @param updater user attempting to update news
-   * @param post
-   * @param publish
-   * @return updated News
-   * @throws Exception
-   */
-  News updateNews(News news, String updater, Boolean post, boolean publish) throws Exception;
 
   /**
    * Update a news If the uploadId of the news is null, the illustration is not
@@ -147,6 +132,24 @@ public interface NewsService {
                    org.exoplatform.services.security.Identity currentIdentity,
                    boolean editMode,
                    String newsObjectType) throws IllegalAccessException;
+
+  /**
+   * Retrieves a news identified by its technical identifier and corresponding translation
+   *
+   * @param newsId {@link News} identifier
+   * @param currentIdentity user attempting to access news
+   * @param editMode access mode to news: whether to edit news to to view it.
+   * @param newsObjectType news object type to be retrieved.
+   * @param lang news translate version
+   * @return {@link News} if found else null
+   * @throws IllegalAccessException when user doesn't have access to
+   *           {@link News}
+   */
+  News getNewsByIdAndLang(String newsId,
+                   org.exoplatform.services.security.Identity currentIdentity,
+                   boolean editMode,
+                   String newsObjectType,
+                   String lang) throws IllegalAccessException;
 
   /**
    * Retrives a news identified by its technical identifier
