@@ -271,7 +271,8 @@ public class NewsUtils {
   }
 
   public static String buildIllustrationUrl(NotePageProperties properties, String lang) {
-    if (properties == null || properties.getFeaturedImage() == null) {
+    if (properties == null || properties.getFeaturedImage() == null || properties.getFeaturedImage().getId() == null
+        || properties.getFeaturedImage().getId() == 0L) {
       return null;
     }
     NoteFeaturedImage featuredImage = properties.getFeaturedImage();
