@@ -260,3 +260,14 @@ export function canPublishNews(spaceId) {
     return resp;
   });
 }
+
+export function deleteArticleTranslation(newsId, lang) {
+  return fetch(`${newsConstants.CONTENT_API}/contents/translation/${newsId}?lang=${lang}`, {
+    credentials: 'include',
+    method: 'DELETE'
+  }).then((resp) => {
+    if (resp && !resp.ok) {
+      throw new Error('Error when deleting article translation');
+    }
+  });
+}

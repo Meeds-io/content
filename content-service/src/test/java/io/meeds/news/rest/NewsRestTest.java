@@ -1505,4 +1505,23 @@ public class NewsRestTest {
     verify(newsService, times(1)).markAsRead(news, JOHN);
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
   }
+
+  @Test
+  public void testDeleteArticleTranslation() throws Exception {
+    Identity currentIdentity = new Identity(JOHN);
+    ConversationState.setCurrent(new ConversationState(currentIdentity));
+    News news = new News();
+    news.setId("1");
+    news.setCanDelete(false);
+    news.setLang("fr");
+    when(newsService.getNewsById("1", currentIdentity, false, ARTICLE.name())).thenReturn(news);
+    //
+    Response response = newsRestController.deleteArticleTranslation(news.getId(), news.getLang());
+    assertEquals(Response.Status.UNAUTHORIZED.getStatusCode(), response.getStatus());
+
+    news.setCanDelete(true);
+    response = newsRestController.deleteArticleTranslation(news.getId(), news.getLang());
+    assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+
+  }
 }

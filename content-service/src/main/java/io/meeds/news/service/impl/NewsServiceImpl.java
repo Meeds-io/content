@@ -39,7 +39,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.exoplatform.commons.api.notification.NotificationContext;
 import org.exoplatform.commons.api.notification.model.PluginKey;
 import org.exoplatform.commons.exception.ObjectNotFoundException;
-import org.exoplatform.commons.file.services.FileService;
 import org.exoplatform.commons.notification.impl.NotificationContextImpl;
 import org.exoplatform.commons.search.index.IndexingService;
 import org.exoplatform.commons.utils.CommonsUtils;
@@ -64,7 +63,6 @@ import org.exoplatform.social.metadata.model.MetadataKey;
 import org.exoplatform.social.metadata.model.MetadataObject;
 import org.exoplatform.social.metadata.model.MetadataType;
 import org.exoplatform.social.notification.LinkProviderUtils;
-import org.exoplatform.upload.UploadService;
 import org.exoplatform.wiki.WikiException;
 import org.exoplatform.wiki.model.DraftPage;
 import org.exoplatform.wiki.model.Page;
@@ -94,7 +92,6 @@ import io.meeds.news.service.NewsTargetingService;
 import io.meeds.news.utils.NewsUtils;
 import io.meeds.news.utils.NewsUtils.NewsObjectType;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 
@@ -474,11 +471,11 @@ public class NewsServiceImpl implements NewsService {
       if (newsObjectType == null) {
         throw new IllegalArgumentException("Required argument news object type could not be null");
       }
-      if (NewsObjectType.DRAFT.name().toLowerCase().equals(newsObjectType)) {
+      if (NewsObjectType.DRAFT.name().equalsIgnoreCase(newsObjectType)) {
         news = buildDraftArticle(newsId, currentIdentity.getUserId());
-      } else if (LATEST_DRAFT.name().toLowerCase().equals(newsObjectType)) {
+      } else if (LATEST_DRAFT.name().equalsIgnoreCase(newsObjectType)) {
         news = buildLatestDraftArticle(newsId, currentIdentity.getUserId(), lang);
-      } else if (ARTICLE.name().toLowerCase().equals(newsObjectType)) {
+      } else if (ARTICLE.name().equalsIgnoreCase(newsObjectType)) {
         news = buildArticle(newsId, lang);
       }
     } catch (Exception exception) {
@@ -841,6 +838,10 @@ public class NewsServiceImpl implements NewsService {
 
   }
 
+  @Override
+  public void deleteVersionsByArticleIdAndLang(String id, String lang) throws Exception {
+    noteService.deleteVersionsByNoteIdAndLang(Long.parseLong(id), lang);
+  }
 
   private News addNewArticleVersionWithLang(News news, Identity versionCreator) throws Exception {
     News existingNews = getNewsArticleById(news.getId());
@@ -853,6 +854,7 @@ public class NewsServiceImpl implements NewsService {
       existingPage.setLang(news.getLang());
       existingPage = noteService.updateNote(existingPage, PageUpdateType.EDIT_PAGE_CONTENT_AND_TITLE, versionCreator);
       news.setProperties(existingPage.getProperties());
+      news.setPublicationState(POSTED);
       // update the metadata item
       MetadataItem metadataItem = metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY, new NewsPageObject(NEWS_METADATA_PAGE_OBJECT_TYPE, newsId, null, Long.parseLong(existingNews.getSpaceId()))).stream().findFirst().orElse(null);
       if (metadataItem != null) {
@@ -862,6 +864,11 @@ public class NewsServiceImpl implements NewsService {
       }
       news.setIllustrationURL(NewsUtils.buildIllustrationUrl(existingPage.getProperties(), news.getLang()));
       noteService.createVersionOfNote(existingPage, versionCreator.getUserId());
+      DraftPage draftPage = noteService.getLatestDraftPageByTargetPageAndLang(Long.parseLong(newsId), news.getLang());
+      while (draftPage != null) {
+        noteService.removeDraftById(draftPage.getId());
+        draftPage = noteService.getLatestDraftPageByTargetPageAndLang(Long.parseLong(newsId), news.getLang());
+      }
       return news;
     }
     return null;
@@ -997,6 +1004,7 @@ public class NewsServiceImpl implements NewsService {
         PageVersion pageVersion = noteService.getPublishedVersionByPageIdAndLang(Long.parseLong(newsArticlePage.getId()), null);
         // set properties
         newsArticle.setId(newsArticlePage.getId());
+        newsArticlePage.setLang(newsArticlePage.getLang());
         newsArticle.setCreationDate(pageVersion.getCreatedDate());
         newsArticle.setIllustrationURL(NewsUtils.buildIllustrationUrl(newsArticlePage.getProperties(), newsArticle.getLang()));
 
@@ -1751,6 +1759,7 @@ public class NewsServiceImpl implements NewsService {
       existingPage = noteService.updateNote(existingPage, PageUpdateType.EDIT_PAGE_CONTENT_AND_TITLE, updater);
       news.setUpdateDate(existingPage.getUpdatedDate());
       news.setUpdater(existingPage.getAuthor());
+      news.setLang(existingPage.getLang());
       news.setUpdaterFullName(existingPage.getAuthorFullName());
       news.setIllustrationURL(NewsUtils.buildIllustrationUrl(existingPage.getProperties(), news.getLang()));
 
@@ -1794,8 +1803,8 @@ public class NewsServiceImpl implements NewsService {
         noteService.createVersionOfNote(existingPage, updater.getUserId());
         // remove the draft
         DraftPage draftPage = noteService.getLatestDraftPageByUserAndTargetPageAndLang(Long.parseLong(existingPage.getId()),
-                updater.getUserId(),
-                null);
+                                                                                       updater.getUserId(),
+                                                                                       null);
         deleteDraftArticle(draftPage.getId(), updater.getUserId());
       }
       return news;
@@ -1819,20 +1828,19 @@ public class NewsServiceImpl implements NewsService {
         news.setCreationDate(articlePage.getCreatedDate());
         news.setAuthor(articlePage.getAuthor());
         news.setUpdater(articlePage.getAuthor());
-        news.setLang(articlePage.getLang());
         news.setProperties(articlePage.getProperties());
         news.setIllustrationURL(NewsUtils.buildIllustrationUrl(articlePage.getProperties(), news.getLang()));
         // fetch related metadata item properties
         NewsPageObject newsPageObject = new NewsPageObject(NEWS_METADATA_PAGE_OBJECT_TYPE,
-                articlePage.getId(),
-                null,
-                Long.parseLong(space.getId()));
+                                                           articlePage.getId(),
+                                                           null,
+                                                           Long.parseLong(space.getId()));
         MetadataItem metadataItem = metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY, newsPageObject).get(0);
         news.setSpaceId(space.getId());
         news.setSpaceAvatarUrl(space.getAvatarUrl());
         news.setSpaceDisplayName(space.getDisplayName());
         boolean hiddenSpace = space.getVisibility().equals(Space.HIDDEN) && !spaceService.isMember(space, currentUsername)
-                && !spaceService.isSuperManager(currentUsername);
+            && !spaceService.isSuperManager(currentUsername);
         news.setHiddenSpace(hiddenSpace);
         boolean isSpaceMember = spaceService.isSuperManager(currentUsername) || spaceService.isMember(space, currentUsername);
         news.setSpaceMember(isSpaceMember);
@@ -1841,8 +1849,8 @@ public class NewsServiceImpl implements NewsService {
         }
 
         org.exoplatform.social.core.identity.model.Identity identity =
-                identityManager.getOrCreateIdentity(OrganizationIdentityProvider.NAME,
-                        news.getAuthor());
+                                                                     identityManager.getOrCreateIdentity(OrganizationIdentityProvider.NAME,
+                                                                                                         news.getAuthor());
         if (identity != null && identity.getProfile() != null) {
           news.setAuthorDisplayName(identity.getProfile().getFullName());
           news.setAuthorAvatarUrl(identity.getProfile().getAvatarUrl());
@@ -1858,14 +1866,15 @@ public class NewsServiceImpl implements NewsService {
         news.setTitle(pageVersion.getTitle());
         processPageContent(pageVersion, news);
         news.setUpdaterFullName(pageVersion.getAuthorFullName());
+        news.setLang(pageVersion.getLang());
 
         NewsPageVersionObject newsPageVersionObject = new NewsPageVersionObject(NEWS_METADATA_PAGE_VERSION_OBJECT_TYPE,
-                pageVersion.getId(),
-                null,
-                Long.parseLong(space.getId()));
+                                                                                pageVersion.getId(),
+                                                                                null,
+                                                                                Long.parseLong(space.getId()));
         List<MetadataItem> newsPageVersionMetadataItems =
-                metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY,
-                        newsPageVersionObject);
+                                                        metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY,
+                                                                                                            newsPageVersionObject);
         buildArticleVersionProperties(news, newsPageVersionMetadataItems);
         return news;
       }
@@ -1951,6 +1960,7 @@ public class NewsServiceImpl implements NewsService {
 
     draftArticle.setId(latestDraft.getId());
     draftArticle.setTargetPageId(latestDraft.getTargetPageId());
+    draftArticle.setLang(latestDraft.getLang());
     return draftArticle;
   }
 

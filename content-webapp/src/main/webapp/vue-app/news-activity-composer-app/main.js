@@ -65,13 +65,13 @@ export function init(maxToUpload, maxFileSize) {
           spaceId: getURLQueryParam('spaceId'),
           activityId: getURLQueryParam('activityId'),
           articleType: getURLQueryParam('type'),
-          selectedLanguage: getURLQueryParam('translation'),
+          selectedLanguage: getURLQueryParam('lang'),
           maxToUpload: maxToUpload,
           maxFileSize: maxFileSize
         };
       },
       template: `<exo-news-activity-composer 
-                   v-if="contentUnifiedEditorEnabled" 
+                   v-if="!contentUnifiedEditorEnabled" 
                    :news-id="articleId" 
                    :space-id="spaceId" 
                    :activity-id="activityId" 
@@ -84,7 +84,10 @@ export function init(maxToUpload, maxFileSize) {
       i18n,
       vuetify
     });
-  }).finally(() => Vue.prototype.$utils.includeExtensions('WYSIWYGPluginsExtensions'));
+  }).finally(() => {
+    Vue.prototype.$utils.includeExtensions('WYSIWYGPluginsExtensions');
+    Vue.prototype.$utils.includeExtensions('AutomaticTranslationNotesEditorExtension');
+  });
 }
 
 export function destroy() {

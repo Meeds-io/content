@@ -333,4 +333,13 @@ public interface NewsService {
    * @throws Exception when error occurs
    */
   void deleteDraftArticle(String draftArticleId, String draftArticleCreator) throws Exception;
+
+  /**
+   * Deletes an article version by its given id and lang
+   *
+   * @param articleId article id
+   * @param lang article version language
+   * @throws Exception when error occurs
+   */
+  void deleteVersionsByArticleIdAndLang(String articleId, String lang) throws Exception;
 }

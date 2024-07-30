@@ -23,7 +23,7 @@
       ref="editor"
       :note="article"
       :draft-saving-status="draftSavingStatus"
-      :note-id-param="articleId"
+      :note-id-param="activityId"
       :post-key="postKey"
       :body-placeholder="contentFormContentPlaceholder"
       :title-placeholder="contentFormTitlePlaceholder"
@@ -44,7 +44,7 @@
       :save-button-icon="saveButtonIcon"
       :save-button-disabled="disableSaveButton"
       :editor-icon="editorIcon"
-      :translation-option-enabled="true"
+      :translation-option-enabled="translationOptionEnabled"
       :images-download-folder="'DRIVE_ROOT_NODE/News/images'"
       @editor-closed="editorClosed"
       @open-treeview="openTreeView"
@@ -62,6 +62,13 @@
       :news-type="articleType"
       :space-id="spaceId"
       @post-article="postArticle" />
+    <div
+      v-for="(extension, i) in editorExtensions"
+      :key="i">
+      <extension-registry-component
+        :component="extension"
+        element="div"/>
+    </div>
   </v-app>
 </template>
 
@@ -119,7 +126,7 @@ export default {
       currentArticleInitDone: false,
       isSpaceMember: false,
       spacePrettyName: null,
-      addingTranslation: false,
+      editorExtensions: null,
     };
   },
   props: {
@@ -181,6 +188,10 @@ export default {
     this.initDataPropertiesFromUrl();
     this.getArticle();
     this.getAvailableLanguages();
+    this.refreshTranslationExtensions();
+    document.addEventListener('automatic-translation-extensions-updated', () => {
+      this.refreshTranslationExtensions();
+    });
     this.$root.$on('display-treeview-items', filter => this.openTreeView(filter));
     this.$root.$on('add-translation', this.addTranslation);
     this.$root.$on('lang-translation-changed', this.changeTranslation);
@@ -208,46 +219,58 @@ export default {
       }
     },
     addTranslation(lang) {
-      this.addingTranslation = true;
+      this.initDone = false;
       const originNoteContent = {
         title: this.article.title,
         content: this.article.content,
         properties: structuredClone(this.article?.properties),
         lang: lang?.value
       };
+      this.article.title = '';
+      this.article.content = '';
+      if (this.article.properties === null) {
+        this.article.properties = {};
+      }
+      this.article.properties.summary = '';
       this.languages = this.languages.filter(item => item.value !== lang?.value);
       this.selectedLanguage = lang?.value;
       this.translations.unshift(lang);
-      this.article.title = '';
-      this.article.content = '';
-      this.article.properties.summary = '';
       this.article.lang = this.selectedLanguage;
-      this.$refs.editor.resetEditorData();
       document.dispatchEvent(new CustomEvent('translation-added',{ detail: originNoteContent }));
+      this.setEditorData('');
       this.$nextTick(() => {
-        this.addingTranslation = false;
+        this.initDone = true;
       });
     },
     changeTranslation(lang) {
       this.selectedLanguage = lang.value;
-      if (lang.value || this.isMobile) {
+      if (lang.value) {
         this.translations=this.translations.filter(item => item.value !== lang.value);
         this.translations.unshift(lang);
       }
       const articleId = !this.article.targetPageId ? this.article.id : this.article.targetPageId;
-      return this.fillArticle(articleId, true,lang.value).then(() => this.updateUrl());
+      this.fillArticle(articleId, true,lang.value).then(() => {
+        this.updateUrl();
+        this.draftSavingStatus = '';
+      });
     },
-    deleteTranslation(/*translation*/) {
-      // TO DO
+    deleteTranslation(translation) {
+      const articleId = this.article?.targetPageId || this.article?.id;
+      return this.$newsServices.deleteArticleTranslation(articleId,translation.value).then(() => {
+        this.translations=this.translations.filter(item => item.value !== translation.value);
+        const messageObject = {
+          type: 'success',
+          message: this.$t('content.alert.success.label.translation.deleted')
+        };
+        this.displayAlert(messageObject);
+      });
     },
     autoSaveActions() {
-      if (!this.articleNotChanged) {
-        this.autoSave();
-      }
+      this.autoSave();
     },
     autoSave: function() {
       // No draft saving if init not done or in edit mode for the moment
-      if (!this.initDone || this.addingTranslation || !this.currentArticleInitDone || this.postingNews || (!this.article && !this.article.content && !this.article.properties.summary && !this.article.properties.featuredImage.id)) {
+      if (!this.initDone || !this.currentArticleInitDone || this.postingNews || this.articleNotChanged || this.isEmptyDraft()) {
         return;
       }
       clearTimeout(this.saveDraft);
@@ -292,7 +315,7 @@ export default {
         if (this.article.body !== createdArticle.body) {
           this.imagesURLs = this.extractImagesURLsDiffs(this.article.body, createdArticle.body);
         }
-        this.fillArticle(createdArticle.id, false, createdArticle.lang || this.selectedLanguage);
+        this.fillArticle(createdArticle.id, false, createdArticle.lang);
         this.enableClickOnce();
         this.displayAlert({
           message: this.$t('news.save.success.message'),
@@ -420,8 +443,11 @@ export default {
         });
       } else {
         this.$newsServices.saveNews(article).then((createdArticle) => {
-          this.initDataPropertiesFromUrl();
-          this.fillArticle(createdArticle.id).then(() => this.updateUrl());
+          this.articleType = 'latest_draft';
+          this.fillArticle(createdArticle.id, false, createdArticle.lang || this.selectedLanguage).then(() => {
+            this.updateUrl();
+            this.initDataPropertiesFromUrl();
+          });
           this.displayAlert({
             message: this.$t('news.publish.success.message'),
             type: 'success',
@@ -545,6 +571,7 @@ export default {
       });
     },
     fillArticle(articleId, setData, lang) {
+      this.initDone = false;
       return this.$newsServices.getNewsById(articleId, true, this.articleType, lang).then(article => {
         if (article === 401) {
           this.unAuthorizedAccess = true;
@@ -574,9 +601,9 @@ export default {
             this.setEditorData(this.article?.content);
           }
         }
-        this.initDone = true;
       }).finally(() => {
         this.getArticleLanguages();
+        this.initDone = true;
       });
     },
     getArticleLanguages(){
@@ -646,7 +673,16 @@ export default {
     },
     isSameArticleContent() {
       return this.$noteUtils.isSameContent(this.article.content, this.originalArticle.content);
-    }
+    },
+    refreshTranslationExtensions() {
+      this.editorExtensions = extensionRegistry.loadExtensions('notesEditor', 'translation-extension');
+    },
+    isEmptyDraft() {
+      const isTitleEmpty = !this.article?.title;
+      const isContentEmpty = !this.article?.content;
+      const isSummaryEmpty = !this.article?.properties || !this.article?.properties?.summary;
+      return isTitleEmpty && isContentEmpty && isSummaryEmpty;
+    },
   },
 };
 </script>
