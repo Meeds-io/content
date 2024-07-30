@@ -69,4 +69,25 @@
     </component-plugin>
   </external-component-plugins>
 
+  <external-component-plugins>
+    <target-component>org.exoplatform.commons.search.index.IndexingOperationProcessor</target-component>
+    <component-plugin>
+      <name>NewsIndexingServiceConnector</name>
+      <set-method>addConnector</set-method>
+      <type>io.meeds.news.search.NewsIndexingServiceConnector</type>
+      <description>News ElasticSearch Indexing Connector</description>
+      <init-params>
+        <value-param>
+          <name>mapping.file.path</name>
+          <value>${exo.news.es.mapping.path:jar:/news-es-mapping.json}</value>
+        </value-param>
+        <properties-param>
+          <name>constructor.params</name>
+          <property name="index_alias" value="news_alias" />
+          <property name="index_current" value="news_v1" />
+        </properties-param>
+      </init-params>
+    </component-plugin>
+  </external-component-plugins>
+
 </configuration>
