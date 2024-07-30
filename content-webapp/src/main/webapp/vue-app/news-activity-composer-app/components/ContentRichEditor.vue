@@ -45,6 +45,7 @@
       :save-button-disabled="disableSaveButton"
       :editor-icon="editorIcon"
       :translation-option-enabled="translationOptionEnabled"
+      :images-download-folder="'DRIVE_ROOT_NODE/News/images'"
       @editor-closed="editorClosed"
       @open-treeview="openTreeView"
       @post-note="postArticleActions"
