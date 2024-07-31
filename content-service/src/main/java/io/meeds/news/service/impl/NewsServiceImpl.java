@@ -865,9 +865,8 @@ public class NewsServiceImpl implements NewsService {
       news.setIllustrationURL(NewsUtils.buildIllustrationUrl(existingPage.getProperties(), news.getLang()));
       noteService.createVersionOfNote(existingPage, versionCreator.getUserId());
       DraftPage draftPage = noteService.getLatestDraftPageByTargetPageAndLang(Long.parseLong(newsId), news.getLang());
-      while (draftPage != null) {
+      if (draftPage != null) {
         noteService.removeDraftById(draftPage.getId());
-        draftPage = noteService.getLatestDraftPageByTargetPageAndLang(Long.parseLong(newsId), news.getLang());
       }
       return news;
     }

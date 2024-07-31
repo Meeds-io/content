@@ -809,7 +809,7 @@ public class NewsRest {
         return Response.status(Response.Status.NOT_FOUND).build();
       }
       if (!news.isCanDelete()) {
-        throw new IllegalAccessException("User " + currentIdentity.getUserId() + " is not authorized to delete article translation");
+        return Response.status(Response.Status.UNAUTHORIZED).build();
       }
       newsService.deleteVersionsByArticleIdAndLang(id, lang);
       return Response.ok().build();
