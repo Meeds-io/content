@@ -21,8 +21,8 @@
 import {newsConstants} from '../services/newsConstants.js';
 import {newsUpdateType} from '../services/newsConstants.js';
 
-export function getNewsById(id, editMode, type) {
-  return fetch(`${newsConstants.CONTENT_API}/contents/${id}?editMode=${editMode || ''}&type=${type || ''}`, {
+export function getNewsById(id, editMode, type, lang) {
+  return fetch(`${newsConstants.CONTENT_API}/contents/${id}?editMode=${editMode || ''}&type=${type || ''}&lang=${lang || ''}`, {
     credentials: 'include',
     method: 'GET',
   }).then((resp) => {
@@ -31,8 +31,6 @@ export function getNewsById(id, editMode, type) {
     } else if ( resp.status === 401) {
       return resp.status;
     }
-  }).then(resp => {
-    return resp;
   }).catch((error) => {
     return error;
   });
@@ -144,7 +142,7 @@ export function importFileFromUrl(url) {
 }
 
 export function updateNews(news, post, type, updateType) {
-  return fetch(`${newsConstants.CONTENT_API}/contents/${news.id}?post=${post}&type=${type || ''}&newsUpdateType=${updateType || newsUpdateType.CONTENT}`, {
+  return fetch(`${newsConstants.CONTENT_API}/contents/${news.id}?post=${post}&type=${type || ''}&newsUpdateType=${updateType || newsUpdateType.CONTENT_AND_TITLE}`, {
     headers: {
       'Content-Type': 'application/json'
     },
@@ -260,5 +258,16 @@ export function canPublishNews(spaceId) {
     method: 'GET'
   }).then((resp) => resp.json()).then(resp => {
     return resp;
+  });
+}
+
+export function deleteArticleTranslation(newsId, lang) {
+  return fetch(`${newsConstants.CONTENT_API}/contents/translation/${newsId}?lang=${lang}`, {
+    credentials: 'include',
+    method: 'DELETE'
+  }).then((resp) => {
+    if (resp && !resp.ok) {
+      throw new Error('Error when deleting article translation');
+    }
   });
 }

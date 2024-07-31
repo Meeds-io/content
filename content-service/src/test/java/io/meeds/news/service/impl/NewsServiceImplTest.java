@@ -22,7 +22,8 @@ package io.meeds.news.service.impl;
 import static io.meeds.news.service.impl.NewsServiceImpl.*;
 import static io.meeds.news.utils.NewsUtils.NewsObjectType.ARTICLE;
 import static io.meeds.news.utils.NewsUtils.NewsObjectType.LATEST_DRAFT;
-import static io.meeds.news.utils.NewsUtils.NewsUpdateType.CONTENT;
+import static io.meeds.news.utils.NewsUtils.NewsUpdateType.CONTENT_AND_TITLE;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -314,7 +315,7 @@ public class NewsServiceImplTest {
     expecteddraftPage.setWikiOwner("/space/groupId");
 
     // When, Then
-    assertThrows(IllegalAccessException.class, () -> newsService.updateNews(news, "john", false, false, NewsUtils.NewsObjectType.DRAFT.name().toLowerCase(), CONTENT.name().toLowerCase()));
+    assertThrows(IllegalAccessException.class, () -> newsService.updateNews(news, "john", false, false, NewsUtils.NewsObjectType.DRAFT.name().toLowerCase(), CONTENT_AND_TITLE.name()));
 
     // Given
     when(spaceService.canRedactOnSpace(space, identity)).thenReturn(true);
@@ -325,7 +326,7 @@ public class NewsServiceImplTest {
     when(noteService.updateDraftForNewPage(any(DraftPage.class), anyLong(), anyLong())).thenReturn(expecteddraftPage);
 
     // When
-    newsService.updateNews(news, "john", false, false, NewsUtils.NewsObjectType.DRAFT.name().toLowerCase(), CONTENT.name().toLowerCase());
+    newsService.updateNews(news, "john", false, false, NewsUtils.NewsObjectType.DRAFT.name().toLowerCase(), CONTENT_AND_TITLE.name());
 
     // Then
     verify(noteService, times(1)).updateDraftForNewPage(eq(expecteddraftPage), anyLong(), anyLong());
@@ -588,7 +589,7 @@ public class NewsServiceImplTest {
     news.setOriginalBody("body");
 
     // When, Then
-      assertThrows(IllegalAccessException.class, () -> newsService.updateNews(news, "john", false, false, NewsUtils.NewsObjectType.DRAFT.name().toLowerCase(), CONTENT.name().toLowerCase()));
+      assertThrows(IllegalAccessException.class, () -> newsService.updateNews(news, "john", false, false, NewsUtils.NewsObjectType.DRAFT.name().toLowerCase(), CONTENT_AND_TITLE.name()));
 
     // Given
     when(spaceService.canRedactOnSpace(space, identity)).thenReturn(true);
@@ -610,7 +611,7 @@ public class NewsServiceImplTest {
                                              anyString())).thenReturn(draftPage);
 
     // When
-    newsService.updateNews(news, "john", false, false, LATEST_DRAFT.name().toLowerCase(), CONTENT.name().toLowerCase());
+    newsService.updateNews(news, "john", false, false, LATEST_DRAFT.name().toLowerCase(), CONTENT_AND_TITLE.name());
 
     // Then
     verify(noteService, times(1)).createDraftForExistPage(any(DraftPage.class),
@@ -670,7 +671,7 @@ public class NewsServiceImplTest {
     news.setOriginalBody("body");
 
     // When, Then
-    assertThrows(IllegalAccessException.class, () -> newsService.updateNews(news, "john", false, false, NewsUtils.NewsObjectType.DRAFT.name().toLowerCase(), CONTENT.name().toLowerCase()));
+    assertThrows(IllegalAccessException.class, () -> newsService.updateNews(news, "john", false, false, NewsUtils.NewsObjectType.DRAFT.name().toLowerCase(), CONTENT_AND_TITLE.name()));
 
     // Given
     when(spaceService.canRedactOnSpace(space, identity)).thenReturn(true);
@@ -687,7 +688,7 @@ public class NewsServiceImplTest {
                                              anyString())).thenReturn(draftPage);
 
     // When
-    newsService.updateNews(news, "john", false, false, LATEST_DRAFT.name().toLowerCase(), CONTENT.name().toLowerCase());
+    newsService.updateNews(news, "john", false, false, LATEST_DRAFT.name().toLowerCase(), CONTENT_AND_TITLE.name());
 
     // Then
     verify(noteService, times(1)).updateDraftForExistPage(any(DraftPage.class),
@@ -746,7 +747,7 @@ public class NewsServiceImplTest {
     news.setOriginalBody("body");
 
     // When, Then
-    assertThrows(IllegalAccessException.class, () -> newsService.updateNews(news, "john", false, false, NewsUtils.NewsObjectType.DRAFT.name().toLowerCase(), CONTENT.name().toLowerCase()));
+    assertThrows(IllegalAccessException.class, () -> newsService.updateNews(news, "john", false, false, NewsUtils.NewsObjectType.DRAFT.name().toLowerCase(), CONTENT_AND_TITLE.name()));
 
     // Given
     when(spaceService.canRedactOnSpace(space, identity)).thenReturn(true);
@@ -759,7 +760,7 @@ public class NewsServiceImplTest {
     when(noteService.updateNote(any(Page.class), any(), any())).thenReturn(existingPage);
 
     // When
-    newsService.updateNews(news, "john", false, false, ARTICLE.name().toLowerCase(), CONTENT.name().toLowerCase());
+    newsService.updateNews(news, "john", false, false, ARTICLE.name().toLowerCase(), CONTENT_AND_TITLE.name());
 
     // Then
     verify(noteService, times(1)).updateNote(any(Page.class), any(), any());

@@ -100,7 +100,7 @@ public class NewsUtils {
   }
 
   public enum NewsUpdateType {
-    CONTENT, SCHEDULE, POSTING_AND_PUBLISHING
+    CONTENT_AND_TITLE, SCHEDULE, POSTING_AND_PUBLISHING
   }
 
   public static void broadcastEvent(String eventName, Object source, Object data) {
