@@ -77,12 +77,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.annotation.Secured;
-import org.springframework.util.MimeType;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -225,7 +223,6 @@ public class NewsRest {
       if (news == null) {
         return ResponseEntity.notFound().build();
       }
-
       news.setTitle(updatedNews.getTitle());
       news.setBody(updatedNews.getBody());
       news.setUploadId(updatedNews.getUploadId());
@@ -235,6 +232,7 @@ public class NewsRest {
       news.setTargets(updatedNews.getTargets());
       news.setAudience(updatedNews.getAudience());
       news.setProperties(updatedNews.getProperties());
+      news.setLang(updatedNews.getLang());
       news = newsService.updateNews(news, currentIdentity.getUserId(), post, updatedNews.isPublished(), newsObjectType, newsUpdateType);
 
       return ResponseEntity.ok(news);
@@ -352,14 +350,17 @@ public class NewsRest {
                                           String newsObjectType,
                                           @Parameter(description = "Is edit mode")
                                           @RequestParam(name = "editMode", defaultValue = "false", required = false)
-                                          boolean editMode) {
+                                          boolean editMode,
+                                          @Parameter(description = "article translation")
+                                          @RequestParam(name = "lang", required = false)
+                                          String lang) {
     String authenticatedUser = ConversationState.getCurrent().getIdentity().getUserId();
     try {
       if (StringUtils.isBlank(id)) {
         return ResponseEntity.badRequest().build();
       }
       org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
-      News news = newsService.getNewsById(id, currentIdentity, editMode, newsObjectType);
+      News news = newsService.getNewsByIdAndLang(id, currentIdentity, editMode, newsObjectType, StringUtils.isBlank(lang) ? null : lang);
       if (news == null || news.isDeleted()) {
         return ResponseEntity.notFound().build();
       }
@@ -783,5 +784,41 @@ public class NewsRest {
     newsFilter.setOffset(offset);
 
     return newsFilter;
+  }
+  
+  @DeleteMapping(path = "translation/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+  @Secured("users")
+  @Operation(summary = "Delete article version with language", method = "DELETE", description = "This deletes the article version ")
+  @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "article version deleted"),
+      @ApiResponse(responseCode = "400", description = "Invalid query input"),
+      @ApiResponse(responseCode = "401", description = "User not authorized to delete the article"),
+      @ApiResponse(responseCode = "500", description = "Internal server error") })
+  public Response deleteArticleTranslation(@PathVariable("id")
+                                           String id,
+                                           @Parameter(description = "article version language")
+                                           @RequestParam(name = "lang")
+                                           String lang) {
+    org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
+    try {
+      if (StringUtils.isBlank(id)) {
+        return Response.status(Response.Status.BAD_REQUEST).build();
+      }
+      // fetch always the original news
+      News news = newsService.getNewsById(id, currentIdentity, false, ARTICLE.name());
+      if (news == null) {
+        return Response.status(Response.Status.NOT_FOUND).build();
+      }
+      if (!news.isCanDelete()) {
+        return Response.status(Response.Status.UNAUTHORIZED).build();
+      }
+      newsService.deleteVersionsByArticleIdAndLang(id, lang);
+      return Response.ok().build();
+    } catch (IllegalAccessException e) {
+      LOG.warn("User '{}' is not authorized to delete article translation", currentIdentity.getUserId(), e);
+      return Response.status(Response.Status.UNAUTHORIZED).entity(e.getMessage()).build();
+    } catch (Exception e) {
+      LOG.error("Error when deleting the article translation with id " + id, e);
+      return Response.serverError().entity(e.getMessage()).build();
+    }
   }
 }

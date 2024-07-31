@@ -64,7 +64,7 @@ export function init(maxToUpload, maxFileSize) {
           spaceId: getURLQueryParam('spaceId'),
           activityId: getURLQueryParam('activityId'),
           articleType: getURLQueryParam('type'),
-          selectedLanguage: getURLQueryParam('translation'),
+          selectedLanguage: getURLQueryParam('lang'),
           maxToUpload: maxToUpload,
           maxFileSize: maxFileSize
         };
@@ -83,7 +83,10 @@ export function init(maxToUpload, maxFileSize) {
       i18n,
       vuetify
     });
-  }).finally(() => Vue.prototype.$utils.includeExtensions('WYSIWYGPluginsExtensions'));
+  }).finally(() => {
+    Vue.prototype.$utils.includeExtensions('WYSIWYGPluginsExtensions');
+    Vue.prototype.$utils.includeExtensions('AutomaticTranslationNotesEditorExtension');
+  });
 }
 
 export function destroy() {
