@@ -70,8 +70,8 @@ const newsActivityTypeExtensionOptions = {
   getSourceLink: (activity) => `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/activity?id=${!activity.parentActivity ? activity.id : activity.parentActivity.id}`,
   getSummary: (activity) => {
     const news = activity?.news;
-    if (news?.summary) {
-      return news.summary;
+    if (news?.properties?.summary) {
+      return news?.properties?.summary;
     } else if (news?.body) {
       return Vue.prototype.$utils.htmlToText(news.body);
     }

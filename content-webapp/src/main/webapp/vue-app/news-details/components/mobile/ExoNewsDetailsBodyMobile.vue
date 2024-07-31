@@ -112,7 +112,7 @@ export default {
       return this.news && this.news.publicationState;
     },
     newsSummary() {
-      return this.news?.summary;
+      return this.news?.properties?.summary;
     },
     newsBody() {
       return this.news?.body;

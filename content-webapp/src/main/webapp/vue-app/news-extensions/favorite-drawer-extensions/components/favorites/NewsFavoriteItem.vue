@@ -26,7 +26,7 @@
         size="25">
         <img
           v-if="news.illustrationURL"
-          :alt="activityTitle"
+          :alt="featuredImageAltText"
           :src="`${news.illustrationURL}&size=25x25`">
         <img
           v-else
@@ -61,11 +61,17 @@ export default {
     },
   },
   data: () => ({
+    news: null,
     activityTitle: '',
     url: '',
     isFavorite: true,
     newsObjectType: 'article',
   }),
+  computed: {
+    featuredImageAltText() {
+      return this.news?.properties?.featuredImage?.altText || this.activityTitle;
+    }
+  },
   created() {
     this.$newsServices.getNewsById(this.id, false, this.newsObjectType)
       .then(news => {

@@ -227,7 +227,6 @@ public class NewsRest {
       }
 
       news.setTitle(updatedNews.getTitle());
-      news.setSummary(updatedNews.getSummary());
       news.setBody(updatedNews.getBody());
       news.setUploadId(updatedNews.getUploadId());
       news.setPublicationState(updatedNews.getPublicationState());
@@ -235,7 +234,7 @@ public class NewsRest {
       news.setActivityPosted(updatedNews.isActivityPosted());
       news.setTargets(updatedNews.getTargets());
       news.setAudience(updatedNews.getAudience());
-
+      news.setProperties(updatedNews.getProperties());
       news = newsService.updateNews(news, currentIdentity.getUserId(), post, updatedNews.isPublished(), newsObjectType, newsUpdateType);
 
       return ResponseEntity.ok(news);
@@ -366,7 +365,6 @@ public class NewsRest {
       }
       Locale userLocale = LocalizationFilter.getCurrentLocale();
       news.setBody(MentionUtils.substituteRoleWithLocale(news.getBody(), userLocale));
-      news.setIllustration(null);
       // check favorite
       Identity userIdentity = identityManager.getOrCreateUserIdentity(currentIdentity.getUserId());
       if (userIdentity != null) {
@@ -503,14 +501,11 @@ public class NewsRest {
         news = newsService.getNews(newsFilter, currentIdentity);
       }
 
-      if (news != null && news.size() != 0) {
-        for (News newsItem : news) {
-          newsItem.setIllustration(null);
-        }
-      }
       if (news != null) {
         Locale userLocale = LocalizationFilter.getCurrentLocale();
-        news.forEach(news1 -> news1.setBody(MentionUtils.substituteRoleWithLocale(news1.getBody(), userLocale)));
+        news.stream()
+            .filter(Objects::nonNull)
+            .forEach(news1 -> news1.setBody(MentionUtils.substituteRoleWithLocale(news1.getBody(), userLocale)));
       }
       newsEntity.setNews(news);
       newsEntity.setOffset(offset);
@@ -590,7 +585,6 @@ public class NewsRest {
       if (news == null) {
         return ResponseEntity.notFound().build();
       }
-      news.setIllustration(null);
       Locale userLocale = LocalizationFilter.getCurrentLocale();
       news.setBody(MentionUtils.substituteRoleWithLocale(news.getBody(), userLocale));
 
@@ -698,59 +692,6 @@ public class NewsRest {
                                                       .collect(Collectors.toList());
 
     return ResponseEntity.ok(results);
-  }
-
-  @GetMapping("/{id}/illustration")
-  @Operation(summary = "Get a news illustration", description = "This gets the news illustration with the given id if the authenticated user is a member of the space or a spaces super manager.")
-  @ApiResponses(value = {
-          @ApiResponse(responseCode = "200", description = "News returned"),
-          @ApiResponse(responseCode = "401", description = "User not authorized to get the news"),
-          @ApiResponse(responseCode = "404", description = "News not found"),
-          @ApiResponse(responseCode = "500", description = "Internal server error")
-  })
-  public ResponseEntity<byte[]> getNewsIllustration(HttpServletRequest request,
-                                                    @PathVariable("id") String id,
-                                                    @Parameter(description = "last modified date")
-                                                    @RequestParam(value = "v", required = false) Long lastModified,
-                                                    @Parameter(description = "News object type to be fetched")
-                                                    @RequestParam(value = "type") String newsObjectType,
-                                                    @Parameter(description = "resized image size")
-                                                    @RequestParam(value = "size", required = false) String size) {
-    try {
-      org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
-      News news = newsService.getNewsById(id, currentIdentity, false, newsObjectType);
-
-      if (news == null || news.getIllustration() == null || news.getIllustration().length == 0) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-      }
-
-      if (!news.isPublished()) {
-        Space space = spaceService.getSpaceById(news.getSpaceId());
-        if (space == null) {
-          return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        }
-      }
-
-      long lastUpdated = news.getIllustrationUpdateDate().getTime();
-      String eTagValue = (size == null || size.isBlank()) ? String.valueOf(lastUpdated) : lastUpdated + "-" + size;
-
-      CacheControl cacheControl = CacheControl.maxAge(CACHE_DURATION_SECONDS, TimeUnit.SECONDS).cachePublic();
-      ResponseEntity.BodyBuilder builder = ResponseEntity.ok()
-              .contentType(new MediaType(MimeType.valueOf(news.getIllustrationMimeType())));
-
-      if (lastModified != null && lastModified > 0) {
-        builder.lastModified(lastUpdated)
-               .eTag(String.valueOf(Objects.hash(eTagValue)))
-               .cacheControl(cacheControl);
-      } else {
-        builder.cacheControl(CacheControl.noStore());
-      }
-
-      return builder.body(news.getIllustration());
-    } catch (Exception e) {
-      LOG.error("Error when getting the news illustration with id " + id, e);
-      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-    }
   }
 
   @GetMapping(path = "canScheduleNews/{spaceId}", produces = MediaType.APPLICATION_JSON_VALUE)

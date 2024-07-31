@@ -168,7 +168,7 @@ export default {
   },
   methods: {
     getEditUrl(news) {
-      let editUrl = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news/editor?newsId=${news.newsId}`;
+      let editUrl = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news/editor?newsId=${news.targetPageId || news.newsId}`;
       if (news.spaceId) {
         editUrl += `&spaceId=${news.spaceId}`;
       }
