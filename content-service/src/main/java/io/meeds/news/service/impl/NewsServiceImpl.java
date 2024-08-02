@@ -975,6 +975,7 @@ public class NewsServiceImpl implements NewsService {
         // set properties
         newsArticle.setId(newsArticlePage.getId());
         newsArticle.setCreationDate(pageVersion.getCreatedDate());
+        newsArticle.setProperties(newsArticlePage.getProperties());
         newsArticle.setIllustrationURL(NewsUtils.buildIllustrationUrl(newsArticlePage.getProperties(), newsArticle.getLang()));
 
         NewsPageVersionObject newsArticleVersionMetaDataObject = new NewsPageVersionObject(NEWS_METADATA_PAGE_VERSION_OBJECT_TYPE,
@@ -1042,6 +1043,8 @@ public class NewsServiceImpl implements NewsService {
 
     draftArticle.setDraftUpdateDate(draftArticlePage.getCreatedDate());
     draftArticle.setDraftUpdater(draftArticlePage.getAuthor());
+    draftArticle.setTargetPageId(draftArticlePage.getTargetPageId());
+    draftArticle.setProperties(draftArticlePage.getProperties());
     draftArticle.setId(draftArticlePage.getId());
     NewsLatestDraftObject latestDraftObject = new NewsLatestDraftObject(NEWS_METADATA_LATEST_DRAFT_OBJECT_TYPE,
                                                                         draftArticlePage.getId(),
@@ -1729,6 +1732,7 @@ public class NewsServiceImpl implements NewsService {
       news.setUpdateDate(existingPage.getUpdatedDate());
       news.setUpdater(existingPage.getAuthor());
       news.setUpdaterFullName(existingPage.getAuthorFullName());
+      news.setProperties(existingPage.getProperties());
       news.setIllustrationURL(NewsUtils.buildIllustrationUrl(existingPage.getProperties(), news.getLang()));
 
       String newsArticleUpdaterIdentityId = identityManager.getOrCreateUserIdentity(updater.getUserId()).getId();
@@ -1876,6 +1880,8 @@ public class NewsServiceImpl implements NewsService {
 
       news.setDraftUpdateDate(draftPage.getUpdatedDate());
       news.setDraftUpdater(draftPage.getAuthor());
+      news.setTargetPageId(draftPage.getTargetPageId());
+      news.setProperties(draftPage.getProperties());
       news.setIllustrationURL(NewsUtils.buildIllustrationUrl(draftPage.getProperties(), news.getLang()));
 
       NewsLatestDraftObject latestDraftObject = new NewsLatestDraftObject(NEWS_METADATA_LATEST_DRAFT_OBJECT_TYPE,
