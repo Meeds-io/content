@@ -283,15 +283,3 @@ export function getArticleLanguages(articleId, withDrafts) {
     return resp.json();
   });
 }
-
-export function getLanguages(lang) {
-  return fetch(`${newsConstants.CONTENT_API}/contents/languages?lang=${lang || ''}`, {
-    credentials: 'include',
-    method: 'GET'
-  }).then((resp) => {
-    if (resp && !resp.ok) {
-      throw new Error('Error when getting available languages');
-    }
-    return resp.json();
-  });
-}

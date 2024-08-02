@@ -42,12 +42,11 @@ export default {
     showDeleteButton: false,
     selectedTranslation: {value: eXo.env.portal.language},
     translations: [],
-    languages: [],
+    languages: JSON.parse(eXo.env.portal.availableLanguages),
     originalVersion: null,
     previousSelectedTranslation: null
   }),
   created() {
-    this.getLanguages();
     this.originalVersion = { value: '', text: this.$root.$t('article.label.translation.originalVersion') };
     this.removeParamFromUrl('lang');
     this.$newsServices.getNewsById(this.newsId, false, this.newsType)
@@ -88,11 +87,6 @@ export default {
         } else {
           this.removeParamFromUrl('lang');
         }
-      });
-    },
-    getLanguages(lang) {
-      return this.$newsServices.getLanguages(lang).then((rep) => {
-        this.languages = rep;
       });
     },
     addParamToUrl(paramName, paramValue) {

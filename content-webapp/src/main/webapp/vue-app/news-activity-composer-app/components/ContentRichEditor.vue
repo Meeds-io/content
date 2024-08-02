@@ -98,7 +98,7 @@ export default {
       contentFormTitle: '',
       appName: 'content',
       translations: [],
-      languages: [],
+      languages: JSON.parse(eXo.env.portal.availableLanguages),
       allLanguages: [],
       postingNews: false,
       savingDraft: false,
@@ -635,15 +635,12 @@ export default {
       this.$refs.editor.closePluginsDrawer();
     },
     getAvailableLanguages() {
-      return this.$newsServices.getLanguages().then(data => {
-        this.languages = data || [];
-        this.languages.sort((a, b) => a.text.localeCompare(b.text));
-        this.allLanguages = this.languages;
-        this.languages.unshift({value: '', text: this.$t('article.label.chooseLanguage')});
-        if (this.translations) {
-          this.languages = this.languages.filter(item1 => !this.translations.some(item2 => item2.value === item1.value));
-        }
-      });
+      this.languages.sort((a, b) => a.text.localeCompare(b.text));
+      this.allLanguages = this.languages;
+      this.languages.unshift({value: '', text: this.$t('article.label.chooseLanguage')});
+      if (this.translations) {
+        this.languages = this.languages.filter(item1 => !this.translations.some(item2 => item2.value === item1.value));
+      }
     },
     displayAlert(detail) {
       document.dispatchEvent(new CustomEvent('alert-message-html', {detail: {
