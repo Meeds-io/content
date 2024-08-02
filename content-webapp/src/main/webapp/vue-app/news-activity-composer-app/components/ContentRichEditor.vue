@@ -67,7 +67,7 @@
       :key="i">
       <extension-registry-component
         :component="extension"
-        element="div"/>
+        element="div" />
     </div>
   </v-app>
 </template>
@@ -232,6 +232,7 @@ export default {
         this.article.properties = {};
       }
       this.article.properties.summary = '';
+      this.article.properties.featuredImage = {};
       this.languages = this.languages.filter(item => item.value !== lang?.value);
       this.selectedLanguage = lang?.value;
       this.translations.unshift(lang);
@@ -634,11 +635,11 @@ export default {
       this.$refs.editor.closePluginsDrawer();
     },
     getAvailableLanguages() {
-      return this.$notesService.getAvailableLanguages().then(data => {
+      return this.$newsServices.getLanguages().then(data => {
         this.languages = data || [];
         this.languages.sort((a, b) => a.text.localeCompare(b.text));
         this.allLanguages = this.languages;
-        this.languages.unshift({value: '', text: this.$t('notes.label.chooseLangage')});
+        this.languages.unshift({value: '', text: this.$t('article.label.chooseLanguage')});
         if (this.translations) {
           this.languages = this.languages.filter(item1 => !this.translations.some(item2 => item2.value === item1.value));
         }
@@ -681,7 +682,8 @@ export default {
       const isTitleEmpty = !this.article?.title;
       const isContentEmpty = !this.article?.content;
       const isSummaryEmpty = !this.article?.properties || !this.article?.properties?.summary;
-      return isTitleEmpty && isContentEmpty && isSummaryEmpty;
+      const isFeaturedImageEmpty = !this.article.properties || !this.article?.properties?.featuredImage || this.article?.properties?.featuredImage?.id <= 0;
+      return isTitleEmpty && isContentEmpty && isSummaryEmpty && isFeaturedImageEmpty;
     },
   },
 };

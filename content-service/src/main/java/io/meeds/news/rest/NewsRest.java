@@ -22,11 +22,14 @@ package io.meeds.news.rest;
 import static io.meeds.news.utils.NewsUtils.NewsObjectType.ARTICLE;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -49,6 +52,7 @@ import org.exoplatform.container.ExoContainerContext;
 import org.exoplatform.container.PortalContainer;
 import org.exoplatform.container.component.RequestLifeCycle;
 import org.exoplatform.portal.application.localization.LocalizationFilter;
+import org.exoplatform.portal.localization.LocaleContextInfoUtils;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
 
@@ -76,6 +80,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -819,6 +825,59 @@ public class NewsRest {
     } catch (Exception e) {
       LOG.error("Error when deleting the article translation with id " + id, e);
       return Response.serverError().entity(e.getMessage()).build();
+    }
+  }
+
+  @GetMapping(path = "translation/{articleId}", produces = MediaType.APPLICATION_JSON_VALUE)
+  @Secured("users")
+  @Operation(summary = "Get article available translation languages", method = "GET", description = "Get article available translation languages")
+  @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "article version deleted"),
+          @ApiResponse(responseCode = "400", description = "Invalid query input"),
+          @ApiResponse(responseCode = "401", description = "User not authorized to delete the article"),
+          @ApiResponse(responseCode = "500", description = "Internal server error") })
+  public ResponseEntity<List<String>> getAvailableTranslationLanguages(@PathVariable("articleId")
+                                                                       String articleId,
+                                                                       @RequestParam(name = "withDrafts")
+                                                                       boolean withDrafts) {
+    try {
+      if (StringUtils.isBlank(articleId)) {
+        return ResponseEntity.badRequest().build();
+      }
+      return ResponseEntity.ok(newsService.getArticleLanguages(articleId, withDrafts));
+    } catch (Exception e) {
+      LOG.error("Error when getting the article available translation languages with id " + articleId, e);
+      return ResponseEntity.internalServerError().build();
+    }
+  }
+
+  @GetMapping(value = "/languages", produces = "application/json")
+  public ResponseEntity<String> getAvailableLanguages(@RequestParam(value = "lang", required = false) String lang) {
+    try {
+      Set<Locale> locales = LocaleContextInfoUtils.getSupportedLocales();
+      List<Locale> localesList = new ArrayList<>(locales);
+      JSONArray localesJSON = new JSONArray();
+      Locale currentLocal = Locale.ENGLISH;
+      if (!lang.isEmpty()) {
+        Optional<Locale> opLocal = Arrays.stream(Locale.getAvailableLocales())
+                .filter(local -> local.getLanguage().equals(lang))
+                .findAny();
+        if (opLocal.isPresent()) {
+          currentLocal = opLocal.get();
+        }
+      }
+      for (Locale locale : localesList) {
+        JSONObject object = new JSONObject();
+        if (locale == null || locale.toString().equals("ma")) {
+          continue;
+        } else {
+          object.put("value", locale.toString());
+          object.put("text", locale.getDisplayName(currentLocal));
+        }
+        localesJSON.add(object);
+      }
+      return ResponseEntity.ok(localesJSON.toString());
+    } catch (Exception e) {
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
     }
   }
 }

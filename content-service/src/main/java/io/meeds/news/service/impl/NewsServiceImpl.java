@@ -1161,6 +1161,11 @@ public class NewsServiceImpl implements NewsService {
     }
   }
 
+  @Override
+  public List<String> getArticleLanguages(String articleId, boolean withDrafts) throws WikiException {
+    return noteService.getPageAvailableTranslationLanguages(Long.parseLong(articleId), true);
+  }
+
   private News updateDraftArticleForNewPage(News draftArticle, String draftArticleUpdater) throws WikiException,
                                                                                            IllegalAccessException {
     DraftPage draftArticlePage = noteService.getDraftNoteById(draftArticle.getId(), draftArticleUpdater);
@@ -1859,13 +1864,13 @@ public class NewsServiceImpl implements NewsService {
         news.setDeleted(articlePage.isDeleted());
         news.setUrl(NewsUtils.buildNewsArticleUrl(news, currentUsername));
         news.setPublicationDate(articlePage.getCreatedDate());
-        news.setUpdateDate(new Date(metadataItem.getUpdatedDate()));
         // fetch the last version of the given lang
         PageVersion pageVersion = noteService.getPublishedVersionByPageIdAndLang(Long.parseLong(articlePage.getId()), lang);
         news.setTitle(pageVersion.getTitle());
         processPageContent(pageVersion, news);
         news.setUpdaterFullName(pageVersion.getAuthorFullName());
         news.setLang(pageVersion.getLang());
+        news.setUpdateDate(pageVersion.getUpdatedDate());
 
         NewsPageVersionObject newsPageVersionObject = new NewsPageVersionObject(NEWS_METADATA_PAGE_VERSION_OBJECT_TYPE,
                                                                                 pageVersion.getId(),
