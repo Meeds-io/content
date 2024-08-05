@@ -50,9 +50,9 @@ import io.meeds.news.utils.NewsUtils;
 
 public class NewsIndexingServiceConnector extends ElasticIndexingServiceConnector {
 
-  public static final String    TYPE = "news";
+  public static final String    TYPE             = "news";
 
-  private static final Log      LOG  = ExoLogger.getLogger(NewsIndexingServiceConnector.class);
+  private static final Log      LOG              = ExoLogger.getLogger(NewsIndexingServiceConnector.class);
 
   private final NewsService     newsService;
 
@@ -61,6 +61,9 @@ public class NewsIndexingServiceConnector extends ElasticIndexingServiceConnecto
   private final ActivityManager activityManager;
 
   private final MetadataService metadataService;
+
+  private static final String   SUMMARY_PROPERTY = "summary";
+
 
   public NewsIndexingServiceConnector(IdentityManager identityManager,
                                       InitParams initParams,

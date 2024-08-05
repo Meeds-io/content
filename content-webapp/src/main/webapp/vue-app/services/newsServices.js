@@ -271,3 +271,15 @@ export function deleteArticleTranslation(newsId, lang) {
     }
   });
 }
+
+export function getArticleLanguages(articleId, withDrafts) {
+  return fetch(`${newsConstants.CONTENT_API}/contents/translation/${articleId}?withDrafts=${withDrafts}`, {
+    credentials: 'include',
+    method: 'GET'
+  }).then((resp) => {
+    if (resp && !resp.ok) {
+      throw new Error('Error when getting article languages');
+    }
+    return resp.json();
+  });
+}

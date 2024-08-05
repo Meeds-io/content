@@ -62,6 +62,8 @@ export function init() {
       i18n,
       vuetify
     }).$mount(appElement);
+  }).finally(() => {
+    Vue.prototype.$utils.includeExtensions('AutomaticTranslationNewsActivityStreamExtension');
   });
 }
 export function destroy() {
