@@ -69,12 +69,12 @@
                       :format="dateFormat"
                       class="newsInformationValue newsPostedDate news-details-information ms-1" />
                   </template>
-                  <extension-registry-component
-                    v-if="translateExtension"
-                    :component="translateExtension"
-                    :params="params"
-                    element="div" />
-                  <span v-else-if="postedDate" class="newsInformationValue newsPostedDate news-details-information">- {{ postedDate }}</span>
+                  <div class="mb-1 ml-2">
+                    <content-translation-menu
+                        :translations="translations"
+                        :selected-translation="selectedTranslation"
+                        :article="news" />
+                  </div>
                 </div>
                 <div class="newsUpdater text-subtitle">
                   <div v-if="publicationState !== 'staged' && showUpdateInfo">
@@ -155,6 +155,18 @@ export default {
       required: false,
       default: null
     },
+    translations: {
+      type: Array,
+      default: () => {
+        return [];
+      }
+    },
+    selectedTranslation: {
+      type: Object,
+      default: () => {
+        return {};
+      }
+    }
   },
   data: () => ({
     dateFormat: {
@@ -166,7 +178,6 @@ export default {
       hour: '2-digit',
       minute: '2-digit',
     },
-    translateExtension: null,
     newsTitleContent: null,
     newsSummaryContent: null,
     newsBodyContent: null
@@ -175,10 +186,6 @@ export default {
     this.setNewsTitle(this.news?.title);
     this.setNewsSummary(this.news?.properties?.summary);
     this.setNewsContent(this.news?.body);
-    this.refreshTranslationExtensions();
-    document.addEventListener('automatic-translation-extensions-updated', () => {
-      this.refreshTranslationExtensions();
-    });
     this.$root.$on('update-news-title', this.setNewsTitle);
     this.$root.$on('update-news-summary', this.setNewsSummary);
     this.$root.$on('update-news-body', this.setNewsContent);
@@ -260,9 +267,6 @@ export default {
     setNewsContent(translation) {
       this.newsBodyContent = translation;
     },
-    refreshTranslationExtensions() {
-      this.translateExtension = extensionRegistry.loadExtensions('news', 'translation-menu-extension')[0];
-    }
   }
 };
 </script>

@@ -342,4 +342,12 @@ public interface NewsService {
    * @throws Exception when error occurs
    */
   void deleteVersionsByArticleIdAndLang(String articleId, String lang) throws Exception;
+
+  /**
+   * Get all article available languages by its given id
+   *
+   * @param articleId article id
+   * @throws Exception when error occurs
+   */
+  List<String> getArticleLanguages(String articleId, boolean withDrafts) throws Exception;
 }
