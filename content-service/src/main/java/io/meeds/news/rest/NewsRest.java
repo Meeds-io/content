@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -819,6 +820,35 @@ public class NewsRest {
     } catch (Exception e) {
       LOG.error("Error when deleting the article translation with id " + id, e);
       return Response.serverError().entity(e.getMessage()).build();
+    }
+  }
+
+  /**
+   * Get available translation languages for an article
+   *
+   * @param articleId the ID of the article
+   * @param withDrafts boolean flag to include drafts translation languages
+   * @return a list of available translation languages
+   */
+  @GetMapping(path = "translation/{articleId}", produces = MediaType.APPLICATION_JSON_VALUE)
+  @Secured("users")
+  @Operation(summary = "Get article available translation languages", method = "GET", description = "Get article available translation languages")
+  @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "article version deleted"),
+          @ApiResponse(responseCode = "400", description = "Invalid query input"),
+          @ApiResponse(responseCode = "401", description = "User not authorized to delete the article"),
+          @ApiResponse(responseCode = "500", description = "Internal server error") })
+  public ResponseEntity<List<String>> getAvailableTranslationLanguages(@PathVariable("articleId")
+                                                                       String articleId,
+                                                                       @RequestParam(name = "withDrafts")
+                                                                       boolean withDrafts) {
+    try {
+      if (StringUtils.isBlank(articleId)) {
+        return ResponseEntity.badRequest().build();
+      }
+      return ResponseEntity.ok(newsService.getArticleLanguages(articleId, withDrafts));
+    } catch (Exception e) {
+      LOG.error("Error when getting the article available translation languages with id " + articleId, e);
+      return ResponseEntity.internalServerError().build();
     }
   }
 }
