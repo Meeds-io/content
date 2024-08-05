@@ -67,7 +67,7 @@
       :key="i">
       <extension-registry-component
         :component="extension"
-        element="div"/>
+        element="div" />
     </div>
   </v-app>
 </template>
@@ -83,7 +83,8 @@ export default {
         title: '',
         content: '',
         body: '',
-        properties: {}
+        properties: {},
+        lang: ''
       },
       originalArticle: {
         id: 0,
@@ -98,7 +99,7 @@ export default {
       contentFormTitle: '',
       appName: 'content',
       translations: [],
-      languages: [],
+      languages: JSON.parse(eXo.env.portal.availableLanguages),
       allLanguages: [],
       postingNews: false,
       savingDraft: false,
@@ -232,17 +233,19 @@ export default {
         this.article.properties = {};
       }
       this.article.properties.summary = '';
+      this.article.properties.featuredImage = {};
+      this.setEditorData('');
       this.languages = this.languages.filter(item => item.value !== lang?.value);
       this.selectedLanguage = lang?.value;
       this.translations.unshift(lang);
       this.article.lang = this.selectedLanguage;
       document.dispatchEvent(new CustomEvent('translation-added',{ detail: originNoteContent }));
-      this.setEditorData('');
       this.$nextTick(() => {
         this.initDone = true;
       });
     },
     changeTranslation(lang) {
+      this.currentArticleInitDone = false;
       this.selectedLanguage = lang.value;
       if (lang.value) {
         this.translations=this.translations.filter(item => item.value !== lang.value);
@@ -252,6 +255,7 @@ export default {
       this.fillArticle(articleId, true,lang.value).then(() => {
         this.updateUrl();
         this.draftSavingStatus = '';
+        this.currentArticleInitDone = true;
       });
     },
     deleteTranslation(translation) {
@@ -294,6 +298,7 @@ export default {
       updatedArticle.publicationState = 'draft';
       return this.$newsServices.updateNews(updatedArticle, false, this.articleType).then((createdArticle) => {
         this.spaceUrl = createdArticle.spaceUrl;
+        this.article.properties = createdArticle.properties;
         this.article.lang = createdArticle.lang;
         if (this.article.body !== createdArticle.body) {
           this.imagesURLs = this.extractImagesURLsDiffs(this.article.body, createdArticle.body);
@@ -317,11 +322,15 @@ export default {
         }
         this.fillArticle(createdArticle.id, false, createdArticle.lang);
         this.enableClickOnce();
+        let alertLink = this.isSpaceMember ? `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/activity?id=${createdArticle.activityId}` : `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news-detail?newsId=${createdArticle.id}`;
+        if (createdArticle.lang) {
+          alertLink = `${alertLink}&lang=${createdArticle.lang}`;
+        }
         this.displayAlert({
           message: this.$t('news.save.success.message'),
           type: 'success',
           alertLinkText: this.$t('news.view.label'),
-          alertLink: this.isSpaceMember ? `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/activity?id=${createdArticle.activityId}` : `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news-detail?newsId=${createdArticle.id}`
+          alertLink: alertLink
         });
       }).then(() => this.draftSavingStatus = '');
     },
@@ -552,7 +561,12 @@ export default {
           this.canCreateArticle = canCreateArticle || this.articleId;
           if (this.canCreateArticle) {
             if (this.articleId) {
-              this.fillArticle(this.articleId, true, this.selectedLanguage);
+              this.fillArticle(this.articleId, true, this.selectedLanguage).then(() => {
+                this.updateUrl();
+                if (!this.article.lang) {
+                  this.selectedLanguage = '';
+                }
+              });
             } else {
               const message = localStorage.getItem('exo-activity-composer-message');
               if (message) {
@@ -608,7 +622,7 @@ export default {
     },
     getArticleLanguages(){
       const articleId= this.article.targetPageId ? this.article.targetPageId : this.article.id;
-      return this.$notesService.getNoteLanguages(articleId,true).then(data => {
+      return this.$newsServices.getArticleLanguages(articleId,true).then(data => {
         this.translations =  data || [];
         if (this.translations.length>0) {
           this.translations = this.allLanguages.filter(item1 => this.translations.some(item2 => item2 === item1.value));
@@ -634,15 +648,12 @@ export default {
       this.$refs.editor.closePluginsDrawer();
     },
     getAvailableLanguages() {
-      return this.$notesService.getAvailableLanguages().then(data => {
-        this.languages = data || [];
-        this.languages.sort((a, b) => a.text.localeCompare(b.text));
-        this.allLanguages = this.languages;
-        this.languages.unshift({value: '', text: this.$t('notes.label.chooseLangage')});
-        if (this.translations) {
-          this.languages = this.languages.filter(item1 => !this.translations.some(item2 => item2.value === item1.value));
-        }
-      });
+      this.languages.sort((a, b) => a.text.localeCompare(b.text));
+      this.allLanguages = this.languages;
+      this.languages.unshift({value: '', text: this.$t('article.label.chooseLanguage')});
+      if (this.translations) {
+        this.languages = this.languages.filter(item1 => !this.translations.some(item2 => item2.value === item1.value));
+      }
     },
     displayAlert(detail) {
       document.dispatchEvent(new CustomEvent('alert-message-html', {detail: {
@@ -681,7 +692,8 @@ export default {
       const isTitleEmpty = !this.article?.title;
       const isContentEmpty = !this.article?.content;
       const isSummaryEmpty = !this.article?.properties || !this.article?.properties?.summary;
-      return isTitleEmpty && isContentEmpty && isSummaryEmpty;
+      const isFeaturedImageEmpty = !this.article.properties || !this.article?.properties?.featuredImage || this.article?.properties?.featuredImage.id === null || this.article?.properties?.featuredImage?.id <= 0 ;
+      return isTitleEmpty && isContentEmpty && isSummaryEmpty && isFeaturedImageEmpty;
     },
   },
 };
