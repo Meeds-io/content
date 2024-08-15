@@ -233,6 +233,7 @@ public class NewsServiceImpl implements NewsService {
 
   @Override
   public News postNews(News news, String poster) throws Exception {
+    LOG.info("Start postNews");
     if (news.getPublicationState().equals(STAGED) || news.getSchedulePostDate() != null) {
       news = postScheduledArticle(news);
     } else {
@@ -245,6 +246,7 @@ public class NewsServiceImpl implements NewsService {
     }
     NewsUtils.broadcastEvent(NewsUtils.POST_NEWS_ARTICLE, news.getId(), news);// Gamification
     NewsUtils.broadcastEvent(NewsUtils.POST_NEWS, news.getAuthor(), news);// Analytics
+    LOG.info("End postNews");
     return news;
   }
 
@@ -966,6 +968,7 @@ public class NewsServiceImpl implements NewsService {
    */
   @Override
   public News createNewsArticlePage(News newsArticle, String newsArticleCreator) throws Exception {
+    LOG.info("Start createNewsArticlePage");
     // get the news draft article from the news model before setting the news
     // article id to the news model
     String draftNewsId = newsArticle.getId();
@@ -976,6 +979,7 @@ public class NewsServiceImpl implements NewsService {
 
     Wiki wiki = wikiService.getWikiByTypeAndOwner(WikiType.GROUP.name().toLowerCase(), pageOwnerId);
     Page newsArticlesRootNotePage = null;
+    LOG.info("Start get Wiki");
     if (wiki != null) {
       newsArticlesRootNotePage = noteService.getNoteOfNoteBookByName(WikiType.GROUP.name().toLowerCase(),
                                                                      pageOwnerId,
@@ -991,8 +995,9 @@ public class NewsServiceImpl implements NewsService {
       // create the news root page
       newsArticlesRootNotePage = createNewsArticlesNoteRootPage(wiki);
     }
-
+    LOG.info("End get Wiki");
     if (newsArticlesRootNotePage != null) {
+      LOG.info("Start create wiki page");
       Page newsArticlePage = new Page();
       newsArticlePage.setName(newsArticle.getName());
       newsArticlePage.setTitle(newsArticle.getTitle());
@@ -1001,11 +1006,17 @@ public class NewsServiceImpl implements NewsService {
       newsArticlePage.setAuthor(newsArticle.getAuthor());
       newsArticlePage.setLang(null);
       newsArticlePage.setProperties(newsArticle.getProperties());
+      LOG.info("Start create Note");
       newsArticlePage = noteService.createNote(wiki, newsArticlesRootNotePage.getName(), newsArticlePage, poster);
+      LOG.info("End create Note");
       // create the version
+      LOG.info("Start create note version");
       noteService.createVersionOfNote(newsArticlePage, poster.getUserId());
+      LOG.info("Start create note version");
       if (newsArticlePage != null) {
+        LOG.info("Start get published version by page ID and Lang");
         PageVersion pageVersion = noteService.getPublishedVersionByPageIdAndLang(Long.parseLong(newsArticlePage.getId()), null);
+        LOG.info("End get published version by page ID and Lang");
         // set properties
         newsArticle.setId(newsArticlePage.getId());
         newsArticlePage.setLang(newsArticlePage.getLang());
@@ -1013,6 +1024,7 @@ public class NewsServiceImpl implements NewsService {
         newsArticle.setProperties(newsArticlePage.getProperties());
         newsArticle.setIllustrationURL(NewsUtils.buildIllustrationUrl(newsArticlePage.getProperties(), newsArticle.getLang()));
 
+        LOG.info("Start save Metadata for nte version");
         NewsPageVersionObject newsArticleVersionMetaDataObject = new NewsPageVersionObject(NEWS_METADATA_PAGE_VERSION_OBJECT_TYPE,
                                                                                            pageVersion.getId(),
                                                                                            null,
@@ -1026,7 +1038,11 @@ public class NewsServiceImpl implements NewsService {
                                            newsArticleVersionMetadataItemProperties,
                                            Long.parseLong(newsArticleMetadataItemCreatorIdentityId));
 
+        LOG.info("End save Metadata for note version");
+
+
         // create metadata item page
+        LOG.info("Start save Metadata for note");
         NewsPageObject newsPageObject = new NewsPageObject(NEWS_METADATA_PAGE_OBJECT_TYPE,
                                                            newsArticlePage.getId(),
                                                            null,
@@ -1048,11 +1064,15 @@ public class NewsServiceImpl implements NewsService {
                                            NEWS_METADATA_KEY,
                                            newsPageProperties,
                                            Long.parseLong(newsArticleMetadataItemCreatorIdentityId));
+        LOG.info("End save Metadata for nte version");
+
         // delete the draft
         deleteDraftArticle(draftNewsId, poster.getUserId());
+        LOG.info("End createNewsArticlePage");
         return newsArticle;
       }
     }
+    LOG.info("End createNewsArticlePage with no page created");
     return null;
   }
 
