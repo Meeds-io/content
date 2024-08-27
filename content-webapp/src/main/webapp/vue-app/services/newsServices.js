@@ -21,8 +21,8 @@
 import {newsConstants} from '../services/newsConstants.js';
 import {newsUpdateType} from '../services/newsConstants.js';
 
-export function getNewsById(id, editMode, type, lang) {
-  return fetch(`${newsConstants.CONTENT_API}/contents/${id}?editMode=${editMode || ''}&type=${type || ''}&lang=${lang || ''}`, {
+export function getNewsById(id, editMode, type, lang, getDefault) {
+  return fetch(`${newsConstants.CONTENT_API}/contents/${id}?editMode=${editMode || ''}&type=${type || ''}&lang=${lang || ''}&getDefault=${getDefault || false}`, {
     credentials: 'include',
     method: 'GET',
   }).then((resp) => {

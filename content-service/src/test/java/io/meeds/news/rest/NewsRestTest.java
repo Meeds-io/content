@@ -140,14 +140,14 @@ public class NewsRestTest {
     ConversationState.setCurrent(new ConversationState(currentIdentity));
     News news = new News();
     news.setId("1");
-    lenient().when(newsService.getNewsByIdAndLang(nullable(String.class), any(), nullable(Boolean.class), nullable(String.class), nullable(String.class)))
+    lenient().when(newsService.getNewsByIdAndLang(nullable(String.class), any(), nullable(Boolean.class), nullable(String.class), nullable(String.class), anyBoolean()))
              .thenReturn(news);
     lenient().when(spaceService.getSpaceById(nullable(String.class))).thenReturn(new Space());
     lenient().when(spaceService.isMember(any(Space.class), eq(JOHN))).thenReturn(true);
     lenient().when(spaceService.isSuperManager(eq(JOHN))).thenReturn(false);
 
     // When
-    ResponseEntity response = newsRestController.getNewsById("1", null, null, false, null);
+    ResponseEntity response = newsRestController.getNewsById("1", null, null, false, null, false);
 
     // Then
     assertEquals(200, response.getStatusCodeValue());
@@ -280,13 +280,13 @@ public class NewsRestTest {
     Identity currentIdentity = new Identity(JOHN);
     ConversationState.setCurrent(new ConversationState(currentIdentity));
     News news = new News();
-    lenient().when(newsService.getNewsByIdAndLang(anyString(), any(), anyBoolean(), nullable(String.class), nullable(String.class))).thenReturn(news);
+    lenient().when(newsService.getNewsByIdAndLang(anyString(), any(), anyBoolean(), nullable(String.class), nullable(String.class), anyBoolean())).thenReturn(news);
     lenient().when(spaceService.getSpaceById(anyString())).thenReturn(new Space());
     lenient().when(spaceService.isMember(any(Space.class), eq(JOHN))).thenReturn(false);
     lenient().when(spaceService.isSuperManager(eq(JOHN))).thenReturn(true);
 
     // When
-    ResponseEntity response = newsRestController.getNewsById("1", null, null, false, null);
+    ResponseEntity response = newsRestController.getNewsById("1", null, null, false, null, false);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatusCode().value());
@@ -303,7 +303,7 @@ public class NewsRestTest {
     lenient().when(spaceService.isSuperManager(eq(JOHN))).thenReturn(true);
 
     // When
-    ResponseEntity response = newsRestController.getNewsById("1", null, null, false, null);
+    ResponseEntity response = newsRestController.getNewsById("1", null, null, false, null, false);
 
     // Then
     assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatusCode().value());
@@ -324,7 +324,7 @@ public class NewsRestTest {
     Space space2 = new Space();
     space1.setId("2");
     space1.setPrettyName("space2");
-    lenient().when(newsService.getNewsByIdAndLang(anyString(), any(), anyBoolean(), nullable(String.class), nullable(String.class))).thenReturn(news);
+    lenient().when(newsService.getNewsByIdAndLang(anyString(), any(), anyBoolean(), nullable(String.class), nullable(String.class), anyBoolean())).thenReturn(news);
     lenient().when(spaceService.getSpaceById("1")).thenReturn(space1);
     lenient().when(spaceService.getSpaceById("2")).thenReturn(space2);
     lenient().when(spaceService.isMember(space1, JOHN)).thenReturn(true);
@@ -332,7 +332,7 @@ public class NewsRestTest {
     lenient().when(spaceService.isSuperManager(eq(JOHN))).thenReturn(false);
 
     // When
-    ResponseEntity response = newsRestController.getNewsById("1", "spaces", null, false, null);
+    ResponseEntity response = newsRestController.getNewsById("1", "spaces", null, false, null, false);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatusCode().value());
@@ -551,10 +551,10 @@ public class NewsRestTest {
     news.setId("1");
     news.setSpaceId("1");
 
-    when(newsService.getNewsByIdAndLang(anyString(), any(), anyBoolean(), nullable(String.class), nullable(String.class))).thenReturn(news);
+    when(newsService.getNewsByIdAndLang(anyString(), any(), anyBoolean(), nullable(String.class), nullable(String.class), anyBoolean())).thenReturn(news);
 
     // When
-    ResponseEntity response = newsRestController.getNewsById("1", null, null, false, null);
+    ResponseEntity response = newsRestController.getNewsById("1", null, null, false, null, false);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatusCode().value());
@@ -566,13 +566,13 @@ public class NewsRestTest {
     
     Identity currentIdentity = new Identity(JOHN);
     ConversationState.setCurrent(new ConversationState(currentIdentity));
-    lenient().when(newsService.getNewsByIdAndLang(anyString(), any(), anyBoolean(), anyString(), nullable(String.class))).thenReturn(null);
+    lenient().when(newsService.getNewsByIdAndLang(anyString(), any(), anyBoolean(), anyString(), nullable(String.class), anyBoolean())).thenReturn(null);
     lenient().when(spaceService.getSpaceById(anyString())).thenReturn(new Space());
     lenient().when(spaceService.isMember(any(Space.class), eq(JOHN))).thenReturn(true);
     lenient().when(spaceService.isSuperManager(eq(JOHN))).thenReturn(true);
 
     // When
-    ResponseEntity response = newsRestController.getNewsById("1", null, null, false, null);
+    ResponseEntity response = newsRestController.getNewsById("1", null, null, false, null, false);
 
     // Then
     assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatusCode().value());
@@ -583,13 +583,13 @@ public class NewsRestTest {
     // Given
     Identity currentIdentity = new Identity(JOHN);
     ConversationState.setCurrent(new ConversationState(currentIdentity));
-    lenient().when(newsService.getNewsByIdAndLang(anyString(), any(), anyBoolean(), anyString(), nullable(String.class))).thenReturn(null);
+    lenient().when(newsService.getNewsByIdAndLang(anyString(), any(), anyBoolean(), anyString(), nullable(String.class),anyBoolean())).thenReturn(null);
     lenient().when(spaceService.getSpaceById(anyString())).thenReturn(new Space());
     lenient().when(spaceService.isMember(any(Space.class), eq(JOHN))).thenReturn(true);
     lenient().when(spaceService.isSuperManager(eq(JOHN))).thenReturn(true);
 
     // When
-    ResponseEntity response = newsRestController.getNewsById(null, null, null, false, null);
+    ResponseEntity response = newsRestController.getNewsById(null, null, null, false, null, false);
 
     // Then
     assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatusCode().value());
@@ -837,7 +837,7 @@ public class NewsRestTest {
     news.setSpaceId("space1");
     news.setViewsCount((long) 6);
 
-    lenient().when(newsService.getNewsByIdAndLang("1", currentIdentity, false, null, null)).thenReturn(news);
+    lenient().when(newsService.getNewsByIdAndLang("1", currentIdentity, false, null, null,false)).thenReturn(news);
     Space space1 = new Space();
     space1.setPrettyName("space1");
     lenient().when(spaceService.getSpaceById("space1")).thenReturn(space1);
@@ -845,7 +845,7 @@ public class NewsRestTest {
     lenient().when(spaceService.isSuperManager(eq(JOHN))).thenReturn(false);
 
     // When
-    ResponseEntity response = newsRestController.getNewsById("1", null, null, false, null);
+    ResponseEntity response = newsRestController.getNewsById("1", null, null, false, null, false);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatusCode().value());
@@ -862,7 +862,7 @@ public class NewsRestTest {
 
     lenient().when(newsService.getNewsById("1", currentIdentity, false, null)).thenReturn(news);
     // When
-    ResponseEntity response = newsRestController.getNewsById("2", null, null, false, null);
+    ResponseEntity response = newsRestController.getNewsById("2", null, null, false, null, false);
     ;
 
     // Then

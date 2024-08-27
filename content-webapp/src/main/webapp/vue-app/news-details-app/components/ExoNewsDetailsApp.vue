@@ -49,22 +49,8 @@ export default {
   created() {
     this.originalVersion = { value: '', text: this.$root.$t('article.label.translation.originalVersion') };
     this.removeParamFromUrl('lang');
-    this.$newsServices.getNewsById(this.newsId, false, this.newsType)
-      .then(news => {
-        if (news !== null && news !== UNAUTHORIZED_CODE) {
-          this.showEditButton = news.canEdit;
-          this.showPublishButton = news.canPublish;
-          this.showDeleteButton = news.canDelete;
-          this.fetchTranslation(news);
-          if (!news.spaceMember) {
-            this.$root.$emit('restricted-space', this.news.spaceDisplayName, this.news.hiddenSpace);
-            const message = this.news.hiddenSpace ? this.$t('news.activity.notAuthorizedUserForSpaceHidden'): this.$t('news.activity.notAuthorizedUser').replace('{0}',  this.news.spaceDisplayName);
-            this.$root.$emit('alert-message', message, 'warning');
-          }
-        } else {
-          this.notFound = true;
-        }
-      });
+    this.getArticleVersionWithLang(this.newsId, this.selectedTranslation.value);
+    this.fetchTranslation(this.newsId);
     this.$root.$on('change-article-translation', (translation) => {
       this.previousSelectedTranslation = this.selectedTranslation.value;
       this.changeTranslation(translation);
@@ -80,12 +66,25 @@ export default {
         // reset the news model after the automatic translation
         this.news = null;
       }
-      return this.$newsServices.getNewsById(id, false, 'article', lang).then((resp) => {
-        this.news = resp;
-        if (this.news.lang) {
-          this.addParamToUrl('lang', this.news.lang);
+      return this.$newsServices.getNewsById(id, false, 'article', lang, true).then((resp) => {
+        if (resp !== null && resp !== UNAUTHORIZED_CODE) {
+          this.news = resp;
+          this.showEditButton = this.news.canEdit;
+          this.showPublishButton = this.news.canPublish;
+          this.showDeleteButton = this.news.canDelete;
+          if (this.news.lang) {
+            this.addParamToUrl('lang', this.news.lang);
+          } else {
+            this.removeParamFromUrl('lang');
+            this.selectedTranslation = this.originalVersion;
+          }
+          if (this.news.spaceMember) {
+            this.$root.$emit('restricted-space', this.news.spaceDisplayName, this.news.hiddenSpace);
+            const message = this.news.hiddenSpace ? this.$t('news.activity.notAuthorizedUserForSpaceHidden'): this.$t('news.activity.notAuthorizedUser').replace('{0}',  this.news.spaceDisplayName);
+            this.$root.$emit('alert-message', message, 'warning');
+          }
         } else {
-          this.removeParamFromUrl('lang');
+          this.notFound = true;
         }
       });
     },
@@ -103,21 +102,14 @@ export default {
       this.selectedTranslation = translation;
       this.getArticleVersionWithLang(this.news.id, this.selectedTranslation.value);
     },
-    fetchTranslation(originalArticle) {
-      this.$newsServices.getArticleLanguages(originalArticle.id, false).then((resp) => {
+    fetchTranslation(articleId) {
+      this.$newsServices.getArticleLanguages(articleId, false).then((resp) => {
         this.translations =  resp || [];
         if (this.translations.length>0) {
           this.translations = this.languages.filter(item1 => this.translations.some(item2 => item2 === item1.value));
           this.translations.sort((a, b) => a.text.localeCompare(b.text));
         }
         this.translations.unshift(this.originalVersion);
-        const exists = this.translations.some(obj => obj.value.toLowerCase() === this.selectedTranslation.value.toLowerCase());
-        if (exists) {
-          this.getArticleVersionWithLang(originalArticle.id, this.selectedTranslation.value);
-        } else {
-          this.news = originalArticle;
-          this.selectedTranslation = this.originalVersion;
-        }
       });
     },
     updateSelectedTranslation(translation) {

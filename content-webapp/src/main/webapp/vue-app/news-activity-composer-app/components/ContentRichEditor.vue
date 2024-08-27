@@ -83,7 +83,8 @@ export default {
         title: '',
         content: '',
         body: '',
-        properties: {}
+        properties: {},
+        lang: ''
       },
       originalArticle: {
         id: 0,
@@ -233,12 +234,12 @@ export default {
       }
       this.article.properties.summary = '';
       this.article.properties.featuredImage = {};
+      this.setEditorData('');
       this.languages = this.languages.filter(item => item.value !== lang?.value);
       this.selectedLanguage = lang?.value;
       this.translations.unshift(lang);
       this.article.lang = this.selectedLanguage;
       document.dispatchEvent(new CustomEvent('translation-added',{ detail: originNoteContent }));
-      this.setEditorData('');
       this.$nextTick(() => {
         this.initDone = true;
       });
@@ -295,6 +296,7 @@ export default {
       updatedArticle.publicationState = 'draft';
       return this.$newsServices.updateNews(updatedArticle, false, this.articleType).then((createdArticle) => {
         this.spaceUrl = createdArticle.spaceUrl;
+        this.article.properties = createdArticle.properties;
         this.article.lang = createdArticle.lang;
         if (this.article.body !== createdArticle.body) {
           this.imagesURLs = this.extractImagesURLsDiffs(this.article.body, createdArticle.body);
@@ -679,7 +681,7 @@ export default {
       const isTitleEmpty = !this.article?.title;
       const isContentEmpty = !this.article?.content;
       const isSummaryEmpty = !this.article?.properties || !this.article?.properties?.summary;
-      const isFeaturedImageEmpty = !this.article.properties || !this.article?.properties?.featuredImage || this.article?.properties?.featuredImage?.id <= 0;
+      const isFeaturedImageEmpty = !this.article.properties || !this.article?.properties?.featuredImage || this.article?.properties?.featuredImage.id === null || this.article?.properties?.featuredImage?.id <= 0 ;
       return isTitleEmpty && isContentEmpty && isSummaryEmpty && isFeaturedImageEmpty;
     },
   },
