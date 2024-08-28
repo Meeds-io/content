@@ -210,7 +210,7 @@ public class NewsRest {
                                          @RequestParam("type")
                                          String newsObjectType,
                                          @Parameter(description = "News update action type to be done")
-                                         @RequestParam(name = "newsUpdateType", defaultValue = "content_and_title", required = false)
+                                         @RequestParam(name = "newsUpdateType", defaultValue = "content", required = false)
                                          String newsUpdateType,
                                          @RequestBody
                                          News updatedNews) {
@@ -354,17 +354,14 @@ public class NewsRest {
                                           boolean editMode,
                                           @Parameter(description = "article translation")
                                           @RequestParam(name = "lang", required = false)
-                                          String lang,
-                                          @Parameter(description = "Fetch the default article if a translation does not exist for the given language")
-                                          @RequestParam(name = "getDefault", defaultValue = "false", required = false)
-                                          boolean getDefault) {
+                                          String lang) {
     String authenticatedUser = ConversationState.getCurrent().getIdentity().getUserId();
     try {
       if (StringUtils.isBlank(id)) {
         return ResponseEntity.badRequest().build();
       }
       org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
-      News news = newsService.getNewsByIdAndLang(id, currentIdentity, editMode, newsObjectType, StringUtils.isBlank(lang) ? null : lang, getDefault);
+      News news = newsService.getNewsByIdAndLang(id, currentIdentity, editMode, newsObjectType, StringUtils.isBlank(lang) ? null : lang);
       if (news == null || news.isDeleted()) {
         return ResponseEntity.notFound().build();
       }

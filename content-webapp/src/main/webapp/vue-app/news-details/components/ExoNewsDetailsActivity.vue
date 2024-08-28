@@ -79,8 +79,12 @@ export default {
     },
   },
   created() {
+    const url = new URL(window.location.href);
+    const params = new URLSearchParams(url.search);
+    if (params.has('lang')) {
+      this.selectedTranslation.value = params.get('lang');
+    }
     this.originalVersion = { value: '', text: this.$root.$t('article.label.translation.originalVersion') };
-    this.removeParamFromUrl('lang');
     if (this.newsId || this.sharedNewsId) {
       this.retrieveNews();
     }
@@ -119,7 +123,7 @@ export default {
         // reset the news model after the automatic translation
         this.news = null;
       }
-      return this.$newsServices.getNewsById(id, false, 'article', lang, true ).then((resp) => {
+      return this.$newsServices.getNewsById(id, false, 'article', lang).then((resp) => {
         this.news = resp;
         if (this.news.lang) {
           this.addParamToUrl('lang', this.news.lang);

@@ -457,7 +457,7 @@ public class NewsServiceImpl implements NewsService {
                           Identity currentIdentity,
                           boolean editMode,
                           String newsObjectType) throws IllegalAccessException {
-    return getNewsByIdAndLang(newsId, currentIdentity, editMode, newsObjectType, null, false);
+    return getNewsByIdAndLang(newsId, currentIdentity, editMode, newsObjectType, null);
   }
 
   /**
@@ -468,8 +468,7 @@ public class NewsServiceImpl implements NewsService {
                           Identity currentIdentity,
                           boolean editMode,
                           String newsObjectType,
-                          String lang,
-                          boolean getDefault) throws IllegalAccessException {
+                          String lang) throws IllegalAccessException {
     News news = null;
     try {
       if (newsObjectType == null) {
@@ -480,7 +479,7 @@ public class NewsServiceImpl implements NewsService {
       } else if (LATEST_DRAFT.name().equalsIgnoreCase(newsObjectType)) {
         news = buildLatestDraftArticle(newsId, currentIdentity.getUserId(), lang);
       } else if (ARTICLE.name().equalsIgnoreCase(newsObjectType)) {
-        news = buildArticle(newsId, lang, getDefault);
+        news = buildArticle(newsId, lang, true);
       }
     } catch (Exception exception) {
       LOG.error("An error occurred while retrieving news with id {}", newsId, exception);
@@ -1139,7 +1138,7 @@ public class NewsServiceImpl implements NewsService {
 
   @Override
   public List<String> getArticleLanguages(String articleId, boolean withDrafts) throws WikiException {
-    return noteService.getPageAvailableTranslationLanguages(Long.parseLong(articleId), true);
+    return noteService.getPageAvailableTranslationLanguages(Long.parseLong(articleId), withDrafts);
   }
 
   private News updateDraftArticleForNewPage(News draftArticle, String draftArticleUpdater) throws WikiException,
@@ -1798,7 +1797,7 @@ public class NewsServiceImpl implements NewsService {
     return buildArticle(newsId, null, false);
   }
 
-  private News buildArticle(String newsId, String lang, boolean getDefault) throws Exception {
+  private News buildArticle(String newsId, String lang, boolean fetchOriginal) throws Exception {
     if (StringUtils.isNumeric(newsId)) {
       Page articlePage = noteService.getNoteById(newsId);
       Identity userIdentity = getCurrentIdentity();
@@ -1807,7 +1806,7 @@ public class NewsServiceImpl implements NewsService {
         Space space = spaceService.getSpaceByGroupId(articlePage.getWikiOwner());
         // fetch the last version of the given lang
         PageVersion pageVersion = noteService.getPublishedVersionByPageIdAndLang(Long.parseLong(articlePage.getId()), lang);
-        if (pageVersion == null && getDefault) {
+        if (pageVersion == null && fetchOriginal) {
           pageVersion = noteService.getPublishedVersionByPageIdAndLang(Long.parseLong(articlePage.getId()), null);
         }
         News news = new News();
@@ -1941,7 +1940,7 @@ public class NewsServiceImpl implements NewsService {
                                                                                      currentIdentityId,
                                                                                      lang);
     if (latestDraft == null) {
-      return buildArticle(parentPageId, lang, false);
+      return buildArticle(parentPageId, lang, true);
     }
     News draftArticle = buildDraftArticle(latestDraft.getId(), currentIdentityId);
 
@@ -2034,7 +2033,7 @@ public class NewsServiceImpl implements NewsService {
       news.setIllustrationURL(NewsUtils.buildIllustrationUrl(news.getProperties(), news.getLang()));
       DraftPage draftPage = noteService.getLatestDraftPageByTargetPageAndLang(Long.parseLong(newsId), news.getLang());
       if (draftPage != null) {
-        noteService.removeDraftById(draftPage.getId());
+        deleteDraftArticle(draftPage.getId(), draftPage.getAuthor());
       }
       return news;
     }

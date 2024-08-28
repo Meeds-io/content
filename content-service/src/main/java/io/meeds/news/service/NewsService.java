@@ -141,7 +141,6 @@ public interface NewsService {
    * @param editMode access mode to news: whether to edit news to to view it.
    * @param newsObjectType news object type to be retrieved.
    * @param lang news translate version
-   * @param getDefault fetch the default article if a translation does not exist for the given language
    * @return {@link News} if found else null
    * @throws IllegalAccessException when user doesn't have access to
    *           {@link News}
@@ -150,8 +149,7 @@ public interface NewsService {
                    org.exoplatform.services.security.Identity currentIdentity,
                    boolean editMode,
                    String newsObjectType,
-                   String lang,
-                   boolean getDefault) throws IllegalAccessException;
+                   String lang) throws IllegalAccessException;
 
   /**
    * Retrives a news identified by its technical identifier

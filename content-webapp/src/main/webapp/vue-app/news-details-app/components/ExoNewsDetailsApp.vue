@@ -47,8 +47,12 @@ export default {
     previousSelectedTranslation: null
   }),
   created() {
+    const url = new URL(window.location.href);
+    const params = new URLSearchParams(url.search);
+    if (params.has('lang')) {
+      this.selectedTranslation.value = params.get('lang');
+    }
     this.originalVersion = { value: '', text: this.$root.$t('article.label.translation.originalVersion') };
-    this.removeParamFromUrl('lang');
     this.getArticleVersionWithLang(this.newsId, this.selectedTranslation.value);
     this.fetchTranslation(this.newsId);
     this.$root.$on('change-article-translation', (translation) => {
@@ -66,7 +70,7 @@ export default {
         // reset the news model after the automatic translation
         this.news = null;
       }
-      return this.$newsServices.getNewsById(id, false, 'article', lang, true).then((resp) => {
+      return this.$newsServices.getNewsById(id, false, 'article', lang).then((resp) => {
         if (resp !== null && resp !== UNAUTHORIZED_CODE) {
           this.news = resp;
           this.showEditButton = this.news.canEdit;

@@ -245,6 +245,7 @@ export default {
       });
     },
     changeTranslation(lang) {
+      this.currentArticleInitDone = false;
       this.selectedLanguage = lang.value;
       if (lang.value) {
         this.translations=this.translations.filter(item => item.value !== lang.value);
@@ -254,6 +255,7 @@ export default {
       this.fillArticle(articleId, true,lang.value).then(() => {
         this.updateUrl();
         this.draftSavingStatus = '';
+        this.currentArticleInitDone = true;
       });
     },
     deleteTranslation(translation) {
@@ -320,11 +322,15 @@ export default {
         }
         this.fillArticle(createdArticle.id, false, createdArticle.lang);
         this.enableClickOnce();
+        let alertLink = this.isSpaceMember ? `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/activity?id=${createdArticle.activityId}` : `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news-detail?newsId=${createdArticle.id}`;
+        if (createdArticle.lang) {
+          alertLink = `${alertLink}&lang=${createdArticle.lang}`;
+        }
         this.displayAlert({
           message: this.$t('news.save.success.message'),
           type: 'success',
           alertLinkText: this.$t('news.view.label'),
-          alertLink: this.isSpaceMember ? `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/activity?id=${createdArticle.activityId}` : `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news-detail?newsId=${createdArticle.id}`
+          alertLink: alertLink
         });
       }).then(() => this.draftSavingStatus = '');
     },
@@ -555,7 +561,12 @@ export default {
           this.canCreateArticle = canCreateArticle || this.articleId;
           if (this.canCreateArticle) {
             if (this.articleId) {
-              this.fillArticle(this.articleId, true, this.selectedLanguage);
+              this.fillArticle(this.articleId, true, this.selectedLanguage).then(() => {
+                this.updateUrl();
+                if (!this.article.lang) {
+                  this.selectedLanguage = '';
+                }
+              });
             } else {
               const message = localStorage.getItem('exo-activity-composer-message');
               if (message) {
@@ -611,7 +622,7 @@ export default {
     },
     getArticleLanguages(){
       const articleId= this.article.targetPageId ? this.article.targetPageId : this.article.id;
-      return this.$notesService.getNoteLanguages(articleId,true).then(data => {
+      return this.$newsServices.getArticleLanguages(articleId,true).then(data => {
         this.translations =  data || [];
         if (this.translations.length>0) {
           this.translations = this.allLanguages.filter(item1 => this.translations.some(item2 => item2 === item1.value));
