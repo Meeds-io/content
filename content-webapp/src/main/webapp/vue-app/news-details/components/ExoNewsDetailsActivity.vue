@@ -79,8 +79,12 @@ export default {
     },
   },
   created() {
+    const url = new URL(window.location.href);
+    const params = new URLSearchParams(url.search);
+    if (params.has('lang')) {
+      this.selectedTranslation.value = params.get('lang');
+    }
     this.originalVersion = { value: '', text: this.$root.$t('article.label.translation.originalVersion') };
-    this.removeParamFromUrl('lang');
     if (this.newsId || this.sharedNewsId) {
       this.retrieveNews();
     }
@@ -98,13 +102,15 @@ export default {
       if (this.activity.news) {
         this.activityId = this.activity.news.activityId;
         if (this.activity.news.id) {
-          this.fetchTranslation(this.activity.news);
+          const newsId = this.activity.news.id;
+          this.getArticleVersionWithLang(newsId, this.selectedTranslation.value);
+          this.fetchTranslation(newsId);
         }
       } else {
         this.$newsServices.getNewsByActivityId(this.activityId)
           .then(news => {
             if (news?.id) {
-              this.fetchTranslation(news);
+              this.getArticleVersionWithLang(news.id, this.selectedTranslation.value);
             }
           })
           .catch(() => {
@@ -123,6 +129,7 @@ export default {
           this.addParamToUrl('lang', this.news.lang);
         } else {
           this.removeParamFromUrl('lang');
+          this.selectedTranslation = this.originalVersion;
         }
       });
     },
@@ -141,21 +148,14 @@ export default {
       this.getArticleVersionWithLang(this.news.id, this.selectedTranslation.value);
       this.$forceUpdate();
     },
-    fetchTranslation(originalArticle) {
-      this.$newsServices.getArticleLanguages(originalArticle.id, false).then((resp) => {
+    fetchTranslation(articleId) {
+      this.$newsServices.getArticleLanguages(articleId, false).then((resp) => {
         this.translations =  resp || [];
         if (this.translations.length>0) {
           this.translations = this.languages.filter(item1 => this.translations.some(item2 => item2 === item1.value));
           this.translations.sort((a, b) => a.text.localeCompare(b.text));
         }
         this.translations.unshift(this.originalVersion);
-        const exists = this.translations.some(obj => obj.value.toLowerCase() === this.selectedTranslation.value.toLowerCase());
-        if (exists) {
-          this.getArticleVersionWithLang(originalArticle.id, this.selectedTranslation.value);
-        } else {
-          this.news = originalArticle;
-          this.selectedTranslation = this.originalVersion;
-        }
       });
     },
     updateSelectedTranslation(translation) {
