@@ -163,8 +163,6 @@ public class NewsServiceImpl implements NewsService {
   public static final String         NEWS_ATTACHMENTS_IDS                   = "attachmentsIds";
 
   public static final String         ARTICLE_CONTENT                        = "content";
-  
-  public static final String        FEATURED_IMAGE_ID                       = "featuredImageId";
 
   public static final MetadataKey    NEWS_METADATA_KEY                      =
                                                        new MetadataKey(NEWS_METADATA_TYPE.getName(), NEWS_METADATA_NAME, 0);
@@ -563,7 +561,7 @@ public class NewsServiceImpl implements NewsService {
                                        newsTargetingService.getNewsTargetItemsByTargetName(targetName, newsFilter.getOffset(), 0);
     return newsTargetItems.stream().filter(target -> {
       try {
-        News news = getNewsById(target.getObjectId(), currentIdentity, false, ARTICLE.name().toLowerCase());
+        News news = getNewsArticleById(target.getObjectId());
         return news != null
             && (StringUtils.isEmpty(news.getAudience()) || news.getAudience().equals(NewsUtils.ALL_NEWS_AUDIENCE) || news.isSpaceMember());
       } catch (Exception e) {
@@ -571,7 +569,7 @@ public class NewsServiceImpl implements NewsService {
       }
     }).map(target -> {
       try {
-        News news = getNewsById(target.getObjectId(), currentIdentity, false, ARTICLE.name().toLowerCase());
+        News news = getNewsByIdAndLang(target.getObjectId(), currentIdentity, false, ARTICLE.name().toLowerCase(), newsFilter.getLang());
         news.setPublishDate(new Date(target.getCreatedDate()));
         return news;
       } catch (Exception e) {
@@ -1319,12 +1317,13 @@ public class NewsServiceImpl implements NewsService {
                           .stream()
                           .map(article -> {
                             try {
-                              return buildArticle(article.getObjectId());
+                              return buildArticle(article.getObjectId(), filter.getLang(), true);
                             } catch (Exception e) {
                               LOG.error("Error while building published news article", e);
                               return null;
                             }
                           })
+                          .filter(Objects::nonNull)
                           .toList();
   }
 
@@ -1348,12 +1347,13 @@ public class NewsServiceImpl implements NewsService {
                           .stream()
                           .map(article -> {
                             try {
-                              return buildArticle(article.getObjectId());
+                              return buildArticle(article.getObjectId(), filter.getLang(), true);
                             } catch (Exception e) {
                               LOG.error("Error while building news article", e);
                               return null;
                             }
                           })
+                          .filter(Objects::nonNull)
                           .toList();
   }
 
@@ -1369,12 +1369,13 @@ public class NewsServiceImpl implements NewsService {
                           .stream()
                           .map(article -> {
                             try {
-                              return buildArticle(article.getObjectId());
+                              return buildArticle(article.getObjectId(), filter.getLang(), true);
                             } catch (Exception e) {
                               LOG.error("Error while building news article", e);
                               return null;
                             }
                           })
+                          .filter(Objects::nonNull)
                           .toList();
   }
 
@@ -1399,12 +1400,13 @@ public class NewsServiceImpl implements NewsService {
                           .stream()
                           .map(article -> {
                             try {
-                              return buildArticle(article.getObjectId());
+                              return buildArticle(article.getObjectId(), filter.getLang(), true);
                             } catch (Exception e) {
                               LOG.error("Error while building news article", e);
                               return null;
                             }
                           })
+                          .filter(Objects::nonNull)
                           .toList();
   }
 
@@ -1432,6 +1434,7 @@ public class NewsServiceImpl implements NewsService {
                               return null;
                             }
                           })
+                          .filter(Objects::nonNull)
                           .toList();
   }
 

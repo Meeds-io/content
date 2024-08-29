@@ -179,6 +179,9 @@ export default {
         editUrl += `&spaceName=${news.spaceUrl.substring(news.spaceUrl.lastIndexOf('/') + 1)}`;
       }
       editUrl += `&type=${news.activityId && 'latest_draft' || 'draft'}`;
+      if (news.lang) {
+        editUrl += `&lang=${news.lang}`;
+      }
       return editUrl;
     },
     editLink(news) {

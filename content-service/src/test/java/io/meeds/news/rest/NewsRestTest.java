@@ -111,6 +111,8 @@ public class NewsRestTest {
   @InjectMocks
   private NewsRest newsRestController;
 
+  private HttpServletRequest request;
+
   @Before
   public void setup() {
     newsRestController.init();
@@ -125,6 +127,8 @@ public class NewsRestTest {
                                                                                                                              null,
                                                                                                                              null);
     when(identityManager.getOrCreateUserIdentity(JOHN)).thenReturn(userIdentity);
+    request = mock(HttpServletRequest.class);
+    when(request.getLocale()).thenReturn(Locale.ENGLISH);
   }
 
   @AfterClass
@@ -168,10 +172,10 @@ public class NewsRestTest {
     newsList.add(news);
     NewsFilter newsFilter = new NewsFilter();
     newsFilter.setLimit(10);
-    lenient().when(newsService.getNewsByTargetName(newsFilter, "sliderNews", currentIdentity)).thenReturn(newsList);
+    lenient().when(newsService.getNewsByTargetName(any(NewsFilter.class), anyString(), any(Identity.class))).thenReturn(newsList);
 
     // When
-    ResponseEntity response = newsRestController.getNewsByTarget( "sliderNews", 0, 10, false);
+    ResponseEntity response = newsRestController.getNewsByTarget( "sliderNews", 0, 10, false, request);
 
     // Then
     assertEquals(200, response.getStatusCode().value());
@@ -598,7 +602,6 @@ public class NewsRestTest {
   @Test
   public void shouldGetNewsDraftListWhenNewsDraftsExistsAndUserIsMemberOfTheSpaceAndSuperManager() throws Exception {
     // Given
-    HttpServletRequest request = mock(HttpServletRequest.class);
     lenient().when(request.getRemoteUser()).thenReturn("john");
     Identity currentIdentity = new Identity(JOHN);
     ConversationState.setCurrent(new ConversationState(currentIdentity));
@@ -780,7 +783,6 @@ public class NewsRestTest {
   @Test
   public void shouldGetAllPublishedNewsWhenExist() throws Exception {
     // Given
-    HttpServletRequest request = mock(HttpServletRequest.class);
     Identity currentIdentity = new Identity(JOHN);
     ConversationState.setCurrent(new ConversationState(currentIdentity));
     News news1 = new News();
@@ -807,7 +809,6 @@ public class NewsRestTest {
   @Test
   public void shouldGetEmptyListWhenNoPublishedExists() throws Exception {
     // Given
-    HttpServletRequest request = mock(HttpServletRequest.class);
     Identity currentIdentity = new Identity(JOHN);
     ConversationState.setCurrent(new ConversationState(currentIdentity));
     NewsFilter newsFilter = new NewsFilter();
@@ -872,7 +873,6 @@ public class NewsRestTest {
   @Test
   public void shouldGetAllPinnedNewsWhenExist() throws Exception {
     // Given
-    HttpServletRequest request = mock(HttpServletRequest.class);
     Identity currentIdentity = new Identity(JOHN);
     ConversationState.setCurrent(new ConversationState(currentIdentity));
     News news1 = new News();
