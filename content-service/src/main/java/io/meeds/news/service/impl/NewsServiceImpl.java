@@ -939,6 +939,7 @@ public class NewsServiceImpl implements NewsService {
                                                                                        .getId()));
 
 
+      draftArticle.setProperties(draftArticlePage.getProperties());
       draftArticle.setIllustrationURL(NewsUtils.buildIllustrationUrl(draftArticle.getProperties(), draftArticlePage.getLang()));
       draftArticle.setId(draftArticlePage.getId());
       draftArticle.setCreationDate(draftArticlePage.getCreatedDate());
@@ -1008,7 +1009,7 @@ public class NewsServiceImpl implements NewsService {
         PageVersion pageVersion = noteService.getPublishedVersionByPageIdAndLang(Long.parseLong(newsArticlePage.getId()), null);
         // set properties
         newsArticle.setId(newsArticlePage.getId());
-        newsArticlePage.setLang(newsArticlePage.getLang());
+        newsArticle.setLang(newsArticlePage.getLang());
         newsArticle.setCreationDate(pageVersion.getCreatedDate());
         newsArticle.setProperties(newsArticlePage.getProperties());
         newsArticle.setIllustrationURL(NewsUtils.buildIllustrationUrl(newsArticlePage.getProperties(), newsArticle.getLang()));
@@ -1185,6 +1186,7 @@ public class NewsServiceImpl implements NewsService {
       DraftPage draftPage = noteService.updateDraftForNewPage(draftArticlePage,
                                         System.currentTimeMillis(),
                                         Long.parseLong(identityManager.getOrCreateUserIdentity(draftArticleUpdater).getId()));
+      draftArticle.setProperties(draftPage.getProperties());
       draftArticle.setIllustrationURL(NewsUtils.buildIllustrationUrl(draftPage.getProperties(), draftArticle.getLang()));
       return draftArticle;
     }
