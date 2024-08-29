@@ -668,7 +668,6 @@ export default {
       this.activityId = this.getURLQueryParam('activityId');
       this.articleType = this.getURLQueryParam('type');
       this.spaceId = this.getURLQueryParam('spaceId');
-      this.selectedLanguage = this.getURLQueryParam('translation');
       this.spacePrettyName = this.getURLQueryParam('spaceName');
       this.selectedLanguage = this.getURLQueryParam('lang');
     },
