@@ -227,6 +227,23 @@ public interface NewsService {
                                                                                        ObjectNotFoundException;
 
   /**
+   * Retrieves a news item identified by originating Activity identifier or a
+   * shared activity identifier
+   *
+   * @param activityId {@link ExoSocialActivity} identifier
+   * @param currentIdentity user attempting to access news
+   * @param lang news translation version
+   * @return {@link News} if found else null
+   * @throws IllegalAccessException when user doesn't have access to
+   *           {@link News} or {@link ExoSocialActivity}
+   * @throws ObjectNotFoundException when a {@link News} wasn't found for this
+   *           activity identifier
+   */
+  News getNewsByActivityIdAndLang(String activityId,
+                           org.exoplatform.services.security.Identity currentIdentity, String lang) throws IllegalAccessException,
+          ObjectNotFoundException;
+
+  /**
    * Schedule publishing a News
    * 
    * @param news

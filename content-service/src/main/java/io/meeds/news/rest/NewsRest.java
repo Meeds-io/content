@@ -579,13 +579,15 @@ public class NewsRest {
       @ApiResponse(responseCode = "404", description = "News not found"),
       @ApiResponse(responseCode = "500", description = "Internal server error") })
   public ResponseEntity<News> getNewsByActivityId(@PathVariable("activityId")
-                                                  String activityId) {
+                                                  String activityId,
+                                                  @RequestParam(name = "lang", defaultValue = "null", required = false)
+                                                  String lang) {
     if (StringUtils.isBlank(activityId)) {
       return ResponseEntity.badRequest().build();
     }
     org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
     try {
-      News news = newsService.getNewsByActivityId(activityId, currentIdentity);
+      News news = newsService.getNewsByActivityIdAndLang(activityId, currentIdentity, lang);
       if (news == null) {
         return ResponseEntity.notFound().build();
       }

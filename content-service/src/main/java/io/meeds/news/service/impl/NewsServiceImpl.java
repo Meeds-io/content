@@ -655,6 +655,12 @@ public class NewsServiceImpl implements NewsService {
   @Override
   public News getNewsByActivityId(String activityId, Identity currentIdentity) throws IllegalAccessException,
                                                                                ObjectNotFoundException {
+    return getNewsByActivityIdAndLang(activityId, currentIdentity, null);
+  }
+
+  @Override
+  public News getNewsByActivityIdAndLang(String activityId, Identity currentIdentity, String lang) throws IllegalAccessException,
+                                                                                      ObjectNotFoundException {
     ExoSocialActivity activity = activityManager.getActivity(activityId);
     if (activity == null) {
       throw new ObjectNotFoundException("Activity with id " + activityId + " wasn't found");
@@ -678,13 +684,12 @@ public class NewsServiceImpl implements NewsService {
           throw new IllegalAccessException("Shared Activity '" + activityId + "' Poster " + activity.getPosterId()
               + " isn't found");
         }
-        return getNewsByActivityId(originalActivityId, NewsUtils.getUserIdentity(sharedActivityPosterIdentity.getRemoteId()));
+        return getNewsByActivityIdAndLang(originalActivityId, NewsUtils.getUserIdentity(sharedActivityPosterIdentity.getRemoteId()), lang);
       }
       throw new ObjectNotFoundException("Activity with id " + activityId + " isn't of type news nor a shared news");
     }
-    return getNewsById(newsId, currentIdentity, false, ARTICLE.name().toLowerCase());
+    return getNewsByIdAndLang(newsId, currentIdentity, false, ARTICLE.name().toLowerCase(), lang);
   }
-
   /**
    * {@inheritDoc}
    */
