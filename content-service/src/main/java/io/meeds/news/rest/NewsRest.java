@@ -482,12 +482,12 @@ public class NewsRest {
         }
       }
       NewsFilter newsFilter = buildFilter(spacesList, filter, text, author, limit, offset);
+      String lang = request.getLocale().getLanguage();
+      newsFilter.setLang(lang);
       List<News> news;
       org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
       // Set text to search news with
       if (StringUtils.isNotEmpty(text)) {
-        String lang = request.getLocale().getLanguage();
-        newsFilter.setLang(lang);
         TagService tagService = CommonsUtils.getService(TagService.class);
         long userIdentityId = RestUtils.getCurrentUserIdentityId();
         if (text.indexOf("#") == 0) {
@@ -538,7 +538,8 @@ public class NewsRest {
                                                     int limit,
                                                     @Parameter(description = "News total size")
                                                     @RequestParam(name = "returnSize", required = false)
-                                                    boolean returnSize) {
+                                                    boolean returnSize,
+                                                    HttpServletRequest request) {
     try {
       String authenticatedUser = ConversationState.getCurrent().getIdentity().getUserId();
       if (StringUtils.isBlank(targetName)) {
@@ -551,6 +552,7 @@ public class NewsRest {
         return ResponseEntity.badRequest().build();
       }
       NewsFilter newsFilter = buildFilter(null, "", "", authenticatedUser, limit, offset);
+      newsFilter.setLang(request.getLocale().getLanguage());
       NewsEntity newsEntity = new NewsEntity();
       org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
       List<News> news = newsService.getNewsByTargetName(newsFilter, targetName, currentIdentity);
