@@ -93,6 +93,7 @@ import io.meeds.news.service.NewsTargetingService;
 import io.meeds.news.utils.NewsUtils;
 import io.meeds.news.utils.NewsUtils.NewsObjectType;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 
@@ -196,6 +197,9 @@ public class NewsServiceImpl implements NewsService {
 
   @Autowired
   private NewsSearchConnector newsSearchConnector;
+    @Qualifier("newsService")
+    @Autowired
+    private NewsService newsService;
 
   /**
    * {@inheritDoc}
@@ -509,9 +513,14 @@ public class NewsServiceImpl implements NewsService {
 
   @Override
   public News getNewsArticleById(String newsId) {
+    return getNewsArticleByIdAndLang(newsId, null);
+  }
+
+  @Override
+  public News getNewsArticleByIdAndLang(String newsId, String lang) {
     News news = null;
     try {
-      news = buildArticle(newsId);
+      news = buildArticle(newsId, lang, true);
       news.setTargets(newsTargetingService.getTargetsByNews(news));
     } catch (Exception exception) {
       LOG.error("An error occurred while retrieving news with id {}", newsId, exception);
@@ -843,7 +852,9 @@ public class NewsServiceImpl implements NewsService {
 
   @Override
   public void deleteVersionsByArticleIdAndLang(String id, String lang) throws Exception {
+    News article = newsService.getNewsArticleById(id);
     noteService.deleteVersionsByNoteIdAndLang(Long.parseLong(id), lang);
+    NewsUtils.broadcastEvent(NewsUtils.REMOVE_ARTICLE_TRANSLATION, article.getAuthor(), article);
   }
 
   /**
@@ -1153,8 +1164,11 @@ public class NewsServiceImpl implements NewsService {
       draftArticle.setDraftUpdaterUserName(draftArticlePage.getAuthor());
       draftArticle.setLang(draftArticlePage.getLang());
       draftArticle.setProperties(draftArticlePage.getProperties());
-      draftArticle.setIllustrationURL(NewsUtils.buildIllustrationUrl(draftArticlePage.getProperties(),
-                                                                     draftArticlePage.getLang()));
+      if (draftArticlePage.getProperties() != null && draftArticlePage.getProperties().getFeaturedImage() != null
+          && draftArticlePage.getProperties().getFeaturedImage().getId() != 0) {
+        draftArticle.setIllustrationURL(NewsUtils.buildIllustrationUrl(draftArticlePage.getProperties(),
+                                                                       draftArticlePage.getLang()));
+      }
       org.exoplatform.social.core.identity.model.Identity draftUpdaterIdentity =
                                                                                identityManager.getOrCreateUserIdentity(currentUserId);
       if (draftUpdaterIdentity != null && draftUpdaterIdentity.getProfile() != null) {
@@ -1799,7 +1813,6 @@ public class NewsServiceImpl implements NewsService {
         news.setCreationDate(articlePage.getCreatedDate());
         news.setAuthor(articlePage.getAuthor());
         news.setUpdater(articlePage.getAuthor());
-        news.setIllustrationURL(NewsUtils.buildIllustrationUrl(articlePage.getProperties(), pageVersion.getLang()));
         news.setSpaceId(space.getId());
         news.setSpaceAvatarUrl(space.getAvatarUrl());
         news.setSpaceDisplayName(space.getDisplayName());
@@ -1836,6 +1849,12 @@ public class NewsServiceImpl implements NewsService {
         news.setLang(pageVersion.getLang());
         news.setUpdateDate(new Date(metadataItem.getUpdatedDate()));
         news.setProperties(pageVersion.getProperties());
+        if (news.getProperties() != null && news.getProperties().getFeaturedImage() != null
+            && news.getProperties().getFeaturedImage().getId() != 0) {
+          news.setIllustrationURL(NewsUtils.buildIllustrationUrl(articlePage.getProperties(), pageVersion.getLang()));
+
+        }
+          
 
         NewsPageVersionObject newsPageVersionObject = new NewsPageVersionObject(NEWS_METADATA_PAGE_VERSION_OBJECT_TYPE,
                                                                                 pageVersion.getId(),
@@ -2019,6 +2038,7 @@ public class NewsServiceImpl implements NewsService {
       if (draftPage != null) {
         deleteDraftArticle(draftPage.getId(), draftPage.getAuthor());
       }
+      NewsUtils.broadcastEvent(NewsUtils.ADD_ARTICLE_TRANSLATION, versionCreator, news);
       return news;
     }
     return null;

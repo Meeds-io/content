@@ -160,6 +160,15 @@ public interface NewsService {
   News getNewsArticleById(String newsId);
 
   /**
+   * Retrives a news identified by its technical identifier
+   *
+   * @param newsId {@link News} identifier
+   * @param lang news translation language
+   * @return {@link News} if found else null
+   */
+  News getNewsArticleByIdAndLang(String newsId, String lang);
+
+  /**
    * Get all news
    * 
    * @param filter
@@ -240,8 +249,8 @@ public interface NewsService {
    *           activity identifier
    */
   News getNewsByActivityIdAndLang(String activityId,
-                           org.exoplatform.services.security.Identity currentIdentity, String lang) throws IllegalAccessException,
-          ObjectNotFoundException;
+                                  org.exoplatform.services.security.Identity currentIdentity,
+                                  String lang) throws IllegalAccessException, ObjectNotFoundException;
 
   /**
    * Schedule publishing a News

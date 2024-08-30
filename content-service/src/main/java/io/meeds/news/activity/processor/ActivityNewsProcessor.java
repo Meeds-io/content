@@ -20,8 +20,11 @@
 package io.meeds.news.activity.processor;
 
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import jakarta.annotation.PostConstruct;
+import liquibase.util.CollectionUtil;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.exoplatform.container.xml.InitParams;
 import org.exoplatform.container.xml.ValueParam;
@@ -37,6 +40,7 @@ import io.meeds.news.service.NewsService;
 import io.meeds.news.utils.NewsUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
 
 @Component
 public class ActivityNewsProcessor extends BaseActivityProcessorPlugin {
@@ -93,6 +97,22 @@ public class ActivityNewsProcessor extends BaseActivityProcessorPlugin {
         LOG.warn("Error retrieving news with id {}", activity.getTemplateParams().get("newsId"), e);
       }
       activity.getLinkedProcessedEntities().put("news", news);
+      try {
+        String newsId = news.getId();
+        List<String> articleLanguages = newsService.getArticleLanguages(newsId, false);
+        if (!CollectionUtils.isEmpty(articleLanguages)) {
+          Map<String, News> newsTranslations = new HashMap<>();
+          articleLanguages.stream().forEach(articleLanguage -> {
+            News articleTranslation = newsService.getNewsArticleByIdAndLang(newsId, articleLanguage);
+            if (articleTranslation != null) {
+              newsTranslations.put("news_" + articleLanguage, articleTranslation);
+            }
+          });
+          activity.getLinkedProcessedEntities().put("newsTranslations", newsTranslations);
+        }
+      } catch (Exception exception) {
+        LOG.error("error when adding the news translation to the activity linked processed entities", exception);
+      }
     }
   }
 
