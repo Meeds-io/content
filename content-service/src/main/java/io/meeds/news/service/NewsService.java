@@ -160,10 +160,10 @@ public interface NewsService {
   News getNewsArticleById(String newsId);
 
   /**
-   * Retrives a news identified by its technical identifier
+   * Retrieves a news identified by its technical identifier
    *
    * @param newsId {@link News} identifier
-   * @param lang news translation language
+   * @param lang {@link News} news translation language
    * @return {@link News} if found else null
    */
   News getNewsArticleByIdAndLang(String newsId, String lang);
@@ -236,16 +236,14 @@ public interface NewsService {
                                                                                        ObjectNotFoundException;
 
   /**
-   * Retrieves a news item identified by originating Activity identifier or a
-   * shared activity identifier
-   *
+   * Retrieves a {@link News} by its related activity identifier or its shared activity identifier
    * @param activityId {@link ExoSocialActivity} identifier
    * @param currentIdentity user attempting to access news
-   * @param lang news translation version
+   * @param lang {@link News} translation language
    * @return {@link News} if found else null
    * @throws IllegalAccessException when user doesn't have access to
    *           {@link News} or {@link ExoSocialActivity}
-   * @throws ObjectNotFoundException when a {@link News} wasn't found for this
+   * @throws ObjectNotFoundException when a {@link News} wasn't found for the given
    *           activity identifier
    */
   News getNewsByActivityIdAndLang(String activityId,

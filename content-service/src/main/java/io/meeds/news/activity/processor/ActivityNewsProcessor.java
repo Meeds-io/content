@@ -111,7 +111,7 @@ public class ActivityNewsProcessor extends BaseActivityProcessorPlugin {
           activity.getLinkedProcessedEntities().put("newsTranslations", newsTranslations);
         }
       } catch (Exception exception) {
-        LOG.error("error when adding the news translation to the activity linked processed entities", exception);
+        LOG.error("Error when adding the news translation to the activity linked processed entities", exception);
       }
     }
   }
