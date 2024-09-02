@@ -1811,8 +1811,8 @@ public class NewsServiceImpl implements NewsService {
         News news = new News();
         news.setId(articlePage.getId());
         news.setCreationDate(articlePage.getCreatedDate());
-        news.setAuthor(articlePage.getAuthor());
-        news.setUpdater(articlePage.getAuthor());
+        news.setAuthor(pageVersion.getAuthor());
+        news.setUpdater(pageVersion.getAuthor());
         news.setSpaceId(space.getId());
         news.setSpaceAvatarUrl(space.getAvatarUrl());
         news.setSpaceDisplayName(space.getDisplayName());
