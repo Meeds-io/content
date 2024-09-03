@@ -241,8 +241,7 @@ public class NewsServiceImplTest {
     MetadataItem metadataItem = mock(MetadataItem.class);
     List<MetadataItem> metadataItems = new ArrayList<>();
     metadataItems.add(metadataItem);
-    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
-                                                             any(MetadataObject.class))).thenReturn(metadataItems);
+    when(metadataService.getMetadataItemsByObject(any(MetadataObject.class))).thenReturn(metadataItems);
     Map<String, String> properties = new HashMap<>();
     when(metadataItem.getProperties()).thenReturn(properties);
     PORTAL_CONTAINER.when(PortalContainer::getCurrentPortalContainerName).thenReturn("portal");
@@ -285,8 +284,7 @@ public class NewsServiceImplTest {
     MetadataItem metadataItem = mock(MetadataItem.class);
     List<MetadataItem> metadataItems = new ArrayList<>();
     metadataItems.add(metadataItem);
-    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
-                                                             any(MetadataObject.class))).thenReturn(metadataItems);
+    when(metadataService.getMetadataItemsByObject(any(MetadataObject.class))).thenReturn(metadataItems);
     Map<String, String> properties = new HashMap<>();
     when(metadataItem.getProperties()).thenReturn(properties);
     PORTAL_CONTAINER.when(() -> PortalContainer.getCurrentPortalContainerName()).thenReturn("portal");
@@ -349,8 +347,7 @@ public class NewsServiceImplTest {
     MetadataItem metadataItem = mock(MetadataItem.class);
     List<MetadataItem> metadataItems = new ArrayList<>();
     metadataItems.add(metadataItem);
-    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
-                                                             any(MetadataObject.class))).thenReturn(metadataItems);
+    when(metadataService.getMetadataItemsByObject(any(MetadataObject.class))).thenReturn(metadataItems);
     Map<String, String> properties = new HashMap<>();
     when(metadataItem.getProperties()).thenReturn(properties);
     PORTAL_CONTAINER.when(() -> PortalContainer.getCurrentPortalContainerName()).thenReturn("portal");
@@ -464,8 +461,7 @@ public class NewsServiceImplTest {
     List<MetadataItem> metadataItems = Arrays.asList(metadataItem);
     when(metadataItem.getObjectId()).thenReturn("1");
     when(metadataItem.getProperties()).thenReturn(properties);
-    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
-                                                             any(MetadataObject.class))).thenReturn(metadataItems);
+    when(metadataService.getMetadataItemsByObject(any(MetadataObject.class))).thenReturn(metadataItems);
     PORTAL_CONTAINER.when(() -> PortalContainer.getCurrentPortalContainerName()).thenReturn("portal");
     COMMONS_UTILS.when(() -> CommonsUtils.getCurrentPortalOwner()).thenReturn("dw");
     Identity identity = mock(Identity.class);
@@ -554,8 +550,7 @@ public class NewsServiceImplTest {
     MetadataItem metadataItem = mock(MetadataItem.class);
     List<MetadataItem> metadataItems = new ArrayList<>();
     metadataItems.add(metadataItem);
-    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
-                                                             any(MetadataObject.class))).thenReturn(metadataItems);
+    when(metadataService.getMetadataItemsByObject(any(MetadataObject.class))).thenReturn(metadataItems);
     Map<String, String> properties = new HashMap<>();
     when(metadataItem.getProperties()).thenReturn(properties);
 
@@ -637,8 +632,7 @@ public class NewsServiceImplTest {
     MetadataItem metadataItem = mock(MetadataItem.class);
     List<MetadataItem> metadataItems = new ArrayList<>();
     metadataItems.add(metadataItem);
-    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
-                                                             any(MetadataObject.class))).thenReturn(metadataItems);
+    when(metadataService.getMetadataItemsByObject(any(MetadataObject.class))).thenReturn(metadataItems);
     Map<String, String> properties = new HashMap<>();
     when(metadataItem.getProperties()).thenReturn(properties);
 
@@ -710,8 +704,7 @@ public class NewsServiceImplTest {
     MetadataItem metadataItem = mock(MetadataItem.class);
     List<MetadataItem> metadataItems = new ArrayList<>();
     metadataItems.add(metadataItem);
-    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
-                                                             any(MetadataObject.class))).thenReturn(metadataItems);
+    when(metadataService.getMetadataItemsByObject(any(MetadataObject.class))).thenReturn(metadataItems);
     Map<String, String> properties = new HashMap<>();
     when(metadataItem.getProperties()).thenReturn(properties);
 
@@ -781,8 +774,7 @@ public class NewsServiceImplTest {
     MetadataItem metadataItem = mock(MetadataItem.class);
     List<MetadataItem> metadataItems = new ArrayList<>();
     metadataItems.add(metadataItem);
-    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
-            any(MetadataObject.class))).thenReturn(metadataItems);
+    when(metadataService.getMetadataItemsByObject(any(MetadataObject.class))).thenReturn(metadataItems);
     Map<String, String> properties = new HashMap<>();
     properties.put(NEWS_ACTIVITIES, "1:1;");
     when(metadataItem.getProperties()).thenReturn(properties);
@@ -834,8 +826,7 @@ public class NewsServiceImplTest {
     MetadataItem metadataItem = mock(MetadataItem.class);
     List<MetadataItem> metadataItems = new ArrayList<>();
     metadataItems.add(metadataItem);
-    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
-            any(MetadataObject.class))).thenReturn(metadataItems);
+    when(metadataService.getMetadataItemsByObject(any(MetadataObject.class))).thenReturn(metadataItems);
     Map<String, String> properties = new HashMap<>();
     when(metadataItem.getProperties()).thenReturn(properties);
 
@@ -970,8 +961,7 @@ public class NewsServiceImplTest {
     when(spaceService.getSpaceByGroupId(anyString())).thenReturn(space);
 
     when(noteService.getNoteById(anyString())).thenReturn(page);
-    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
-            any(MetadataObject.class))).thenReturn(metadataItems);
+    when(metadataService.getMetadataItemsByObject(any(MetadataObject.class))).thenReturn(metadataItems);
     PORTAL_CONTAINER.when(PortalContainer::getCurrentPortalContainerName).thenReturn("portal");
     COMMONS_UTILS.when(CommonsUtils::getCurrentPortalOwner).thenReturn("dw");
     when(activityManager.getActivity(nullable(String.class))).thenReturn(null);
