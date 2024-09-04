@@ -101,16 +101,33 @@ export default {
     retrieveNews() {
       if (this.activity.news) {
         this.activityId = this.activity.news.activityId;
-        if (this.activity.news.id) {
-          const newsId = this.activity.news.id;
+        const newsId = this.activity.news.id;
+        if (newsId && this.activity.news?.lang !== this.selectedTranslation.value) {
           this.getArticleVersionWithLang(newsId, this.selectedTranslation.value);
           this.fetchTranslation(newsId);
+        } else {
+          this.news = this.activity.news;
+          this.fetchTranslation(newsId);
+          if (this.news.lang) {
+            this.addParamToUrl('lang', this.news.lang);
+          } else {
+            this.removeParamFromUrl('lang');
+            this.selectedTranslation = this.originalVersion;
+          }
         }
       } else {
-        this.$newsServices.getNewsByActivityId(this.activityId)
+        this.$newsServices.getNewsByActivityId(this.activityId, this.selectedTranslation.value)
           .then(news => {
-            if (news?.id) {
-              this.getArticleVersionWithLang(news.id, this.selectedTranslation.value);
+            if (this.previousSelectedTranslation === 'autoTranslation') {
+              // reset the news model after the automatic translation
+              this.news = null;
+            }
+            this.news = news;
+            if (this.news.lang) {
+              this.addParamToUrl('lang', this.news.lang);
+            } else {
+              this.removeParamFromUrl('lang');
+              this.selectedTranslation = this.originalVersion;
             }
           })
           .catch(() => {

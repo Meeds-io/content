@@ -509,9 +509,14 @@ public class NewsServiceImpl implements NewsService {
 
   @Override
   public News getNewsArticleById(String newsId) {
+    return getNewsArticleByIdAndLang(newsId, null);
+  }
+
+  @Override
+  public News getNewsArticleByIdAndLang(String newsId, String lang) {
     News news = null;
     try {
-      news = buildArticle(newsId);
+      news = buildArticle(newsId, lang, true);
       news.setTargets(newsTargetingService.getTargetsByNews(news));
     } catch (Exception exception) {
       LOG.error("An error occurred while retrieving news with id {}", newsId, exception);
@@ -656,6 +661,12 @@ public class NewsServiceImpl implements NewsService {
   @Override
   public News getNewsByActivityId(String activityId, Identity currentIdentity) throws IllegalAccessException,
                                                                                ObjectNotFoundException {
+    return getNewsByActivityIdAndLang(activityId, currentIdentity, null);
+  }
+
+  @Override
+  public News getNewsByActivityIdAndLang(String activityId, Identity currentIdentity, String lang) throws IllegalAccessException,
+                                                                                      ObjectNotFoundException {
     ExoSocialActivity activity = activityManager.getActivity(activityId);
     if (activity == null) {
       throw new ObjectNotFoundException("Activity with id " + activityId + " wasn't found");
@@ -679,13 +690,12 @@ public class NewsServiceImpl implements NewsService {
           throw new IllegalAccessException("Shared Activity '" + activityId + "' Poster " + activity.getPosterId()
               + " isn't found");
         }
-        return getNewsByActivityId(originalActivityId, NewsUtils.getUserIdentity(sharedActivityPosterIdentity.getRemoteId()));
+        return getNewsByActivityIdAndLang(originalActivityId, NewsUtils.getUserIdentity(sharedActivityPosterIdentity.getRemoteId()), lang);
       }
       throw new ObjectNotFoundException("Activity with id " + activityId + " isn't of type news nor a shared news");
     }
-    return getNewsById(newsId, currentIdentity, false, ARTICLE.name().toLowerCase());
+    return getNewsByIdAndLang(newsId, currentIdentity, false, ARTICLE.name().toLowerCase(), lang);
   }
-
   /**
    * {@inheritDoc}
    */
@@ -839,7 +849,9 @@ public class NewsServiceImpl implements NewsService {
 
   @Override
   public void deleteVersionsByArticleIdAndLang(String id, String lang) throws Exception {
+    News article = getNewsArticleById(id);
     noteService.deleteVersionsByNoteIdAndLang(Long.parseLong(id), lang);
+    NewsUtils.broadcastEvent(NewsUtils.REMOVE_ARTICLE_TRANSLATION, article.getAuthor(), article);
   }
 
   /**
@@ -1150,8 +1162,11 @@ public class NewsServiceImpl implements NewsService {
       draftArticle.setDraftUpdaterUserName(draftArticlePage.getAuthor());
       draftArticle.setLang(draftArticlePage.getLang());
       draftArticle.setProperties(draftArticlePage.getProperties());
-      draftArticle.setIllustrationURL(NewsUtils.buildIllustrationUrl(draftArticlePage.getProperties(),
-                                                                     draftArticlePage.getLang()));
+      if (draftArticlePage.getProperties() != null && draftArticlePage.getProperties().getFeaturedImage() != null
+          && draftArticlePage.getProperties().getFeaturedImage().getId() != 0) {
+        draftArticle.setIllustrationURL(NewsUtils.buildIllustrationUrl(draftArticlePage.getProperties(),
+                                                                       draftArticlePage.getLang()));
+      }
       org.exoplatform.social.core.identity.model.Identity draftUpdaterIdentity =
                                                                                identityManager.getOrCreateUserIdentity(currentUserId);
       if (draftUpdaterIdentity != null && draftUpdaterIdentity.getProfile() != null) {
@@ -1795,9 +1810,8 @@ public class NewsServiceImpl implements NewsService {
         News news = new News();
         news.setId(articlePage.getId());
         news.setCreationDate(articlePage.getCreatedDate());
-        news.setAuthor(articlePage.getAuthor());
-        news.setUpdater(articlePage.getAuthor());
-        news.setIllustrationURL(NewsUtils.buildIllustrationUrl(articlePage.getProperties(), pageVersion.getLang()));
+        news.setAuthor(pageVersion.getAuthor());
+        news.setUpdater(pageVersion.getAuthor());
         news.setSpaceId(space.getId());
         news.setSpaceAvatarUrl(space.getAvatarUrl());
         news.setSpaceDisplayName(space.getDisplayName());
@@ -1834,6 +1848,12 @@ public class NewsServiceImpl implements NewsService {
         news.setLang(pageVersion.getLang());
         news.setUpdateDate(new Date(metadataItem.getUpdatedDate()));
         news.setProperties(pageVersion.getProperties());
+        if (news.getProperties() != null && news.getProperties().getFeaturedImage() != null
+            && news.getProperties().getFeaturedImage().getId() != 0) {
+          news.setIllustrationURL(NewsUtils.buildIllustrationUrl(articlePage.getProperties(), pageVersion.getLang()));
+
+        }
+          
 
         NewsPageVersionObject newsPageVersionObject = new NewsPageVersionObject(NEWS_METADATA_PAGE_VERSION_OBJECT_TYPE,
                                                                                 pageVersion.getId(),
@@ -2018,6 +2038,7 @@ public class NewsServiceImpl implements NewsService {
       if (draftPage != null) {
         deleteDraftArticle(draftPage.getId(), draftPage.getAuthor());
       }
+      NewsUtils.broadcastEvent(NewsUtils.ADD_ARTICLE_TRANSLATION, versionCreator, news);
       return news;
     }
     return null;

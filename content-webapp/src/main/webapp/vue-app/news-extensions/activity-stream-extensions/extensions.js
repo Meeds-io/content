@@ -41,8 +41,13 @@ const newsActivityTypeExtensionOptions = {
     if (activity.parentActivity) {
       activityId = activity.parentActivity.id;
     }
+    if (activity.newsTranslations) {
+      const newsTranslationsMap = activity.newsTranslations;
+      const newsTranslationKey = `news_${lang}`;
+      activity.news = newsTranslationsMap[newsTranslationKey] || activity.news;
+    }
     if (!activity.news || isActivityDetail) {
-      return Vue.prototype.$newsServices.getNewsByActivityId(activityId)
+      return Vue.prototype.$newsServices.getNewsByActivityId(activityId, lang)
         .then(news => activity.news = news);
     }
   },

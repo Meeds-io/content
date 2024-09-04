@@ -34,7 +34,9 @@ import org.springframework.stereotype.Component;
 
 import jakarta.annotation.PostConstruct;
 
+import static io.meeds.news.utils.NewsUtils.ADD_ARTICLE_TRANSLATION;
 import static io.meeds.news.utils.NewsUtils.POST_NEWS;
+import static io.meeds.news.utils.NewsUtils.REMOVE_ARTICLE_TRANSLATION;
 import static io.meeds.news.utils.NewsUtils.SCHEDULE_NEWS;
 import static io.meeds.news.utils.NewsUtils.SHARE_NEWS;
 import static io.meeds.news.utils.NewsUtils.UNSCHEDULE_NEWS;
@@ -56,7 +58,7 @@ public class AttachedActivityCacheUpdater extends Listener<String, News> {
 
   private CachedActivityStorage cachedActivityStorage;
 
-  private String[] LISTENER_EVENTS = { POST_NEWS, UPDATE_NEWS, SHARE_NEWS, SCHEDULE_NEWS, UNSCHEDULE_NEWS };
+  private String[] LISTENER_EVENTS = { POST_NEWS, UPDATE_NEWS, SHARE_NEWS, SCHEDULE_NEWS, UNSCHEDULE_NEWS, ADD_ARTICLE_TRANSLATION, REMOVE_ARTICLE_TRANSLATION };
 
   @PostConstruct
   public void init() {
