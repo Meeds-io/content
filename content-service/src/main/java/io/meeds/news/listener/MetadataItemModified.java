@@ -80,7 +80,11 @@ public class MetadataItemModified extends Listener<Long, MetadataItem> {
         if (StringUtils.isNotBlank(news.getActivityId())) {
           clearCache(news.getActivityId());
         }
-        reindexNews(objectId);
+        if (objectId.contains("-")){
+          reindexNewsTranslation(objectId);
+        } else {
+          reindexNews(objectId);
+        }
       }
     }
   }
@@ -96,6 +100,10 @@ public class MetadataItemModified extends Listener<Long, MetadataItem> {
   }
 
   private void reindexNews(String newsId) {
+    indexingService.reindex(NewsIndexingServiceConnector.TYPE, newsId);
+  }
+
+  private void reindexNewsTranslation(String newsId) {
     indexingService.reindex(NewsIndexingServiceConnector.TYPE, newsId);
   }
 

@@ -32,6 +32,7 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.stream.Stream;
 
+import io.meeds.news.search.NewsTranslationIndexingServiceConnector;
 import io.meeds.notes.model.NotePageProperties;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
@@ -852,6 +853,8 @@ public class NewsServiceImpl implements NewsService {
     News article = getNewsArticleById(id);
     noteService.deleteVersionsByNoteIdAndLang(Long.parseLong(id), lang);
     NewsUtils.broadcastEvent(NewsUtils.REMOVE_ARTICLE_TRANSLATION, article.getAuthor(), article);
+    String newsTranslationId = article.getId().concat("-").concat(article.getLang());
+    indexingService.unindex(NewsTranslationIndexingServiceConnector.TYPE, newsTranslationId);
   }
 
   /**
@@ -2039,6 +2042,8 @@ public class NewsServiceImpl implements NewsService {
         deleteDraftArticle(draftPage.getId(), draftPage.getAuthor());
       }
       NewsUtils.broadcastEvent(NewsUtils.ADD_ARTICLE_TRANSLATION, versionCreator, news);
+      String newsTranslationId = news.getId().concat("-").concat(news.getLang());
+      indexingService.index(NewsTranslationIndexingServiceConnector.TYPE, newsTranslationId);
       return news;
     }
     return null;

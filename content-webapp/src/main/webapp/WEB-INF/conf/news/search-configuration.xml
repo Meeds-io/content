@@ -88,6 +88,19 @@
         </properties-param>
       </init-params>
     </component-plugin>
+    <component-plugin>
+      <name>NewsTranslationIndexingServiceConnector</name>
+      <set-method>addConnector</set-method>
+      <type>io.meeds.news.search.NewsTranslationIndexingServiceConnector</type>
+      <description>News translation language ElasticSearch Indexing Connector</description>
+      <init-params>
+        <properties-param>
+          <name>constructor.params</name>
+          <property name="index_alias" value="news_alias" />
+          <property name="index_current" value="news_v1" />
+        </properties-param>
+      </init-params>
+    </component-plugin>
   </external-component-plugins>
 
 </configuration>
