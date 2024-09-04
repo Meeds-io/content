@@ -579,13 +579,15 @@ public class NewsRest {
       @ApiResponse(responseCode = "404", description = "News not found"),
       @ApiResponse(responseCode = "500", description = "Internal server error") })
   public ResponseEntity<News> getNewsByActivityId(@PathVariable("activityId")
-                                                  String activityId) {
+                                                  String activityId,
+                                                  @RequestParam(name = "lang", defaultValue = "null", required = false)
+                                                  String lang) {
     if (StringUtils.isBlank(activityId)) {
       return ResponseEntity.badRequest().build();
     }
     org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
     try {
-      News news = newsService.getNewsByActivityId(activityId, currentIdentity);
+      News news = newsService.getNewsByActivityIdAndLang(activityId, currentIdentity, lang);
       if (news == null) {
         return ResponseEntity.notFound().build();
       }
@@ -835,9 +837,9 @@ public class NewsRest {
   @GetMapping(path = "translation/{articleId}", produces = MediaType.APPLICATION_JSON_VALUE)
   @Secured("users")
   @Operation(summary = "Get article available translation languages", method = "GET", description = "Get article available translation languages")
-  @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "article version deleted"),
+  @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "Article available translation languages returned"),
           @ApiResponse(responseCode = "400", description = "Invalid query input"),
-          @ApiResponse(responseCode = "401", description = "User not authorized to delete the article"),
+          @ApiResponse(responseCode = "401", description = "User not authorized to get the article available translation languages "),
           @ApiResponse(responseCode = "500", description = "Internal server error") })
   public ResponseEntity<List<String>> getAvailableTranslationLanguages(@PathVariable("articleId")
                                                                        String articleId,
