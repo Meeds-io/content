@@ -191,7 +191,7 @@ public class NewsRestTest {
     Identity currentIdentity = new Identity(JOHN);
     ConversationState.setCurrent(new ConversationState(currentIdentity));
     // When
-    ResponseEntity response = newsRestController.getNewsByActivityId(null);
+    ResponseEntity response = newsRestController.getNewsByActivityId(null, null);
     // Then
     assertEquals(400, response.getStatusCode().value());
   }
@@ -204,7 +204,7 @@ public class NewsRestTest {
     String activityId = "activityId";
 
     // When
-    ResponseEntity response = newsRestController.getNewsByActivityId(activityId);
+    ResponseEntity response = newsRestController.getNewsByActivityId(activityId, null);
 
     // Then
     assertEquals(404, response.getStatusCode().value());
@@ -218,10 +218,10 @@ public class NewsRestTest {
     Identity currentIdentity = new Identity(JOHN);
     ConversationState.setCurrent(new ConversationState(currentIdentity));
 
-    when(newsService.getNewsByActivityId(activityId, currentIdentity)).thenThrow(IllegalAccessException.class);
+    when(newsService.getNewsByActivityIdAndLang(activityId, currentIdentity, null)).thenThrow(IllegalAccessException.class);
 
     // When
-    ResponseEntity response = newsRestController.getNewsByActivityId(activityId);
+    ResponseEntity response = newsRestController.getNewsByActivityId(activityId, null);
 
     // Then
     assertEquals(Response.Status.UNAUTHORIZED.getStatusCode(), response.getStatusCode().value());
@@ -234,10 +234,10 @@ public class NewsRestTest {
 
     Identity currentIdentity = new Identity(JOHN);
     ConversationState.setCurrent(new ConversationState(currentIdentity));
-    when(newsService.getNewsByActivityId(activityId, currentIdentity)).thenThrow(ObjectNotFoundException.class);
+    when(newsService.getNewsByActivityIdAndLang(activityId, currentIdentity, null)).thenThrow(ObjectNotFoundException.class);
 
     // When
-    ResponseEntity response = newsRestController.getNewsByActivityId(activityId);
+    ResponseEntity response = newsRestController.getNewsByActivityId(activityId, null);
 
     // Then
     assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatusCode().value());
@@ -250,10 +250,10 @@ public class NewsRestTest {
 
     Identity currentIdentity = new Identity(JOHN);
     ConversationState.setCurrent(new ConversationState(currentIdentity));
-    when(newsService.getNewsByActivityId(activityId, currentIdentity)).thenThrow(RuntimeException.class);
+    when(newsService.getNewsByActivityIdAndLang(activityId, currentIdentity, null)).thenThrow(RuntimeException.class);
 
     // When
-    ResponseEntity response = newsRestController.getNewsByActivityId(activityId);
+    ResponseEntity response = newsRestController.getNewsByActivityId(activityId, null);
 
     // Then
     assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatusCode().value());
@@ -268,10 +268,10 @@ public class NewsRestTest {
     ConversationState.setCurrent(new ConversationState(currentIdentity));
 
     News news = mock(News.class);
-    when(newsService.getNewsByActivityId(activityId, currentIdentity)).thenReturn(news);
+    when(newsService.getNewsByActivityIdAndLang(activityId, currentIdentity, null)).thenReturn(news);
 
     // When
-    ResponseEntity response = newsRestController.getNewsByActivityId(activityId);
+    ResponseEntity response = newsRestController.getNewsByActivityId(activityId, null);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatusCode().value());
