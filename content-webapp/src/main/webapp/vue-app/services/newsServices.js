@@ -36,8 +36,8 @@ export function getNewsById(id, editMode, type, lang) {
   });
 }
 
-export function getNewsByActivityId(activityId) {
-  return fetch(`${newsConstants.CONTENT_API}/contents/byActivity/${activityId}`, {
+export function getNewsByActivityId(activityId, lang) {
+  return fetch(`${newsConstants.CONTENT_API}/contents/byActivity/${activityId}?lang=${lang || ''}`, {
     credentials: 'include',
     method: 'GET',
   }).then((resp) => {
