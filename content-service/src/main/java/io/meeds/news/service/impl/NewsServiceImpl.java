@@ -93,7 +93,6 @@ import io.meeds.news.service.NewsTargetingService;
 import io.meeds.news.utils.NewsUtils;
 import io.meeds.news.utils.NewsUtils.NewsObjectType;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 
@@ -197,9 +196,6 @@ public class NewsServiceImpl implements NewsService {
 
   @Autowired
   private NewsSearchConnector newsSearchConnector;
-    @Qualifier("newsService")
-    @Autowired
-    private NewsService newsService;
 
   /**
    * {@inheritDoc}
@@ -852,7 +848,7 @@ public class NewsServiceImpl implements NewsService {
 
   @Override
   public void deleteVersionsByArticleIdAndLang(String id, String lang) throws Exception {
-    News article = newsService.getNewsArticleById(id);
+    News article = getNewsArticleById(id);
     noteService.deleteVersionsByNoteIdAndLang(Long.parseLong(id), lang);
     NewsUtils.broadcastEvent(NewsUtils.REMOVE_ARTICLE_TRANSLATION, article.getAuthor(), article);
   }

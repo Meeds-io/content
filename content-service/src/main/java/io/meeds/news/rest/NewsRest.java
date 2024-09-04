@@ -837,9 +837,9 @@ public class NewsRest {
   @GetMapping(path = "translation/{articleId}", produces = MediaType.APPLICATION_JSON_VALUE)
   @Secured("users")
   @Operation(summary = "Get article available translation languages", method = "GET", description = "Get article available translation languages")
-  @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "article version deleted"),
+  @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "Article available translation languages returned"),
           @ApiResponse(responseCode = "400", description = "Invalid query input"),
-          @ApiResponse(responseCode = "401", description = "User not authorized to delete the article"),
+          @ApiResponse(responseCode = "401", description = "User not authorized to get the article available translation languages "),
           @ApiResponse(responseCode = "500", description = "Internal server error") })
   public ResponseEntity<List<String>> getAvailableTranslationLanguages(@PathVariable("articleId")
                                                                        String articleId,
