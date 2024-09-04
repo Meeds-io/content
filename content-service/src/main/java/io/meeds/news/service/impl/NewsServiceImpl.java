@@ -211,10 +211,10 @@ public class NewsServiceImpl implements NewsService {
       if (POSTED.equals(news.getPublicationState())) {
         createdNews = postNews(news, currentIdentity.getUserId());
       } else if (news.getSchedulePostDate() != null) {
-        createdNews = unScheduleNews(news, space.getGroupId(), currentIdentity.getUserId());
+        createdNews = unScheduleNews(news, space, currentIdentity.getUserId());
       } else {
         createdNews = createDraftArticleForNewPage(news,
-                                                   space.getGroupId(),
+                                                   space,
                                                    currentIdentity.getUserId(),
                                                    System.currentTimeMillis());
       }
@@ -227,15 +227,16 @@ public class NewsServiceImpl implements NewsService {
 
   @Override
   public News postNews(News news, String poster) throws Exception {
+    Space space = spaceService.getSpaceById(news.getSpaceId());
     if (news.getPublicationState().equals(STAGED) || news.getSchedulePostDate() != null) {
       news = postScheduledArticle(news);
     } else {
-      news = createNewsArticlePage(news, poster);
+      news = createNewsArticlePage(news, poster, space);
     }
-    postNewsActivity(news);
+    postNewsActivity(news, space);
     sendNotification(poster, news, NotificationConstants.NOTIFICATION_CONTEXT.POST_NEWS);
     if (news.isPublished()) {
-      publishNews(news, poster);
+      publishNews(news, poster, space);
     }
     NewsUtils.broadcastEvent(NewsUtils.POST_NEWS_ARTICLE, news.getId(), news);// Gamification
     NewsUtils.broadcastEvent(NewsUtils.POST_NEWS, news.getAuthor(), news);// Analytics
@@ -262,6 +263,7 @@ public class NewsServiceImpl implements NewsService {
                          String newsObjectType,
                          String newsUpdateType) throws Exception {
 
+    Space space = spaceService.getSpaceById(news.getSpaceId());
     if (!canEditNews(news, updater)) {
       throw new IllegalAccessException("User " + updater + " is not authorized to update news");
     }
@@ -270,20 +272,19 @@ public class NewsServiceImpl implements NewsService {
     News originalNews = getNewsById(newsId, updaterIdentity, false, newsObjectType);
     List<String> oldTargets = newsTargetingService.getTargetsByNews(news);
     boolean canPublish = NewsUtils.canPublishNews(news.getSpaceId(), updaterIdentity);
-    Set<String> previousMentions = NewsUtils.processMentions(originalNews.getOriginalBody(),
-                                                             spaceService.getSpaceById(news.getSpaceId()));
+    Set<String> previousMentions = NewsUtils.processMentions(originalNews.getOriginalBody(), spaceService.getSpaceById(news.getSpaceId()));
     if (NewsObjectType.DRAFT.name().toLowerCase().equals(newsObjectType)) {
       return updateDraftArticleForNewPage(news, updater);
     } else if (LATEST_DRAFT.name().toLowerCase().equals(newsObjectType)) {
       return createOrUpdateDraftForExistingPage(news, updater);
     }
     else if (ARTICLE.name().equalsIgnoreCase(newsObjectType) && CONTENT_AND_TITLE.name().equalsIgnoreCase(newsUpdateType) && StringUtils.isNotEmpty(news.getLang())) {
-      return addNewArticleVersionWithLang(news, updaterIdentity);
+      return addNewArticleVersionWithLang(news, updaterIdentity, news.getSpaceId());
     }
     if (publish != news.isPublished() && news.isCanPublish()) {
       news.setPublished(publish);
       if (news.isPublished()) {
-        publishNews(news, updater);
+        publishNews(news, updater, space);
       } else {
         unpublishNews(newsId, updater);
       }
@@ -336,11 +337,12 @@ public class NewsServiceImpl implements NewsService {
   @Override
   public void deleteNews(String newsId, Identity currentIdentity, String newsObjectType) throws Exception {
     News news = getNewsById(newsId, currentIdentity, false, newsObjectType);
+    
     if (!news.isCanDelete()) {
       throw new IllegalAccessException("User " + currentIdentity.getUserId() + " is not authorized to delete news");
     }
     if (NewsObjectType.DRAFT.name().toLowerCase().equals(newsObjectType)) {
-      deleteDraftArticle(newsId, currentIdentity.getUserId());
+      deleteDraftArticle(newsId, currentIdentity.getUserId(), news.getSpaceId());
     } else if (LATEST_DRAFT.name().toLowerCase().equals(newsObjectType)) {
       Page newsArticlePage = noteService.getNoteById(newsId);
       if (newsArticlePage != null) {
@@ -351,7 +353,7 @@ public class NewsServiceImpl implements NewsService {
           // check if the latest draft has the same illustration
           // with the news article to do not remove it.
           deleteDraftArticle(draft.getId(),
-                             currentIdentity.getUserId());
+                             currentIdentity.getUserId(), news.getSpaceId());
         }
       }
     } else {
@@ -371,7 +373,7 @@ public class NewsServiceImpl implements NewsService {
    * {@inheritDoc}
    */
   @Override
-  public void publishNews(News newsToPublish, String publisher) throws Exception {
+  public void publishNews(News newsToPublish, String publisher, Space space) throws Exception {
     Identity publisherIdentity = NewsUtils.getUserIdentity(publisher);
     News news = getNewsArticleById(newsToPublish.getId());
     boolean displayed = !(StringUtils.equals(news.getPublicationState(), STAGED));
@@ -403,7 +405,6 @@ public class NewsServiceImpl implements NewsService {
     }
     news.setAudience(newsToPublish.getAudience());
     NewsUtils.broadcastEvent(NewsUtils.PUBLISH_NEWS, news.getId(), news);
-    Space space = spaceService.getSpaceById(news.getSpaceId());
     Map<String, Object> shareArticleEventListenerData = new HashMap<>();
     shareArticleEventListenerData.putAll(Map.of(NEWS_ATTACHMENTS_IDS, getArticleAttachmentIdsToShare(Long.parseLong(news.getSpaceId()), Long.parseLong(newsPageObject.getId())),"space", space, NEWS_AUDIENCE, news.getAudience(),ARTICLE_CONTENT, news.getBody()));
     NewsUtils.broadcastEvent(NewsUtils.SHARE_CONTENT_ATTACHMENTS,this, shareArticleEventListenerData);
@@ -709,14 +710,14 @@ public class NewsServiceImpl implements NewsService {
       // or publishing it ( displayed false news target)
       // it will be posted and published by the news schedule job or the edit
       // scheduling.
-      news = createNewsArticlePage(news, currentIdentity.getUserId());
+      news = createNewsArticlePage(news, currentIdentity.getUserId(), space);
     } else if (newsObjectType.equalsIgnoreCase(ARTICLE.name())) {
       updateNewsArticle(news, currentIdentity, NewsUtils.NewsUpdateType.SCHEDULE.name().toLowerCase());
     }
     if (news != null) {
       if (NewsUtils.canPublishNews(space.getId(), currentIdentity)) {
         if (news.isPublished()) {
-          publishNews(news, currentIdentity.getUserId());
+          publishNews(news, currentIdentity.getUserId(), space);
         } else {
           unpublishNews(news.getId(), currentIdentity.getUserId());
         }
@@ -733,10 +734,10 @@ public class NewsServiceImpl implements NewsService {
    * {@inheritDoc}
    */
   @Override
-  public News unScheduleNews(News news, String pageOwnerId, String articleCreator) throws Exception {
+  public News unScheduleNews(News news, Space space, String articleCreator) throws Exception {
     News existingNews = getNewsArticleById(news.getId());
     if (existingNews != null) {
-      news = createDraftArticleForNewPage(news, pageOwnerId, articleCreator, System.currentTimeMillis());
+      news = createDraftArticleForNewPage(news, space, articleCreator, System.currentTimeMillis());
       deleteArticle(existingNews, articleCreator);
       return buildDraftArticle(news.getId(), articleCreator);
     }
@@ -858,11 +859,14 @@ public class NewsServiceImpl implements NewsService {
    */
   @Override
   public News createDraftArticleForNewPage(News draftArticle,
-                                           String pageOwnerId,
+                                           Space draftArticleSpace,
                                            String draftArticleCreator,
                                            long creationDate) throws Exception {
-    Wiki wiki = wikiService.getWikiByTypeAndOwner(WikiType.GROUP.name().toLowerCase(), pageOwnerId);
+    LOG.info("Start create draft article for new page");
+    long startTime = System.currentTimeMillis();
+    Wiki wiki = wikiService.getWikiByTypeAndOwner(WikiType.GROUP.name().toLowerCase(), draftArticleSpace.getGroupId());
     Page newsArticlesRootNotePage = null;
+    String pageOwnerId = draftArticleSpace.getGroupId();
     if (wiki != null) {
       newsArticlesRootNotePage = noteService.getNoteOfNoteBookByName(WikiType.GROUP.name().toLowerCase(),
                                                                      pageOwnerId,
@@ -899,7 +903,9 @@ public class NewsServiceImpl implements NewsService {
       draftArticle.setId(draftArticlePage.getId());
       draftArticle.setCreationDate(draftArticlePage.getCreatedDate());
       draftArticle.setUpdateDate(draftArticlePage.getUpdatedDate());
-      Space draftArticleSpace = spaceService.getSpaceByGroupId(pageOwnerId);
+      LOG.info("Start getSpaceByGroupId in create draft article for new page");
+      long startTime1 = System.currentTimeMillis();
+      LOG.info("End getSpaceByGroupId in create draft article for new page, it took: {} ms", System.currentTimeMillis() - startTime1);
       draftArticle.setSpaceId(draftArticleSpace.getId());
       NewsDraftObject draftArticleMetaDataObject = new NewsDraftObject(NEWS_METADATA_DRAFT_OBJECT_TYPE,
                                                                        draftArticlePage.getId(),
@@ -912,8 +918,10 @@ public class NewsServiceImpl implements NewsService {
                                          draftArticleMetadataItemProperties,
                                          Long.parseLong(draftArticleMetadataItemCreatorIdentityId));
 
+      LOG.info("End create draft article for new page, it took: {} ms", System.currentTimeMillis() - startTime);
       return draftArticle;
     }
+    LOG.info("End create draft article for new page with no root page created, it took: {} ms", System.currentTimeMillis() - startTime);
     return null;
   }
 
@@ -921,13 +929,15 @@ public class NewsServiceImpl implements NewsService {
    * {@inheritDoc}
    */
   @Override
-  public News createNewsArticlePage(News newsArticle, String newsArticleCreator) throws Exception {
+  public News createNewsArticlePage(News newsArticle, String newsArticleCreator, Space space) throws Exception {
+    LOG.info("Start create news");
+    long startTime = System.currentTimeMillis();
     // get the news draft article from the news model before setting the news
     // article id to the news model
     String draftNewsId = newsArticle.getId();
 
     Identity poster = NewsUtils.getUserIdentity(newsArticleCreator);
-    Space space = spaceService.getSpaceById(newsArticle.getSpaceId());
+
     String pageOwnerId = space.getGroupId();
 
     Wiki wiki = wikiService.getWikiByTypeAndOwner(WikiType.GROUP.name().toLowerCase(), pageOwnerId);
@@ -1005,10 +1015,12 @@ public class NewsServiceImpl implements NewsService {
                                            newsPageProperties,
                                            Long.parseLong(newsArticleMetadataItemCreatorIdentityId));
         // delete the draft
-        deleteDraftArticle(draftNewsId, poster.getUserId());
+        deleteDraftArticle(draftNewsId, poster.getUserId(), space.getId());
+        LOG.info("End create news, it took: {} ms", System.currentTimeMillis() - startTime);
         return newsArticle;
       }
     }
+    LOG.info("End create news with no page created, it took: {} ms", System.currentTimeMillis() - startTime);
     return null;
   }
 
@@ -1065,7 +1077,7 @@ public class NewsServiceImpl implements NewsService {
         try {
           DraftPage latestDraftPage = noteService.getLatestDraftOfPage(articlePage, articleCreator);
           if (latestDraftPage != null) {
-            deleteDraftArticle(latestDraftPage.getId(), articleCreator);
+            deleteDraftArticle(latestDraftPage.getId(), articleCreator, news.getSpaceId());
           } else {
             hasDraft = false;
           }
@@ -1098,7 +1110,9 @@ public class NewsServiceImpl implements NewsService {
    * {@inheritDoc}
    */
   @Override
-  public void deleteDraftArticle(String draftArticleId, String draftArticleCreator) throws Exception {
+  public void deleteDraftArticle(String draftArticleId, String draftArticleCreator, String draftArticleSpaceId) throws Exception {
+    LOG.info("Start delete  draft article");
+    long startTime = System.currentTimeMillis();
     DraftPage draftArticlePage = noteService.getDraftNoteById(draftArticleId, draftArticleCreator);
     if (draftArticlePage != null) {
       if (draftArticlePage.getProperties() != null && draftArticlePage.getProperties().getFeaturedImage() != null) {
@@ -1111,16 +1125,16 @@ public class NewsServiceImpl implements NewsService {
                                             Long.parseLong(userIdentityId));
       }
       noteService.removeDraftById(draftArticlePage.getId());
-      Space draftArticleSpace = spaceService.getSpaceByGroupId(draftArticlePage.getWikiOwner());
       MetadataObject draftArticleMetaDataObject =
                                                 new MetadataObject(draftArticlePage.getTargetPageId() != null ? NEWS_METADATA_LATEST_DRAFT_OBJECT_TYPE
                                                                                                               : NEWS_METADATA_DRAFT_OBJECT_TYPE,
                                                                    draftArticlePage.getId(),
                                                                    draftArticlePage.getTargetPageId(),
-                                                                   Long.parseLong(draftArticleSpace.getId()));
+                                                                   Long.parseLong(draftArticleSpaceId));
       List<MetadataItem> draftArticleMetadataItems =
                                                    metadataService.getMetadataItemsByObject(draftArticleMetaDataObject);
       metadataService.deleteMetadataItem(draftArticleMetadataItems.getFirst().getId(), false);
+      LOG.info("End delete  draft article, it took: {} ms", System.currentTimeMillis() - startTime);
     }
   }
 
@@ -1700,10 +1714,9 @@ public class NewsServiceImpl implements NewsService {
     }
   }
 
-  private void postNewsActivity(News news) throws Exception {
+  private void postNewsActivity(News news, Space space) throws Exception {
     org.exoplatform.social.core.identity.model.Identity poster = identityManager.getOrCreateUserIdentity(news.getAuthor());
 
-    Space space = spaceService.getSpaceById(news.getSpaceId());
     org.exoplatform.social.core.identity.model.Identity spaceIdentity =
                                                                       identityManager.getOrCreateSpaceIdentity(space.getPrettyName());
 
@@ -1781,7 +1794,7 @@ public class NewsServiceImpl implements NewsService {
         DraftPage draftPage = noteService.getLatestDraftPageByUserAndTargetPageAndLang(Long.parseLong(existingPage.getId()),
                                                                                        updater.getUserId(),
                                                                                        null);
-        deleteDraftArticle(draftPage.getId(), updater.getUserId());
+        deleteDraftArticle(draftPage.getId(), updater.getUserId(), news.getSpaceId());
       }
       return news;
     }
@@ -2008,7 +2021,7 @@ public class NewsServiceImpl implements NewsService {
     return null;
   }
 
-  private News addNewArticleVersionWithLang(News news, Identity versionCreator) throws Exception {
+  private News addNewArticleVersionWithLang(News news, Identity versionCreator, String spaceId) throws Exception {
     News existingNews = getNewsArticleById(news.getId());
     String newsId = news.getTargetPageId() != null ? news.getTargetPageId() : news.getId();
     Page existingPage = noteService.getNoteById(newsId);
@@ -2032,7 +2045,7 @@ public class NewsServiceImpl implements NewsService {
       news.setIllustrationURL(NewsUtils.buildIllustrationUrl(news.getProperties(), news.getLang()));
       DraftPage draftPage = noteService.getLatestDraftPageByTargetPageAndLang(Long.parseLong(newsId), news.getLang());
       if (draftPage != null) {
-        deleteDraftArticle(draftPage.getId(), draftPage.getAuthor());
+        deleteDraftArticle(draftPage.getId(), draftPage.getAuthor(), spaceId);
       }
       NewsUtils.broadcastEvent(NewsUtils.ADD_ARTICLE_TRANSLATION, versionCreator, news);
       return news;

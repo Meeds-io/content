@@ -52,8 +52,8 @@ public interface NewsService {
    * an id and that a draft already exists with this id, the draft is updated
    * and published.
    * 
-   * @param news The news to post
-   * @param poster the Poster of the News
+   * @param news The {@link News} to be posted
+   * @param poster {@link News} poster
    * @return The posted News
    * @throws Exception when error
    */
@@ -104,9 +104,10 @@ public interface NewsService {
    *
    * @param news to be published
    * @param publisher of the News
+   * @param space of the News
    * @throws Exception when error
    */
-  void publishNews(News news, String publisher) throws Exception;
+  void publishNews(News news, String publisher, Space space) throws Exception;
 
   /**
    * Unpublish a News
@@ -266,12 +267,12 @@ public interface NewsService {
    * Un-schedule publishing a News
    *
    * @param news
-   * @param pageOwnerId
+   * @param space {@link News} space
    * @param newsArticleCreator
    * @return unscheduled News
    * @throws Exception when error occurs
    */
-  News unScheduleNews(News news, String pageOwnerId, String newsArticleCreator) throws Exception;
+  News unScheduleNews(News news, Space space, String newsArticleCreator) throws Exception;
 
   /**
    * Search news by term
@@ -283,7 +284,7 @@ public interface NewsService {
   List<NewsESSearchResult> search(Identity currentIdentity, NewsFilter filter);
 
   /**
-   * Checks if the user can schedule publishinga News
+   * Checks if the user can schedule publishing a News
    * 
    * @param space
    * @param currentIdentity
@@ -312,25 +313,26 @@ public interface NewsService {
   void shareNews(News news, Space space, Identity userIdentity, String sharedActivityId) throws Exception;
 
   /**
-   * @param draftArticle {@link News} news draft article to be created
-   * @param pageOwnerId
-   * @param draftArticleCreator
-   * @param creationDate
+   * @param draftArticle {@link News} draft article to be created
+   * @param draftArticleSpace {@link News} draft article space
+   * @param draftArticleCreator {@link News} draft article creator
+   * @param creationDate {@link News} draft article creation date
    * @return the created draft news article
    * @throws Exception when error occurs
    */
   News createDraftArticleForNewPage(News draftArticle,
-                                    String pageOwnerId,
+                                    Space draftArticleSpace,
                                     String draftArticleCreator,
                                     long creationDate) throws Exception;
 
   /**
-   * @param newsArticle {@link News} news article to be created
-   * @param newsArticleCreator
+   * @param newsArticle {@link News} article to be created
+   * @param newsArticleCreator {@link News} article creator
+   * @param newsArticleSpace {@link News} article space
    * @return the created news article
    * @throws Exception when error occurs
    */
-  News createNewsArticlePage(News newsArticle, String newsArticleCreator) throws Exception;
+  News createNewsArticlePage(News newsArticle, String newsArticleCreator, Space newsArticleSpace) throws Exception;
 
   /**
    * @param news {@link News} news draft article to be created
@@ -353,10 +355,11 @@ public interface NewsService {
    * Deletes a draft article by its given id
    *
    * @param draftArticleId draft article id
-   * @param draftArticleCreator creator
+   * @param draftArticleCreator draft article creator
+   * @param draftArticleSpaceId draft article space id
    * @throws Exception when error occurs
    */
-  void deleteDraftArticle(String draftArticleId, String draftArticleCreator) throws Exception;
+  void deleteDraftArticle(String draftArticleId, String draftArticleCreator, String draftArticleSpaceId) throws Exception;
 
   /**
    * Deletes an article version by its given id and lang
