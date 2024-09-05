@@ -32,7 +32,6 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.stream.Stream;
 
-import io.meeds.news.search.NewsTranslationIndexingServiceConnector;
 import io.meeds.notes.model.NotePageProperties;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
@@ -364,6 +363,10 @@ public class NewsServiceImpl implements NewsService {
       MetadataObject newsMetadataObject = new MetadataObject(NewsUtils.NEWS_METADATA_OBJECT_TYPE, newsId);
       metadataService.deleteMetadataItemsByObject(newsMetadataObject);
       indexingService.unindex(NewsIndexingServiceConnector.TYPE, String.valueOf(news.getId()));
+      List<String> articleLanguages = getArticleLanguages(newsId, false);
+      if (CollectionUtils.isNotEmpty(articleLanguages)) {
+        articleLanguages.forEach(lang -> indexingService.unindex(NewsIndexingServiceConnector.TYPE, news.getId().concat("-").concat(lang)));
+      }
       NewsUtils.broadcastEvent(NewsUtils.DELETE_NEWS, currentIdentity.getUserId(), news);
     }
   }
@@ -853,8 +856,8 @@ public class NewsServiceImpl implements NewsService {
     News article = getNewsArticleById(id);
     noteService.deleteVersionsByNoteIdAndLang(Long.parseLong(id), lang);
     NewsUtils.broadcastEvent(NewsUtils.REMOVE_ARTICLE_TRANSLATION, article.getAuthor(), article);
-    String newsTranslationId = article.getId().concat("-").concat(article.getLang());
-    indexingService.unindex(NewsTranslationIndexingServiceConnector.TYPE, newsTranslationId);
+    String newsTranslationId = id.concat("-").concat(lang);
+    indexingService.unindex(NewsIndexingServiceConnector.TYPE, newsTranslationId);
   }
 
   /**
@@ -1843,7 +1846,6 @@ public class NewsServiceImpl implements NewsService {
         MetadataItem metadataItem = metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY, newsPageObject).get(0);
         buildArticleProperties(news, currentUsername, metadataItem);
         news.setDeleted(articlePage.isDeleted());
-        news.setUrl(NewsUtils.buildNewsArticleUrl(news, currentUsername));
         news.setPublicationDate(articlePage.getCreatedDate());
         news.setTitle(pageVersion.getTitle());
         processPageContent(pageVersion, news);
@@ -1851,6 +1853,7 @@ public class NewsServiceImpl implements NewsService {
         news.setLang(pageVersion.getLang());
         news.setUpdateDate(new Date(metadataItem.getUpdatedDate()));
         news.setProperties(pageVersion.getProperties());
+        news.setUrl(NewsUtils.buildNewsArticleUrl(news, currentUsername));
         if (news.getProperties() != null && news.getProperties().getFeaturedImage() != null
             && news.getProperties().getFeaturedImage().getId() != 0) {
           news.setIllustrationURL(NewsUtils.buildIllustrationUrl(articlePage.getProperties(), pageVersion.getLang()));
@@ -2043,7 +2046,7 @@ public class NewsServiceImpl implements NewsService {
       }
       NewsUtils.broadcastEvent(NewsUtils.ADD_ARTICLE_TRANSLATION, versionCreator, news);
       String newsTranslationId = news.getId().concat("-").concat(news.getLang());
-      indexingService.index(NewsTranslationIndexingServiceConnector.TYPE, newsTranslationId);
+      indexingService.index(NewsIndexingServiceConnector.TYPE, newsTranslationId);
       return news;
     }
     return null;

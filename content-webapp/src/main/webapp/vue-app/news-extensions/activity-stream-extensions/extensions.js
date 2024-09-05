@@ -50,6 +50,10 @@ const newsActivityTypeExtensionOptions = {
       return Vue.prototype.$newsServices.getNewsByActivityId(activityId, lang)
         .then(news => activity.news = news);
     }
+    // metadata object id for translation is a concatenation of the news id and the lang
+    if (activity.news.lang) {
+      activity.templateParams.metadataObjectId = `${activity.news.id}-${activity.news.lang}`;
+    }
   },
   canEdit: () => false,
   canShare: () => true,

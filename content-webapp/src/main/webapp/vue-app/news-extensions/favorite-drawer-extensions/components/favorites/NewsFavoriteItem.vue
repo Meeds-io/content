@@ -25,7 +25,7 @@
         tile
         size="25">
         <img
-          v-if="news.illustrationURL"
+          v-if="news?.illustrationURL"
           :alt="featuredImageAltText"
           :src="`${news.illustrationURL}&size=25x25`">
         <img

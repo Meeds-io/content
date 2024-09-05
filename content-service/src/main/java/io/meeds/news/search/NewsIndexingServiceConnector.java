@@ -54,11 +54,11 @@ public class NewsIndexingServiceConnector extends ElasticIndexingServiceConnecto
 
   private static final Log      LOG              = ExoLogger.getLogger(NewsIndexingServiceConnector.class);
 
-  protected final NewsService     newsService;
+  private final NewsService     newsService;
 
-  protected final IdentityManager identityManager;
+  private final IdentityManager identityManager;
 
-  protected final ActivityManager activityManager;
+  private final ActivityManager activityManager;
 
   private final MetadataService metadataService;
 
@@ -101,8 +101,14 @@ public class NewsIndexingServiceConnector extends ElasticIndexingServiceConnecto
     }
     LOG.debug("Index document for news id={}", id);
     News news = null;
+    String newsId = null;
+    String lang = null;
     try {
-      news = newsService.getNewsArticleById(id);
+      if (StringUtils.contains(id, "-")) {
+        newsId = StringUtils.substringBefore(id, "-");
+        lang = StringUtils.substringAfter(id, "-");
+      }
+      news = newsId != null ? newsService.getNewsArticleByIdAndLang(newsId, lang) : newsService.getNewsArticleById(id);
     } catch (Exception e) {
       LOG.error("Error when getting the news " + id, e);
     }
@@ -187,17 +193,18 @@ public class NewsIndexingServiceConnector extends ElasticIndexingServiceConnecto
     if (news.getUpdateDate() != null) {
       fields.put("lastUpdatedTime", String.valueOf(news.getUpdateDate().getTime()));
     }
+    fields.put("lang", news.getLang());
     DocumentWithMetadata document = new DocumentWithMetadata();
     document.setId(id);
     document.setLastUpdatedDate(news.getUpdateDate());
     document.setPermissions(Collections.singleton(ownerIdentityId));
     document.setFields(fields);
-    addDocumentMetadata(document, news.getId());
+    addDocumentMetadata(document, id);
 
     return document;
   }
 
-  protected String htmlToText(String source) {
+  private String htmlToText(String source) {
     source = source.replaceAll("<( )*head([^>])*>", "<head>");
     source = source.replaceAll("(<( )*(/)( )*head( )*>)", "</head>");
     source = source.replaceAll("(<head>).*(</head>)", "");
@@ -218,7 +225,7 @@ public class NewsIndexingServiceConnector extends ElasticIndexingServiceConnecto
     return source;
   }
 
-  protected void addDocumentMetadata(DocumentWithMetadata document, String documentId) {
+  private void addDocumentMetadata(DocumentWithMetadata document, String documentId) {
     MetadataObject metadataObject = new MetadataObject(NewsUtils.NEWS_METADATA_OBJECT_TYPE, documentId);
     List<MetadataItem> metadataItems = metadataService.getMetadataItemsByObject(metadataObject);
     document.setMetadataItems(metadataItems);

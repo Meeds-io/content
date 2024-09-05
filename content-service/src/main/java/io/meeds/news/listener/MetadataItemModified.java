@@ -75,16 +75,12 @@ public class MetadataItemModified extends Listener<Long, MetadataItem> {
     if (isNewsEvent(objectType)) {
       // Ensure to re-execute all ActivityProcessors to compute & cache
       // metadatas of the activity again
-      News news = newsService.getNewsArticleById(objectId);
+      News news = newsService.getNewsArticleById(StringUtils.substringBefore(objectId, "-"));
       if (news != null) {
         if (StringUtils.isNotBlank(news.getActivityId())) {
           clearCache(news.getActivityId());
         }
-        if (objectId.contains("-")){
-          reindexNewsTranslation(objectId);
-        } else {
-          reindexNews(objectId);
-        }
+        reindexNews(objectId);
       }
     }
   }
@@ -100,10 +96,6 @@ public class MetadataItemModified extends Listener<Long, MetadataItem> {
   }
 
   private void reindexNews(String newsId) {
-    indexingService.reindex(NewsIndexingServiceConnector.TYPE, newsId);
-  }
-
-  private void reindexNewsTranslation(String newsId) {
     indexingService.reindex(NewsIndexingServiceConnector.TYPE, newsId);
   }
 
