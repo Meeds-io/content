@@ -369,6 +369,7 @@ export default {
               if (this.article.body !== updatedArticle.body) {
                 this.imagesURLs = this.extractImagesURLsDiffs(this.article.body, updatedArticle.body);
               }
+              this.article.properties = updatedArticle?.properties;
             })
             .then(() => this.$emit('draftUpdated'))
             .then(() => this.draftSavingStatus = this.$t('news.composer.draft.savedDraftStatus'));
