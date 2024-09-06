@@ -369,6 +369,8 @@ export default {
               if (this.article.body !== updatedArticle.body) {
                 this.imagesURLs = this.extractImagesURLsDiffs(this.article.body, updatedArticle.body);
               }
+              this.article.properties = updatedArticle?.properties;
+              this.article.draftPage = true;
             })
             .then(() => this.$emit('draftUpdated'))
             .then(() => this.draftSavingStatus = this.$t('news.composer.draft.savedDraftStatus'));
@@ -384,6 +386,7 @@ export default {
         this.$newsServices.saveNews(article).then((createdArticle) => {
           this.draftSavingStatus = this.$t('news.composer.draft.savedDraftStatus');
           this.article.id = createdArticle.id;
+          this.article.draftPage = true;
           this.article.properties = createdArticle?.properties;
           if (!this.articleId) {
             this.articleId = createdArticle.id;
