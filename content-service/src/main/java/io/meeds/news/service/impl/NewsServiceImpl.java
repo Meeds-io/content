@@ -1863,7 +1863,7 @@ public class NewsServiceImpl implements NewsService {
         news.setUrl(NewsUtils.buildNewsArticleUrl(news, currentUsername));
         if (news.getProperties() != null && news.getProperties().getFeaturedImage() != null
             && news.getProperties().getFeaturedImage().getId() != 0) {
-          news.setIllustrationURL(NewsUtils.buildIllustrationUrl(articlePage.getProperties(), pageVersion.getLang()));
+          news.setIllustrationURL(NewsUtils.buildIllustrationUrl(news.getProperties(), pageVersion.getLang()));
 
         }
           
@@ -2043,7 +2043,9 @@ public class NewsServiceImpl implements NewsService {
       existingPage.setTitle(news.getTitle());
       existingPage.setContent(news.getBody());
       NotePageProperties properties = news.getProperties();
-      properties.setDraft(false);
+      if (properties != null) {
+        properties.setDraft(false);
+      }
       existingPage.setProperties(properties);
       noteService.createVersionOfNote(existingPage, versionCreator.getUserId());
       news.setIllustrationURL(NewsUtils.buildIllustrationUrl(news.getProperties(), news.getLang()));
