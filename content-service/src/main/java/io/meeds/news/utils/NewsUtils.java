@@ -259,6 +259,10 @@ public class NewsUtils {
               .append(news.getId())
               .append("&type=article");
     }
+    if (news.getLang() != null) {
+      newsArticleUrl.append("&lang=");
+      newsArticleUrl.append(news.getLang());
+    }
     return newsArticleUrl.toString();
   }
   public static String buildSpaceUrl(String spaceId) {

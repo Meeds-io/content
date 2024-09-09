@@ -36,7 +36,7 @@ public class EntityBuilder {
                                                             Identity currentIdentity) {
     NewsSearchResultEntity newsSearchResultEntity = new NewsSearchResultEntity(newsESSearchResult);
     Favorite favorite = new Favorite(NewsUtils.NEWS_METADATA_OBJECT_TYPE,
-                                     newsESSearchResult.getId(),
+                                     newsESSearchResult.getLang() != null ? newsESSearchResult.getId().concat("-").concat(newsESSearchResult.getLang()) : newsESSearchResult.getId(),
                                      null,
                                      Long.parseLong(currentIdentity.getId()));
     newsSearchResultEntity.setFavorite(favoriteService.isFavorite(favorite));
