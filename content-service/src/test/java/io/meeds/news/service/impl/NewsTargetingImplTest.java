@@ -397,7 +397,7 @@ public class NewsTargetingImplTest {
 
     // Then
     verify(identityManager, times(1)).getOrCreateIdentity(OrganizationIdentityProvider.NAME, "root");
-    verify(metadataService, times(1)).createMetadataItem(newsTargetObject, metadataKey, properties, 1);
+    verify(metadataService, times(1)).createMetadataItem(newsTargetObject, metadataKey, properties, 1, false);
 
   }
 

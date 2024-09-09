@@ -151,7 +151,7 @@ public class NewsTargetingServiceImpl implements NewsTargetingService {
     targets.stream().forEach(targetName -> {
       try {
         MetadataKey metadataKey = new MetadataKey(NewsTargetingService.METADATA_TYPE.getName(), targetName, 0);
-        metadataService.createMetadataItem(newsTargetObject, metadataKey, properties, Long.parseLong(currentSocIdentity.getId()));
+        metadataService.createMetadataItem(newsTargetObject, metadataKey, properties, Long.parseLong(currentSocIdentity.getId()), false);
       } catch (ObjectAlreadyExistsException e) {
         LOG.warn("Targets with name {} is already associated to object {}. Ignore error since it will not affect result.",
                  targetName,
