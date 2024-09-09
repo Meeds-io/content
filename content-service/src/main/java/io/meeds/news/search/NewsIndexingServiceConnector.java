@@ -62,8 +62,6 @@ public class NewsIndexingServiceConnector extends ElasticIndexingServiceConnecto
 
   private final MetadataService metadataService;
 
-  private static final String   SUMMARY_PROPERTY = "summary";
-
 
   public NewsIndexingServiceConnector(IdentityManager identityManager,
                                       InitParams initParams,
@@ -103,8 +101,14 @@ public class NewsIndexingServiceConnector extends ElasticIndexingServiceConnecto
     }
     LOG.debug("Index document for news id={}", id);
     News news = null;
+    String newsId = null;
+    String lang = null;
     try {
-      news = newsService.getNewsArticleById(id);
+      if (StringUtils.contains(id, "-")) {
+        newsId = StringUtils.substringBefore(id, "-");
+        lang = StringUtils.substringAfter(id, "-");
+      }
+      news = newsId != null ? newsService.getNewsArticleByIdAndLang(newsId, lang) : newsService.getNewsArticleById(id);
     } catch (Exception e) {
       LOG.error("Error when getting the news " + id, e);
     }
@@ -189,12 +193,13 @@ public class NewsIndexingServiceConnector extends ElasticIndexingServiceConnecto
     if (news.getUpdateDate() != null) {
       fields.put("lastUpdatedTime", String.valueOf(news.getUpdateDate().getTime()));
     }
+    fields.put("lang", news.getLang());
     DocumentWithMetadata document = new DocumentWithMetadata();
     document.setId(id);
     document.setLastUpdatedDate(news.getUpdateDate());
     document.setPermissions(Collections.singleton(ownerIdentityId));
     document.setFields(fields);
-    addDocumentMetadata(document, news.getId());
+    addDocumentMetadata(document, id);
 
     return document;
   }

@@ -371,7 +371,7 @@ public class NewsRest {
       Identity userIdentity = identityManager.getOrCreateUserIdentity(currentIdentity.getUserId());
       if (userIdentity != null) {
         news.setFavorite(favoriteService.isFavorite(new Favorite("news",
-                                                                 news.getId(),
+                                                                 news.getLang() != null ? news.getId().concat("-").concat(news.getLang()) : news.getId(),
                                                                  "",
                                                                  Long.parseLong(userIdentity.getId()))));
       }
@@ -597,7 +597,7 @@ public class NewsRest {
       Identity userIdentity = identityManager.getOrCreateUserIdentity(currentIdentity.getUserId());
       if (userIdentity != null) {
         news.setFavorite(favoriteService.isFavorite(new Favorite("news",
-                                                                 news.getId(),
+                                                                 news.getLang() != null ? news.getId().concat("-").concat(news.getLang()) : news.getId(),
                                                                  "",
                                                                  Long.parseLong(userIdentity.getId()))));
       }

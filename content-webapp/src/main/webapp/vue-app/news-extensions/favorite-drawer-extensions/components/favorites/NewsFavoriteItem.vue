@@ -25,7 +25,7 @@
         tile
         size="25">
         <img
-          v-if="news.illustrationURL"
+          v-if="news?.illustrationURL"
           :alt="featuredImageAltText"
           :src="`${news.illustrationURL}&size=25x25`">
         <img
@@ -73,7 +73,14 @@ export default {
     }
   },
   created() {
-    this.$newsServices.getNewsById(this.id, false, this.newsObjectType)
+    let newsId = this.id;
+    let lang = null;
+    if (this.id.includes('-')) {
+      const parts = this.id.split('-');
+      newsId = parts[0];
+      lang = parts[1];
+    }
+    this.$newsServices.getNewsById(newsId, false, this.newsObjectType, lang)
       .then(news => {
         this.activityTitle = news.title;
         this.url = news.url;
