@@ -51,12 +51,6 @@ export function init(maxToUpload, maxFileSize) {
     newsActivityComposerApp = new Vue({
       el: '#NewsComposerApp',
       computed: {
-        contentUnifiedEditorEnabled() {
-          return eXo?.env?.portal?.contentUnifiedEditorEnabled;
-        },
-        contentTranslateOptionEnabled() {
-          return eXo?.env?.portal?.contentTranslateOptionEnabled;
-        },
       },
       data: function() {
         return {
@@ -69,17 +63,7 @@ export function init(maxToUpload, maxFileSize) {
           maxFileSize: maxFileSize
         };
       },
-      template: `<exo-news-activity-composer 
-                   v-if="!contentUnifiedEditorEnabled" 
-                   :news-id="articleId" 
-                   :space-id="spaceId" 
-                   :activity-id="activityId" 
-                   :max-to-upload="maxToUpload" 
-                   :max-file-size="maxFileSize" 
-                   :news-type="articleType" />
-                 <content-rich-editor
-                   v-else
-                   :translation-option-enabled="contentTranslateOptionEnabled" />`,
+      template: '<content-rich-editor />',
       i18n,
       vuetify
     });

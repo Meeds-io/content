@@ -100,16 +100,7 @@ export function init(params) {
         seeAllUrl,
         defaultLanguage: eXo?.env?.portal?.defaultLanguage
       },
-      computed: {
-        newListTranslationEnabled() {
-          return eXo?.env?.portal?.newsListTranslationEnabled;
-        },
-      },
       created() {
-        if (!this.newListTranslationEnabled) {
-          this.headerTitle = params.headerTitle;
-          return;
-        }
         Vue.prototype.$translationService.getTranslations('newsListView', applicationId, 'headerNameInput').then(translations => {
           this.headerTranslations = translations;
           this.headerTitle = translations?.[lang] || translations?.[this.defaultLanguage]

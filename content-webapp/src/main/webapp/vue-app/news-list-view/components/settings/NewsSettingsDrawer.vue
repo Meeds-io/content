@@ -68,20 +68,7 @@
             </label>
           </div>
           <div class="d-flex flex-row mt-2">
-            <v-text-field
-              v-if="!newListTranslationEnabled"
-              v-model="newsHeader"
-              type="string"
-              name="newsHeader"
-              :placeholder="$t('news.list.settings.placeHolderName')"
-              maxlength="100"
-              class="input-block-level ignore-vuetify-classes pa-0"
-              counter
-              required
-              outlined
-              dense />
             <translation-text-field
-              v-else
               ref="headerNameInput"
               id="headerNameInput"
               v-model="newsHeader"
@@ -243,9 +230,6 @@ export default {
     },
   },
   computed: {
-    newListTranslationEnabled() {
-      return this.$root.newListTranslationEnabled;
-    },
     backgroundColor(){
       return this.newsTargets.length === 0 ? '#E1E8EE': '';
     },
@@ -343,7 +327,7 @@ export default {
       this.viewTemplate = this.$root.viewTemplate;
       this.viewExtensions = this.$root.viewExtensions;
       this.newsTarget = this.$root.newsTarget;
-      this.newsHeader = (this.newListTranslationEnabled && (Object.keys(this.savedHeaderTranslations || {})?.length && this.savedHeaderTranslations
+      this.newsHeader = ((Object.keys(this.savedHeaderTranslations || {})?.length && this.savedHeaderTranslations
                                                        || {[this.$root.defaultLanguage]: this.$root.headerTitle}))
                                                        || this.$root.headerTitle;
       this.limit = this.$root.limit;
@@ -392,17 +376,14 @@ export default {
         seeAllUrl: this.seeAllUrl,
         limit: this.limit,
       };
-      if (!this.newListTranslationEnabled) {
-        settings['header'] = this.newsHeader;
-      }
       this.$newsListService.saveSettings(this.saveSettingsURL , settings)
         .then(() => {
           this.saveHeaderTranslations();
           this.$root.viewTemplate = this.viewTemplate;
           this.$root.newsTarget = this.newsTarget;
           this.$root.headerTranslations = this.newsHeader;
-          this.$root.headerTitle = this.newListTranslationEnabled ? this.newsHeader?.[this.language]
-              || this.newsHeader?.[this.$root.defaultLanguage] : this.newsHeader;
+          this.$root.headerTitle =  this.newsHeader?.[this.language]
+              || this.newsHeader?.[this.$root.defaultLanguage];
           this.$root.limit = this.limit;
           this.$root.showHeader = this.showHeader;
           this.$root.showSeeAll = this.showSeeAll;
@@ -418,8 +399,8 @@ export default {
             limit: this.limit,
             showHeader: this.showHeader,
             headerTranslations: this.newsHeader,
-            headerTitle: this.newListTranslationEnabled ? this.newsHeader?.[this.language]
-                || this.newsHeader?.[this.$root.defaultLanguage] : this.newsHeader,
+            headerTitle: this.newsHeader?.[this.language]
+                || this.newsHeader?.[this.$root.defaultLanguage],
             showSeeAll: this.showSeeAll,
             showArticleTitle: this.showArticleTitle,
             showArticleSummary: this.showArticleSummary,
@@ -438,9 +419,6 @@ export default {
         });
     },
     saveHeaderTranslations() {
-      if (!this.newListTranslationEnabled) {
-        return;
-      }
       return this.$translationService.saveTranslations(this.translationObjectType, this.applicationId,
         this.headerTitleFieldName, this.newsHeader);
     },
