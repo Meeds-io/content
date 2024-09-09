@@ -169,10 +169,11 @@ export default {
       return this.editMode && 'fas fa-save' || 'fa-solid fa-paper-plane';
     },
     disableSaveButton() {
-      return !this.article.title || this.isEmptyArticleContent
-                                 || (!this.propertiesModified
-                                 && this.articleNotChanged
-                                 && this.article.publicationState !== 'draft');
+      return this.postingNews || !this.article.title
+                              || this.isEmptyArticleContent
+                              || (!this.propertiesModified
+                              && this.articleNotChanged
+                              && this.article.publicationState !== 'draft');
     },
     articleNotChanged() {
       return this.originalArticle?.title === this.article.title && this.isSameArticleContent()
@@ -313,6 +314,7 @@ export default {
         });
     },
     updateAndPostArticle() {
+      this.postingNews = true;
       const updatedArticle = this.getArticleToBeUpdated();
       updatedArticle.publicationState = 'posted';
       return this.$newsServices.updateNews(updatedArticle, true, 'article').then((createdArticle) => {
@@ -321,7 +323,6 @@ export default {
           this.imagesURLs = this.extractImagesURLsDiffs(this.article.body, createdArticle.body);
         }
         this.fillArticle(createdArticle.id, false, createdArticle.lang);
-        this.enableClickOnce();
         let alertLink = this.isSpaceMember ? `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/activity?id=${createdArticle.activityId}` : `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news-detail?newsId=${createdArticle.id}`;
         if (createdArticle.lang) {
           alertLink = `${alertLink}&lang=${createdArticle.lang}`;
@@ -332,7 +333,14 @@ export default {
           alertLinkText: this.$t('news.view.label'),
           alertLink: alertLink
         });
-      }).then(() => this.draftSavingStatus = '');
+      }).then(() => {
+        this.draftSavingStatus = '';
+        this.enableClickOnce();
+      }).catch((error) => {
+        this.displayAlert({type: 'error', message: this.$t('news.save.error.message', error?.message)});
+        this.enableClickOnce();
+        this.draftSavingStatus = '';
+      });
     },
     getArticleToBeUpdated() {
       const updatedArticle = {
