@@ -216,7 +216,8 @@ public class NewsServiceImplTest {
     verify(metadataService, times(1)).createMetadataItem(any(NewsDraftObject.class),
                                                          any(MetadataKey.class),
                                                          any(Map.class),
-                                                         anyLong());
+                                                         anyLong(),
+                                                         anyBoolean());
     assertNotNull(savedDraftArticle.getId());
     assertEquals(draftPage.getId(), savedDraftArticle.getId());
     assertEquals(draftPage.getTitle(), savedDraftArticle.getTitle());
@@ -540,7 +541,8 @@ public class NewsServiceImplTest {
     verify(metadataService, atLeast(1)).createMetadataItem(any(MetadataObject.class),
                                                          any(MetadataKey.class),
                                                          any(Map.class),
-                                                         anyLong());
+                                                         anyLong(),
+                                                         anyBoolean());
   }
 
   @Test
@@ -622,7 +624,8 @@ public class NewsServiceImplTest {
     verify(metadataService, times(1)).createMetadataItem(any(NewsLatestDraftObject.class),
                                                          any(MetadataKey.class),
                                                          any(Map.class),
-                                                         anyLong());
+                                                         anyLong(),
+                                                         anyBoolean());
 
   }
 
@@ -696,7 +699,7 @@ public class NewsServiceImplTest {
                                                           nullable(String.class),
                                                           anyLong(),
                                                           anyString());
-    verify(metadataService, times(1)).updateMetadataItem(any(MetadataItem.class), anyLong());
+    verify(metadataService, times(1)).updateMetadataItem(any(MetadataItem.class), anyLong(), anyBoolean());
   }
 
   @Test
@@ -823,7 +826,7 @@ public class NewsServiceImplTest {
     verify(noteService, times(1)).deleteNote(existingPage.getWikiType(), existingPage.getWikiOwner(), existingPage.getName());
     verify(noteService, times(1)).removeDraftById("1");
     verify(activityManager, times(1)).deleteActivity("1");
-    verify(metadataService, times(1)).updateMetadataItem(any(MetadataItem.class), anyLong());
+    verify(metadataService, times(1)).updateMetadataItem(any(MetadataItem.class), anyLong(), anyBoolean());
   }
 
   @Test
