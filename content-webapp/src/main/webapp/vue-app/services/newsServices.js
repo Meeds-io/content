@@ -149,7 +149,12 @@ export function updateNews(news, post, type, updateType) {
     credentials: 'include',
     method: 'PUT',
     body: JSON.stringify(news)
-  }).then(resp => resp.json());
+  }).then(resp => {
+    if (resp && resp.ok) {
+      return resp.json();
+    }
+    throw new Error(`Error when updating article with id ${news.id}`);
+  });
 }
 
 export function findUserSpaces(spaceName) {
