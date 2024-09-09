@@ -202,6 +202,8 @@ public class NewsServiceImpl implements NewsService {
    */
   @Override
   public News createNews(News news, Identity currentIdentity) throws Exception {
+    LOG.info("######### Start create news with broadcast #########");
+    long startTime = System.currentTimeMillis();
     Space space = spaceService.getSpaceById(news.getSpaceId());
     try {
       if (!canCreateNews(space, currentIdentity)) {
@@ -218,6 +220,7 @@ public class NewsServiceImpl implements NewsService {
                                                    currentIdentity.getUserId(),
                                                    System.currentTimeMillis());
       }
+      LOG.info("######### End create news with broadcast, it tooks " +  Long.valueOf(System.currentTimeMillis() - startTime) + " ms" + "#########");
       return createdNews;
     } catch (Exception e) {
       LOG.error("Error when creating the news " + news.getTitle(), e);
