@@ -160,6 +160,7 @@ public class NewsSearchConnector {
         String posterId = (String) hitSource.get("posterId");
         String spaceDisplayName = (String) hitSource.get("spaceDisplayName");
         String newsActivityId = (String) hitSource.get("newsActivityId");
+        String language = (String) hitSource.get("lang");
 
         Long postedTime = parseLong(hitSource, "postedTime");
         Long lastUpdatedTime = parseLong(hitSource, "lastUpdatedTime");
@@ -175,6 +176,7 @@ public class NewsSearchConnector {
           }
         }
         newsSearchResult.setId(id);
+        newsSearchResult.setLang(language);
         newsSearchResult.setTitle(title);
         if (posterId != null) {
           Identity posterIdentity = identityManager.getOrCreateIdentity(OrganizationIdentityProvider.NAME, posterId);
@@ -188,6 +190,9 @@ public class NewsSearchConnector {
         String portalName = PortalContainer.getCurrentPortalContainerName();
         String portalOwner = CommonsUtils.getCurrentPortalOwner();
         newsSearchResult.setNewsUrl("/" + portalName + "/" + portalOwner + "/activity?id=" + newsActivityId);
+        if (language != null) {
+          newsSearchResult.setNewsUrl(newsSearchResult.getNewsUrl().concat("&lang=" + language));
+        }
         newsSearchResult.setBody(body);
         newsSearchResult.setExcerpts(excerpts);
 
