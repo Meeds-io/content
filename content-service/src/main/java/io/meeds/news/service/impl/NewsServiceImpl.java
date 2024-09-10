@@ -399,7 +399,7 @@ public class NewsServiceImpl implements NewsService {
       Date updatedDate = Calendar.getInstance().getTime();
       metadataItem.setUpdatedDate(updatedDate.getTime());
       String publisherId = identityManager.getOrCreateUserIdentity(publisherIdentity.getUserId()).getId();
-      metadataService.updateMetadataItem(metadataItem, Long.parseLong(publisherId), false);
+      metadataService.updateMetadataItem(metadataItem, Long.parseLong(publisherId));
     }
     if (newsToPublish.getTargets() != null) {
       newsTargetingService.deleteNewsTargets(news, publisher);
@@ -445,7 +445,7 @@ public class NewsServiceImpl implements NewsService {
       Date updatedDate = Calendar.getInstance().getTime();
       newsMetadataItem.setUpdatedDate(updatedDate.getTime());
       String publisherId = identityManager.getOrCreateUserIdentity(publisher).getId();
-      metadataService.updateMetadataItem(newsMetadataItem, Long.parseLong(publisherId), false);
+      metadataService.updateMetadataItem(newsMetadataItem, Long.parseLong(publisherId));
     }
   }
 
@@ -634,7 +634,7 @@ public class NewsServiceImpl implements NewsService {
         }
         metadataItem.setProperties(properties);
         String userIdentityId = identityManager.getOrCreateUserIdentity(userId).getId();
-        metadataService.updateMetadataItem(metadataItem, Long.parseLong(userIdentityId), false);
+        metadataService.updateMetadataItem(metadataItem, Long.parseLong(userIdentityId));
       }
     } catch (Exception exception) {
       LOG.error("Failed to mark news article " + news.getId() + " as read for current user", exception);
@@ -838,7 +838,7 @@ public class NewsServiceImpl implements NewsService {
       }
 
       metadataItem.setProperties(properties);
-      metadataService.updateMetadataItem(metadataItem, Long.parseLong(userIdentity.getId()), false);
+      metadataService.updateMetadataItem(metadataItem, Long.parseLong(userIdentity.getId()));
 
       Map<String, Object> shareArticleEventListenerData = new HashMap<>();
       shareArticleEventListenerData.put(NEWS_ATTACHMENTS_IDS, getArticleAttachmentIdsToShare(
@@ -917,8 +917,7 @@ public class NewsServiceImpl implements NewsService {
       metadataService.createMetadataItem(draftArticleMetaDataObject,
                                          NEWS_METADATA_KEY,
                                          draftArticleMetadataItemProperties,
-                                         Long.parseLong(draftArticleMetadataItemCreatorIdentityId),
-                                         false);
+                                         Long.parseLong(draftArticleMetadataItemCreatorIdentityId));
 
       return draftArticle;
     }
@@ -988,8 +987,7 @@ public class NewsServiceImpl implements NewsService {
         metadataService.createMetadataItem(newsArticleVersionMetaDataObject,
                                            NEWS_METADATA_KEY,
                                            newsArticleVersionMetadataItemProperties,
-                                           Long.parseLong(newsArticleMetadataItemCreatorIdentityId),
-                                           false);
+                                           Long.parseLong(newsArticleMetadataItemCreatorIdentityId));
 
         // create metadata item page
         NewsPageObject newsPageObject = new NewsPageObject(NEWS_METADATA_PAGE_OBJECT_TYPE,
@@ -1012,8 +1010,7 @@ public class NewsServiceImpl implements NewsService {
         metadataService.createMetadataItem(newsPageObject,
                                            NEWS_METADATA_KEY,
                                            newsPageProperties,
-                                           Long.parseLong(newsArticleMetadataItemCreatorIdentityId),
-                                           false);
+                                           Long.parseLong(newsArticleMetadataItemCreatorIdentityId));
         // delete the draft
         deleteDraftArticle(draftNewsId, poster.getUserId());
         return newsArticle;
@@ -1059,8 +1056,7 @@ public class NewsServiceImpl implements NewsService {
     metadataService.createMetadataItem(latestDraftObject,
                                        NEWS_METADATA_KEY,
                                        draftArticleMetadataItemProperties,
-                                       Long.parseLong(draftArticleMetadataItemCreatorIdentityId),
-                                       false);
+                                       Long.parseLong(draftArticleMetadataItemCreatorIdentityId));
     return draftArticle;
   }
 
@@ -1099,7 +1095,7 @@ public class NewsServiceImpl implements NewsService {
           properties.put(NEWS_DELETED, String.valueOf(true));
           metadataItem.setProperties(properties);
           String currentIdentityId = identityManager.getOrCreateUserIdentity(articleCreator).getId();
-          metadataService.updateMetadataItem(metadataItem, Long.parseLong(currentIdentityId), false);
+          metadataService.updateMetadataItem(metadataItem, Long.parseLong(currentIdentityId));
         }
       }
     }
@@ -1703,7 +1699,7 @@ public class NewsServiceImpl implements NewsService {
           String updaterId = identityManager.getOrCreateUserIdentity(news.getAuthor()).getId();
           Date updateDate = Calendar.getInstance().getTime();
           metadataItem.setUpdatedDate(updateDate.getTime());
-          metadataService.updateMetadataItem(metadataItem, Long.parseLong(updaterId), false);
+          metadataService.updateMetadataItem(metadataItem, Long.parseLong(updaterId));
           news.setActivities(properties.get(NEWS_ACTIVITIES));
           news.setActivityId(activityId);
         }
@@ -1782,7 +1778,7 @@ public class NewsServiceImpl implements NewsService {
         existingPageMetadataItem.setProperties(newsPageProperties);
         Date updateDate = Calendar.getInstance().getTime();
         existingPageMetadataItem.setUpdatedDate(updateDate.getTime());
-        metadataService.updateMetadataItem(existingPageMetadataItem, Long.parseLong(newsArticleUpdaterIdentityId), false);
+        metadataService.updateMetadataItem(existingPageMetadataItem, Long.parseLong(newsArticleUpdaterIdentityId));
       } else {
         throw new ObjectNotFoundException("No such news article metadata item exists with id " + newsId);
       }
@@ -1926,11 +1922,11 @@ public class NewsServiceImpl implements NewsService {
         latestDraftArticleMetadataItem.setProperties(latestDraftArticleMetadataItemProperties);
         String draftArticleMetadataItemUpdaterIdentityId = identityManager.getOrCreateUserIdentity(updater).getId();
         metadataService.updateMetadataItem(latestDraftArticleMetadataItem,
-                                           Long.parseLong(draftArticleMetadataItemUpdaterIdentityId), false);
+                                           Long.parseLong(draftArticleMetadataItemUpdaterIdentityId));
       } else {
         Map<String, String> latestDraftArticleMetadataItemProperties = new HashMap<>();
         setLatestDraftProperties(latestDraftArticleMetadataItemProperties, news);
-        metadataService.createMetadataItem(latestDraftObject, NEWS_METADATA_KEY, latestDraftArticleMetadataItemProperties, false);
+        metadataService.createMetadataItem(latestDraftObject, NEWS_METADATA_KEY, latestDraftArticleMetadataItemProperties);
 
       }
     } catch (Exception exception) {
@@ -2012,7 +2008,7 @@ public class NewsServiceImpl implements NewsService {
       String poster = identityManager.getOrCreateUserIdentity(news.getAuthor()).getId();
       Date updateDate = Calendar.getInstance().getTime();
       metadataItem.setUpdatedDate(updateDate.getTime());
-      metadataService.updateMetadataItem(metadataItem, Long.parseLong(poster), false);
+      metadataService.updateMetadataItem(metadataItem, Long.parseLong(poster));
       news.setSchedulePostDate(null);
       return news;
     }
@@ -2035,7 +2031,7 @@ public class NewsServiceImpl implements NewsService {
       if (metadataItem != null) {
         Calendar calendar = Calendar.getInstance();
         metadataItem.setUpdatedDate(calendar.getTime().getTime());
-        metadataService.updateMetadataItem(metadataItem, Long.parseLong(identityManager.getOrCreateUserIdentity(versionCreator.getUserId()).getId()), false);
+        metadataService.updateMetadataItem(metadataItem, Long.parseLong(identityManager.getOrCreateUserIdentity(versionCreator.getUserId()).getId()));
       }
       existingPage.setTitle(news.getTitle());
       existingPage.setContent(news.getBody());
