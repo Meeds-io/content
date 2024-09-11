@@ -43,6 +43,7 @@ import static org.mockito.Mockito.when;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
@@ -1522,6 +1523,22 @@ public class NewsRestTest {
     news.setCanDelete(true);
     response = newsRestController.deleteArticleTranslation(news.getId(), news.getLang());
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+
+  }
+
+  @Test
+  public void getArticleAvailableTranslationLanguages() throws Exception {
+    //
+    ResponseEntity responseEntity = newsRestController.getAvailableTranslationLanguages("", false);
+    assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), responseEntity.getStatusCode().value());
+    //
+    when(newsService.getArticleLanguages(anyString(), anyBoolean())).thenReturn(Arrays.asList(new String[]{"fr"}));
+    responseEntity = newsRestController.getAvailableTranslationLanguages("1", false);
+    assertEquals(Response.Status.OK.getStatusCode(), responseEntity.getStatusCode().value());
+    //
+    when(newsService.getArticleLanguages(anyString(), anyBoolean())).thenThrow(new Exception());
+    responseEntity = newsRestController.getAvailableTranslationLanguages("1", false);
+    assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), responseEntity.getStatusCode().value());
 
   }
 }
