@@ -292,7 +292,10 @@ export default {
       updatedArticle.publicationState = 'draft';
       return this.$newsServices.updateNews(updatedArticle, false, this.articleType).then((createdArticle) => {
         this.spaceUrl = createdArticle.spaceUrl;
+        this.articleId = this.article.id = createdArticle.id;
+        this.article.targetPageId = createdArticle.targetPageId;
         this.article.properties = createdArticle.properties;
+        this.article.draftPage = true;
         this.article.lang = createdArticle.lang;
         if (this.article.body !== createdArticle.body) {
           this.imagesURLs = this.extractImagesURLsDiffs(this.article.body, createdArticle.body);
@@ -338,6 +341,7 @@ export default {
     getArticleToBeUpdated() {
       const updatedArticle = {
         id: this.article.activityId && this.article.targetPageId || this.article.id,
+        targetPageId: this.article.targetPageId,
         title: this.article.title,
         body: this.replaceImagesURLs(this.$noteUtils.getContentToSave(this.editorBodyInputRef, this.oembedMinWidth)),
         published: this.article.published,
