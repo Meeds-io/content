@@ -42,11 +42,12 @@ export default {
     showDeleteButton: false,
     selectedTranslation: {value: eXo.env.portal.language},
     translations: [],
-    languages: JSON.parse(eXo.env.portal.availableLanguages),
+    languages: [],
     originalVersion: null,
     previousSelectedTranslation: null
   }),
   created() {
+    this.getAvailableLanguages();
     const url = new URL(window.location.href);
     const params = new URLSearchParams(url.search);
     if (params.has('lang')) {
@@ -65,6 +66,11 @@ export default {
     });
   },
   methods: {
+    getAvailableLanguages() {
+      return this.$notesService.getAvailableLanguages().then(data => {
+        this.languages = data || [];
+      });
+    },
     getArticleVersionWithLang(id, lang) {
       if (this.previousSelectedTranslation === 'autoTranslation') {
         // reset the news model after the automatic translation

@@ -98,7 +98,7 @@ export default {
       contentFormTitle: '',
       appName: 'content',
       translations: [],
-      languages: JSON.parse(eXo.env.portal.availableLanguages),
+      languages: [],
       allLanguages: [],
       postingNews: false,
       savingDraft: false,
@@ -180,9 +180,9 @@ export default {
     },
   },
   created() {
+    this.getAvailableLanguages();
     this.initDataPropertiesFromUrl();
     this.getArticle();
-    this.getAvailableLanguages();
     this.refreshTranslationExtensions();
     document.addEventListener('automatic-translation-extensions-updated', () => {
       this.refreshTranslationExtensions();
@@ -652,12 +652,15 @@ export default {
       this.$refs.editor.closePluginsDrawer();
     },
     getAvailableLanguages() {
-      this.languages.sort((a, b) => a.text.localeCompare(b.text));
-      this.allLanguages = this.languages;
-      this.languages.unshift({value: '', text: this.$t('article.label.chooseLanguage')});
-      if (this.translations) {
-        this.languages = this.languages.filter(item1 => !this.translations.some(item2 => item2.value === item1.value));
-      }
+      return this.$notesService.getAvailableLanguages().then(data => {
+        this.languages = data || [];
+        this.languages.sort((a, b) => a.text.localeCompare(b.text));
+        this.allLanguages = this.languages;
+        this.languages.unshift({value: '', text: this.$t('article.label.chooseLanguage')});
+        if (this.translations) {
+          this.languages = this.languages.filter(item1 => !this.translations.some(item2 => item2.value === item1.value));
+        }
+      });
     },
     displayAlert(detail) {
       document.dispatchEvent(new CustomEvent('alert-message-html', {detail: {
