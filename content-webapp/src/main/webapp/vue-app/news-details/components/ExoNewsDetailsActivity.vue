@@ -45,7 +45,7 @@ export default {
     news: null,
     selectedTranslation: {value: eXo.env.portal.language},
     translations: [],
-    languages: JSON.parse(eXo.env.portal.availableLanguages),
+    languages: [],
     originalVersion: null,
     previousSelectedTranslation: null
   }),
@@ -79,6 +79,7 @@ export default {
     },
   },
   created() {
+    this.getAvailableLanguages();
     const url = new URL(window.location.href);
     const params = new URLSearchParams(url.search);
     if (params.has('lang')) {
@@ -98,6 +99,11 @@ export default {
     });
   },
   methods: {
+    getAvailableLanguages() {
+      return this.$notesService.getAvailableLanguages().then(data => {
+        this.languages = data || [];
+      });
+    },
     retrieveNews() {
       if (this.activity.news) {
         this.activityId = this.activity.news.activityId;
