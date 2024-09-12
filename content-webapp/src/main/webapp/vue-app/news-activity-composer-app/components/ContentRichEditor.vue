@@ -696,7 +696,7 @@ export default {
       return this.$noteUtils.isSameContent(this.article.content, this.originalArticle.content);
     },
     refreshTranslationExtensions() {
-      this.editorExtensions = extensionRegistry.loadExtensions('notesEditor', 'translation-extension');
+      this.editorExtensions = extensionRegistry.loadExtensions('contentEditor', 'translation-extension');
     },
     isEmptyDraft() {
       const isTitleEmpty = !this.article?.title;
