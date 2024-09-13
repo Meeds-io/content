@@ -20,6 +20,7 @@
 package io.meeds.news.service.impl;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -182,11 +183,9 @@ public class NewsTargetingImplTest {
                                                                                  identityManager,
                                                                                  spaceService,
                                                                                  organizationService);
-    IdentityRegistry identityRegistry = mock(IdentityRegistry.class);
     EXO_CONTAINER_CONTEXT.when(() -> ExoContainerContext.getService(IdentityRegistry.class)).thenReturn(identityRegistry);
     org.exoplatform.services.security.Identity identity = mock(org.exoplatform.services.security.Identity.class);
-    REST_UTILS.when(() -> RestUtils.getCurrentUser()).thenReturn("user");
-    when(identityRegistry.getIdentity("user")).thenReturn(identity);
+    REST_UTILS.when(RestUtils::getCurrentUser).thenReturn("user");
     MetadataType metadataType = new MetadataType(4, "newsTarget");
     List<Metadata> newsTargets = new LinkedList<>();
     Metadata sliderNews = new Metadata();
@@ -226,87 +225,89 @@ public class NewsTargetingImplTest {
 
     when(metadataService.getMetadatas(metadataType.getName(), 0)).thenReturn(newsTargets);
     when(spaceService.getSpaceById("1")).thenReturn(space);
-    when(spaceService.isPublisher(space, identity.getUserId())).thenReturn(false);
 
     // When
+    COMMONS_UTILS.when(() -> CommonsUtils.getService(SpaceService.class)).thenReturn(spaceService);
     allowedTargets = newsTargetingService.getAllowedTargets(identity);
 
     // Then
     assertNotNull(allowedTargets);
     assertEquals(0, allowedTargets.size());
 
-    // Given
-    when(spaceService.isPublisher(space, identity.getUserId())).thenReturn(true);
+    try (MockedStatic<NewsUtils> newsUtils = mockStatic(NewsUtils.class)) {
+      // Given
+      newsUtils.when(() -> NewsUtils.canPublishNews(space.getId(), identity)).thenReturn(true);
 
-    // When
-    allowedTargets = newsTargetingService.getAllowedTargets(identity);
+      // When
+      allowedTargets = newsTargetingService.getAllowedTargets(identity);
 
-    // Then
-    assertNotNull(allowedTargets);
-    assertEquals(1, allowedTargets.size());
-    assertEquals("latestNews", allowedTargets.get(0).getName());
-    assertTrue(allowedTargets.get(0).isRestrictedAudience());
+      // Then
+      assertNotNull(allowedTargets);
+      assertEquals(1, allowedTargets.size());
+      assertEquals("latestNews", allowedTargets.get(0).getName());
+      assertFalse(allowedTargets.get(0).isRestrictedAudience());
 
-    // Given
-    Metadata testNews = new Metadata();
-    testNews.setName("testNews");
-    testNews.setCreatedDate(200);
-    HashMap<String, String> testNewsProperties = new HashMap<>();
-    testNewsProperties.put("label", "test news");
-    testNewsProperties.put(NewsUtils.TARGET_PERMISSIONS, "/platform/administrators");
-    testNews.setProperties(testNewsProperties);
-    testNews.setId(3);
-    newsTargets.add(testNews);
+      // Given
+      Metadata testNews = new Metadata();
+      testNews.setName("testNews");
+      testNews.setCreatedDate(200);
+      HashMap<String, String> testNewsProperties = new HashMap<>();
+      testNewsProperties.put("label", "test news");
+      testNewsProperties.put(NewsUtils.TARGET_PERMISSIONS, "/platform/administrators");
+      testNews.setProperties(testNewsProperties);
+      testNews.setId(3);
+      newsTargets.add(testNews);
 
-    when(organizationService.getGroupHandler()).thenReturn(groupHandler);
-    Group group = new GroupImpl();
-    group.setId("/platform/administrators");
-    group.setGroupName("Administrators");
+      when(organizationService.getGroupHandler()).thenReturn(groupHandler);
+      Group group = new GroupImpl();
+      group.setId("/platform/administrators");
+      group.setGroupName("Administrators");
 
-    when(groupHandler.findGroupById("/platform/administrators")).thenReturn(group);
-    when(identity.isMemberOf("/platform/administrators", "publisher")).thenReturn(false);
+      when(groupHandler.findGroupById("/platform/administrators")).thenReturn(group);
+      when(identity.isMemberOf("/platform/administrators", "publisher")).thenReturn(false);
 
-    // when
-    allowedTargets = newsTargetingService.getAllowedTargets(identity);
+      // when
+      allowedTargets = newsTargetingService.getAllowedTargets(identity);
 
-    // Then
-    assertNotNull(allowedTargets);
-    assertEquals(1, allowedTargets.size());
-    assertEquals("latestNews", allowedTargets.get(0).getName());
+      // Then
+      assertNotNull(allowedTargets);
+      assertEquals(1, allowedTargets.size());
+      assertEquals("latestNews", allowedTargets.get(0).getName());
 
-    // Given
-    when(identity.isMemberOf("/platform/administrators", "publisher")).thenReturn(true);
+      // Given
+      when(identity.isMemberOf("/platform/administrators", "publisher")).thenReturn(true);
 
-    // when
-    allowedTargets = newsTargetingService.getAllowedTargets(identity);
+      // when
+      allowedTargets = newsTargetingService.getAllowedTargets(identity);
 
-    // Then
-    assertNotNull(allowedTargets);
-    assertEquals(2, allowedTargets.size());
-    assertEquals("latestNews", allowedTargets.get(0).getName());
-    assertEquals("testNews", allowedTargets.get(1).getName());
-    assertTrue(allowedTargets.get(0).isRestrictedAudience());
+      // Then
+      assertNotNull(allowedTargets);
+      assertEquals(2, allowedTargets.size());
+      assertEquals("latestNews", allowedTargets.get(0).getName());
+      assertEquals("testNews", allowedTargets.get(1).getName());
+      assertFalse(allowedTargets.get(0).isRestrictedAudience());
 
-    // Given
-    when(spaceService.getSpaceById("1")).thenReturn(null);
+      // Given
+      when(spaceService.getSpaceById("1")).thenReturn(null);
 
-    // when
-    allowedTargets = newsTargetingService.getAllowedTargets(identity);
+      // when
+      allowedTargets = newsTargetingService.getAllowedTargets(identity);
 
-    // Then
-    assertNotNull(allowedTargets);
-    assertEquals(1, allowedTargets.size());
-    assertEquals("testNews", allowedTargets.get(0).getName());
+      // Then
+      assertNotNull(allowedTargets);
+      assertEquals(1, allowedTargets.size());
+      assertEquals("testNews", allowedTargets.get(0).getName());
 
-    // Given
-    when(groupHandler.findGroupById("/platform/administrators")).thenReturn(null);
+      // Given
+      when(groupHandler.findGroupById("/platform/administrators")).thenReturn(null);
 
-    // when
-    allowedTargets = newsTargetingService.getAllowedTargets(identity);
+      // when
+      allowedTargets = newsTargetingService.getAllowedTargets(identity);
 
-    // Then
-    assertNotNull(allowedTargets);
-    assertEquals(0, allowedTargets.size());
+      // Then
+      assertNotNull(allowedTargets);
+      assertEquals(0, allowedTargets.size());
+    }
   }
 
   @Test
@@ -386,7 +387,6 @@ public class NewsTargetingImplTest {
     EXO_CONTAINER_CONTEXT.when(() -> ExoContainerContext.getService(IdentityRegistry.class)).thenReturn(identityRegistry);
     EXO_CONTAINER_CONTEXT.when(() -> ExoContainerContext.getCurrentContainer()).thenReturn(container);
     when(spaceService.getSpaceById("1")).thenReturn(space);
-    when(spaceService.isMember(space, identity.getUserId())).thenReturn(true);
     EXO_CONTAINER_CONTEXT.when(() -> ExoContainerContext.getService(Authenticator.class)).thenReturn(authenticator);
     when(authenticator.createIdentity("root")).thenReturn(identity);
     List<MembershipEntry> memberships = new LinkedList<>();
