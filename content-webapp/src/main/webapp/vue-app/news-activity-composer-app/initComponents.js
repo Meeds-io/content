@@ -17,8 +17,7 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
- 
-import ExoNewsActivityComposer  from './components/ExoNewsActivityComposer.vue';
+
 import ExoNewsFileDrop from './components/ExoNewsFileDrop.vue';
 import ContentRichEditor from './components/ContentRichEditor.vue';
 
@@ -26,7 +25,6 @@ import * as  newsServices from '../services/newsServices.js';
 import * as newsConstants from '../services/newsConstants.js';
 
 const components = {
-  'exo-news-activity-composer': ExoNewsActivityComposer,
   'exo-news-file-drop': ExoNewsFileDrop,
   'content-rich-editor': ContentRichEditor
 };

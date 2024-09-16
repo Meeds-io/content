@@ -27,14 +27,16 @@
       @click="$root.$emit('open-schedule-drawer','editScheduledNews')">
       {{ $t("news.composer.btn.scheduleArticle") }}
     </v-btn>
-    <exo-news-details-action-menu
+    <exo-news-details-action-menu-app
       v-if="publicationState !== 'staged' && (showEditButton || showDeleteButton || showPublishButton)"
       class="pull-right"
       :news="news"
-      :news-published="newsPublished"
+      :current-app="currentApplication"
       :show-edit-button="showEditButton"
       :show-delete-button="showDeleteButton"
-      :show-publish-button="showPublishButton" />
+      :show-publish-button="showPublishButton"
+      @delete-article="$emit('delete-article')"
+      @edit-article="$emit('edit-article')" />
     <exo-news-favorite-action
       v-if="displayFavoriteButton"
       :news="news"
@@ -85,6 +87,7 @@ export default {
   data() {
     return {
       spaceId: null,
+      currentApplication: 'newsDetails',
       updaterIdentity: null,
       BYTES_IN_MB: 1048576,
       dateFormat: {
