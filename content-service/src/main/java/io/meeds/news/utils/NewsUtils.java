@@ -87,18 +87,17 @@ public class NewsUtils {
 
   public static final String  ALL_NEWS_AUDIENCE               = "all";
 
-  private static final String PUBLISHER_MEMBERSHIP_NAME       = "publisher";
+  public static final String PUBLISHER_MEMBERSHIP_NAME       = "publisher";
 
-  private static final String MANAGER_MEMBERSHIP_NAME         = "manager";
+  public static final String MANAGER_MEMBERSHIP_NAME         = "manager";
 
-  private static final String PLATFORM_WEB_CONTRIBUTORS_GROUP = "/platform/web-contributors";
-
-  public static final String  SHARE_CONTENT_ATTACHMENTS       = "content.share.attachments";
+  public static final String PLATFORM_WEB_CONTRIBUTORS_GROUP = "/platform/web-contributors";
 
   public static final String  ADD_ARTICLE_TRANSLATION         = "content.add.article.translation";
 
   public static final String  REMOVE_ARTICLE_TRANSLATION      = "content.remove.article.translation";
 
+  public static final String SHARE_CONTENT_ATTACHMENTS       = "content.share.attachments";
 
   public enum NewsObjectType {
     DRAFT, LATEST_DRAFT, ARTICLE;
@@ -196,9 +195,12 @@ public class NewsUtils {
     if (!StringUtils.isBlank(spaceId)) {
       SpaceService spaceService = CommonsUtils.getService(SpaceService.class);
       Space space = spaceService.getSpaceById(spaceId);
-      return currentIdentity != null && space != null && spaceService.isMember(space, currentIdentity.getUserId())
+      return currentIdentity != null
+          && space != null
           && (currentIdentity.isMemberOf(PLATFORM_WEB_CONTRIBUTORS_GROUP, PUBLISHER_MEMBERSHIP_NAME)
-              || spaceService.isPublisher(space, currentIdentity.getUserId()));
+              || spaceService.isPublisher(space, currentIdentity.getUserId())
+              || spaceService.isManager(space, currentIdentity.getUserId())
+              || spaceService.isSuperManager(currentIdentity.getUserId()));
     }
     return currentIdentity != null && currentIdentity.isMemberOf(PLATFORM_WEB_CONTRIBUTORS_GROUP, PUBLISHER_MEMBERSHIP_NAME);
   }

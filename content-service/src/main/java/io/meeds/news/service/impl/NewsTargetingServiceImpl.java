@@ -96,7 +96,7 @@ public class NewsTargetingServiceImpl implements NewsTargetingService {
                                                Space targetPermissionSpace =
                                                                            spaceService.getSpaceById(targetMetadataPermission.split(SPACE_TARGET_PERMISSION_PREFIX)[1]);
                                                return targetPermissionSpace != null
-                                                   && spaceService.isPublisher(targetPermissionSpace, userIdentity.getUserId());
+                                                   && NewsUtils.canPublishNews(targetPermissionSpace.getId(), userIdentity);
                                              }
                                              return false;
                                            }
@@ -267,7 +267,7 @@ public class NewsTargetingServiceImpl implements NewsTargetingService {
               permissionEntity.setRemoteId(space.getPrettyName());
               permissionEntity.setAvatar(space.getAvatarUrl());
               if (!isSpacePublisher) {
-                isSpacePublisher = spaceService.isPublisher(space, currentIdentity.getUserId());
+                isSpacePublisher = NewsUtils.canPublishNews(space.getId(), currentIdentity);
               }
             }
           }
