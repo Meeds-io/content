@@ -186,10 +186,6 @@ public class NewsTargetingImplTest {
   @Test
   public void testGetAllowedTargets() throws Exception {
     // Given
-    NewsTargetingServiceImpl newsTargetingService = new NewsTargetingServiceImpl(metadataService,
-                                                                                 identityManager,
-                                                                                 spaceService,
-                                                                                 organizationService);
     EXO_CONTAINER_CONTEXT.when(() -> ExoContainerContext.getService(IdentityRegistry.class)).thenReturn(identityRegistry);
     org.exoplatform.services.security.Identity identity = mock(org.exoplatform.services.security.Identity.class);
     REST_UTILS.when(RestUtils::getCurrentUser).thenReturn("user");
