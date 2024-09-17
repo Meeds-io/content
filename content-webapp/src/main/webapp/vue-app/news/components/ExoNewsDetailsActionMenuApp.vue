@@ -27,7 +27,7 @@
     left
     offset-y
     min-width="108px"
-    class="px-0 mx-2">
+    class="px-0 mx-2 pa-0 py-0 overflow-hidden">
     <template #activator="{ on, attrs }">
       <v-btn
         v-bind="attrs"
@@ -39,26 +39,52 @@
       </v-btn>
     </template>
 
-    <v-list>
-      <v-list-item v-if="showEditButton" @click="$emit('edit')">
-        <v-list-item-title>
+    <v-list class="pa-0">
+      <v-list-item class="px-4 action-menu-item d-flex align-center" v-if="showEditButton" @click="$emit('edit-article', news)">
+        <v-icon
+          size="16">
+          fas fa-edit
+        </v-icon>
+        <span class="ps-2 pt-1">
           {{ $t('news.details.header.menu.edit') }}
-        </v-list-item-title>
+        </span>
       </v-list-item>
-      <v-list-item v-if="showShareButton && news.activityId" @click="$root.$emit('activity-share-drawer-open', news.activityId, 'newsApp')">
-        <v-list-item-title>
+      <v-list-item  class="px-4 action-menu-item d-flex align-center" v-if="showShareButton && news.activityId" @click="$root.$emit('activity-share-drawer-open', news.activityId, currentApp)">
+        <v-icon
+          size="16">
+          fa fa-share
+        </v-icon>
+        <span class="ps-2 pt-1">
           {{ $t('news.details.header.menu.share') }}
-        </v-list-item-title>
+        </span>
       </v-list-item>
-      <v-list-item v-if="showResumeButton" @click="$emit('edit')">
-        <v-list-item-title>
+      <v-list-item class="px-4 action-menu-item d-flex align-center" v-if="showResumeButton" @click="$emit('edit-article', news)">
+        <v-icon
+          size="16">
+          fas fa-edit
+        </v-icon>
+        <span class="ps-2 pt-1">
           {{ $t('news.details.header.menu.resume') }}
-        </v-list-item-title>
+        </span>
       </v-list-item>
-      <v-list-item v-if="showDeleteButton" @click="$emit('delete')">
-        <v-list-item-title>
+      <v-list-item class="px-4 action-menu-item" v-if="showPublishButton" @click="$root.$emit('open-edit-publishing-drawer')">
+        <v-icon
+          size="16">
+          fa-solid fa-paper-plane
+        </v-icon>
+        <span class="ps-2 pt-1">
+          {{ $t('news.details.header.menu.publish') }}
+        </span>
+      </v-list-item>
+      <v-list-item class="px-4 action-menu-item d-flex align-center deleteArticleOption" v-if="showDeleteButton" @click="$emit('delete-article')">
+        <v-icon
+          size="16"
+          class="clickable icon-menu deleteArticleIcon ">
+          fas fa-trash
+        </v-icon>
+        <span class="ps-2 pt-1 deleteArticleText">
           {{ $t('news.details.header.menu.delete') }}
-        </v-list-item-title>
+        </span>
       </v-list-item>
     </v-list>
   </v-menu>
@@ -92,6 +118,16 @@ export default {
       required: false,
       default: false
     },
+    showPublishButton: {
+      type: Boolean,
+      required: false,
+      default: false
+    },
+    currentApp: {
+      type: String,
+      required: false,
+      default: null
+    },
   },
   data: () => ({
     actionMenu: null,
@@ -103,6 +139,11 @@ export default {
           this.actionMenu = false;
         }, 200);
       }
+    });
+  },
+  mounted() {
+    $('#UIPortalApplication').parent().click(() => {
+      this.actionMenu = false;
     });
   },
 };

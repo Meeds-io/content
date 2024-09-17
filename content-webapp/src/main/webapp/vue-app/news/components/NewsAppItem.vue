@@ -42,8 +42,9 @@
           :show-delete-button="news.canDelete"
           :show-share-button="showShareButton && !isDraftsFilter"
           :show-resume-button="news.draft && isDraftsFilter"
-          @delete="deleteConfirmDialog"
-          @edit="editLink(news)" />
+          :current-app="currentApplication"
+          @delete-article="deleteConfirmDialog"
+          @edit-article="editLink(news)" />
         <exo-confirm-dialog
           ref="deleteConfirmDialog"
           :message="confirmDeleteNewsDialogMessage"
@@ -130,6 +131,7 @@ export default {
   },
   data: () => ({
     showShareButton: true,
+    currentApplication: 'newsApp',
     dateTimeFormat: {
       hour: '2-digit',
       minute: '2-digit',
