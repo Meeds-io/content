@@ -19,7 +19,7 @@
  */
 
 import ExoNewsDetails  from './components/ExoNewsDetails.vue';
-import ExoNewsDetailsActionMenu from './components/ExoNewsDetailsActionMenu.vue';
+import ExoNewsDetailsActionMenuApp from '../news/components/ExoNewsDetailsActionMenuApp.vue';
 import ExoNewsDetailsActivity from './components/ExoNewsDetailsActivity.vue';
 import ExoNewsDetailsToolBar from './components/ExoNewsDetailsToolBar.vue';
 import ExoNewsDetailsToolBarMobile from './components/mobile/ExoNewsDetailsToolBarMobile.vue';
@@ -32,7 +32,7 @@ import ExoNewsFavoriteAction from './components/ExoNewsFavoriteAction.vue';
 const components = {
   'exo-news-details': ExoNewsDetails,
   'exo-news-details-activity': ExoNewsDetailsActivity,
-  'exo-news-details-action-menu': ExoNewsDetailsActionMenu,
+  'exo-news-details-action-menu-app': ExoNewsDetailsActionMenuApp,
   'exo-news-details-toolbar': ExoNewsDetailsToolBar,
   'exo-news-details-toolbar-mobile': ExoNewsDetailsToolBarMobile,
   'exo-news-details-body-mobile': ExoNewsDetailsBodyMobile,
