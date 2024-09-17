@@ -39,7 +39,9 @@
         :activity-id="activityId"
         :show-edit-button="showEditButton"
         :show-delete-button="showDeleteButton"
-        :show-publish-button="showPublishButton" />
+        :show-publish-button="showPublishButton"
+        @delete-article="deleteConfirmDialog"
+        @edit-article="editLink" />
       <exo-news-details-body
         :current-user="currentUser"
         :news="news"
@@ -145,8 +147,6 @@ export default {
     }
   },
   created() {
-    this.$root.$on('delete-news', this.deleteConfirmDialog);
-    this.$root.$on('edit-news', this.editLink);
     if (!this.news || !this.news.spaceId) {
       this.getNewsById(this.newsId);
     } else {
