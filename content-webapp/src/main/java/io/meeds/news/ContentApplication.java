@@ -17,32 +17,24 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
- 
-import ExoNewsActivityComposer  from './components/ExoNewsActivityComposer.vue';
-import ExoNewsFileDrop from './components/ExoNewsFileDrop.vue';
-import ContentRichEditor from './components/ContentRichEditor.vue';
+package io.meeds.news;
+import io.meeds.spring.AvailableIntegration;
+import io.meeds.spring.kernel.PortalApplicationContextInitializer;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.liquibase.LiquibaseAutoConfiguration;
+import org.springframework.context.annotation.PropertySource;
 
-import * as  newsServices from '../services/newsServices.js';
-import * as newsConstants from '../services/newsConstants.js';
+@SpringBootApplication(scanBasePackages = {
+    ContentApplication.MODULE_NAME,
+    AvailableIntegration.KERNEL_MODULE,
+    AvailableIntegration.JPA_MODULE,
+    AvailableIntegration.WEB_MODULE,
+  }, exclude = {
+    LiquibaseAutoConfiguration.class,
+})
+@PropertySource("classpath:application.properties")
+@PropertySource("classpath:application-common.properties")
+public class ContentApplication extends PortalApplicationContextInitializer {
+  public static final String MODULE_NAME = "io.meeds.news";
 
-const components = {
-  'exo-news-activity-composer': ExoNewsActivityComposer,
-  'exo-news-file-drop': ExoNewsFileDrop,
-  'content-rich-editor': ContentRichEditor
-};
-
-for (const key in components) {
-  Vue.component(key, components[key]);
-}
-
-if (!Vue.prototype.$newsServices) {
-  window.Object.defineProperty(Vue.prototype, '$newsServices', {
-    value: newsServices,
-  });
-}
-
-if (!Vue.prototype.$newsConstants) {
-  window.Object.defineProperty(Vue.prototype, '$newsConstants', {
-    value: newsConstants,
-  });
 }

@@ -25,8 +25,8 @@
         tile
         size="25">
         <img
-          v-if="news.illustrationURL"
-          :alt="activityTitle"
+          v-if="news?.illustrationURL"
+          :alt="featuredImageAltText"
           :src="`${news.illustrationURL}&size=25x25`">
         <img
           v-else
@@ -61,13 +61,26 @@ export default {
     },
   },
   data: () => ({
+    news: null,
     activityTitle: '',
     url: '',
     isFavorite: true,
     newsObjectType: 'article',
   }),
+  computed: {
+    featuredImageAltText() {
+      return this.news?.properties?.featuredImage?.altText || this.activityTitle;
+    }
+  },
   created() {
-    this.$newsServices.getNewsById(this.id, false, this.newsObjectType)
+    let newsId = this.id;
+    let lang = null;
+    if (this.id.includes('-')) {
+      const parts = this.id.split('-');
+      newsId = parts[0];
+      lang = parts[1];
+    }
+    this.$newsServices.getNewsById(newsId, false, this.newsObjectType, lang)
       .then(news => {
         this.activityTitle = news.title;
         this.url = news.url;

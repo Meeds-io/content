@@ -37,6 +37,7 @@
           <v-img
             class="articleImage fill-height"
             :src="showArticleImage && item.illustrationURL !== null ? item.illustrationURL.concat('&size=1420x222').toString() : '/content/images/news.png'"
+            :alt="item?.properties?.featuredImage?.altText"
             eager />
           <v-container class="slide-text-container d-flex text-center">
             <div class="flex flex-column carouselNewsInfo">
@@ -62,7 +63,7 @@
                 </span>
               </a>
               <div class="flex flex-row flex-grow-1 align-center mx-4 my-2">
-                <span v-if="showArticleSummary" class="white--text articleSummary"> {{ item.summary }}</span>
+                <span v-if="showArticleSummary" class="white--text articleSummary"> {{ item?.properties?.summary }}</span>
                 <news-slider-view-item
                   :author="item.author"
                   :author-display-name="item.authorDisplayName"

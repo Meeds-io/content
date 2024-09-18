@@ -42,7 +42,9 @@
         :show-publish-button="showPublishButton" />
       <exo-news-details-body
         :current-user="currentUser"
-        :news="news" />
+        :news="news"
+        :translations="translations"
+        :selected-translation="selectedTranslation" />
     </div>
     <schedule-news-drawer
       v-if="currentUser"
@@ -103,6 +105,18 @@ export default {
       required: false,
       default: false
     },
+    translations: {
+      type: Array,
+      default: () => {
+        return [];
+      }
+    },
+    selectedTranslation: {
+      type: Object,
+      default: () => {
+        return {};
+      }
+    }
   },
   data() {
     return {
@@ -173,7 +187,10 @@ export default {
     },
     editLink() {
       const newsType = this.activityId && this.activityId !== '' ? this.$newsConstants.newsObjectType.LATEST_DRAFT : this.newsType;
-      const editUrl = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news/editor?spaceId=${this.spaceId}&newsId=${this.newsId}&activityId=${this.activityId}&type=${newsType}`;
+      let editUrl = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news/editor?spaceId=${this.spaceId}&newsId=${this.newsId}&activityId=${this.activityId}&spaceName=${this.currentSpace.prettyName}&type=${newsType}`;
+      if (this.news.lang) {
+        editUrl = `${editUrl}&lang=${this.news.lang}`;
+      }
       window.open(editUrl, '_target');
     },
     deleteConfirmDialog() {
@@ -245,7 +262,7 @@ export default {
       }
     },
     getNewsById(newsId) {
-      this.$newsServices.getNewsById(newsId, false, this.processedNewsType)
+      this.$newsServices.getNewsById(newsId, false, this.processedNewsType, this.selectedTranslation.value)
         .then(news => {
           this.spaceId = news.spaceId;
           this.getSpaceById(this.spaceId);

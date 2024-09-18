@@ -1,9 +1,10 @@
-<%@page import="org.exoplatform.container.ExoContainerContext"%>
 <%@page import="org.exoplatform.services.security.ConversationState"%>
 <%@page import="org.exoplatform.services.security.Identity"%>
 <%@ page import="io.meeds.news.utils.NewsUtils" %>
 <%@ page import="org.exoplatform.web.PortalHttpServletResponseWrapper" %>
 <%@ page import="org.exoplatform.portal.application.PortalRequestContext" %>
+<%@ page import="org.exoplatform.commons.api.settings.ExoFeatureService" %>
+<%@ page import="org.exoplatform.commons.utils.CommonsUtils" %>
 <%@ taglib uri="http://java.sun.com/portlet_2_0" prefix="portlet" %>
 
 <portlet:defineObjects />
@@ -11,6 +12,13 @@
 
 <div id="newsListViewApp" class="VuetifyApp">
   <%
+    String applicationId;
+    Object applicationIdParam = request.getAttribute("applicationId");
+    if (applicationIdParam instanceof String[]) {
+      applicationId = ((String[]) applicationIdParam)[0];
+    } else {
+      applicationId = (String) applicationIdParam;
+    }
     int generatedId = (int) (Math.random() * 1000000l);
     String appId = "news-list-view-" + generatedId;
     String[] viewTemplateParams = (String[]) request.getAttribute("viewTemplate");
@@ -29,7 +37,7 @@
     String[] seeAllUrlParams = (String[]) request.getAttribute("seeAllUrl");
     String viewTemplate = viewTemplateParams == null || viewTemplateParams.length == 0 ? "": viewTemplateParams[0];
     String newsTarget = newsTargetParams == null || newsTargetParams.length == 0 ? "": newsTargetParams[0];
-    String header = headerParams == null || headerParams.length == 0 ? "": headerParams[0];
+    String headerTitle = headerParams == null || headerParams.length == 0 ? "": headerParams[0];
     String limit = limitParams == null || limitParams.length == 0 ? "4": limitParams[0];
     String showHeader = showHeaderParams == null || showHeaderParams.length == 0 ? "true": showHeaderParams[0];
     String showSeeAll = showSeeAllParams == null || showSeeAllParams.length == 0 ? "true": showSeeAllParams[0];
@@ -50,7 +58,7 @@
 
     PortalRequestContext rcontext = PortalRequestContext.getCurrentInstance();
     PortalHttpServletResponseWrapper responseWrapper = ( PortalHttpServletResponseWrapper ) rcontext.getResponse();
-    String newsListUrl = "/portal/rest/v1/news/byTarget/" + newsTarget + "?offset=0&limit=" + limit + "&returnSize=true";
+    String newsListUrl = "/content/rest/contents/byTarget/" + newsTarget + "?offset=0&limit=" + limit + "&returnSize=true";
     responseWrapper.addHeader("Link", "<" + newsListUrl + ">; rel=prefetch; as=fetch; crossorigin=use-credentials", false);
     boolean canManageNewsPublishTargets = NewsUtils.canManageNewsPublishTargets(currentIdentity);
   %>
@@ -58,11 +66,12 @@
     <script type="text/javascript">
       eXo.env.portal.canManageNewsPublishTargets = <%=canManageNewsPublishTargets%>;
       require(['PORTLET/content/NewsListView'], app => app.init({
+        applicationId: '<%=applicationId%>',
         appId: '<%=appId%>',
         saveSettingsURL: <%= "'" + saveSettingsURL + "'" %>,
         viewTemplate: <%= viewTemplate == null ? null : "'" + viewTemplate + "'" %>,
         newsTarget: <%= newsTarget == null ? null : "'" + newsTarget + "'" %>,
-        header: <%= header == null ? null : "'" + header.replace("'", "\\'") + "'" %>,
+        headerTitle: <%= headerTitle == null ? null : "'" + headerTitle.replace("'", "\\'") + "'" %>,
         showHeader: <%= showHeader == null ? null : "'" + showHeader + "'" %>,
         limit: <%= limit == null ? null : "'" + limit + "'" %>,
         showSeeAll: <%= showSeeAll == null ? null : "'" + showSeeAll + "'" %>,

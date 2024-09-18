@@ -168,14 +168,20 @@ export default {
   },
   methods: {
     getEditUrl(news) {
-      let editUrl = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news/editor?newsId=${news.newsId}`;
+      let editUrl = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news/editor?newsId=${news.targetPageId || news.newsId}`;
       if (news.spaceId) {
         editUrl += `&spaceId=${news.spaceId}`;
       }
       if (news.activityId) {
         editUrl += `&activityId=${news.activityId}`;
       }
+      if (news.spaceUrl) {
+        editUrl += `&spaceName=${news.spaceUrl.substring(news.spaceUrl.lastIndexOf('/') + 1)}`;
+      }
       editUrl += `&type=${news.activityId && 'latest_draft' || 'draft'}`;
+      if (news.lang) {
+        editUrl += `&lang=${news.lang}`;
+      }
       return editUrl;
     },
     editLink(news) {

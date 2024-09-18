@@ -50,9 +50,9 @@ import io.meeds.news.utils.NewsUtils;
 
 public class NewsIndexingServiceConnector extends ElasticIndexingServiceConnector {
 
-  public static final String    TYPE = "news";
+  public static final String    TYPE             = "news";
 
-  private static final Log      LOG  = ExoLogger.getLogger(NewsIndexingServiceConnector.class);
+  private static final Log      LOG              = ExoLogger.getLogger(NewsIndexingServiceConnector.class);
 
   private final NewsService     newsService;
 
@@ -61,6 +61,7 @@ public class NewsIndexingServiceConnector extends ElasticIndexingServiceConnecto
   private final ActivityManager activityManager;
 
   private final MetadataService metadataService;
+
 
   public NewsIndexingServiceConnector(IdentityManager identityManager,
                                       InitParams initParams,
@@ -100,8 +101,14 @@ public class NewsIndexingServiceConnector extends ElasticIndexingServiceConnecto
     }
     LOG.debug("Index document for news id={}", id);
     News news = null;
+    String newsId = null;
+    String lang = null;
     try {
-      news = newsService.getNewsArticleById(id);
+      if (StringUtils.contains(id, "-")) {
+        newsId = StringUtils.substringBefore(id, "-");
+        lang = StringUtils.substringAfter(id, "-");
+      }
+      news = newsId != null ? newsService.getNewsArticleByIdAndLang(newsId, lang) : newsService.getNewsArticleById(id);
     } catch (Exception e) {
       LOG.error("Error when getting the news " + id, e);
     }
@@ -114,7 +121,10 @@ public class NewsIndexingServiceConnector extends ElasticIndexingServiceConnecto
     fields.put("title", news.getTitle());
 
     String body = news.getBody();
-    String summary = news.getSummary();
+    String summary = "";
+    if (news.getProperties() != null) {
+      summary = news.getProperties().getSummary();
+    }
     if (StringUtils.isBlank(body)) {
       body = news.getTitle();
     }
@@ -183,12 +193,13 @@ public class NewsIndexingServiceConnector extends ElasticIndexingServiceConnecto
     if (news.getUpdateDate() != null) {
       fields.put("lastUpdatedTime", String.valueOf(news.getUpdateDate().getTime()));
     }
+    fields.put("lang", news.getLang());
     DocumentWithMetadata document = new DocumentWithMetadata();
     document.setId(id);
     document.setLastUpdatedDate(news.getUpdateDate());
     document.setPermissions(Collections.singleton(ownerIdentityId));
     document.setFields(fields);
-    addDocumentMetadata(document, news.getId());
+    addDocumentMetadata(document, id);
 
     return document;
   }

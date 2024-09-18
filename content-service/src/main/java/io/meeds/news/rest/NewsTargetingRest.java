@@ -26,125 +26,114 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import javax.annotation.security.RolesAllowed;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.DELETE;
-import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.PUT;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
-import javax.ws.rs.core.Context;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
+
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import io.swagger.v3.oas.annotations.Parameter;
 import org.apache.commons.lang3.StringUtils;
-import org.picocontainer.Startable;
 
 import org.exoplatform.container.ExoContainerContext;
 import org.exoplatform.container.PortalContainer;
 import org.exoplatform.container.component.RequestLifeCycle;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
-import org.exoplatform.services.rest.resource.ResourceContainer;
 import org.exoplatform.services.security.ConversationState;
 import org.exoplatform.social.metadata.model.Metadata;
 
 import io.meeds.news.service.NewsTargetingService;
 import io.meeds.news.utils.NewsUtils;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.annotation.Secured;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-@Path("v1/news/targeting")
-@Tag(name = "v1/news/targeting", description = "Manage news targeting operations")
-public class NewsTargetingRestResourcesV1 implements ResourceContainer, Startable {
+@RestController
+@RequestMapping("targeting")
+@Tag(name = "content/rest/targeting", description = "Manage targeting operations")
+public class NewsTargetingRest {
 
-  private static final Log         LOG                     = ExoLogger.getLogger(NewsTargetingRestResourcesV1.class);
+  private static final Log         LOG                     = ExoLogger.getLogger(NewsTargetingRest.class);
 
+  @Autowired
   private NewsTargetingService     newsTargetingService;
+
+  @Autowired
+  private PortalContainer          container;
 
   private ScheduledExecutorService scheduledExecutor;
 
-  private PortalContainer          container;
-
   private Map<String, String>      newsTargetToDeleteQueue = new HashMap<>();
 
-  public NewsTargetingRestResourcesV1(NewsTargetingService newsTargetingService, PortalContainer container) {
-    this.newsTargetingService = newsTargetingService;
-    this.container = container;
-  }
 
-  @Override
-  public void start() {
+  @PostConstruct
+  public void init() {
     scheduledExecutor = Executors.newScheduledThreadPool(1);
   }
 
-  @Override
-  public void stop() {
+  @PreDestroy
+  public void destroy() {
     if (scheduledExecutor != null) {
       scheduledExecutor.shutdown();
     }
   }
 
-  @GET
-  @Produces(MediaType.APPLICATION_JSON)
-  @RolesAllowed("users")
+  @GetMapping(produces = MediaType.APPLICATION_JSON)
+  @Secured("users")
   @Operation(summary = "Get all news targets", method = "GET", description = "Get all news targets")
-  @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "Request fulfilled"),
-      @ApiResponse(responseCode = "500", description = "Internal server error") })
-  public Response getAllTargets(@Context
-  HttpServletRequest request) {
+  @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Request fulfilled"),
+          @ApiResponse(responseCode = "500", description = "Internal server error")})
+  public ResponseEntity<List<NewsTargetingEntity>> getAllTargets() {
     try {
       List<NewsTargetingEntity> targets = newsTargetingService.getAllTargets();
-      return Response.ok(targets).build();
+      return ResponseEntity.ok(targets);
     } catch (Exception e) {
       LOG.error("Error when getting the news targets", e);
-      return Response.serverError().build();
+      return ResponseEntity.internalServerError().build();
     }
   }
 
-  @Path("allowed")
-  @GET
-  @Produces(MediaType.APPLICATION_JSON)
-  @RolesAllowed("users")
+  @GetMapping(path = "allowed", produces = MediaType.APPLICATION_JSON)
+  @Secured("users")
   @Operation(summary = "Get all allowed news targets of the current user", method = "GET", description = "Get all allowed news targets of the current user")
-  @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "Request fulfilled"),
-      @ApiResponse(responseCode = "500", description = "Internal server error") })
-  public Response getAllowedTargets(@Context
-  HttpServletRequest request) {
+  @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Request fulfilled"),
+          @ApiResponse(responseCode = "500", description = "Internal server error")})
+  public ResponseEntity<List<NewsTargetingEntity>> getAllowedTargets() {
     org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
     try {
       List<NewsTargetingEntity> allowedTargets = newsTargetingService.getAllowedTargets(currentIdentity);
-      return Response.ok(allowedTargets).build();
+      return ResponseEntity.ok(allowedTargets);
     } catch (Exception e) {
       LOG.error("Error when getting allowed news targets for the user " + currentIdentity.getUserId(), e);
-      return Response.serverError().build();
+      return ResponseEntity.internalServerError().build();
     }
   }
 
-  @DELETE
-  @Path("{targetName}")
-  @Produces(MediaType.APPLICATION_JSON)
-  @RolesAllowed("users")
+  @DeleteMapping(path = "{targetName}", produces = MediaType.APPLICATION_JSON)
+  @Secured("users")
   @Operation(summary = "Delete news target", method = "DELETE", description = "This deletes news target")
   @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "News target deleted"),
       @ApiResponse(responseCode = "400", description = "Invalid query input"),
       @ApiResponse(responseCode = "401", description = "User not authorized to delete the news target"),
       @ApiResponse(responseCode = "500", description = "Internal server error") })
-  public Response deleteTarget(@Context
-  HttpServletRequest request,
-                               @Parameter(description = "Target name", required = true)
-                               @PathParam("targetName")
+  public Response deleteTarget(@PathVariable("targetName")
                                String targetName,
-                               @Parameter(description = "Time to effectively delete news target", required = false)
-                               @QueryParam("delay")
+                               @Parameter(description = "Time to effectively delete news target")
+                               @RequestParam(name = "delay", required = false)
                                long delay) {
     org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
     try {
@@ -182,16 +171,12 @@ public class NewsTargetingRestResourcesV1 implements ResourceContainer, Startabl
     }
   }
 
-  @Path("{targetName}/undoDelete")
-  @POST
-  @RolesAllowed("users")
+  @PostMapping(path = "{targetName}/undoDelete")
+  @Secured("users")
   @Operation(summary = "Undo deleting news target if not yet effectively deleted", method = "POST", description = "Undo deleting news target if not yet effectively deleted")
   @ApiResponses(value = { @ApiResponse(responseCode = "400", description = "Invalid query input"),
       @ApiResponse(responseCode = "403", description = "Forbidden operation") })
-  public Response undoDeleteTarget(@Context
-  HttpServletRequest request,
-                                   @Parameter(description = "News target name identifier", required = true)
-                                   @PathParam("targetName")
+  public Response undoDeleteTarget(@PathVariable("targetName")
                                    String targetName) {
     if (StringUtils.isBlank(targetName)) {
       return Response.status(Response.Status.BAD_REQUEST).entity("Target name ist mandatory").build();
@@ -215,21 +200,17 @@ public class NewsTargetingRestResourcesV1 implements ResourceContainer, Startabl
     }
   }
 
-  @POST
-  @Consumes(MediaType.APPLICATION_JSON)
-  @Produces(MediaType.APPLICATION_JSON)
-  @RolesAllowed("users")
+  @PostMapping(consumes = MediaType.APPLICATION_JSON, produces = MediaType.APPLICATION_JSON)
+  @Secured("users")
   @Operation(summary = "Create news target", method = "POST", description = "Create news target")
   @ApiResponses(value = { @ApiResponse(responseCode = "401", description = "User not authorized to create news target"),
       @ApiResponse(responseCode = "403", description = "Forbidden operation"),
       @ApiResponse(responseCode = "409", description = "Conflict operation"),
-      @ApiResponse(responseCode = "500", description = "Internal server error") })
-  public Response createNewsTarget(@Context
-  HttpServletRequest request, @RequestBody(description = "News target to create", required = true)
-  NewsTargetingEntity newsTargetingEntity) {
+          @ApiResponse(responseCode = "500", description = "Internal server error")})
+  public Response createNewsTarget(@RequestBody NewsTargetingEntity newsTargetingEntity) {
     if (newsTargetingEntity.getProperties() == null
-        || newsTargetingEntity.getProperties().get(NewsUtils.TARGET_PERMISSIONS) == null
-        || newsTargetingEntity.getProperties().get(NewsUtils.TARGET_PERMISSIONS).isEmpty()) {
+            || newsTargetingEntity.getProperties().get(NewsUtils.TARGET_PERMISSIONS) == null
+            || newsTargetingEntity.getProperties().get(NewsUtils.TARGET_PERMISSIONS).isEmpty()) {
       return Response.status(Response.Status.FORBIDDEN).build();
     }
     org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
@@ -252,21 +233,16 @@ public class NewsTargetingRestResourcesV1 implements ResourceContainer, Startabl
     }
   }
 
-  @PUT
-  @Path("{originalTargetName}")
-  @Consumes(MediaType.APPLICATION_JSON)
-  @Produces(MediaType.APPLICATION_JSON)
-  @RolesAllowed("users")
+  @PutMapping(path = "{originalTargetName}", consumes = MediaType.APPLICATION_JSON, produces = MediaType.APPLICATION_JSON)
+  @Secured("users")
   @Operation(summary = "Update an existing news target", method = "PUT", description = "Update an existing news target")
   @ApiResponses(value = { @ApiResponse(responseCode = "401", description = "Unauthorized operation"),
       @ApiResponse(responseCode = "403", description = "Forbidden operation"),
       @ApiResponse(responseCode = "404", description = "Object not found"),
       @ApiResponse(responseCode = "409", description = "Conflict operation"),
       @ApiResponse(responseCode = "500", description = "Internal server error") })
-  public Response updateNewsTarget(@Parameter(description = "News target to create", required = true)
-  NewsTargetingEntity newsTargetingEntity,
-                                   @Parameter(description = "Original news target name", required = true)
-                                   @PathParam("originalTargetName")
+  public Response updateNewsTarget(@RequestBody NewsTargetingEntity newsTargetingEntity,
+                                   @PathVariable("originalTargetName")
                                    String originalTargetName) {
     if (newsTargetingEntity.getProperties() == null
         || newsTargetingEntity.getProperties().get(NewsUtils.TARGET_PERMISSIONS) == null

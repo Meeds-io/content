@@ -101,7 +101,11 @@
         <h3>{{ notFoundMessage }}</h3>
       </div>
       <div v-if="showLoadMoreButton" class="newsListPagination">
-        <div class="btn btn-block" @click="loadMore">{{ $t('news.app.loadMore') }}</div>
+        <v-btn
+          class="btn full-width"
+          @click="loadMore">
+          {{ $t('news.app.loadMore') }}
+        </v-btn>
       </div>
       <news-activity-sharing-spaces-drawer />
       <activity-share-drawer />
@@ -247,12 +251,16 @@ export default {
   },
   methods: {
     getDraftUrl(item) {
-      let draftUrl = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news/editor?newsId=${item.id}`;
+      let draftUrl = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news/editor`;
+      draftUrl += `?newsId=${item.activityId && item.targetPageId || item.id}`;
       if (item.spaceId) {
         draftUrl += `&spaceId=${item.spaceId}`;
       }
       if (item.activityId) {
         draftUrl += `&activityId=${item.activityId}`;
+      }
+      if (item.spaceUrl) {
+        draftUrl += `&spaceName=${item.spaceUrl.substring(item.spaceUrl.lastIndexOf('/') + 1)}`;
       }
       draftUrl += `&type=${item.activityId && 'latest_draft' || 'draft'}`;
       return draftUrl;
@@ -275,11 +283,11 @@ export default {
       const result = [];
 
       data.forEach((item) => {
-        const newsPublicationDate = item.publicationDate != null ? new Date(item.publicationDate.time) : null;
-        const newsUpdateDate = new Date(item.updateDate.time);
+        const newsPublicationDate = item.publicationDate != null ? new Date(item.publicationDate) : null;
+        const newsUpdateDate = new Date(item.updateDate);
         result.push({
           newsId: item.id,
-          newsText: this.getNewsText(item.summary, item.body),
+          newsText: this.getNewsText(item?.properties?.summary, item.body),
           illustrationURL: item.illustrationURL,
           title: item.title,
           updatedDate: this.isDraftsFilter ? newsPublicationDate : newsUpdateDate,

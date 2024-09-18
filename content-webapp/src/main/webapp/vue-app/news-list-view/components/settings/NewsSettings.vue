@@ -24,9 +24,9 @@
       <span
         v-if="showHeader"
         class="news-text-header text-truncate"
-        :title="newsHeader">{{ newsHeader }}</span>
+        :title="headerTitle">{{ headerTitle }}</span>
     </div>
-    <div :class="[showHeader && newsHeader ? 'd-flex flex-column me-2 mt-1' : 'd-flex flex-column me-2']">
+    <div :class="[showHeader && headerTitle ? 'd-flex flex-column me-2 mt-1' : 'd-flex flex-column me-2']">
       <v-icon
         v-if="canPublishNews && showSettingsIcon"
         :class="classButtonOpenSettings"
@@ -72,13 +72,16 @@ export default {
     }
   },
   data: () => ({
-    newsHeader: '',
     seeAllUrl: '',
     showHeader: false,
     showSeeAll: false,
     canPublishNews: false,
+    language: eXo?.env?.portal?.language,
   }),
   computed: {
+    headerTitle() {
+      return this.$root.headerTitle || '';
+    },
     showSettingsContainer(){
       return this.showHeader || this.showSeeAll || this.canPublishNews ;
     },
@@ -91,12 +94,10 @@ export default {
       this.canPublishNews = canPublishNews;
     });
     this.$root.$on('saved-news-settings', (newsTarget, selectedOptions) => {
-      this.newsHeader = selectedOptions.header;
       this.seeAllUrl = selectedOptions.seeAllUrl;
       this.showSeeAll = selectedOptions.showSeeAll;
       this.showHeader = selectedOptions.showHeader;
     });
-    this.newsHeader = this.$root.header;
     this.seeAllUrl = this.$root.seeAllUrl;
     this.showSeeAll = this.$root.showSeeAll;
     this.showHeader = this.$root.showHeader;

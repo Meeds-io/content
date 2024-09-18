@@ -19,7 +19,6 @@
  */
 package io.meeds.news.service;
 
-import java.util.Date;
 import java.util.List;
 
 import org.exoplatform.commons.exception.ObjectNotFoundException;
@@ -31,7 +30,9 @@ import org.exoplatform.wiki.model.Page;
 import io.meeds.news.filter.NewsFilter;
 import io.meeds.news.model.News;
 import io.meeds.news.search.NewsESSearchResult;
+import org.springframework.stereotype.Service;
 
+@Service
 public interface NewsService {
 
   /**
@@ -67,20 +68,6 @@ public interface NewsService {
    * @throws Exception if an error occurred
    */
   boolean canCreateNews(Space space, org.exoplatform.services.security.Identity currentIdentity) throws Exception;
-
-  /**
-   * Update a news If the uploadId of the news is null, the illustration is not
-   * updated. If the uploadId of the news is empty, the illustration is removed
-   * (if any).
-   * 
-   * @param news
-   * @param updater user attempting to update news
-   * @param post
-   * @param publish
-   * @return updated News
-   * @throws Exception
-   */
-  News updateNews(News news, String updater, Boolean post, boolean publish) throws Exception;
 
   /**
    * Update a news If the uploadId of the news is null, the illustration is not
@@ -131,30 +118,6 @@ public interface NewsService {
   void unpublishNews(String newsId, String publisher) throws Exception;
 
   /**
-   * Retrives a news identified by its technical identifier
-   * 
-   * @param newsId {@link News} identifier
-   * @param editMode access mode to news: whether to edit news to to view it.
-   * @return {@link News} if found else null
-   * @throws Exception when user doesn't have access to {@link News}
-   */
-  News getNewsById(String newsId, boolean editMode) throws Exception;
-
-  /**
-   * Retrives a news identified by its technical identifier
-   * 
-   * @param newsId {@link News} identifier
-   * @param currentIdentity user attempting to access news
-   * @param editMode access mode to news: whether to edit news to to view it.
-   * @return {@link News} if found else null
-   * @throws IllegalAccessException when user doesn't have access to
-   *           {@link News}
-   */
-  News getNewsById(String newsId,
-                   org.exoplatform.services.security.Identity currentIdentity,
-                   boolean editMode) throws IllegalAccessException;
-
-  /**
    * Retrieves a news identified by its technical identifier
    *
    * @param newsId {@link News} identifier
@@ -171,12 +134,39 @@ public interface NewsService {
                    String newsObjectType) throws IllegalAccessException;
 
   /**
+   * Retrieves a news identified by its technical identifier and corresponding translation
+   *
+   * @param newsId {@link News} identifier
+   * @param currentIdentity user attempting to access news
+   * @param editMode access mode to news: whether to edit news to to view it.
+   * @param newsObjectType news object type to be retrieved.
+   * @param lang news translate version
+   * @return {@link News} if found else null
+   * @throws IllegalAccessException when user doesn't have access to
+   *           {@link News}
+   */
+  News getNewsByIdAndLang(String newsId,
+                   org.exoplatform.services.security.Identity currentIdentity,
+                   boolean editMode,
+                   String newsObjectType,
+                   String lang) throws IllegalAccessException;
+
+  /**
    * Retrives a news identified by its technical identifier
    * 
    * @param newsId {@link News} identifier
    * @return {@link News} if found else null
    */
   News getNewsArticleById(String newsId);
+
+  /**
+   * Retrieves a news identified by its technical identifier
+   *
+   * @param newsId {@link News} identifier
+   * @param lang {@link News} news translation language
+   * @return {@link News} if found else null
+   */
+  News getNewsArticleByIdAndLang(String newsId, String lang);
 
   /**
    * Get all news
@@ -244,6 +234,21 @@ public interface NewsService {
   News getNewsByActivityId(String activityId,
                            org.exoplatform.services.security.Identity currentIdentity) throws IllegalAccessException,
                                                                                        ObjectNotFoundException;
+
+  /**
+   * Retrieves a {@link News} by its related activity identifier or its shared activity identifier
+   * @param activityId {@link ExoSocialActivity} identifier
+   * @param currentIdentity user attempting to access news
+   * @param lang {@link News} translation language
+   * @return {@link News} if found else null
+   * @throws IllegalAccessException when user doesn't have access to
+   *           {@link News} or {@link ExoSocialActivity}
+   * @throws ObjectNotFoundException when a {@link News} wasn't found for the given
+   *           activity identifier
+   */
+  News getNewsByActivityIdAndLang(String activityId,
+                                  org.exoplatform.services.security.Identity currentIdentity,
+                                  String lang) throws IllegalAccessException, ObjectNotFoundException;
 
   /**
    * Schedule publishing a News
@@ -345,10 +350,28 @@ public interface NewsService {
   void deleteArticle(News news, String articleCreator) throws Exception;
 
   /**
-   * @param draftArticleId
-   * @param draftArticleCreator
-   * @param deleteIllustration
+   * Deletes a draft article by its given id
+   *
+   * @param draftArticleId draft article id
+   * @param draftArticleCreator creator
    * @throws Exception when error occurs
    */
-  void deleteDraftArticle(String draftArticleId, String draftArticleCreator, boolean deleteIllustration) throws Exception;
+  void deleteDraftArticle(String draftArticleId, String draftArticleCreator) throws Exception;
+
+  /**
+   * Deletes an article version by its given id and lang
+   *
+   * @param articleId article id
+   * @param lang article version language
+   * @throws Exception when error occurs
+   */
+  void deleteVersionsByArticleIdAndLang(String articleId, String lang) throws Exception;
+
+  /**
+   * Get all article available languages by its given id
+   *
+   * @param articleId article id
+   * @throws Exception when error occurs
+   */
+  List<String> getArticleLanguages(String articleId, boolean withDrafts) throws Exception;
 }

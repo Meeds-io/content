@@ -60,11 +60,11 @@ const url = `/content/i18n/locale.portlet.news.News?lang=${lang}`;
 
 // getting locale resources
 export function init(params) {
+  const applicationId = params.applicationId;
   const appId = params.appId;
   const viewTemplate = params.viewTemplate;
   const saveSettingsURL = params.saveSettingsURL;
   const newsTarget = params.newsTarget;
-  const header = params.header;
   const limit = params.limit === '' ? '4' : params.limit;
   const showHeader = viewTemplate === 'NewsSlider' ? false: params.showHeader === 'true';
   const showSeeAll = params.showSeeAll === 'true' && !!params.seeAllUrl?.length;
@@ -81,10 +81,12 @@ export function init(params) {
     // init Vue app when locale resources are ready
     Vue.createApp({
       data: {
+        applicationId,
+        headerTranslations: null,
         saveSettingsURL,
         viewTemplate,
         newsTarget,
-        header,
+        headerTitle: null,
         limit,
         showHeader,
         showSeeAll,
@@ -95,13 +97,23 @@ export function init(params) {
         showArticleSpace,
         showArticleReactions,
         showArticleDate,
-        seeAllUrl
+        seeAllUrl,
+        defaultLanguage: eXo?.env?.portal?.defaultLanguage
+      },
+      created() {
+        Vue.prototype.$translationService.getTranslations('newsListView', applicationId, 'headerNameInput').then(translations => {
+          this.headerTranslations = translations;
+          this.headerTitle = translations?.[lang] || translations?.[this.defaultLanguage]
+                                                  || params.headerTitle;
+        });
       },
       template: `<news-list-view
                   id="${appId}"
+                  :application-id="applicationId"
+                  :header-translations="headerTranslations"
                   :view-template="viewTemplate"
                   :news-target="newsTarget"
-                  :header="header"
+                  :header-title="headerTitle"
                   :show-article-author="showArticleAuthor"
                   :show-article-image="showArticleImage"
                   :show-article-reactions="showArticleReactions"

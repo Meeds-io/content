@@ -65,6 +65,7 @@
               <v-img
                 v-if="typeof newsInfo[0] !== 'undefined'"
                 :src="newsInfo[0].illustrationURL"
+                :alt="newsInfo[0]?.properties?.featuredImage?.altText"
                 class="firstNewsImg"
                 aspect-ratio="2.3"
                 @click="openNews(newsInfo[0].url)">
@@ -105,7 +106,10 @@
                         tile
                         size="95"
                         class="mr-2 my-0">
-                        <v-img :src="item.illustrationURL" @click="openNews(item.url)" />
+                        <v-img
+                          :src="item.illustrationURL"
+                          :alt="item?.properties?.featuredImage?.altText"
+                          @click="openNews(item.url)" />
                       </v-list-item-avatar>
 
                       <v-list-item-content class="pt-0 pl-3">
@@ -142,6 +146,7 @@
               v-for="(slide, index) of newsInfo"
               :key="index"
               :src="slide.illustrationURL"
+              :alt="slide?.properties?.featuredImage?.altText"
               aspect-ratio="2.3"
               @click="openNews(slide.url)">
               <v-sheet

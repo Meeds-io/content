@@ -64,7 +64,7 @@ export default {
   }),
   computed: {
     newsId() {
-      return this.news?.id;
+      return this.news.lang && `${this.news.id}-${this.news.lang}` || this.news.id;
     },
     spaceId() {
       return this.news?.spaceId;

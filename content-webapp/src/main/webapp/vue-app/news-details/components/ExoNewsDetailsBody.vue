@@ -24,9 +24,9 @@
       <div :class="[illustrationURL ? 'newsDetails-header' : '']" class="newsDetails-header">
         <div v-if="illustrationURL" class="illustration center">
           <img
-            :src="illustrationURL.concat('&size=0x400').toString()"
+            :src="`${illustrationURL}&size=0x400`"
+            :alt="featuredImageAltText"
             class="newsDetailsImage illustrationPicture"
-            :alt="newsTitle"
             longdesc="#newsSummary">
         </div>
         <div class="newsDetails">
@@ -69,12 +69,12 @@
                       :format="dateFormat"
                       class="newsInformationValue newsPostedDate news-details-information ms-1" />
                   </template>
-                  <extension-registry-component
-                    v-if="translateExtension"
-                    :component="translateExtension"
-                    :params="params"
-                    element="div" />
-                  <span v-else-if="postedDate" class="newsInformationValue newsPostedDate news-details-information">- {{ postedDate }}</span>
+                  <div class="mb-1 ml-2">
+                    <content-translation-menu
+                        :translations="translations"
+                        :selected-translation="selectedTranslation"
+                        :article="news" />
+                  </div>
                 </div>
                 <div class="newsUpdater text-subtitle">
                   <div v-if="publicationState !== 'staged' && showUpdateInfo">
@@ -155,6 +155,18 @@ export default {
       required: false,
       default: null
     },
+    translations: {
+      type: Array,
+      default: () => {
+        return [];
+      }
+    },
+    selectedTranslation: {
+      type: Object,
+      default: () => {
+        return {};
+      }
+    }
   },
   data: () => ({
     dateFormat: {
@@ -166,19 +178,14 @@ export default {
       hour: '2-digit',
       minute: '2-digit',
     },
-    translateExtension: null,
     newsTitleContent: null,
     newsSummaryContent: null,
     newsBodyContent: null
   }),
   created() {
     this.setNewsTitle(this.news?.title);
-    this.setNewsSummary(this.news?.summary);
+    this.setNewsSummary(this.news?.properties?.summary);
     this.setNewsContent(this.news?.body);
-    this.refreshTranslationExtensions();
-    document.addEventListener('automatic-translation-extensions-updated', () => {
-      this.refreshTranslationExtensions();
-    });
     this.$root.$on('update-news-title', this.setNewsTitle);
     this.$root.$on('update-news-summary', this.setNewsSummary);
     this.$root.$on('update-news-body', this.setNewsContent);
@@ -190,13 +197,16 @@ export default {
       };
     },
     illustrationURL() {
-      return this.news && this.news.illustrationURL;
+      return this?.news.illustrationURL;
+    },
+    featuredImageAltText() {
+      return this.news?.properties?.featuredImage?.altText || this.newsTitle;
     },
     newsTitle() {
       return this.news && this.newsTitleContent;
     },
     showUpdateInfo() {
-      return this.news && this.news.updateDate && this.news.updater !=='__system' && this.news.updateDate !== 'null' && this.news.publicationDate && this.news.publicationDate !== 'null' && this.news.updateDate.time > this.news.publicationDate.time;
+      return this.news && this.news.updateDate && this.news.updater !=='__system' && this.news.updateDate !== 'null' && this.news.publicationDate && this.news.publicationDate !== 'null' && new Date(this.news.updateDate).getTime() > new Date(this.news.publicationDate).getTime();
     },
     authorProfile() {
       return this.news && this.news.author;
@@ -217,10 +227,10 @@ export default {
       return this.news && this.news.updater;
     },
     publicationDate() {
-      return this.news && this.news.publicationDate && this.news.publicationDate.time && new Date(this.news.publicationDate.time);
+      return this.news && this.news.publicationDate && new Date(this.news.publicationDate);
     },
     updatedDate() {
-      return this.news && this.news.updateDate && this.news.updateDate.time && new Date(this.news.updateDate.time);
+      return this.news && this.news.updateDate && new Date(this.news.updateDate);
     },
     newsSummary() {
       return this.news && this.newsSummaryContent;
@@ -232,7 +242,7 @@ export default {
       return this.news && this.news.postedDate;
     },
     summary() {
-      return this.news && this.news.summary;
+      return this.news?.properties?.summary;
     },
     attachmentsIds() {
       return this.news?.attachmentsIds;
@@ -257,9 +267,6 @@ export default {
     setNewsContent(translation) {
       this.newsBodyContent = translation;
     },
-    refreshTranslationExtensions() {
-      this.translateExtension = extensionRegistry.loadExtensions('news', 'translation-menu-extension')[0];
-    }
   }
 };
 </script>

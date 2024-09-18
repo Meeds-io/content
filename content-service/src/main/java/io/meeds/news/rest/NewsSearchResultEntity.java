@@ -21,6 +21,7 @@ package io.meeds.news.rest;
 
 import java.util.List;
 
+import org.exoplatform.social.core.identity.model.Identity;
 import org.exoplatform.social.rest.entity.BaseEntity;
 import org.exoplatform.social.rest.entity.IdentityEntity;
 
@@ -29,8 +30,6 @@ import io.meeds.news.search.NewsESSearchResult;
 public class NewsSearchResultEntity extends BaseEntity {
 
   private static final long serialVersionUID = 1L;
-
-  private IdentityEntity    poster;
 
   private String            title;
 
@@ -50,6 +49,10 @@ public class NewsSearchResultEntity extends BaseEntity {
 
   private String            activityId;
 
+  private String            posterFullName;
+
+  private String            posterUserName;
+
   public NewsSearchResultEntity() {
   }
 
@@ -63,14 +66,23 @@ public class NewsSearchResultEntity extends BaseEntity {
     this.postedTime = newsESSearchResult.getPostedTime();
     this.lastUpdatedTime = newsESSearchResult.getLastUpdatedTime();
     this.activityId = newsESSearchResult.getActivityId();
+    this.posterFullName = newsESSearchResult.getPoster().getProfile().getFullName();
+    this.posterUserName = newsESSearchResult.getPoster().getRemoteId();
+  }
+  public String getPosterFullName() {
+    return posterFullName;
   }
 
-  public IdentityEntity getPoster() {
-    return poster;
+  public void setPosterFullName(String posterFullName) {
+    this.posterFullName = posterFullName;
   }
 
-  public void setPoster(IdentityEntity poster) {
-    this.poster = poster;
+  public String getPosterUserName() {
+    return posterUserName;
+  }
+
+  public void setPosterUserName(String posterUserName) {
+    this.posterUserName = posterUserName;
   }
 
   public String getBody() {

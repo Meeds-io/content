@@ -48,10 +48,15 @@ import io.meeds.news.rest.NewsTargetingEntity;
 import io.meeds.news.rest.NewsTargetingPermissionsEntity;
 import io.meeds.news.service.NewsTargetingService;
 import io.meeds.news.utils.NewsUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Primary;
+import org.springframework.stereotype.Service;
 
 /**
  * Service managing News Targeting
  */
+@Primary
+@Service
 public class NewsTargetingServiceImpl implements NewsTargetingService {
 
   private static final Log    LOG                            = ExoLogger.getLogger(NewsTargetingServiceImpl.class);
@@ -60,23 +65,17 @@ public class NewsTargetingServiceImpl implements NewsTargetingService {
 
   private static final String PUBLISHER_MEMBERSHIP_NAME      = "publisher";
 
+  @Autowired
   private MetadataService     metadataService;
 
+  @Autowired
   private IdentityManager     identityManager;
 
+  @Autowired
   private SpaceService        spaceService;
 
+  @Autowired
   private OrganizationService organizationService;
-
-  public NewsTargetingServiceImpl(MetadataService metadataService,
-                                  IdentityManager identityManager,
-                                  SpaceService spaceService,
-                                  OrganizationService organizationService) {
-    this.metadataService = metadataService;
-    this.identityManager = identityManager;
-    this.spaceService = spaceService;
-    this.organizationService = organizationService;
-  }
 
   @Override
   public List<NewsTargetingEntity> getAllTargets() {
@@ -152,7 +151,7 @@ public class NewsTargetingServiceImpl implements NewsTargetingService {
     targets.stream().forEach(targetName -> {
       try {
         MetadataKey metadataKey = new MetadataKey(NewsTargetingService.METADATA_TYPE.getName(), targetName, 0);
-        metadataService.createMetadataItem(newsTargetObject, metadataKey, properties, Long.parseLong(currentSocIdentity.getId()));
+        metadataService.createMetadataItem(newsTargetObject, metadataKey, properties, Long.parseLong(currentSocIdentity.getId()), false);
       } catch (ObjectAlreadyExistsException e) {
         LOG.warn("Targets with name {} is already associated to object {}. Ignore error since it will not affect result.",
                  targetName,

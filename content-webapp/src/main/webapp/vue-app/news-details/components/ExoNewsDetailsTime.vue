@@ -73,10 +73,10 @@ export default {
   }),
   computed: {
     publicationDate() {
-      return this.news && this.news.publicationDate && this.news.publicationDate.time && new Date(this.news.publicationDate.time);
+      return this.news && this.news.publicationDate && this.news.publicationDate && new Date(this.news.publicationDate);
     },
     updatedDate() {
-      return this.news && this.news.updateDate && this.news.updateDate.time && new Date(this.news.updateDate.time);
+      return this.news && this.news.updateDate && new Date(this.news.updateDate);
     },
     postedDate() {
       return this.news && this.news.postedDate;

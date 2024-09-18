@@ -31,8 +31,10 @@ import static org.mockito.Mockito.when;
 
 import java.util.Map;
 
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
@@ -65,13 +67,11 @@ public class NewsActivityListenerTest {
   @Mock
   private NewsService     newsService;
 
+  @InjectMocks
+  NewsActivityListener    newsActivityListener;
+
   @Test
   public void testNotShareWhenActivityNotFound() {
-    NewsActivityListener newsActivityListener = new NewsActivityListener(activityManager,
-                                                                         identityManager,
-                                                                         spaceService,
-                                                                         newsService);
-
     ActivityLifeCycleEvent event = mock(ActivityLifeCycleEvent.class);
     newsActivityListener.shareActivity(event);
 
@@ -80,11 +80,6 @@ public class NewsActivityListenerTest {
 
   @Test
   public void testNotShareWhenActivityNotHavingTemplates() {
-    NewsActivityListener newsActivityListener = new NewsActivityListener(activityManager,
-                                                                         identityManager,
-                                                                         spaceService,
-                                                                         newsService);
-
     ActivityLifeCycleEvent event = mock(ActivityLifeCycleEvent.class);
     ExoSocialActivity activity = mock(ExoSocialActivity.class);
     when(event.getActivity()).thenReturn(activity);
@@ -95,11 +90,6 @@ public class NewsActivityListenerTest {
 
   @Test
   public void testNotShareWhenActivityNotSharedOne() {
-    NewsActivityListener newsActivityListener = new NewsActivityListener(activityManager,
-                                                                         identityManager,
-                                                                         spaceService,
-                                                                         newsService);
-
     ActivityLifeCycleEvent event = mock(ActivityLifeCycleEvent.class);
     ExoSocialActivity activity = mock(ExoSocialActivity.class);
     when(event.getActivity()).thenReturn(activity);
@@ -113,11 +103,6 @@ public class NewsActivityListenerTest {
 
   @Test
   public void testNotShareWhenSharedActivityNotFound() {
-    NewsActivityListener newsActivityListener = new NewsActivityListener(activityManager,
-                                                                         identityManager,
-                                                                         spaceService,
-                                                                         newsService);
-
     ActivityLifeCycleEvent event = mock(ActivityLifeCycleEvent.class);
     ExoSocialActivity activity = mock(ExoSocialActivity.class);
     when(event.getActivity()).thenReturn(activity);
@@ -135,11 +120,6 @@ public class NewsActivityListenerTest {
 
   @Test
   public void testNotShareWhenSharedActivityNotNewsActivity() {
-    NewsActivityListener newsActivityListener = new NewsActivityListener(activityManager,
-                                                                         identityManager,
-                                                                         spaceService,
-                                                                         newsService);
-
     ActivityLifeCycleEvent event = mock(ActivityLifeCycleEvent.class);
     ExoSocialActivity activity = mock(ExoSocialActivity.class);
     when(event.getActivity()).thenReturn(activity);
@@ -160,11 +140,6 @@ public class NewsActivityListenerTest {
 
   @Test
   public void testNotShareWhenSharedActivityWhenNewsNotFound() throws Exception {
-    NewsActivityListener newsActivityListener = new NewsActivityListener(activityManager,
-                                                                         identityManager,
-                                                                         spaceService,
-                                                                         newsService);
-
     ActivityLifeCycleEvent event = mock(ActivityLifeCycleEvent.class);
     ExoSocialActivity activity = mock(ExoSocialActivity.class);
     when(event.getActivity()).thenReturn(activity);
@@ -198,11 +173,6 @@ public class NewsActivityListenerTest {
 
   @Test
   public void testShareWhenNewsFound() throws Exception {
-    NewsActivityListener newsActivityListener = new NewsActivityListener(activityManager,
-                                                                         identityManager,
-                                                                         spaceService,
-                                                                         newsService);
-
     ActivityLifeCycleEvent event = mock(ActivityLifeCycleEvent.class);
     ExoSocialActivity activity = mock(ExoSocialActivity.class);
     when(event.getActivity()).thenReturn(activity);

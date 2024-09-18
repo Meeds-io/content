@@ -29,6 +29,7 @@ const lang = typeof eXo !== 'undefined' ? eXo.env.portal.language : 'en';
 
 // should expose the locale resources as REST API
 const urls = [
+  `/content/i18n/locale.portlet.notes.notesPortlet?lang=${lang}`,
   `/content/i18n/locale.portlet.news.News?lang=${lang}`,
 ];
 
@@ -49,20 +50,26 @@ export function init(maxToUpload, maxFileSize) {
     // init Vue app when locale resources are ready
     newsActivityComposerApp = new Vue({
       el: '#NewsComposerApp',
+      computed: {
+      },
       data: function() {
         return {
-          newsId: getURLQueryParam('newsId'),
+          articleId: getURLQueryParam('newsId'),
           spaceId: getURLQueryParam('spaceId'),
           activityId: getURLQueryParam('activityId'),
-          newsType: getURLQueryParam('type'),
+          articleType: getURLQueryParam('type'),
+          selectedLanguage: getURLQueryParam('lang'),
           maxToUpload: maxToUpload,
           maxFileSize: maxFileSize
         };
       },
-      template: '<exo-news-activity-composer :news-id="newsId" :space-id="spaceId" :activity-id="activityId" :max-to-upload="maxToUpload" :max-file-size="maxFileSize" :news-type="newsType"></exo-news-activity-composer>',
+      template: '<content-rich-editor />',
       i18n,
       vuetify
     });
+  }).finally(() => {
+    Vue.prototype.$utils.includeExtensions('WYSIWYGPluginsExtensions');
+    Vue.prototype.$utils.includeExtensions('AutomaticTranslationNotesEditorExtension');
   });
 }
 

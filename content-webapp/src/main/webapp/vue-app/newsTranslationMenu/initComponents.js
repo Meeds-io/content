@@ -17,23 +17,21 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
-import io.meeds.spring.AvailableIntegration;
-import io.meeds.spring.kernel.PortalApplicationContextInitializer;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.liquibase.LiquibaseAutoConfiguration;
-import org.springframework.context.annotation.PropertySource;
 
-@SpringBootApplication(scanBasePackages = {
-    ContentApplication.MODULE_NAME,
-    AvailableIntegration.KERNEL_MODULE,
-    AvailableIntegration.JPA_MODULE,
-    AvailableIntegration.WEB_SECURITY_MODULE,
-  }, exclude = {
-    LiquibaseAutoConfiguration.class,
-})
-@PropertySource("classpath:application.properties")
-@PropertySource("classpath:application-common.properties")
-public class ContentApplication extends PortalApplicationContextInitializer {
-  public static final String MODULE_NAME = "io.meeds.news";
+import contentTranslationMenu from './components/ContentTranslationMenu.vue';
 
+const components = {
+  'content-translation-menu': contentTranslationMenu,
+};
+
+for (const key in components) {
+  Vue.component(key, components[key]);
+}
+
+import * as  newsServices from '../services/newsServices';
+
+if (!Vue.prototype.$newsServices) {
+  window.Object.defineProperty(Vue.prototype, '$newsServices', {
+    value: newsServices,
+  });
 }

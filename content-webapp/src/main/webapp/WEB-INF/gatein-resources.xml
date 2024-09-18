@@ -49,6 +49,7 @@
     <portlet-name>NewsComposer</portlet-name>
     <skin-name>Enterprise</skin-name>
     <css-path>/skin/css/newsComposer.css</css-path>
+    <additional-module>Notes</additional-module>
   </portlet-skin>
 
   <portlet-skin>
@@ -88,6 +89,9 @@
         <minify>false</minify>
         <path>/js/newsActivityComposer.bundle.js</path>
       </script>
+      <depends>
+        <module>NotesRichEditor</module>
+      </depends>
       <depends>
         <module>vue</module>
       </depends>
@@ -186,6 +190,9 @@
       </depends>
       <depends>
         <module>newsDetails</module>
+      </depends>
+      <depends>
+        <module>NewsActivityStreamExtensions</module>
       </depends>
     </module>
   </portlet>
@@ -312,6 +319,9 @@
     </depends>
     <depends>
       <module>suggester</module>
+    </depends>
+    <depends>
+      <module>contentTranslationMenu</module>
     </depends>
   </module>
 
@@ -546,6 +556,30 @@
     </depends>
     <depends>
       <module>extensionRegistry</module>
+    </depends>
+  </module>
+
+  <module>
+    <name>contentTranslationMenu</name>
+    <script>
+      <minify>false</minify>
+      <path>/js/contentTranslationMenu.bundle.js</path>
+    </script>
+    <depends>
+      <module>vue</module>
+    </depends>
+    <depends>
+      <module>vuetify</module>
+    </depends>
+    <depends>
+      <module>eXoVueI18n</module>
+    </depends>
+    <depends>
+      <module>extensionRegistry</module>
+    </depends>
+    <depends>
+      <module>jquery</module>
+      <as>$</as>
     </depends>
   </module>
 </gatein-resources>

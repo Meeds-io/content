@@ -23,7 +23,7 @@ export const newsConstants = {
   PORTAL_NAME: eXo.env.portal.portalName || '',
   CONTAINER_NAME: eXo.env.portal.containerName || '',
   PORTAL_REST: eXo.env.portal.rest,
-  NEWS_API: `${eXo.env.portal.context}/${eXo.env.portal.rest}/v1/news`,
+  CONTENT_API: '/content/rest',
   SOCIAL_ACTIVITY_API: `${eXo.env.portal.context}/${eXo.env.portal.rest}/v1/social/activities`,
   SOCIAL_SPACE_API: `${eXo.env.portal.context}/${eXo.env.portal.rest}/v1/social/spaces`,
   SOCIAL_SPACES_SUGGESTION_API: `${eXo.env.portal.context}/${eXo.env.portal.rest}${eXo.env.portal.context}/social/spaces/suggest.json`,
@@ -37,9 +37,9 @@ export const newsConstants = {
 };
 
 export const newsUpdateType = {
-  CONTENT: 'content',
-  POSTING_AND_PUBLISHING: 'postingAndPublishing',
-  SCHEDULE: 'schedule'
+  CONTENT_AND_TITLE: 'CONTENT_AND_TITLE',
+  POSTING_AND_PUBLISHING: 'POSTING_AND_PUBLISHING',
+  SCHEDULE: 'SCHEDULE'
 };
 
 export const newsObjectType = {

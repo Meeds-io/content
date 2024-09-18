@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import jakarta.annotation.PostConstruct;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.json.simple.JSONArray;
@@ -44,8 +45,6 @@ import org.exoplatform.commons.utils.IOUtil;
 import org.exoplatform.commons.utils.PropertyManager;
 import org.exoplatform.container.PortalContainer;
 import org.exoplatform.container.configuration.ConfigurationManager;
-import org.exoplatform.container.xml.InitParams;
-import org.exoplatform.container.xml.PropertiesParam;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
 import org.exoplatform.social.core.identity.model.Identity;
@@ -56,11 +55,37 @@ import org.exoplatform.social.metadata.favorite.FavoriteService;
 import org.exoplatform.social.metadata.tag.TagService;
 
 import io.meeds.news.filter.NewsFilter;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
+@Component
 public class NewsSearchConnector {
-  private static final Log             LOG                          = ExoLogger.getLogger(NewsSearchConnector.class);
 
-  private static final String          SEARCH_QUERY_FILE_PATH_PARAM = "query.file.path";
+  @Autowired
+  private ConfigurationManager   configurationManager;
+
+  @Autowired
+  private IdentityManager        identityManager;
+
+  @Autowired
+  private ActivityStorage        activityStorage;
+
+  @Autowired
+  private ElasticSearchingClient client;
+
+  @Value("${content.es.index:news_alias}")
+  private String                 index;
+
+  @Value("${content.search.type:news}")
+  private String                 searchType;
+
+  @Value("${content.es.query.path:jar:/news-search-query.json}")
+  private String                       searchQueryFilePath;
+
+  private String                       searchQuery;
+
+  private static final Log             LOG                          = ExoLogger.getLogger(NewsSearchConnector.class);
 
   public static final String           SEARCH_QUERY_TERM            = """
                                                                       "must":{ "query_string" :{
@@ -69,45 +94,10 @@ public class NewsSearchConnector {
                                                                               "query": "@term@"}
                                                                               },""";
 
-  private final ConfigurationManager   configurationManager;
-
-  private final IdentityManager        identityManager;
-
-  private final ActivityStorage        activityStorage;
-
-  private final ElasticSearchingClient client;
-
-  private final String                 index;
-
-  private final String                 searchType;
-
-  private String                       searchQueryFilePath;
-
-  private String                       searchQuery;
-
-  public NewsSearchConnector(ConfigurationManager configurationManager,
-                             IdentityManager identityManager,
-                             ActivityStorage activityStorage,
-                             ElasticSearchingClient client,
-                             InitParams initParams) {
-    this.configurationManager = configurationManager;
-    this.identityManager = identityManager;
-    this.activityStorage = activityStorage;
-    this.client = client;
-
-    PropertiesParam param = initParams.getPropertiesParam("constructor.params");
-    this.index = param.getProperty("index");
-    this.searchType = param.getProperty("searchType");
-    if (initParams.containsKey(SEARCH_QUERY_FILE_PATH_PARAM)) {
-      searchQueryFilePath = initParams.getValueParam(SEARCH_QUERY_FILE_PATH_PARAM).getValue();
-      try {
-        retrieveSearchQuery();
-      } catch (Exception e) {
-        LOG.error("Can't read elasticsearch search query from path {}", searchQueryFilePath, e);
-      }
-    }
+  @PostConstruct
+  public void init() {
+    retrieveSearchQuery();
   }
-
   public List<NewsESSearchResult> search(Identity viewerIdentity, NewsFilter filter) {
     if (viewerIdentity == null) {
       throw new IllegalArgumentException("Viewer identity is mandatory");
@@ -121,7 +111,7 @@ public class NewsSearchConnector {
     if (StringUtils.isBlank(filter.getSearchText()) && !filter.isFavorites() && CollectionUtils.isEmpty(filter.getTagNames())) {
       throw new IllegalArgumentException("Filter term is mandatory");
     }
-    Set<Long> streamFeedOwnerIds = activityStorage.getStreamFeedOwnerIds(viewerIdentity);
+    Set<Long> streamFeedOwnerIds = this.activityStorage.getStreamFeedOwnerIds(viewerIdentity);
     String esQuery = buildQueryStatement(viewerIdentity, streamFeedOwnerIds, filter);
     String jsonResponse = this.client.sendRequest(esQuery, this.index);
     return buildResult(jsonResponse);
@@ -170,6 +160,7 @@ public class NewsSearchConnector {
         String posterId = (String) hitSource.get("posterId");
         String spaceDisplayName = (String) hitSource.get("spaceDisplayName");
         String newsActivityId = (String) hitSource.get("newsActivityId");
+        String language = (String) hitSource.get("lang");
 
         Long postedTime = parseLong(hitSource, "postedTime");
         Long lastUpdatedTime = parseLong(hitSource, "lastUpdatedTime");
@@ -185,6 +176,7 @@ public class NewsSearchConnector {
           }
         }
         newsSearchResult.setId(id);
+        newsSearchResult.setLang(language);
         newsSearchResult.setTitle(title);
         if (posterId != null) {
           Identity posterIdentity = identityManager.getOrCreateIdentity(OrganizationIdentityProvider.NAME, posterId);
@@ -198,6 +190,9 @@ public class NewsSearchConnector {
         String portalName = PortalContainer.getCurrentPortalContainerName();
         String portalOwner = CommonsUtils.getCurrentPortalOwner();
         newsSearchResult.setNewsUrl("/" + portalName + "/" + portalOwner + "/activity?id=" + newsActivityId);
+        if (language != null) {
+          newsSearchResult.setNewsUrl(newsSearchResult.getNewsUrl().concat("&lang=" + language));
+        }
         newsSearchResult.setBody(body);
         newsSearchResult.setExcerpts(excerpts);
 

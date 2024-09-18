@@ -22,37 +22,27 @@ package io.meeds.news.rest;
 import static io.meeds.news.utils.NewsUtils.NewsObjectType.ARTICLE;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
+
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import javax.annotation.security.RolesAllowed;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.DELETE;
-import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.PUT;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
-import javax.ws.rs.core.CacheControl;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.EntityTag;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Request;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.core.UriInfo;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 
+import javax.ws.rs.core.Response;
+
+
+import io.swagger.v3.oas.annotations.Parameter;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.picocontainer.Startable;
+
 
 import org.exoplatform.commons.exception.ObjectNotFoundException;
 import org.exoplatform.commons.utils.CommonsUtils;
@@ -62,8 +52,7 @@ import org.exoplatform.container.component.RequestLifeCycle;
 import org.exoplatform.portal.application.localization.LocalizationFilter;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
-import org.exoplatform.services.rest.http.PATCH;
-import org.exoplatform.services.rest.resource.ResourceContainer;
+
 import org.exoplatform.services.security.ConversationState;
 import org.exoplatform.social.core.identity.model.Identity;
 import org.exoplatform.social.core.identity.provider.OrganizationIdentityProvider;
@@ -84,176 +73,158 @@ import io.meeds.news.search.NewsESSearchResult;
 import io.meeds.news.service.NewsService;
 import io.meeds.news.utils.NewsUtils;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.annotation.Secured;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-@Path("v1/news")
-@Tag(name = "v1/news", description = "Managing news")
-public class NewsRestResourcesV1 implements ResourceContainer, Startable {
+@RestController
+@RequestMapping("contents")
+@Tag(name = "content/rest/contents", description = "Managing contents")
+public class NewsRest {
 
-  private static final Log          LOG                             = ExoLogger.getLogger(NewsRestResourcesV1.class);
-
+  private static final Log          LOG                             = ExoLogger.getLogger(NewsRest.class);
+  
+  @Autowired
   private NewsService               newsService;
 
+  @Autowired
   private SpaceService              spaceService;
 
+  @Autowired
   private IdentityManager           identityManager;
 
-  private ScheduledExecutorService  scheduledExecutor;
-
+  @Autowired
   private PortalContainer           container;
 
+  @Autowired
   private FavoriteService           favoriteService;
 
   private Map<String, String>       newsToDeleteQueue               = new HashMap<>();
 
+  private ScheduledExecutorService  scheduledExecutor;
+
   private static final int          CACHE_DURATION_SECONDS          = 31536000;
-
-  private static final long         CACHE_DURATION_MILLISECONDS     = CACHE_DURATION_SECONDS * 1000L;
-
-  private static final CacheControl ILLUSTRATION_CACHE_CONTROL      = new CacheControl();
-
-  static {
-    ILLUSTRATION_CACHE_CONTROL.setMaxAge(CACHE_DURATION_SECONDS);
-  }
 
   private enum FilterType {
     PINNED, MYPOSTED, DRAFTS, SCHEDULED, ALL
   }
 
-  public NewsRestResourcesV1(NewsService newsService,
-                             SpaceService spaceService,
-                             IdentityManager identityManager,
-                             PortalContainer container,
-                             FavoriteService favoriteService) {
-
-    this.newsService = newsService;
-    this.spaceService = spaceService;
-    this.identityManager = identityManager;
-    this.container = container;
-    this.favoriteService = favoriteService;
-  }
-
-  @Override
-  public void start() {
+  @PostConstruct
+  public void init() {
     scheduledExecutor = Executors.newScheduledThreadPool(1);
   }
 
-  @Override
-  public void stop() {
+  @PreDestroy
+  public void destroy() {
     if (scheduledExecutor != null) {
       scheduledExecutor.shutdown();
     }
   }
 
-  @POST
-  @Consumes(MediaType.APPLICATION_JSON)
-  @Produces(MediaType.APPLICATION_JSON)
-  @RolesAllowed("users")
+  @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+  @Secured("users")
   @Operation(summary = "Create a news", method = "POST", description = "This creates the news if the authenticated user is a member of the space or a spaces super manager. The news is created in draft status, unless the publicationState property is set to 'posted'.")
   @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "News created"),
       @ApiResponse(responseCode = "400", description = "Invalid query input"),
       @ApiResponse(responseCode = "401", description = "User not authorized to create the news"),
       @ApiResponse(responseCode = "500", description = "Internal server error") })
-  public Response createNews(@Context
-  HttpServletRequest request, @RequestBody(description = "News object to create", required = true)
-  News news) {
+  public ResponseEntity<News> createNews(@RequestBody News news) {
     if (news == null || StringUtils.isEmpty(news.getSpaceId())) {
-      return Response.status(Response.Status.BAD_REQUEST).build();
+      return ResponseEntity.badRequest().build();
     }
 
     org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
     try {
       News createdNews = newsService.createNews(news, currentIdentity);
 
-      return Response.ok(createdNews).build();
+      return ResponseEntity.ok(createdNews);
     } catch (IllegalAccessException e) {
-      LOG.warn("User '{}' is not autorized to create news", currentIdentity.getUserId(), e);
-      return Response.status(Response.Status.UNAUTHORIZED).entity(e.getMessage()).build();
+      LOG.warn("User '{}' is not authorized to create news", currentIdentity.getUserId(), e);
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     } catch (Exception e) {
       LOG.error("Error when creating the news " + news.getTitle(), e);
-      return Response.serverError().entity(e.getMessage()).build();
+      return ResponseEntity.badRequest().build();
     }
   }
 
-  @GET
-  @Path("canCreateNews/{spaceId}")
-  @Produces(MediaType.TEXT_PLAIN)
-  @RolesAllowed("users")
+
+  @GetMapping(path = "canCreateNews/{spaceId}", produces = MediaType.APPLICATION_JSON_VALUE)
+  @Secured("users")
   @Operation(summary = "check if the current user can create a news in the given space", method = "GET", description = "This checks if the current user can create a news in the given space")
   @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "User ability to create a news is returned"),
       @ApiResponse(responseCode = "400", description = "Invalid query input"),
       @ApiResponse(responseCode = "401", description = "User not authorized to create a news"),
       @ApiResponse(responseCode = "404", description = "Space not found"),
       @ApiResponse(responseCode = "500", description = "Internal server error") })
-  public Response canCreateNews(@Context
-  HttpServletRequest request,
-                                @Parameter(description = "space id", required = true)
-                                @PathParam("spaceId")
-                                String spaceId) {
+  public ResponseEntity<Boolean> canCreateNews(@PathVariable("spaceId") String spaceId) {
     org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
     try {
       if (StringUtils.isBlank(spaceId)) {
-        return Response.status(Response.Status.BAD_REQUEST).build();
+        return ResponseEntity.badRequest().build();
       }
       Space space = spaceService.getSpaceById(spaceId);
       if (space == null) {
-        return Response.status(Response.Status.NOT_FOUND).build();
+        return ResponseEntity.notFound().build();
       }
 
-      return Response.ok(String.valueOf(newsService.canCreateNews(space, currentIdentity))).build();
+      return ResponseEntity.ok(newsService.canCreateNews(space, currentIdentity));
     } catch (IllegalAccessException e) {
       LOG.warn("User '{}' is not autorized to check if we can create news", currentIdentity.getUserId(), e);
-      return Response.status(Response.Status.UNAUTHORIZED).entity(e.getMessage()).build();
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     } catch (Exception e) {
       LOG.error("Error when checking if the authenticated user can create a news", e);
-      return Response.serverError().entity(e.getMessage()).build();
+      return ResponseEntity.internalServerError().build();
     }
   }
 
-  @PUT
-  @Path("{id}")
-  @Consumes(MediaType.APPLICATION_JSON)
-  @Produces(MediaType.APPLICATION_JSON)
-  @RolesAllowed("users")
+
+  @PutMapping(path = "{id}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+  @Secured("users")
   @Operation(summary = "Create a news", method = "PUT", description = "This updates the news if the authenticated user is a member of the space or a spaces super manager.")
   @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "News updated"),
       @ApiResponse(responseCode = "400", description = "Invalid query input"),
       @ApiResponse(responseCode = "401", description = "User not authorized to update the news"),
       @ApiResponse(responseCode = "500", description = "Internal server error") })
-  public Response updateNews(@Parameter(description = "News id", required = true)
-  @PathParam("id")
-  String id,
-                             @Parameter(description = "Post news", required = false)
-                             @QueryParam("post")
-                             boolean post,
-                             @Parameter(description = "News object type to be updated", required = false)
-                             @QueryParam("type")
-                             String newsObjectType,
-                             @Parameter(description = "News update action type to be done", required = false)
-                             @Schema(defaultValue = "content")
-                             @QueryParam("newsUpdateType")
-                             String newsUpdateType,
-                             @RequestBody(description = "News object to be updated", required = true)
-                             News updatedNews) {
+  public ResponseEntity<News> updateNews(@PathVariable("id")
+                                         String id,
+                                         @Parameter(description = "Post news")
+                                         @RequestParam(name = "post", required = false)
+                                         boolean post,
+                                         @Parameter(description = "News object type to be updated")
+                                         @RequestParam("type")
+                                         String newsObjectType,
+                                         @Parameter(description = "News update action type to be done")
+                                         @RequestParam(name = "newsUpdateType", defaultValue = "content", required = false)
+                                         String newsUpdateType,
+                                         @RequestBody
+                                         News updatedNews) {
 
     if (updatedNews == null) {
-      return Response.status(Response.Status.BAD_REQUEST).build();
+      return ResponseEntity.badRequest().build();
     }
     org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
     try {
       News news = newsService.getNewsById(id, currentIdentity, false, newsObjectType);
       if (news == null) {
-        return Response.status(Response.Status.NOT_FOUND).build();
+        return ResponseEntity.notFound().build();
       }
-
       news.setTitle(updatedNews.getTitle());
-      news.setSummary(updatedNews.getSummary());
       news.setBody(updatedNews.getBody());
       news.setUploadId(updatedNews.getUploadId());
       news.setPublicationState(updatedNews.getPublicationState());
@@ -261,38 +232,34 @@ public class NewsRestResourcesV1 implements ResourceContainer, Startable {
       news.setActivityPosted(updatedNews.isActivityPosted());
       news.setTargets(updatedNews.getTargets());
       news.setAudience(updatedNews.getAudience());
-
+      news.setProperties(updatedNews.getProperties());
+      news.setLang(updatedNews.getLang());
       news = newsService.updateNews(news, currentIdentity.getUserId(), post, updatedNews.isPublished(), newsObjectType, newsUpdateType);
 
-      return Response.ok(news).build();
+      return ResponseEntity.ok(news);
     } catch (IllegalAccessException e) {
       LOG.warn("User '{}' is not authorized to update news", currentIdentity.getUserId(), e);
-      return Response.status(Response.Status.UNAUTHORIZED).entity(e.getMessage()).build();
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     } catch (Exception e) {
       LOG.error("Error when updating the news " + id, e);
-      return Response.serverError().entity(e.getMessage()).build();
+      return ResponseEntity.internalServerError().build();
     }
   }
 
-  @DELETE
-  @Path("{id}")
-  @Produces(MediaType.APPLICATION_JSON)
-  @RolesAllowed("users")
+  @DeleteMapping(path = "{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+  @Secured("users")
   @Operation(summary = "Delete news", method = "DELETE", description = "This deletes the news")
   @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "News deleted"),
       @ApiResponse(responseCode = "400", description = "Invalid query input"),
       @ApiResponse(responseCode = "401", description = "User not authorized to delete the news"),
       @ApiResponse(responseCode = "500", description = "Internal server error") })
-  public Response deleteNews(@Context
-  HttpServletRequest request,
-                             @Parameter(description = "News id", required = true)
-                             @PathParam("id")
+  public Response deleteNews(@PathVariable("id")
                              String id,
-                             @Parameter(description = "news object to be deleted", required = true)
-                             @QueryParam("type")
+                             @Parameter(description = "news object to be deleted")
+                             @RequestParam("type")
                              String newsObjectType,
-                             @Parameter(description = "Time to effectively delete news", required = false)
-                             @QueryParam("delay")
+                             @Parameter(description = "Time to effectively delete news")
+                             @RequestParam(name = "delay", required = false)
                              long delay) {
     org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
     try {
@@ -339,25 +306,21 @@ public class NewsRestResourcesV1 implements ResourceContainer, Startable {
     }
   }
 
-  @Path("{id}/undoDelete")
-  @POST
-  @RolesAllowed("users")
+  @PostMapping("{id}/undoDelete")
+  @Secured("users")
   @Operation(summary = "Undo deleting news if not yet effectively deleted", method = "POST", description = "Undo deleting news if not yet effectively deleted")
   @ApiResponses(value = { @ApiResponse(responseCode = "204", description = "Request fulfilled"),
       @ApiResponse(responseCode = "400", description = "Invalid query input"),
       @ApiResponse(responseCode = "403", description = "Forbidden operation"),
       @ApiResponse(responseCode = "401", description = "Unauthorized operation"),
       @ApiResponse(responseCode = "500", description = "Internal server error"), })
-  public Response undoDeleteNews(@Context
-  HttpServletRequest request,
-                                 @Parameter(description = "News node identifier", required = true)
-                                 @PathParam("id")
+  public Response undoDeleteNews(@PathVariable("id")
                                  String id) {
     if (StringUtils.isBlank(id)) {
       return Response.status(Response.Status.BAD_REQUEST).entity("News identifier must not be null or empty").build();
     }
     if (newsToDeleteQueue.containsKey(id)) {// TODO Move to service layer
-      String authenticatedUser = request.getRemoteUser();
+      String authenticatedUser = ConversationState.getCurrent().getIdentity().getUserId();
       String originalModifierUser = newsToDeleteQueue.get(id);
       if (!originalModifierUser.equals(authenticatedUser)) {
         LOG.warn("User {} attempts to cancel deletion of a news deleted by user {}", authenticatedUser, originalModifierUser);
@@ -372,47 +335,43 @@ public class NewsRestResourcesV1 implements ResourceContainer, Startable {
     }
   }
 
-  @GET
-  @Path("{id}")
-  @Produces(MediaType.APPLICATION_JSON)
+  @GetMapping(path = "{id}", produces = MediaType.APPLICATION_JSON_VALUE)
   @Operation(summary = "Get a news", method = "GET", description = "This gets the news with the given id if the authenticated user is a member of the space or a spaces super manager.")
   @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "News returned"),
       @ApiResponse(responseCode = "401", description = "User not authorized to get the news"),
       @ApiResponse(responseCode = "404", description = "News not found"),
       @ApiResponse(responseCode = "500", description = "Internal server error") })
-  public Response getNewsById(@Context
-  HttpServletRequest request,
-                              @Parameter(description = "News id", required = true)
-                              @PathParam("id")
-                              String id,
-                              @Parameter(description = "fields", required = true)
-                              @QueryParam("fields")
-                              String fields,
-                              @Parameter(description = "News object type to be fetched", required = false)
-                              @QueryParam("type")
-                              String newsObjectType,
-                              @Parameter(description = "Is edit mode")
-                              @Schema(defaultValue = "false")
-                              @QueryParam("editMode")
-                              boolean editMode) {
-    String authenticatedUser = request.getRemoteUser();
+  public ResponseEntity<News> getNewsById(@PathVariable("id")
+                                          String id,
+                                          @Parameter(description = "fields")
+                                          @RequestParam(name = "fields", required = false)
+                                          String fields,
+                                          @Parameter(description = "News object type to be fetched")
+                                          @RequestParam("type")
+                                          String newsObjectType,
+                                          @Parameter(description = "Is edit mode")
+                                          @RequestParam(name = "editMode", defaultValue = "false", required = false)
+                                          boolean editMode,
+                                          @Parameter(description = "article translation")
+                                          @RequestParam(name = "lang", required = false)
+                                          String lang) {
+    String authenticatedUser = ConversationState.getCurrent().getIdentity().getUserId();
     try {
       if (StringUtils.isBlank(id)) {
-        return Response.status(Response.Status.BAD_REQUEST).build();
+        return ResponseEntity.badRequest().build();
       }
       org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
-      News news = newsService.getNewsById(id, currentIdentity, editMode, newsObjectType);
+      News news = newsService.getNewsByIdAndLang(id, currentIdentity, editMode, newsObjectType, StringUtils.isBlank(lang) ? null : lang);
       if (news == null || news.isDeleted()) {
-        return Response.status(Response.Status.NOT_FOUND).build();
+        return ResponseEntity.notFound().build();
       }
       Locale userLocale = LocalizationFilter.getCurrentLocale();
       news.setBody(MentionUtils.substituteRoleWithLocale(news.getBody(), userLocale));
-      news.setIllustration(null);
       // check favorite
       Identity userIdentity = identityManager.getOrCreateUserIdentity(currentIdentity.getUserId());
       if (userIdentity != null) {
         news.setFavorite(favoriteService.isFavorite(new Favorite("news",
-                                                                 news.getId(),
+                                                                 news.getLang() != null ? news.getId().concat("-").concat(news.getLang()) : news.getId(),
                                                                  "",
                                                                  Long.parseLong(userIdentity.getId()))));
       }
@@ -429,35 +388,30 @@ public class NewsRestResourcesV1 implements ResourceContainer, Startable {
           spacesList.add(spaceId);
         }
         filteredNews.setSharedInSpacesList(spacesList);
-        return Response.ok(filteredNews).build();
+        return ResponseEntity.ok(filteredNews);
       } else {
-        return Response.ok(news).build();
+        return ResponseEntity.ok(news);
       }
     } catch (IllegalAccessException e) {
       LOG.warn("User {} attempt to access unauthorized news with id {}", authenticatedUser, id);
-      return Response.status(Response.Status.UNAUTHORIZED).entity(e.getMessage()).build();
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     } catch (Exception e) {
       LOG.error("Error when getting the news " + id, e);
-      return Response.serverError().entity(e.getMessage()).build();
+      return ResponseEntity.internalServerError().build();
     }
   }
 
-  @POST
-  @Path("markAsRead/{id}")
-  @RolesAllowed("users")
-  @Produces(MediaType.TEXT_PLAIN)
+  @PostMapping(path = "markAsRead/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+  @Secured("users")
   @Operation(summary = "mark a news article as read", method = "POST", description = "This marks a news article as read by the user who accessed its details.")
   @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "Request fulfilled"),
       @ApiResponse(responseCode = "401", description = "User not authorized to get the news"),
       @ApiResponse(responseCode = "404", description = "News not found"),
       @ApiResponse(responseCode = "500", description = "Internal server error") })
 
-  public Response markNewsAsRead(@Context
-  HttpServletRequest request,
-                                 @Parameter(description = "News id", required = true)
-                                 @PathParam("id")
+  public Response markNewsAsRead(@PathVariable("id")
                                  String id) {
-    String authenticatedUser = request.getRemoteUser();
+    String authenticatedUser = ConversationState.getCurrent().getIdentity().getUserId();
     try {
       if (StringUtils.isBlank(id)) {
         return Response.status(Response.Status.BAD_REQUEST).build();
@@ -468,7 +422,7 @@ public class NewsRestResourcesV1 implements ResourceContainer, Startable {
         return Response.status(Response.Status.NOT_FOUND).build();
       }
       newsService.markAsRead(news, authenticatedUser);
-      return Response.ok("ok").type(MediaType.TEXT_PLAIN).build();
+      return Response.ok("ok").type(MediaType.APPLICATION_JSON_VALUE).build();
     } catch (IllegalAccessException e) {
       LOG.warn("User {} has no access rights on news with id {}", authenticatedUser, id);
       return Response.status(Response.Status.UNAUTHORIZED).entity(e.getMessage()).build();
@@ -478,44 +432,39 @@ public class NewsRestResourcesV1 implements ResourceContainer, Startable {
     }
   }
 
-  @GET
-  @RolesAllowed("users")
-  @Produces(MediaType.APPLICATION_JSON)
+  @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+  @Secured("users")
   @Operation(summary = "Get news list", method = "GET", description = "This gets the list of news with the given search text, of the given author, in the given space or spaces, with the given publication state, with the given pinned state if the authenticated user is a member of the spaces or a super manager.")
   @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "News list returned"),
       @ApiResponse(responseCode = "401", description = "User not authorized to get the news list"),
       @ApiResponse(responseCode = "404", description = "News list not found"),
       @ApiResponse(responseCode = "500", description = "Internal server error") })
-  public Response getNews(@Context
-  HttpServletRequest request,
-                          @Parameter(description = "News author", required = true)
-                          @QueryParam("author")
-                          String author,
-                          @Parameter(description = "News spaces", required = true)
-                          @QueryParam("spaces")
-                          String spaces,
-                          @Parameter(description = "News filter", required = true)
-                          @QueryParam("filter")
-                          String filter,
-                          @Parameter(description = "search text", required = true)
-                          @QueryParam("text")
-                          String text,
-                          @Parameter(description = "News pagination offset")
-                          @Schema(defaultValue = "0")
-                          @QueryParam("offset")
-                          int offset,
-                          @Parameter(description = "News pagination limit")
-                          @Schema(defaultValue = "10")
-                          @QueryParam("limit")
-                          int limit,
-                          @Parameter(description = "News total size")
-                          @Schema(defaultValue = "false")
-                          @QueryParam("returnSize")
-                          boolean returnSize) {
+  public ResponseEntity<NewsEntity> getNews(@Parameter(description = "News author")
+                                            @RequestParam("author")
+                                            String author,
+                                            @Parameter(description = "News spaces")
+                                            @RequestParam(name = "spaces", required = false)
+                                            String spaces,
+                                            @Parameter(description = "News filter")
+                                            @RequestParam("filter")
+                                            String filter,
+                                            @Parameter(description = "search text")
+                                            @RequestParam(name = "text", required = false)
+                                            String text,
+                                            @Parameter(description = "News pagination offset")
+                                            @RequestParam(name = "offset", defaultValue = "0", required = false)
+                                            int offset,
+                                            @Parameter(description = "News pagination limit")
+                                            @RequestParam(name = "limit", defaultValue = "10")
+                                            int limit,
+                                            @Parameter(description = "News total size")
+                                            @RequestParam(name = "returnSize", defaultValue = "false", required = false)
+                                            boolean returnSize,
+                                            HttpServletRequest request) {
     try {// TODO Move to service layer
-      String authenticatedUser = request.getRemoteUser();
+      String authenticatedUser = ConversationState.getCurrent().getIdentity().getUserId();
       if (StringUtils.isBlank(author) || !authenticatedUser.equals(author)) {
-        return Response.status(Response.Status.UNAUTHORIZED).build();
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
       }
 
       NewsEntity newsEntity = new NewsEntity();
@@ -527,18 +476,18 @@ public class NewsRestResourcesV1 implements ResourceContainer, Startable {
           Space space = spaceService.getSpaceById(spaceId);
           if (space == null
               || (!spaceService.isSuperManager(authenticatedUser) && !spaceService.isMember(space, authenticatedUser))) {
-            return Response.status(Response.Status.UNAUTHORIZED).build();
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
           }
           spacesList.add(spaceId);
         }
       }
       NewsFilter newsFilter = buildFilter(spacesList, filter, text, author, limit, offset);
+      String lang = request.getLocale().getLanguage();
+      newsFilter.setLang(lang);
       List<News> news;
       org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
       // Set text to search news with
       if (StringUtils.isNotEmpty(text)) {
-        String lang = request.getLocale().getLanguage();
-        newsFilter.setLang(lang);
         TagService tagService = CommonsUtils.getService(TagService.class);
         long userIdentityId = RestUtils.getCurrentUserIdentityId();
         if (text.indexOf("#") == 0) {
@@ -554,14 +503,11 @@ public class NewsRestResourcesV1 implements ResourceContainer, Startable {
         news = newsService.getNews(newsFilter, currentIdentity);
       }
 
-      if (news != null && news.size() != 0) {
-        for (News newsItem : news) {
-          newsItem.setIllustration(null);
-        }
-      }
       if (news != null) {
         Locale userLocale = LocalizationFilter.getCurrentLocale();
-        news.forEach(news1 -> news1.setBody(MentionUtils.substituteRoleWithLocale(news1.getBody(), userLocale)));
+        news.stream()
+            .filter(Objects::nonNull)
+            .forEach(news1 -> news1.setBody(MentionUtils.substituteRoleWithLocale(news1.getBody(), userLocale)));
       }
       newsEntity.setNews(news);
       newsEntity.setOffset(offset);
@@ -569,50 +515,44 @@ public class NewsRestResourcesV1 implements ResourceContainer, Startable {
       if (returnSize) {
         newsEntity.setSize(newsService.getNewsCount(newsFilter));
       }
-      return Response.ok(newsEntity).build();
+      return ResponseEntity.ok(newsEntity);
     } catch (Exception e) {
       LOG.error("Error when getting the news with params author=" + author + ", spaces=" + spaces, e);
-      return Response.serverError().entity(e.getMessage()).build();
+      return ResponseEntity.internalServerError().build();
     }
   }
 
-  @GET
-  @Path("byTarget/{targetName}")
-  @Produces(MediaType.APPLICATION_JSON)
+  @GetMapping(path = "byTarget/{targetName}", produces = MediaType.APPLICATION_JSON_VALUE)
   @Operation(summary = "Get news list", method = "GET", description = "This gets the list of news by the given target.")
   @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "News list returned"),
       @ApiResponse(responseCode = "401", description = "User not authorized to get the news list"),
       @ApiResponse(responseCode = "404", description = "News list not found"),
       @ApiResponse(responseCode = "500", description = "Internal server error") })
-  public Response getNewsByTarget(@Context
-  HttpServletRequest request,
-                                  @Parameter(description = "News target name", required = true)
-                                  @PathParam("targetName")
-                                  String targetName,
-                                  @Parameter(description = "News pagination offset")
-                                  @Schema(defaultValue = "0")
-                                  @QueryParam("offset")
-                                  int offset,
-                                  @Parameter(description = "News pagination limit")
-                                  @Schema(defaultValue = "10")
-                                  @QueryParam("limit")
-                                  int limit,
-                                  @Parameter(description = "News total size")
-                                  @Schema(defaultValue = "false")
-                                  @QueryParam("returnSize")
-                                  boolean returnSize) {
+  public ResponseEntity<NewsEntity> getNewsByTarget(@PathVariable("targetName")
+                                                    String targetName,
+                                                    @Parameter(description = "News pagination offset")
+                                                    @RequestParam(name = "offset", defaultValue = "0", required = false)
+                                                    int offset,
+                                                    @Parameter(description = "News pagination limit")
+                                                    @RequestParam(name = "limit", defaultValue = "10")
+                                                    int limit,
+                                                    @Parameter(description = "News total size")
+                                                    @RequestParam(name = "returnSize", required = false)
+                                                    boolean returnSize,
+                                                    HttpServletRequest request) {
     try {
-      String authenticatedUser = request.getRemoteUser();
+      String authenticatedUser = ConversationState.getCurrent().getIdentity().getUserId();
       if (StringUtils.isBlank(targetName)) {
-        return Response.status(Response.Status.BAD_REQUEST).build();
+        return ResponseEntity.badRequest().build();
       }
       if (offset < 0) {
-        return Response.status(Response.Status.BAD_REQUEST).entity("Offset must be 0 or positive").build();
+        ResponseEntity.badRequest().build();
       }
       if (limit < 0) {
-        return Response.status(Response.Status.BAD_REQUEST).entity("Limit must be positive").build();
+        return ResponseEntity.badRequest().build();
       }
       NewsFilter newsFilter = buildFilter(null, "", "", authenticatedUser, limit, offset);
+      newsFilter.setLang(request.getLocale().getLanguage());
       NewsEntity newsEntity = new NewsEntity();
       org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
       List<News> news = newsService.getNewsByTargetName(newsFilter, targetName, currentIdentity);
@@ -624,139 +564,124 @@ public class NewsRestResourcesV1 implements ResourceContainer, Startable {
       if (returnSize) {
         newsEntity.setSize(news.size());
       }
-      return Response.ok(newsEntity).build();
+      return ResponseEntity.ok(newsEntity);
     } catch (Exception e) {
       LOG.error("Error when getting the news with target name=" + targetName, e);
-      return Response.serverError().entity(e.getMessage()).build();
+      return ResponseEntity.internalServerError().build();
     }
   }
 
-  @GET
-  @Path("byActivity/{activityId}")
-  @RolesAllowed("users")
-  @Produces(MediaType.APPLICATION_JSON)
+  @GetMapping(path = "byActivity/{activityId}", produces = MediaType.APPLICATION_JSON_VALUE)
+  @Secured("users")
   @Operation(summary = "Get a news identified by its activity or shared activity identifier", method = "GET", description = "This gets the news with the given id if the authenticated user is a member of the space or a spaces super manager.")
   @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "News returned"),
       @ApiResponse(responseCode = "401", description = "User not authorized to get the news"),
       @ApiResponse(responseCode = "404", description = "News not found"),
       @ApiResponse(responseCode = "500", description = "Internal server error") })
-  public Response getNewsByActivityId(@Parameter(description = "Activity id", required = true)
-  @PathParam("activityId")
-  String activityId) {
+  public ResponseEntity<News> getNewsByActivityId(@PathVariable("activityId")
+                                                  String activityId,
+                                                  @RequestParam(name = "lang", defaultValue = "null", required = false)
+                                                  String lang) {
     if (StringUtils.isBlank(activityId)) {
-      return Response.status(Response.Status.BAD_REQUEST).build();
+      return ResponseEntity.badRequest().build();
     }
     org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
     try {
-      News news = newsService.getNewsByActivityId(activityId, currentIdentity);
+      News news = newsService.getNewsByActivityIdAndLang(activityId, currentIdentity, lang);
       if (news == null) {
-        return Response.status(Response.Status.NOT_FOUND).build();
+        return ResponseEntity.notFound().build();
       }
-      news.setIllustration(null);
       Locale userLocale = LocalizationFilter.getCurrentLocale();
       news.setBody(MentionUtils.substituteRoleWithLocale(news.getBody(), userLocale));
 
       Identity userIdentity = identityManager.getOrCreateUserIdentity(currentIdentity.getUserId());
       if (userIdentity != null) {
         news.setFavorite(favoriteService.isFavorite(new Favorite("news",
-                                                                 news.getId(),
+                                                                 news.getLang() != null ? news.getId().concat("-").concat(news.getLang()) : news.getId(),
                                                                  "",
                                                                  Long.parseLong(userIdentity.getId()))));
       }
-      return Response.ok(news).build();
+      return ResponseEntity.ok(news);
     } catch (IllegalAccessException e) {
       LOG.warn("User {} attempt to access unauthorized news with id {}", currentIdentity.getUserId(), activityId);
-      return Response.status(Response.Status.UNAUTHORIZED).entity(e.getMessage()).build();
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     } catch (ObjectNotFoundException e) {
-      return Response.status(Response.Status.NOT_FOUND).entity(e.getMessage()).build();
+      return ResponseEntity.notFound().build();
     } catch (Exception e) {
       LOG.error("Error when getting the news " + activityId, e);
-      return Response.serverError().entity(e.getMessage()).build();
+      return ResponseEntity.internalServerError().build();
     }
   }
 
-  @PATCH
-  @Path("schedule")
-  @Consumes(MediaType.APPLICATION_JSON)
-  @Produces(MediaType.APPLICATION_JSON)
-  @RolesAllowed("users")
+  @PatchMapping(path = "schedule", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+  @Secured("users")
   @Operation(summary = "Schedule a news", method = "POST", description = "This schedules the news if the authenticated user is a member of the space or a spaces super manager. The news is created in staged status, after reaching a date of publication startPublishedDate, the publicationState property is set to 'posted'.")
   @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "News scheduled"),
       @ApiResponse(responseCode = "400", description = "Invalid query input"),
       @ApiResponse(responseCode = "401", description = "User not authorized to schedule the news"),
       @ApiResponse(responseCode = "500", description = "Internal server error") })
-  public Response scheduleNews(@Context
-                               HttpServletRequest request,
-                               @Parameter(description = "News object type to be fetched", required = false)
-                               @QueryParam("type")
-                               String newsObjectType,
-                               @RequestBody(description = "News object to be scheduled", required = true)
-                               News scheduledNews) {
+  public ResponseEntity<News> scheduleNews(@Parameter(description = "News object type to be fetched")
+                                           @RequestParam("type")
+                                           String newsObjectType,
+                                           @RequestBody
+                                           News scheduledNews) {
     if (scheduledNews == null || StringUtils.isEmpty(scheduledNews.getId())) {
-      return Response.status(Response.Status.BAD_REQUEST).build();
+      return ResponseEntity.badRequest().build();
     }
     org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
     try {
       News news = newsService.getNewsById(scheduledNews.getId(), currentIdentity, false, newsObjectType);
       if (news == null) {
-        return Response.status(Response.Status.NOT_FOUND).build();
+        return ResponseEntity.notFound().build();
       }
       news = newsService.scheduleNews(scheduledNews, currentIdentity, newsObjectType);
-      return Response.ok(news).build();
+      return ResponseEntity.ok(news);
     } catch (IllegalAccessException e) {
       LOG.warn("User '{}' is not autorized to schedule news", currentIdentity.getUserId(), e);
-      return Response.status(Response.Status.UNAUTHORIZED).entity(e.getMessage()).build();
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     } catch (Exception e) {
       LOG.error("Error when scheduling the news " + scheduledNews.getTitle(), e);
-      return Response.serverError().entity(e.getMessage()).build();
+      return ResponseEntity.internalServerError().build();
     }
   }
 
-  @Path("search")
-  @GET
-  @Produces(MediaType.APPLICATION_JSON)
-  @RolesAllowed("users")
+  @GetMapping(path = "search", produces = MediaType.APPLICATION_JSON_VALUE)
+  @Secured("users")
   @Operation(summary = "Search the list of news available with query", method = "GET", description = "Search the list of news available with query")
   @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "Request fulfilled"),
       @ApiResponse(responseCode = "400", description = "Invalid query input"),
       @ApiResponse(responseCode = "500", description = "Internal server error"), })
-  public Response search(@Context
-  UriInfo uriInfo, @Context
-  HttpServletRequest request,
-                         @Parameter(description = "Term to search", required = true)
-                         @QueryParam("query")
-                         String query,
-                         @Parameter(description = "Properties to expand")
-                         @QueryParam("expand")
-                         String expand,
-                         @Parameter(description = "Offset")
-                         @Schema(defaultValue = "0")
-                         @QueryParam("offset")
-                         int offset,
-                         @Parameter(description = "Tag names used to search news", required = true)
-                         @QueryParam("tags")
-                         List<String> tagNames,
-                         @Parameter(description = "Limit")
-                         @Schema(defaultValue = "20")
-                         @QueryParam("limit")
-                         int limit,
-                         @Parameter(description = "Favorites")
-                         @Schema(defaultValue = "false")
-                         @QueryParam("favorites")
-                         boolean favorites) {
+  public ResponseEntity<List<NewsSearchResultEntity>> search(@Parameter(description = "Term to search")
+                                                             @RequestParam(name = "query", required = false)
+                                                             String query,
+                                                             @Parameter(description = "Properties to expand")
+                                                             @RequestParam(name = "expand", required = false)
+                                                             String expand,
+                                                             @Parameter(description = "Offset")
+                                                             @RequestParam(name = "offset", defaultValue = "0", required = false)
+                                                             int offset,
+                                                             @Parameter(description = "Tag names used to search news")
+                                                             @RequestParam(name = "tags", required = false)
+                                                             List<String> tagNames,
+                                                             @Parameter(description = "Limit")
+                                                             @RequestParam(name = "limit", defaultValue = "10")
+                                                             int limit,
+                                                             @Parameter(description = "Favorites")
+                                                             @RequestParam(name = "favorites", defaultValue = "false", required = false)
+                                                             boolean favorites) {
 
     if (StringUtils.isBlank(query) && !favorites && CollectionUtils.isEmpty(tagNames)) {
-      return Response.status(Response.Status.BAD_REQUEST).entity("'query' parameter is mandatory").build();
+      return ResponseEntity.badRequest().build();
     }
 
-    String authenticatedUser = request.getRemoteUser();
+    String authenticatedUser = ConversationState.getCurrent().getIdentity().getUserId();
     Identity currentIdentity = identityManager.getOrCreateIdentity(OrganizationIdentityProvider.NAME, authenticatedUser);
 
     if (offset < 0) {
-      return Response.status(Response.Status.BAD_REQUEST).entity("Offset must be 0 or positive").build();
+      return ResponseEntity.badRequest().build();
     }
     if (limit < 0) {
-      return Response.status(Response.Status.BAD_REQUEST).entity("Limit must be positive").build();
+      return ResponseEntity.badRequest().build();
     }
     NewsFilter filter = new NewsFilter();
     filter.setSearchText(query);
@@ -769,255 +694,55 @@ public class NewsRestResourcesV1 implements ResourceContainer, Startable {
                                          searchResults.stream()
                                                       .map(searchResult -> io.meeds.news.utils.EntityBuilder.fromNewsSearchResult(favoriteService,
                                                                                                                                   searchResult,
-                                                                                                                                  currentIdentity,
-                                                                                                                                  uriInfo))
+                                                                                                                                  currentIdentity))
                                                       .collect(Collectors.toList());
 
-    return Response.ok(results).build();
+    return ResponseEntity.ok(results);
   }
 
-  @GET
-  @Path("{id}/illustration")
-  @Operation(summary = "Get a news illustration", method = "GET", description = "This gets the news illustration with the given id if the authenticated user is a member of the space or a spaces super manager.")
-  @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "News returned"),
-      @ApiResponse(responseCode = "401", description = "User not authorized to get the news"),
-      @ApiResponse(responseCode = "404", description = "News not found"),
-      @ApiResponse(responseCode = "500", description = "Internal server error") })
-  public Response getNewsIllustration(@Context
-  Request rsRequest, @Context
-  HttpServletRequest request,
-                                      @Parameter(description = "News id", required = true)
-                                      @PathParam("id")
-                                      String id,
-                                      @Parameter(description = "last modified date")
-                                      @QueryParam("v")
-                                      long lastModified,
-                                      @Parameter(description = "News object type to be fetched", required = false)
-                                      @QueryParam("type")
-                                      String newsObjectType,
-                                      @Parameter(description = "resized image size")
-                                      @QueryParam("size")
-                                      String size) {
-    try {
-      org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
-      News news = newsService.getNewsById(id, currentIdentity, false, newsObjectType);
-      if (news == null || news.getIllustration() == null || news.getIllustration().length == 0) {
-        return Response.status(Response.Status.NOT_FOUND).build();
-      }
-
-      if (!news.isPublished()) {// TODO Check if necessary
-        Space space = spaceService.getSpaceById(news.getSpaceId());
-        if (space == null) {
-          return Response.status(Response.Status.NOT_FOUND).build();
-        }
-      }
-
-      long lastUpdated = news.getIllustrationUpdateDate().getTime();
-      EntityTag eTag = (size == null || size.isBlank()) ? new EntityTag(String.valueOf(lastUpdated))
-                                                        : new EntityTag(lastUpdated + "-" + size);
-      Response.ResponseBuilder builder = rsRequest.evaluatePreconditions(eTag);
-      if (builder == null) {
-        if (size != null) {
-          // if there is no cache (browser cache or server cache with the etag),
-          // the image is resized
-          // it can be improved a little by storing the thumbnail in the news.
-          // in this case we need to add a security mechanism to prevent a user
-          // to generate one image for each (width,height) combination
-        }
-        builder = Response.ok(news.getIllustration(), news.getIllustrationMimeType());
-      }
-
-      if (lastModified > 0) {
-        builder.lastModified(new Date(lastUpdated));
-        builder.expires(new Date(System.currentTimeMillis() + CACHE_DURATION_MILLISECONDS));
-        builder.cacheControl(ILLUSTRATION_CACHE_CONTROL);
-      }
-      builder.tag(eTag);
-      return builder.build();
-    } catch (Exception e) {
-      LOG.error("Error when getting the news " + id, e);
-      return Response.serverError().build();
-    }
-
-//    try {
-//      boolean isDefault = bannerId == 0;
-//      EntityTag eTag = !isDefault ? new EntityTag(String.valueOf(bannerId)) : new EntityTag(siteName);
-//      Response.ResponseBuilder builder = request.evaluatePreconditions(eTag);
-//      if (builder == null) {
-//        InputStream stream = isDefault ? layoutService.getDefaultSiteBannerStream(siteName)
-//                                       : layoutService.getSiteBannerStream(siteName);
-//        builder = Response.ok(stream, "image/png");
-//        builder.tag(eTag);
-//      }
-//      builder.cacheControl(BANNER_CACHE_CONTROL);
-//      builder.lastModified(new Date(System.currentTimeMillis()));
-//      builder.expires(new Date(System.currentTimeMillis() + CACHE_IN_MILLI_SECONDS));
-//      return builder.build();
-//    } catch (ObjectNotFoundException e) {
-//      return Response.status(Response.Status.NOT_FOUND).build();
-//    } catch (IOException e) {
-//      return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
-//    }
-  }
-
-  @POST
-  @Path("{id}/click")
-  @RolesAllowed("users")
-  @Operation(summary = "Log a click action on a news", method = "POST", description = "This logs a message when the user performs a click on a news")
-  @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "Click logged"),
-      @ApiResponse(responseCode = "400", description = "Invalid query input"),
-      @ApiResponse(responseCode = "500", description = "Internal server error") })
-  public Response clickOnNews(@Context
-  UriInfo uriInfo,
-                              @Parameter(description = "News id", required = true)
-                              @PathParam("id")
-                              String id,
-                              @Parameter(description = "The clicked element", required = true)
-                              String clickedElement) {
-
-    String authenticatedUser = ConversationState.getCurrent().getIdentity().getUserId();
-    Identity currentUser = identityManager.getOrCreateIdentity(OrganizationIdentityProvider.NAME, authenticatedUser, false);
-
-    News news;
-    try {
-      org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
-      news = newsService.getNewsById(id, currentIdentity, false);
-      if (news == null) {
-        return Response.status(Response.Status.NOT_FOUND).build();
-      }
-    } catch (Exception e) {
-      LOG.error("Error while getting news with id " + id, e);
-      return Response.serverError().build();
-    }
-
-    Space space = spaceService.getSpaceById(news.getSpaceId());
-
-    LOG.info("service=news operation=click_on_{} parameters=\"news_id:{},space_name:{},space_id:{},user_id:{}\"",
-             clickedElement,
-             news.getId(),
-             space != null ? space.getPrettyName() : "",
-             space != null ? space.getId() : "",
-             currentUser.getId());
-
-    return Response.status(Response.Status.OK).build();
-  }
-
-  @PATCH
-  @Path("{id}")
-  @Consumes(MediaType.APPLICATION_JSON)
-  @RolesAllowed("users")
-  @Operation(summary = "Update a news", method = "PATCH", description = "This updates the sent fields of a news")
-  @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "News updated"),
-      @ApiResponse(responseCode = "400", description = "Invalid query input"),
-      @ApiResponse(responseCode = "401", description = "User not authorized to update the news"),
-      @ApiResponse(responseCode = "500", description = "Internal server error") })
-  public Response patchNews(@Context
-  HttpServletRequest request,
-                            @Parameter(description = "News id", required = true)
-                            @PathParam("id")
-                            String id,
-                            @RequestBody(description = "News object", required = true)
-                            News updatedNews) {
-    if (updatedNews == null) {
-      return Response.status(Response.Status.BAD_REQUEST).build();
-    }
-    String authenticatedUser = request.getRemoteUser();
-    try {
-      org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
-      News news = newsService.getNewsById(id, currentIdentity, false);
-      if (news == null) {
-        return Response.status(Response.Status.NOT_FOUND).build();
-      }
-      Space space = spaceService.getSpaceById(news.getSpaceId());
-      if (space == null) {
-        return Response.status(Response.Status.NOT_FOUND).build();
-      }
-      boolean isUpdatedTitle = (updatedNews.getTitle() != null) && !updatedNews.getTitle().equals(news.getTitle());
-      boolean isUpdatedSummary = (updatedNews.getSummary() != null) && !updatedNews.getSummary().equals(news.getSummary());
-      boolean isUpdatedBody = (updatedNews.getBody() != null) && !updatedNews.getBody().equals(news.getBody());
-      boolean isUpdatedIllustration =
-                                    (updatedNews.getUploadId() != null) && !updatedNews.getUploadId().equals(news.getUploadId());
-      if (isUpdatedTitle || isUpdatedSummary || isUpdatedBody || isUpdatedIllustration) {
-        if (!news.isCanEdit()) {
-          return Response.status(Response.Status.UNAUTHORIZED).build();
-        }
-        if (isUpdatedTitle) {
-          news.setTitle(updatedNews.getTitle());
-        }
-        if (isUpdatedSummary) {
-          news.setSummary(updatedNews.getSummary());
-        }
-        if (isUpdatedBody) {
-          news.setBody(updatedNews.getBody());
-        }
-        if (isUpdatedIllustration) {
-          news.setUploadId(updatedNews.getUploadId());
-        }
-        news = newsService.updateNews(news, authenticatedUser, null, updatedNews.isPublished());
-      }
-
-      return Response.ok(news).build();
-    } catch (IllegalAccessException e) {
-      LOG.warn("User '{}' is not autorized to patch news", authenticatedUser, e);
-      return Response.status(Response.Status.UNAUTHORIZED).entity(e.getMessage()).build();
-    } catch (Exception e) {
-      LOG.error("Error when trying to update the news " + id, e);
-      return Response.serverError().build();
-    }
-  }
-
-  @GET
-  @Path("canScheduleNews/{spaceId}")
-  @Produces(MediaType.TEXT_PLAIN)
-  @RolesAllowed("users")
+  @GetMapping(path = "canScheduleNews/{spaceId}", produces = MediaType.APPLICATION_JSON_VALUE)
+  @Secured("users")
   @Operation(summary = "check if the current user can schedule a news in the given space", method = "GET", description = "This checks if the current user can schedule a news in the given space")
   @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "User ability to schedule a news"),
       @ApiResponse(responseCode = "400", description = "Invalid query input"),
       @ApiResponse(responseCode = "401", description = "User not authorized to schedule a news"),
       @ApiResponse(responseCode = "404", description = "Space not found"),
       @ApiResponse(responseCode = "500", description = "Internal server error") })
-  public Response canScheduleNews(@Parameter(description = "space id", required = true)
-  @PathParam("spaceId")
-  String spaceId) {
+  public ResponseEntity<Boolean> canScheduleNews(@PathVariable("spaceId") String spaceId) {
     org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
     try {
       if (StringUtils.isBlank(spaceId)) {
-        return Response.status(Response.Status.BAD_REQUEST).build();
+        return ResponseEntity.badRequest().build();
       }
       Space space = spaceService.getSpaceById(spaceId);
       if (space == null) {
-        return Response.status(Response.Status.NOT_FOUND).build();
+        return ResponseEntity.notFound().build();
       }
 
-      return Response.ok(String.valueOf(newsService.canScheduleNews(space, currentIdentity))).build();
+      return ResponseEntity.ok(newsService.canScheduleNews(space, currentIdentity));
     } catch (Exception e) {
       LOG.error("Error when checking if the authenticated user can schedule a news", e);
-      return Response.serverError().build();
+      return ResponseEntity.internalServerError().build();
     }
   }
 
-  @GET
-  @Path("canPublishNews")
-  @Produces(MediaType.TEXT_PLAIN)
-  @RolesAllowed("users")
+  @GetMapping(path = "canPublishNews", produces = MediaType.APPLICATION_JSON_VALUE)
+  @Secured("users")
   @Operation(summary = "check if the current user can publish a news to all users", method = "GET", description = "This checks if the current user can publish a news to all users")
-  @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "User ability to publish a news is returned"),
-      @ApiResponse(responseCode = "401", description = "User not authorized to publish a news") })
-  public Response canPublishNews(@Parameter(description = "space id", required = true)
-  @QueryParam("spaceId")
-  String spaceId) {
+  @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "User ability to publish a news is returned"), @ApiResponse(responseCode = "401", description = "User not authorized to publish a news") })
+  public ResponseEntity<Boolean> canPublishNews(@RequestParam(name = "spaceId", required = false) String spaceId) {
     org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
     try {
       if (!StringUtils.isBlank(spaceId)) {
         Space space = spaceService.getSpaceById(spaceId);
         if (space == null) {
-          return Response.status(Response.Status.NOT_FOUND).build();
+          return ResponseEntity.notFound().build();
         }
       }
-      return Response.ok(String.valueOf(NewsUtils.canPublishNews(spaceId, currentIdentity))).build();
+      return ResponseEntity.ok(NewsUtils.canPublishNews(spaceId, currentIdentity));
     } catch (Exception e) {
       LOG.error("Error when checking if the authenticated user can publish a news to all users", e);
-      return Response.serverError().build();
+      return ResponseEntity.internalServerError().build();
     }
   }
 
@@ -1064,5 +789,70 @@ public class NewsRestResourcesV1 implements ResourceContainer, Startable {
     newsFilter.setOffset(offset);
 
     return newsFilter;
+  }
+  
+  @DeleteMapping(path = "translation/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+  @Secured("users")
+  @Operation(summary = "Delete article version with language", method = "DELETE", description = "This deletes the article version ")
+  @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "article version deleted"),
+      @ApiResponse(responseCode = "400", description = "Invalid query input"),
+      @ApiResponse(responseCode = "401", description = "User not authorized to delete the article"),
+      @ApiResponse(responseCode = "500", description = "Internal server error") })
+  public Response deleteArticleTranslation(@PathVariable("id")
+                                           String id,
+                                           @Parameter(description = "article version language")
+                                           @RequestParam(name = "lang")
+                                           String lang) {
+    org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
+    try {
+      if (StringUtils.isBlank(id)) {
+        return Response.status(Response.Status.BAD_REQUEST).build();
+      }
+      // fetch always the original news
+      News news = newsService.getNewsById(id, currentIdentity, false, ARTICLE.name());
+      if (news == null) {
+        return Response.status(Response.Status.NOT_FOUND).build();
+      }
+      if (!news.isCanDelete()) {
+        return Response.status(Response.Status.UNAUTHORIZED).build();
+      }
+      newsService.deleteVersionsByArticleIdAndLang(id, lang);
+      return Response.ok().build();
+    } catch (IllegalAccessException e) {
+      LOG.warn("User '{}' is not authorized to delete article translation", currentIdentity.getUserId(), e);
+      return Response.status(Response.Status.UNAUTHORIZED).entity(e.getMessage()).build();
+    } catch (Exception e) {
+      LOG.error("Error when deleting the article translation with id " + id, e);
+      return Response.serverError().entity(e.getMessage()).build();
+    }
+  }
+
+  /**
+   * Get available translation languages for an article
+   *
+   * @param articleId the ID of the article
+   * @param withDrafts boolean flag to include drafts translation languages
+   * @return a list of available translation languages
+   */
+  @GetMapping(path = "translation/{articleId}", produces = MediaType.APPLICATION_JSON_VALUE)
+  @Secured("users")
+  @Operation(summary = "Get article available translation languages", method = "GET", description = "Get article available translation languages")
+  @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "Article available translation languages returned"),
+          @ApiResponse(responseCode = "400", description = "Invalid query input"),
+          @ApiResponse(responseCode = "401", description = "User not authorized to get the article available translation languages "),
+          @ApiResponse(responseCode = "500", description = "Internal server error") })
+  public ResponseEntity<List<String>> getAvailableTranslationLanguages(@PathVariable("articleId")
+                                                                       String articleId,
+                                                                       @RequestParam(name = "withDrafts")
+                                                                       boolean withDrafts) {
+    try {
+      if (StringUtils.isBlank(articleId)) {
+        return ResponseEntity.badRequest().build();
+      }
+      return ResponseEntity.ok(newsService.getArticleLanguages(articleId, withDrafts));
+    } catch (Exception e) {
+      LOG.error("Error when getting the article available translation languages with id " + articleId, e);
+      return ResponseEntity.internalServerError().build();
+    }
   }
 }

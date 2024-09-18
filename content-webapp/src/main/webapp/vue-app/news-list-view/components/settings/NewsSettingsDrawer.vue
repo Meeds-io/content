@@ -68,17 +68,18 @@
             </label>
           </div>
           <div class="d-flex flex-row mt-2">
-            <v-text-field
+            <translation-text-field
+              ref="headerNameInput"
+              id="headerNameInput"
               v-model="newsHeader"
-              type="string"
-              name="newsHeader"
               :placeholder="$t('news.list.settings.placeHolderName')"
+              drawer-title="news.list.settings.translation.header"
               maxlength="100"
-              class="input-block-level ignore-vuetify-classes pa-0"
-              counter
-              required
-              outlined
-              dense />
+              class="flex"
+              no-expand-icon
+              back-icon
+              autofocus
+              required />
           </div>
           <div class="d-flex flex-row">
             <label for="newsTarget" class="listViewLabel text-subtitle-1 mt-6">
@@ -143,7 +144,7 @@
           </div>
         </div>
         <news-advanced-settings
-          v-else
+          v-show="showAdvancedSettings"
           :show-article-summary="showArticleSummary"
           :show-see-all="showSeeAll"
           :show-header="showHeader"
@@ -154,7 +155,12 @@
           @selected-option="selectedOption" />
       </form>
       <div class="d-flex flex-row mt-4 mx-8 justify-end advancedSettings">
-        <span v-if="!showAdvancedSettings" @click="showAdvancedSettings = !showAdvancedSettings">{{ $t('news.list.settings.drawer.advancedSettings') }}</span>
+        <span
+          v-if="!showAdvancedSettings"
+          class="primary--text text-decoration-underline clickable"
+          @click="showAdvancedSettings = !showAdvancedSettings">
+          {{ $t('news.list.settings.drawer.advancedSettings') }}
+        </span>
       </div>
     </template>
     <template slot="footer">
@@ -190,7 +196,7 @@ export default {
     viewExtensions: {},
     newsTarget: null,
     limit: 5,
-    newsHeader: '',
+    newsHeader: null,
     showAdvancedSettings: false,
     showHeader: false,
     showSeeAll: false,
@@ -205,8 +211,24 @@ export default {
     seeAllUrl: '',
     isValidSeeAllUrl: false,
     saveSettingsURL: '',
-    canManageNewsPublishTargets: eXo.env.portal.canManageNewsPublishTargets
+    canManageNewsPublishTargets: eXo.env.portal.canManageNewsPublishTargets,
+    translationObjectType: 'newsListView',
+    headerTitleFieldName: 'headerNameInput',
   }),
+  props: {
+    language: {
+      type: String,
+      default: 'en'
+    },
+    applicationId: {
+      type: String,
+      default: null,
+    },
+    savedHeaderTranslations: {
+      type: Object,
+      default: null
+    },
+  },
   computed: {
     backgroundColor(){
       return this.newsTargets.length === 0 ? '#E1E8EE': '';
@@ -224,7 +246,7 @@ export default {
       return this.viewTemplates.filter(e=> !e.name.includes('EmptyTemplate'));
     },
     disabled() {
-      return !this.newsHeader.length || (this.showSeeAll && !this.isValidSeeAllUrl);
+      return this.showSeeAll && !this.isValidSeeAllUrl;
     },
     previewTemplate() {
       if ( this.viewTemplate === 'NewsLatest') {
@@ -305,7 +327,9 @@ export default {
       this.viewTemplate = this.$root.viewTemplate;
       this.viewExtensions = this.$root.viewExtensions;
       this.newsTarget = this.$root.newsTarget;
-      this.newsHeader = this.$root.header;
+      this.newsHeader = ((Object.keys(this.savedHeaderTranslations || {})?.length && this.savedHeaderTranslations
+                                                       || {[this.$root.defaultLanguage]: this.$root.headerTitle}))
+                                                       || this.$root.headerTitle;
       this.limit = this.$root.limit;
       this.showHeader = this.viewTemplate === 'NewsSlider' || this.viewTemplate === 'NewsMosaic' || this.viewTemplate === 'NewsStories' ? false : this.$root.showHeader;
       this.showSeeAll = this.$root.showSeeAll;
@@ -337,10 +361,9 @@ export default {
     save() {
       this.saving = true;
       let selectedOptions = null;
-      this.$newsListService.saveSettings(this.saveSettingsURL ,{
+      const settings = {
         viewTemplate: this.viewTemplate,
         newsTarget: this.newsTarget,
-        header: this.newsHeader,
         showHeader: this.showHeader,
         showSeeAll: this.showSeeAll,
         showArticleTitle: this.showArticleTitle,
@@ -352,11 +375,15 @@ export default {
         showArticleDate: this.showArticleDate,
         seeAllUrl: this.seeAllUrl,
         limit: this.limit,
-      })
+      };
+      this.$newsListService.saveSettings(this.saveSettingsURL , settings)
         .then(() => {
+          this.saveHeaderTranslations();
           this.$root.viewTemplate = this.viewTemplate;
           this.$root.newsTarget = this.newsTarget;
-          this.$root.header = this.newsHeader;
+          this.$root.headerTranslations = this.newsHeader;
+          this.$root.headerTitle =  this.newsHeader?.[this.language]
+              || this.newsHeader?.[this.$root.defaultLanguage];
           this.$root.limit = this.limit;
           this.$root.showHeader = this.showHeader;
           this.$root.showSeeAll = this.showSeeAll;
@@ -371,7 +398,9 @@ export default {
           selectedOptions = {
             limit: this.limit,
             showHeader: this.showHeader,
-            header: this.newsHeader,
+            headerTranslations: this.newsHeader,
+            headerTitle: this.newsHeader?.[this.language]
+                || this.newsHeader?.[this.$root.defaultLanguage],
             showSeeAll: this.showSeeAll,
             showArticleTitle: this.showArticleTitle,
             showArticleSummary: this.showArticleSummary,
@@ -388,6 +417,10 @@ export default {
         .finally(() => {
           this.saving = false;
         });
+    },
+    saveHeaderTranslations() {
+      return this.$translationService.saveTranslations(this.translationObjectType, this.applicationId,
+        this.headerTitleFieldName, this.newsHeader);
     },
     getLabel(label, defaultLabel) {
       if (label === this.$t(label)) {
@@ -468,7 +501,6 @@ export default {
     },
     switchSettingsDrawer() {
       this.showAdvancedSettings = !this.showAdvancedSettings;
-      this.reset();
     },
     createNewTarget() {
       this.$root.$emit('open-news-publish-targets-management-drawer');

@@ -17,32 +17,13 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
- 
-import ExoNewsActivityComposer  from './components/ExoNewsActivityComposer.vue';
-import ExoNewsFileDrop from './components/ExoNewsFileDrop.vue';
-import ContentRichEditor from './components/ContentRichEditor.vue';
 
-import * as  newsServices from '../services/newsServices.js';
-import * as newsConstants from '../services/newsConstants.js';
-
-const components = {
-  'exo-news-activity-composer': ExoNewsActivityComposer,
-  'exo-news-file-drop': ExoNewsFileDrop,
-  'content-rich-editor': ContentRichEditor
-};
-
-for (const key in components) {
-  Vue.component(key, components[key]);
-}
-
-if (!Vue.prototype.$newsServices) {
-  window.Object.defineProperty(Vue.prototype, '$newsServices', {
-    value: newsServices,
-  });
-}
-
-if (!Vue.prototype.$newsConstants) {
-  window.Object.defineProperty(Vue.prototype, '$newsConstants', {
-    value: newsConstants,
-  });
+import './initComponents.js';
+if (extensionRegistry) {
+  const components = extensionRegistry.loadComponents('contentTranslationMenu');
+  if (components && components.length > 0) {
+    components.forEach(cmp => {
+      Vue.component(cmp.componentName, cmp.componentOptions);
+    });
+  }
 }

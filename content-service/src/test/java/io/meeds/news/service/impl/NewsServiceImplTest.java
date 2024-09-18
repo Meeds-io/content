@@ -22,7 +22,8 @@ package io.meeds.news.service.impl;
 import static io.meeds.news.service.impl.NewsServiceImpl.*;
 import static io.meeds.news.utils.NewsUtils.NewsObjectType.ARTICLE;
 import static io.meeds.news.utils.NewsUtils.NewsObjectType.LATEST_DRAFT;
-import static io.meeds.news.utils.NewsUtils.NewsUpdateType.CONTENT;
+import static io.meeds.news.utils.NewsUtils.NewsUpdateType.CONTENT_AND_TITLE;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -33,12 +34,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
-import static org.mockito.Mockito.atLeast;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -50,6 +46,8 @@ import java.util.Map;
 
 import io.meeds.news.search.NewsSearchConnector;
 import io.meeds.news.search.NewsESSearchResult;
+import io.meeds.notes.model.NoteFeaturedImage;
+import io.meeds.notes.model.NotePageProperties;
 import org.exoplatform.services.security.ConversationState;
 import org.exoplatform.social.core.utils.MentionUtils;
 import org.exoplatform.wiki.WikiException;
@@ -57,8 +55,10 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
+import org.mockito.MockitoAnnotations;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import org.exoplatform.commons.file.services.FileService;
@@ -129,7 +129,8 @@ public class NewsServiceImplTest {
   @Mock
   private NewsSearchConnector newsSearchConnector;
 
-  private NewsService                                  newsService;
+  @InjectMocks
+  private NewsServiceImpl                                  newsService;
 
   private static final MockedStatic<CommonsUtils>      COMMONS_UTILS      = mockStatic(CommonsUtils.class);
 
@@ -143,18 +144,6 @@ public class NewsServiceImplTest {
 
   @Before
   public void setUp() {
-    this.newsService = new NewsServiceImpl(spaceService,
-                                           noteService,
-                                           metadataService,
-                                           fileService,
-                                           newsTargetingService,
-                                           indexingService,
-                                           identityManager,
-                                           activityManager,
-                                           wikiService,
-                                           uploadService,
-            newsSearchConnector);
-
     when(johnIdentity.getUserId()).thenReturn("john");
     ConversationState conversationState = mock(ConversationState.class);
     CONVERSATION_STATE.when(ConversationState::getCurrent).thenReturn(conversationState);
@@ -176,7 +165,6 @@ public class NewsServiceImplTest {
     News draftArticle = new News();
     draftArticle.setAuthor("john");
     draftArticle.setTitle("draft article for new page");
-    draftArticle.setSummary("draft article summary for new page");
     draftArticle.setBody("draft body");
     draftArticle.setPublicationState("draft");
 
@@ -211,7 +199,7 @@ public class NewsServiceImplTest {
     when(noteService.getNoteOfNoteBookByName("group",
                                              space.getGroupId(),
                                              NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME)).thenReturn(rootPage);
-    when(noteService.createDraftForNewPage(any(DraftPage.class), anyLong())).thenReturn(draftPage);
+    when(noteService.createDraftForNewPage(any(DraftPage.class), anyLong(), anyLong())).thenReturn(draftPage);
     when(rootPage.getId()).thenReturn("1");
     org.exoplatform.social.core.identity.model.Identity identity1 =
                                                                   mock(org.exoplatform.social.core.identity.model.Identity.class);
@@ -228,7 +216,8 @@ public class NewsServiceImplTest {
     verify(metadataService, times(1)).createMetadataItem(any(NewsDraftObject.class),
                                                          any(MetadataKey.class),
                                                          any(Map.class),
-                                                         anyLong());
+                                                         anyLong(),
+                                                         anyBoolean());
     assertNotNull(savedDraftArticle.getId());
     assertEquals(draftPage.getId(), savedDraftArticle.getId());
     assertEquals(draftPage.getTitle(), savedDraftArticle.getTitle());
@@ -256,7 +245,6 @@ public class NewsServiceImplTest {
     when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
                                                              any(MetadataObject.class))).thenReturn(metadataItems);
     Map<String, String> properties = new HashMap<>();
-    properties.put(NEWS_SUMMARY, draftPage.getContent());
     when(metadataItem.getProperties()).thenReturn(properties);
     PORTAL_CONTAINER.when(PortalContainer::getCurrentPortalContainerName).thenReturn("portal");
     COMMONS_UTILS.when(CommonsUtils::getCurrentPortalOwner).thenReturn("dw");
@@ -319,7 +307,6 @@ public class NewsServiceImplTest {
     news.setId("1");
     news.setPublicationState("draft");
     news.setSpaceId(space.getId());
-    news.setSummary("news summary");
 
     DraftPage expecteddraftPage = new DraftPage();
     expecteddraftPage.setTitle(news.getTitle());
@@ -329,7 +316,7 @@ public class NewsServiceImplTest {
     expecteddraftPage.setWikiOwner("/space/groupId");
 
     // When, Then
-    assertThrows(IllegalAccessException.class, () -> newsService.updateNews(news, "john", false, false, NewsUtils.NewsObjectType.DRAFT.name().toLowerCase(), CONTENT.name().toLowerCase()));
+    assertThrows(IllegalAccessException.class, () -> newsService.updateNews(news, "john", false, false, NewsUtils.NewsObjectType.DRAFT.name().toLowerCase(), CONTENT_AND_TITLE.name()));
 
     // Given
     when(spaceService.canRedactOnSpace(space, identity)).thenReturn(true);
@@ -337,14 +324,13 @@ public class NewsServiceImplTest {
                                                                   mock(org.exoplatform.social.core.identity.model.Identity.class);
     when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(identity1);
     when(identity1.getId()).thenReturn("1");
-    when(noteService.updateDraftForNewPage(any(DraftPage.class), anyLong())).thenReturn(expecteddraftPage);
+    when(noteService.updateDraftForNewPage(any(DraftPage.class), anyLong(), anyLong())).thenReturn(expecteddraftPage);
 
     // When
-    newsService.updateNews(news, "john", false, false, NewsUtils.NewsObjectType.DRAFT.name().toLowerCase(), CONTENT.name().toLowerCase());
+    newsService.updateNews(news, "john", false, false, NewsUtils.NewsObjectType.DRAFT.name().toLowerCase(), CONTENT_AND_TITLE.name());
 
     // Then
-    verify(noteService, times(1)).updateDraftForNewPage(eq(expecteddraftPage), anyLong());
-    verify(metadataService, times(1)).updateMetadataItem(any(MetadataItem.class), anyLong());
+    verify(noteService, times(1)).updateDraftForNewPage(eq(expecteddraftPage), anyLong(), anyLong());
   }
 
   @Test
@@ -475,7 +461,6 @@ public class NewsServiceImplTest {
     when(noteService.getDraftNoteById(anyString(), anyString())).thenReturn(draftPage);
 
     Map<String, String> properties = new HashMap<>();
-    properties.put(NEWS_SUMMARY, draftPage.getContent());
     MetadataItem metadataItem = mock(MetadataItem.class);
     List<MetadataItem> metadataItems = Arrays.asList(metadataItem);
     when(metadataItem.getObjectId()).thenReturn("1");
@@ -512,7 +497,6 @@ public class NewsServiceImplTest {
     News newsArticle = new News();
     newsArticle.setAuthor("john");
     newsArticle.setTitle("news article for new page");
-    newsArticle.setSummary("news article summary for new page");
     newsArticle.setBody("news body");
     newsArticle.setPublicationState(POSTED);
     newsArticle.setId("1");
@@ -557,7 +541,8 @@ public class NewsServiceImplTest {
     verify(metadataService, atLeast(1)).createMetadataItem(any(MetadataObject.class),
                                                          any(MetadataKey.class),
                                                          any(Map.class),
-                                                         anyLong());
+                                                         anyLong(),
+                                                         anyBoolean());
   }
 
   @Test
@@ -603,11 +588,10 @@ public class NewsServiceImplTest {
     news.setId("1");
     news.setPublicationState("draft");
     news.setSpaceId("1");
-    news.setSummary("news summary");
     news.setOriginalBody("body");
 
     // When, Then
-      assertThrows(IllegalAccessException.class, () -> newsService.updateNews(news, "john", false, false, NewsUtils.NewsObjectType.DRAFT.name().toLowerCase(), CONTENT.name().toLowerCase()));
+      assertThrows(IllegalAccessException.class, () -> newsService.updateNews(news, "john", false, false, NewsUtils.NewsObjectType.DRAFT.name().toLowerCase(), CONTENT_AND_TITLE.name()));
 
     // Given
     when(spaceService.canRedactOnSpace(space, identity)).thenReturn(true);
@@ -629,7 +613,7 @@ public class NewsServiceImplTest {
                                              anyString())).thenReturn(draftPage);
 
     // When
-    newsService.updateNews(news, "john", false, false, LATEST_DRAFT.name().toLowerCase(), CONTENT.name().toLowerCase());
+    newsService.updateNews(news, "john", false, false, LATEST_DRAFT.name().toLowerCase(), CONTENT_AND_TITLE.name());
 
     // Then
     verify(noteService, times(1)).createDraftForExistPage(any(DraftPage.class),
@@ -640,7 +624,8 @@ public class NewsServiceImplTest {
     verify(metadataService, times(1)).createMetadataItem(any(NewsLatestDraftObject.class),
                                                          any(MetadataKey.class),
                                                          any(Map.class),
-                                                         anyLong());
+                                                         anyLong(),
+                                                         anyBoolean());
 
   }
 
@@ -686,11 +671,10 @@ public class NewsServiceImplTest {
     news.setId("1");
     news.setPublicationState("draft");
     news.setSpaceId("1");
-    news.setSummary("news summary");
     news.setOriginalBody("body");
 
     // When, Then
-    assertThrows(IllegalAccessException.class, () -> newsService.updateNews(news, "john", false, false, NewsUtils.NewsObjectType.DRAFT.name().toLowerCase(), CONTENT.name().toLowerCase()));
+    assertThrows(IllegalAccessException.class, () -> newsService.updateNews(news, "john", false, false, NewsUtils.NewsObjectType.DRAFT.name().toLowerCase(), CONTENT_AND_TITLE.name()));
 
     // Given
     when(spaceService.canRedactOnSpace(space, identity)).thenReturn(true);
@@ -707,7 +691,7 @@ public class NewsServiceImplTest {
                                              anyString())).thenReturn(draftPage);
 
     // When
-    newsService.updateNews(news, "john", false, false, LATEST_DRAFT.name().toLowerCase(), CONTENT.name().toLowerCase());
+    newsService.updateNews(news, "john", false, false, LATEST_DRAFT.name().toLowerCase(), CONTENT_AND_TITLE.name());
 
     // Then
     verify(noteService, times(1)).updateDraftForExistPage(any(DraftPage.class),
@@ -715,7 +699,7 @@ public class NewsServiceImplTest {
                                                           nullable(String.class),
                                                           anyLong(),
                                                           anyString());
-    verify(metadataService, times(1)).updateMetadataItem(any(MetadataItem.class), anyLong());
+    verify(metadataService, times(1)).updateMetadataItem(any(MetadataItem.class), anyLong(), anyBoolean());
   }
 
   @Test
@@ -763,11 +747,10 @@ public class NewsServiceImplTest {
     news.setId("1");
     news.setPublicationState(POSTED);
     news.setSpaceId("1");
-    news.setSummary("news summary");
     news.setOriginalBody("body");
 
     // When, Then
-    assertThrows(IllegalAccessException.class, () -> newsService.updateNews(news, "john", false, false, NewsUtils.NewsObjectType.DRAFT.name().toLowerCase(), CONTENT.name().toLowerCase()));
+    assertThrows(IllegalAccessException.class, () -> newsService.updateNews(news, "john", false, false, NewsUtils.NewsObjectType.DRAFT.name().toLowerCase(), CONTENT_AND_TITLE.name()));
 
     // Given
     when(spaceService.canRedactOnSpace(space, identity)).thenReturn(true);
@@ -777,16 +760,15 @@ public class NewsServiceImplTest {
     when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(identity1);
     when(identity1.getId()).thenReturn("1");
 
-    when(noteService.updateNote(any(Page.class))).thenReturn(existingPage);
+    when(noteService.updateNote(any(Page.class), any(), any())).thenReturn(existingPage);
 
     // When
-    newsService.updateNews(news, "john", false, false, ARTICLE.name().toLowerCase(), CONTENT.name().toLowerCase());
+    newsService.updateNews(news, "john", false, false, ARTICLE.name().toLowerCase(), CONTENT_AND_TITLE.name());
 
     // Then
-    verify(noteService, times(1)).updateNote(any(Page.class));
+    verify(noteService, times(1)).updateNote(any(Page.class), any(), any());
     verify(noteService, times(1)).createVersionOfNote(existingPage, identity.getUserId());
-    verify(noteService, times(2)).getPublishedVersionByPageIdAndLang(1L, null);
-    verify(metadataService, times(1)).updateMetadataItem(any(MetadataItem.class), anyLong());
+    verify(noteService, times(1)).getPublishedVersionByPageIdAndLang(1L, null);
   }
 
   @Test
@@ -827,9 +809,16 @@ public class NewsServiceImplTest {
     when(spaceService.canRedactOnSpace(space, identity)).thenReturn(true);
     when(noteService.deleteNote(existingPage.getWikiType(), existingPage.getWikiOwner(), existingPage.getName())).thenReturn(true);
     DraftPage draftPage = mock(DraftPage.class);
+    NotePageProperties draftProperties = new NotePageProperties();
+    NoteFeaturedImage noteFeaturedImage = new NoteFeaturedImage();
+    noteFeaturedImage.setId(123L);
+    draftProperties.setFeaturedImage(noteFeaturedImage);
     when(draftPage.getId()).thenReturn("1");
+    when(draftPage.getProperties()).thenReturn(draftProperties);
     when(noteService.getLatestDraftOfPage(existingPage, identity.getUserId())).thenReturn(draftPage);
     when(noteService.getDraftNoteById(anyString(), anyString())).thenReturn(draftPage);
+    when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(new org.exoplatform.social.core.identity.model.Identity("1"));
+    doNothing().when(noteService).removeNoteFeaturedImage(anyLong(), anyLong(), anyString(), anyBoolean(), anyLong());
 
     newsService.deleteNews(existingPage.getId(), identity, ARTICLE.name().toLowerCase());
 
@@ -837,7 +826,7 @@ public class NewsServiceImplTest {
     verify(noteService, times(1)).deleteNote(existingPage.getWikiType(), existingPage.getWikiOwner(), existingPage.getName());
     verify(noteService, times(1)).removeDraftById("1");
     verify(activityManager, times(1)).deleteActivity("1");
-    verify(metadataService, times(1)).updateMetadataItem(any(MetadataItem.class), anyLong());
+    verify(metadataService, times(1)).updateMetadataItem(any(MetadataItem.class), anyLong(), anyBoolean());
   }
 
   @Test
@@ -865,7 +854,6 @@ public class NewsServiceImplTest {
     News newsArticle = new News();
     newsArticle.setAuthor("john");
     newsArticle.setTitle("news article");
-    newsArticle.setSummary("news article summary");
     newsArticle.setBody("news body");
     newsArticle.setPublicationState("staged");
     newsArticle.setId("1");
@@ -951,7 +939,7 @@ public class NewsServiceImplTest {
     when(draftPage.getCreatedDate()).thenReturn(new Date());
     when(draftPage.getAuthor()).thenReturn("john");
     when(draftPage.getId()).thenReturn("1");
-    when(noteService.createDraftForNewPage(any(DraftPage.class), anyLong())).thenReturn(draftPage);
+    when(noteService.createDraftForNewPage(any(DraftPage.class), anyLong(), anyLong())).thenReturn(draftPage);
 
     org.exoplatform.social.core.identity.model.Identity identity1 =
             mock(org.exoplatform.social.core.identity.model.Identity.class);
@@ -960,8 +948,79 @@ public class NewsServiceImplTest {
 
     newsService.unScheduleNews(newsArticle, space.getGroupId(), "john");
 
-    verify(noteService, times(1)).createDraftForNewPage(any(DraftPage.class), anyLong());
+    verify(noteService, times(1)).createDraftForNewPage(any(DraftPage.class), anyLong(), anyLong());
     verify(noteService, times(1)).deleteNote(anyString(), anyString(), anyString());
+  }
+
+  @Test
+  public void testAddNewsArticleTranslation() throws Exception {
+    // Given
+    Page existingPage = mock(Page.class);
+    when(noteService.getNoteById(anyString())).thenReturn(existingPage);
+    when(existingPage.getId()).thenReturn("1");
+    when(existingPage.getWikiOwner()).thenReturn("/space/groupId");
+
+    MetadataItem metadataItem = mock(MetadataItem.class);
+    List<MetadataItem> metadataItems = new ArrayList<>();
+    metadataItems.add(metadataItem);
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+            any(MetadataObject.class))).thenReturn(metadataItems);
+    Map<String, String> properties = new HashMap<>();
+    when(metadataItem.getProperties()).thenReturn(properties);
+    mockBuildArticle(metadataItems);
+
+    Space space = mockSpace();
+
+    Identity identity = mockIdentity();
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(anyString(), any(Identity.class))).thenReturn(false);
+    NEWS_UTILS.when(() -> NewsUtils.processMentions(anyString(), any())).thenReturn(new HashSet<>());
+    when(newsTargetingService.getTargetsByNews(any(News.class))).thenReturn(null);
+
+    DraftPage draftPage = mock(DraftPage.class);
+
+    when(draftPage.getId()).thenReturn("1");
+
+    PageVersion pageVersion = mock(PageVersion.class);
+    when(noteService.getPublishedVersionByPageIdAndLang(1L, "fr")).thenReturn(pageVersion);
+    when(noteService.getLatestDraftPageByUserAndTargetPageAndLang(anyLong(),
+            anyString(),
+            anyString())).thenReturn(draftPage);
+
+    when(existingPage.getAuthor()).thenReturn("john");
+    when(pageVersion.getAuthor()).thenReturn("john");
+    when(pageVersion.getUpdatedDate()).thenReturn(new Date());
+    when(pageVersion.getAuthorFullName()).thenReturn("full name");
+
+    News news = new News();
+    news.setAuthor("john");
+    news.setTitle("new draft title");
+    news.setBody("draft body");
+    news.setId("1");
+    news.setPublicationState(POSTED);
+    news.setSpaceId("1");
+    news.setOriginalBody("body");
+    news.setLang("fr");
+
+    // When, Then
+    assertThrows(IllegalAccessException.class, () -> newsService.updateNews(news, "john", false, false, NewsUtils.NewsObjectType.DRAFT.name().toLowerCase(), CONTENT_AND_TITLE.name()));
+
+    // Given
+    when(spaceService.canRedactOnSpace(space, identity)).thenReturn(true);
+    when(spaceService.isSuperManager(anyString())).thenReturn(true);
+    org.exoplatform.social.core.identity.model.Identity identity1 =
+            mock(org.exoplatform.social.core.identity.model.Identity.class);
+    when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(identity1);
+    when(identity1.getId()).thenReturn("1");
+
+    when(noteService.updateNote(any(Page.class), any(), any())).thenReturn(existingPage);
+    // When
+    newsService.updateNews(news, "john", false, false, ARTICLE.name().toLowerCase(), CONTENT_AND_TITLE.name());
+
+    // Then
+    verify(noteService, times(1)).updateNote(any(Page.class), any(), any());
+    verify(noteService, times(1)).createVersionOfNote(existingPage, identity.getUserId());
+    verify(noteService, times(2)).getPublishedVersionByPageIdAndLang(1L, null);
+    NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.ADD_ARTICLE_TRANSLATION), anyObject(), anyObject()), times(1));
   }
 
   private void mockBuildArticle(List<MetadataItem> metadataItems) throws WikiException {

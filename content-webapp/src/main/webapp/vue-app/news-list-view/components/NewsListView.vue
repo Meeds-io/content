@@ -35,7 +35,11 @@
             :params="viewComponentParams" />
         </v-card-text>
       </v-card>
-      <news-settings-drawer v-if="canPublishNews" />
+      <news-settings-drawer
+        v-if="canPublishNews"
+        :saved-header-translations="headerTranslations"
+        :language="language"
+        :application-id="applicationId"/>
       <news-publish-targets-management-drawer v-if="canManageNewsPublishTargets" />
     </v-app>
   </v-hover>
@@ -44,6 +48,14 @@
 <script>
 export default {
   props: {
+    applicationId: {
+      type: String,
+      default: null,
+    },
+    headerTranslations: {
+      type: Object,
+      default: null
+    },
     viewTemplate: {
       type: String,
       default: null,
@@ -52,7 +64,7 @@ export default {
       type: Array,
       default: null,
     },
-    header: {
+    headerTitle: {
       type: String,
       default: null,
     },
@@ -110,7 +122,8 @@ export default {
     hasMore: false,
     offset: 0,
     canPublishNews: false,
-    canManageNewsPublishTargets: eXo.env.portal.canManageNewsPublishTargets
+    canManageNewsPublishTargets: eXo.env.portal.canManageNewsPublishTargets,
+    language: eXo?.env?.portal?.language,
   }),
   computed: {
     displayHeader() {
@@ -149,7 +162,8 @@ export default {
         viewExtension: this.selectedViewExtension,
         newsTarget: this.newsTarget,
         newsList: this.newsList,
-        header: this.header,
+        headerTranslations: this.headerTranslations,
+        headerTitle: this.headerTitle,
         limit: this.limit,
         showHeader: this.showHeader,
         showSeeAll: this.showSeeAll,

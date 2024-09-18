@@ -23,21 +23,6 @@
    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
    xsi:schemaLocation="http://www.exoplatform.org/xml/ns/kernel_1_2.xsd http://www.exoplatform.org/xml/ns/kernel_1_2.xsd"
    xmlns="http://www.exoplatform.org/xml/ns/kernel_1_2.xsd">
-
-  <component>
-    <type>io.meeds.news.search.NewsSearchConnector</type>
-    <init-params>
-      <value-param>
-        <name>query.file.path</name>
-        <value>${exo.news.es.query.path:jar:/news-search-query.json}</value>
-      </value-param>
-      <properties-param>
-        <name>constructor.params</name>
-        <property name="searchType" value="news" />
-        <property name="index" value="news_alias" />
-      </properties-param>
-    </init-params>
-  </component>
   
   <external-component-plugins>
     <target-component>org.exoplatform.social.core.search.SearchService</target-component>
@@ -55,7 +40,7 @@
               <string>news</string>
             </field>
             <field name="uri">
-              <string><![CDATA[/portal/rest/v1/news/search?query={keyword}&limit={limit}]]></string>
+              <string><![CDATA[/content/rest/contents/search?query={keyword}&limit={limit}]]></string>
             </field>
             <field name="enabled">
               <boolean>${exo.search.activity.enabled:true}</boolean>

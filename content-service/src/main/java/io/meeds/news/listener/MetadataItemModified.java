@@ -24,6 +24,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.exoplatform.commons.search.index.IndexingService;
 import org.exoplatform.services.listener.Event;
 import org.exoplatform.services.listener.Listener;
+import org.exoplatform.services.listener.ListenerService;
 import org.exoplatform.social.core.storage.api.ActivityStorage;
 import org.exoplatform.social.core.storage.cache.CachedActivityStorage;
 import org.exoplatform.social.metadata.model.MetadataItem;
@@ -32,20 +33,37 @@ import io.meeds.news.model.News;
 import io.meeds.news.search.NewsIndexingServiceConnector;
 import io.meeds.news.service.NewsService;
 import io.meeds.news.utils.NewsUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
+import jakarta.annotation.PostConstruct;
+
+@Component
 public class MetadataItemModified extends Listener<Long, MetadataItem> {
 
+  @Autowired
   private IndexingService       indexingService;
 
+  @Autowired
   private NewsService           newsService;
+
+  @Autowired
+  private ActivityStorage       activityStorage;
+
+  @Autowired
+  private ListenerService        listenerService;
 
   private CachedActivityStorage cachedActivityStorage;
 
-  public MetadataItemModified(NewsService newsService, IndexingService indexingService, ActivityStorage activityStorage) {
-    this.newsService = newsService;
-    this.indexingService = indexingService;
+  private String[] LISTENER_EVENTS = { "social.metadataItem.updated", "social.metadataItem.created", "social.metadataItem.deleted" };
+
+  @PostConstruct
+  public void init() {
     if (activityStorage instanceof CachedActivityStorage) {
       this.cachedActivityStorage = (CachedActivityStorage) activityStorage;
+    }
+    for (String listener : LISTENER_EVENTS) {
+      listenerService.addListener(listener, this);
     }
   }
 
@@ -57,7 +75,7 @@ public class MetadataItemModified extends Listener<Long, MetadataItem> {
     if (isNewsEvent(objectType)) {
       // Ensure to re-execute all ActivityProcessors to compute & cache
       // metadatas of the activity again
-      News news = newsService.getNewsById(objectId, false);
+      News news = newsService.getNewsArticleById(StringUtils.substringBefore(objectId, "-"));
       if (news != null) {
         if (StringUtils.isNotBlank(news.getActivityId())) {
           clearCache(news.getActivityId());

@@ -41,9 +41,18 @@ const newsActivityTypeExtensionOptions = {
     if (activity.parentActivity) {
       activityId = activity.parentActivity.id;
     }
+    if (activity.newsTranslations) {
+      const newsTranslationsMap = activity.newsTranslations;
+      const newsTranslationKey = `news_${lang}`;
+      activity.news = newsTranslationsMap[newsTranslationKey] || activity.news;
+    }
     if (!activity.news || isActivityDetail) {
-      return Vue.prototype.$newsServices.getNewsByActivityId(activityId)
+      return Vue.prototype.$newsServices.getNewsByActivityId(activityId, lang)
         .then(news => activity.news = news);
+    }
+    // metadata object id for translation is a concatenation of the news id and the lang
+    if (activity.news.lang) {
+      activity.templateParams.metadataObjectId = `${activity.news.id}-${activity.news.lang}`;
     }
   },
   canEdit: () => false,
@@ -70,8 +79,8 @@ const newsActivityTypeExtensionOptions = {
   getSourceLink: (activity) => `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/activity?id=${!activity.parentActivity ? activity.id : activity.parentActivity.id}`,
   getSummary: (activity) => {
     const news = activity?.news;
-    if (news?.summary) {
-      return news.summary;
+    if (news?.properties?.summary) {
+      return news?.properties?.summary;
     } else if (news?.body) {
       return Vue.prototype.$utils.htmlToText(news.body);
     }

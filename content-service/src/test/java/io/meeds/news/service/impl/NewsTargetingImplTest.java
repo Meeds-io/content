@@ -24,6 +24,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -38,11 +39,15 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import org.exoplatform.container.component.RequestLifeCycle;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
+import org.mockito.MockitoAnnotations;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import org.exoplatform.commons.utils.CommonsUtils;
@@ -106,6 +111,14 @@ public class NewsTargetingImplTest {
   @Mock
   private GroupHandler                                   groupHandler;
 
+  @InjectMocks
+  NewsTargetingServiceImpl                               newsTargetingService;
+
+  @Before
+  public void setUp() {
+    EXO_CONTAINER_CONTEXT.when(() -> ExoContainerContext.getCurrentContainer()).thenReturn(container);
+  }
+
   @AfterClass
   public static void afterRunBare() throws Exception { // NOSONAR
     EXO_CONTAINER_CONTEXT.close();
@@ -116,11 +129,6 @@ public class NewsTargetingImplTest {
   @Test
   public void testGetAllTargets() throws Exception {
     // Given
-    NewsTargetingServiceImpl newsTargetingService = new NewsTargetingServiceImpl(metadataService,
-                                                                                 identityManager,
-                                                                                 spaceService,
-                                                                                 organizationService);
-    IdentityRegistry identityRegistry = mock(IdentityRegistry.class);
     EXO_CONTAINER_CONTEXT.when(() -> ExoContainerContext.getService(IdentityRegistry.class)).thenReturn(identityRegistry);
     org.exoplatform.services.security.Identity identity = mock(org.exoplatform.services.security.Identity.class);
     REST_UTILS.when(() -> RestUtils.getCurrentUser()).thenReturn("root");
@@ -178,10 +186,6 @@ public class NewsTargetingImplTest {
   @Test
   public void testGetAllowedTargets() throws Exception {
     // Given
-    NewsTargetingServiceImpl newsTargetingService = new NewsTargetingServiceImpl(metadataService,
-                                                                                 identityManager,
-                                                                                 spaceService,
-                                                                                 organizationService);
     EXO_CONTAINER_CONTEXT.when(() -> ExoContainerContext.getService(IdentityRegistry.class)).thenReturn(identityRegistry);
     org.exoplatform.services.security.Identity identity = mock(org.exoplatform.services.security.Identity.class);
     REST_UTILS.when(RestUtils::getCurrentUser).thenReturn("user");
@@ -312,10 +316,6 @@ public class NewsTargetingImplTest {
   @Test
   public void testGetTargetsByNews() throws Exception {
     // Given
-    NewsTargetingServiceImpl newsTargetingService = new NewsTargetingServiceImpl(metadataService,
-                                                                                 identityManager,
-                                                                                 spaceService,
-                                                                                 organizationService);
     News news = new News();
     news.setId("123456");
     news.setSpaceId("1");
@@ -350,10 +350,6 @@ public class NewsTargetingImplTest {
   @Test
   public void testSaveNewsTargets() throws Exception {
     // Given
-    NewsTargetingServiceImpl newsTargetingService = new NewsTargetingServiceImpl(metadataService,
-                                                                                 identityManager,
-                                                                                 spaceService,
-                                                                                 organizationService);
     org.exoplatform.services.security.Identity identity = new org.exoplatform.services.security.Identity("root");
     Metadata sliderNews = new Metadata();
     sliderNews.setName("sliderNews");
@@ -381,7 +377,6 @@ public class NewsTargetingImplTest {
     MetadataKey metadataKey = new MetadataKey(NewsTargetingService.METADATA_TYPE.getName(), "sliderNews", 0);
     Identity userIdentity = new Identity("1");
     when(identityManager.getOrCreateIdentity(OrganizationIdentityProvider.NAME, "root")).thenReturn(userIdentity);
-    IdentityRegistry identityRegistry = mock(IdentityRegistry.class);
     Authenticator authenticator = mock(Authenticator.class);
     EXO_CONTAINER_CONTEXT.when(() -> ExoContainerContext.getService(IdentityRegistry.class)).thenReturn(identityRegistry);
     EXO_CONTAINER_CONTEXT.when(() -> ExoContainerContext.getCurrentContainer()).thenReturn(container);
@@ -402,17 +397,12 @@ public class NewsTargetingImplTest {
 
     // Then
     verify(identityManager, times(1)).getOrCreateIdentity(OrganizationIdentityProvider.NAME, "root");
-    verify(metadataService, times(1)).createMetadataItem(newsTargetObject, metadataKey, properties, 1);
+    verify(metadataService, times(1)).createMetadataItem(newsTargetObject, metadataKey, properties, 1, false);
 
   }
 
   @Test
   public void testGetNewsTargetItemsByTargetName() throws Exception {
-    // Given
-    NewsTargetingServiceImpl newsTargetingService = new NewsTargetingServiceImpl(metadataService,
-                                                                                 identityManager,
-                                                                                 spaceService,
-                                                                                 organizationService);
 
     Metadata sliderNews = new Metadata();
     sliderNews.setName("newsTargets");
@@ -446,15 +436,10 @@ public class NewsTargetingImplTest {
   @Test
   public void testDeleteTargetByName() throws IllegalAccessException {
     // Given
-    NewsTargetingServiceImpl newsTargetingService = new NewsTargetingServiceImpl(metadataService,
-                                                                                 identityManager,
-                                                                                 spaceService,
-                                                                                 organizationService);
     String username = "user";
     Identity userIdentity = new Identity();
     userIdentity.setRemoteId(username);
 
-    IdentityRegistry identityRegistry = mock(IdentityRegistry.class);
     EXO_CONTAINER_CONTEXT.when(() -> ExoContainerContext.getService(IdentityRegistry.class)).thenReturn(identityRegistry);
     org.exoplatform.services.security.Identity identity = mock(org.exoplatform.services.security.Identity.class);
     when(identity.isMemberOf("/platform/web-contributors", "manager")).thenReturn(true);
@@ -484,10 +469,6 @@ public class NewsTargetingImplTest {
   @Test
   public void testCreateTarget() throws IllegalAccessException {
     // Given
-    NewsTargetingServiceImpl newsTargetingService = new NewsTargetingServiceImpl(metadataService,
-                                                                                 identityManager,
-                                                                                 spaceService,
-                                                                                 organizationService);
     org.exoplatform.services.security.Identity currentIdentity = new org.exoplatform.services.security.Identity("root");
     MembershipEntry membershipentry = new MembershipEntry("/platform/web-contributors", "manager");
     List<MembershipEntry> memberships = new ArrayList<MembershipEntry>();
@@ -495,7 +476,7 @@ public class NewsTargetingImplTest {
     currentIdentity.setMemberships(memberships);
     Identity userIdentity = new Identity("organization", "root");
     userIdentity.setId("1");
-    when(identityManager.getOrCreateIdentity(any(), any())).thenReturn(userIdentity);
+    when(identityManager.getOrCreateIdentity(anyString(), anyString())).thenReturn(userIdentity);
 
     List<Metadata> newsTargets = new LinkedList<>();
     Metadata sliderNews = new Metadata();
@@ -537,8 +518,7 @@ public class NewsTargetingImplTest {
     userIdentity1.setId(id1);
     userIdentity1.setRemoteId(username1);
 
-    IdentityRegistry identityRegistry1 = mock(IdentityRegistry.class);
-    EXO_CONTAINER_CONTEXT.when(() -> ExoContainerContext.getService(IdentityRegistry.class)).thenReturn(identityRegistry1);
+    EXO_CONTAINER_CONTEXT.when(() -> ExoContainerContext.getService(IdentityRegistry.class)).thenReturn(identityRegistry);
     org.exoplatform.services.security.Identity identity1 = mock(org.exoplatform.services.security.Identity.class);
     try {
       newsTargetingService.createNewsTarget(newsTargetingEntity, identity1);
@@ -551,10 +531,6 @@ public class NewsTargetingImplTest {
   @Test
   public void testUpdateTarget() throws IllegalAccessException {
     // Given
-    NewsTargetingServiceImpl newsTargetingService = new NewsTargetingServiceImpl(metadataService,
-                                                                                 identityManager,
-                                                                                 spaceService,
-                                                                                 organizationService);
     org.exoplatform.services.security.Identity currentIdentity = new org.exoplatform.services.security.Identity("root");
     MembershipEntry membershipentry = new MembershipEntry("/platform/web-contributors", "manager");
     List<MembershipEntry> memberships = new ArrayList<MembershipEntry>();
