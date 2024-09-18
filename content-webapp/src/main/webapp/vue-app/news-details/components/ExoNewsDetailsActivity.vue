@@ -28,6 +28,7 @@
     :show-edit-button="showEditButton"
     :show-publish-button="showPublishButton"
     :show-delete-button="showDeleteButton"
+    :show-copy-link-button="true"
     :translations="translations"
     :selected-translation="selectedTranslation" />
 </template>
