@@ -25,7 +25,10 @@
         :news="news"
         :show-edit-button="showEditButton"
         :show-delete-button="showDeleteButton"
-        :show-publish-button="showPublishButton" />
+        :show-copy-link-button="showCopyLinkButton"
+        :show-publish-button="showPublishButton"
+        @delete-article="deleteConfirmDialog"
+        @edit-article="editLink" />
       <exo-news-details-body-mobile
         :news="news"
         :news-id="newsId"
@@ -40,6 +43,7 @@
         :show-edit-button="showEditButton"
         :show-delete-button="showDeleteButton"
         :show-publish-button="showPublishButton"
+        :show-copy-link-button="showCopyLinkButton"
         @delete-article="deleteConfirmDialog"
         @edit-article="editLink" />
       <exo-news-details-body
@@ -103,6 +107,11 @@ export default {
       default: false
     },
     showDeleteButton: {
+      type: Boolean,
+      required: false,
+      default: false
+    },
+    showCopyLinkButton: {
       type: Boolean,
       required: false,
       default: false

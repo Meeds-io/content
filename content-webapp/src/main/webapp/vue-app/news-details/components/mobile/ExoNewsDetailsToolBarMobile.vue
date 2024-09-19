@@ -40,18 +40,21 @@
     </v-app-bar-nav-icon>
     <v-spacer />
     <v-btn
-      v-if="publicationState !== 'staged' && showEditButton"
+      v-if="publicationState !== 'staged'"
       class="newsDetailsMenuBtn my-2"
       fab
       dark
       x-small>
-      <exo-news-details-action-menu
-        v-if="showEditButton && publicationState !== 'staged'"
+      <exo-news-details-action-menu-app
+        v-if="publicationState !== 'staged'"
         :news="news"
         :show-edit-button="showEditButton"
         :show-delete-button="showDeleteButton"
         :show-publish-button="showPublishButton"
-        :news-published="newsPublished" />
+        :show-copy-link-button="showCopyLinkButton"
+        :news-published="newsPublished"
+        @edit-article="$emit('edit-article', news)"
+        @delete-article="$emit('delete-article')" />
     </v-btn>
     <v-btn
       v-if="publicationState === 'staged'"
@@ -80,6 +83,11 @@ export default {
       default: false
     },
     showDeleteButton: {
+      type: Boolean,
+      required: false,
+      default: false
+    },
+    showCopyLinkButton: {
       type: Boolean,
       required: false,
       default: false

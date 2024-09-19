@@ -60,6 +60,7 @@ export function init(params) {
           newsType: params.newsType,
           showEditButton: params.news.canEdit,
           showPublishButton: params.news.canPublish,
+          showCopyLinkButton: true,
           showDeleteButton: params.news.canDelete,
         };
       },

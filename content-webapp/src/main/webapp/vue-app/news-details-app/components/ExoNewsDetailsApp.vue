@@ -17,6 +17,7 @@
       :show-delete-button="showDeleteButton"
       :translations="translations"
       :selected-translation="selectedTranslation"
+      :show-copy-link-button="true"
     />
   </div>
 </template>
