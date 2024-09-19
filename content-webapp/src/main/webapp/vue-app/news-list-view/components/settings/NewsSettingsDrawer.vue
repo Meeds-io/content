@@ -230,9 +230,6 @@ export default {
     },
   },
   computed: {
-    newListTranslationEnabled() {
-      return this.$root.newListTranslationEnabled;
-    },
     backgroundColor(){
       return this.newsTargets.length === 0 ? '#E1E8EE': '';
     },

@@ -98,10 +98,6 @@ public class NewsUtils {
   public static final String  REMOVE_ARTICLE_TRANSLATION      = "content.remove.article.translation";
 
   public static final String SHARE_CONTENT_ATTACHMENTS       = "content.share.attachments";
-  
-  public static final String  ADD_ARTICLE_TRANSLATION         = "content.add.article.translation";
-
-  public static final String  REMOVE_ARTICLE_TRANSLATION      = "content.remove.article.translation";
 
   public enum NewsObjectType {
     DRAFT, LATEST_DRAFT, ARTICLE;
