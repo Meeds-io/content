@@ -19,11 +19,17 @@
  */
 package io.meeds.news.service.impl;
 
-import static io.meeds.news.service.impl.NewsServiceImpl.*;
+import static io.meeds.news.service.impl.NewsServiceImpl.DRAFT;
+import static io.meeds.news.service.impl.NewsServiceImpl.NEWS_ACTIVITIES;
+import static io.meeds.news.service.impl.NewsServiceImpl.NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME;
+import static io.meeds.news.service.impl.NewsServiceImpl.NEWS_DELETED;
+import static io.meeds.news.service.impl.NewsServiceImpl.NEWS_PUBLICATION_STATE;
+import static io.meeds.news.service.impl.NewsServiceImpl.POSTED;
+import static io.meeds.news.service.impl.NewsServiceImpl.PUBLISHED;
+import static io.meeds.news.service.impl.NewsServiceImpl.SCHEDULE_POST_DATE;
 import static io.meeds.news.utils.NewsUtils.NewsObjectType.ARTICLE;
 import static io.meeds.news.utils.NewsUtils.NewsObjectType.LATEST_DRAFT;
 import static io.meeds.news.utils.NewsUtils.NewsUpdateType.CONTENT_AND_TITLE;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -34,7 +40,13 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -44,13 +56,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
-import io.meeds.news.search.NewsSearchConnector;
-import io.meeds.news.search.NewsESSearchResult;
-import io.meeds.notes.model.NoteFeaturedImage;
-import io.meeds.notes.model.NotePageProperties;
-import org.exoplatform.services.security.ConversationState;
-import org.exoplatform.social.core.utils.MentionUtils;
-import org.exoplatform.wiki.WikiException;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
@@ -58,23 +63,25 @@ import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
-import org.mockito.MockitoAnnotations;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import org.exoplatform.commons.file.services.FileService;
 import org.exoplatform.commons.search.index.IndexingService;
 import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.container.PortalContainer;
+import org.exoplatform.services.security.ConversationState;
 import org.exoplatform.services.security.Identity;
 import org.exoplatform.social.core.manager.ActivityManager;
 import org.exoplatform.social.core.manager.IdentityManager;
 import org.exoplatform.social.core.space.model.Space;
 import org.exoplatform.social.core.space.spi.SpaceService;
+import org.exoplatform.social.core.utils.MentionUtils;
 import org.exoplatform.social.metadata.MetadataService;
 import org.exoplatform.social.metadata.model.MetadataItem;
 import org.exoplatform.social.metadata.model.MetadataKey;
 import org.exoplatform.social.metadata.model.MetadataObject;
 import org.exoplatform.upload.UploadService;
+import org.exoplatform.wiki.WikiException;
 import org.exoplatform.wiki.model.DraftPage;
 import org.exoplatform.wiki.model.Page;
 import org.exoplatform.wiki.model.PageVersion;
@@ -86,9 +93,12 @@ import io.meeds.news.filter.NewsFilter;
 import io.meeds.news.model.News;
 import io.meeds.news.model.NewsDraftObject;
 import io.meeds.news.model.NewsLatestDraftObject;
-import io.meeds.news.service.NewsService;
+import io.meeds.news.search.NewsESSearchResult;
+import io.meeds.news.search.NewsSearchConnector;
 import io.meeds.news.service.NewsTargetingService;
 import io.meeds.news.utils.NewsUtils;
+import io.meeds.notes.model.NoteFeaturedImage;
+import io.meeds.notes.model.NotePageProperties;
 
 @RunWith(MockitoJUnitRunner.Silent.class)
 public class NewsServiceImplTest {
@@ -216,8 +226,7 @@ public class NewsServiceImplTest {
     verify(metadataService, times(1)).createMetadataItem(any(NewsDraftObject.class),
                                                          any(MetadataKey.class),
                                                          any(Map.class),
-                                                         anyLong(),
-                                                         anyBoolean());
+                                                         anyLong());
     assertNotNull(savedDraftArticle.getId());
     assertEquals(draftPage.getId(), savedDraftArticle.getId());
     assertEquals(draftPage.getTitle(), savedDraftArticle.getTitle());
@@ -541,8 +550,7 @@ public class NewsServiceImplTest {
     verify(metadataService, atLeast(1)).createMetadataItem(any(MetadataObject.class),
                                                          any(MetadataKey.class),
                                                          any(Map.class),
-                                                         anyLong(),
-                                                         anyBoolean());
+                                                         anyLong());
   }
 
   @Test
@@ -624,8 +632,7 @@ public class NewsServiceImplTest {
     verify(metadataService, times(1)).createMetadataItem(any(NewsLatestDraftObject.class),
                                                          any(MetadataKey.class),
                                                          any(Map.class),
-                                                         anyLong(),
-                                                         anyBoolean());
+                                                         anyLong());
 
   }
 
@@ -699,7 +706,7 @@ public class NewsServiceImplTest {
                                                           nullable(String.class),
                                                           anyLong(),
                                                           anyString());
-    verify(metadataService, times(1)).updateMetadataItem(any(MetadataItem.class), anyLong(), anyBoolean());
+    verify(metadataService, times(1)).updateMetadataItem(any(MetadataItem.class), anyLong());
   }
 
   @Test
@@ -826,7 +833,7 @@ public class NewsServiceImplTest {
     verify(noteService, times(1)).deleteNote(existingPage.getWikiType(), existingPage.getWikiOwner(), existingPage.getName());
     verify(noteService, times(1)).removeDraftById("1");
     verify(activityManager, times(1)).deleteActivity("1");
-    verify(metadataService, times(1)).updateMetadataItem(any(MetadataItem.class), anyLong(), anyBoolean());
+    verify(metadataService, times(1)).updateMetadataItem(any(MetadataItem.class), anyLong());
   }
 
   @Test

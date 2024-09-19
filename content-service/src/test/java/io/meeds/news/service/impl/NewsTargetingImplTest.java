@@ -39,7 +39,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import org.exoplatform.container.component.RequestLifeCycle;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
@@ -47,7 +46,6 @@ import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
-import org.mockito.MockitoAnnotations;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import org.exoplatform.commons.utils.CommonsUtils;
@@ -397,7 +395,7 @@ public class NewsTargetingImplTest {
 
     // Then
     verify(identityManager, times(1)).getOrCreateIdentity(OrganizationIdentityProvider.NAME, "root");
-    verify(metadataService, times(1)).createMetadataItem(newsTargetObject, metadataKey, properties, 1, false);
+    verify(metadataService, times(1)).createMetadataItem(newsTargetObject, metadataKey, properties, 1);
 
   }
 
