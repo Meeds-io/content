@@ -107,22 +107,6 @@ export function init(params) {
                                                   || params.headerTitle;
         });
       },
-      computed: {
-        newListTranslationEnabled() {
-          return eXo?.env?.portal?.newsListTranslationEnabled;
-        },
-      },
-      created() {
-        if (!this.newListTranslationEnabled) {
-          this.headerTitle = params.headerTitle;
-          return;
-        }
-        Vue.prototype.$translationService.getTranslations('newsListView', applicationId, 'headerNameInput').then(translations => {
-          this.headerTranslations = translations;
-          this.headerTitle = translations?.[lang] || translations?.[this.defaultLanguage]
-                                                  || params.headerTitle;
-        });
-      },
       template: `<news-list-view
                   id="${appId}"
                   :application-id="applicationId"
