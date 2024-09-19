@@ -28,13 +28,14 @@
       {{ $t("news.composer.btn.scheduleArticle") }}
     </v-btn>
     <exo-news-details-action-menu-app
-      v-if="publicationState !== 'staged' && (showEditButton || showDeleteButton || showPublishButton)"
+      v-if="publicationState !== 'staged' && (showEditButton || showDeleteButton || showPublishButton || showCopyLinkButton)"
       class="pull-right"
       :news="news"
       :current-app="currentApplication"
       :show-edit-button="showEditButton"
       :show-delete-button="showDeleteButton"
       :show-publish-button="showPublishButton"
+      :show-copy-link-button="showCopyLinkButton"
       @delete-article="$emit('delete-article')"
       @edit-article="$emit('edit-article')" />
     <exo-news-favorite-action
@@ -83,6 +84,11 @@ export default {
       required: false,
       default: false
     },
+    showCopyLinkButton: {
+      type: Boolean,
+      required: false,
+      default: false
+    }
   },
   data() {
     return {

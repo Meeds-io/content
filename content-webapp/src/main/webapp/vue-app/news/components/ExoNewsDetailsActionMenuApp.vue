@@ -26,67 +26,45 @@
     bottom
     left
     offset-y
-    min-width="108px"
-    class="px-0 mx-2 pa-0 py-0 overflow-hidden">
+    class="px-0 mx-2 pa-0 py-0 overflow-hidden newsMenu">
     <template #activator="{ on, attrs }">
       <v-btn
         v-bind="attrs"
         :aria-label="$t('news.details.menu.open')"
         class="newsDetailsActionMenu pull-right"
+        :class="isMobile && 'pl-4' || ''"
         icon
-        v-on="on">
+        v-on="on"
+        @click="openBottomMenu">
         <v-icon>mdi-dots-vertical</v-icon>
       </v-btn>
     </template>
-
-    <v-list class="pa-0">
-      <v-list-item class="px-4 action-menu-item d-flex align-center" v-if="showEditButton" @click="$emit('edit-article', news)">
-        <v-icon
-          size="16">
-          fas fa-edit
-        </v-icon>
-        <span class="ps-2 pt-1">
-          {{ $t('news.details.header.menu.edit') }}
-        </span>
-      </v-list-item>
-      <v-list-item  class="px-4 action-menu-item d-flex align-center" v-if="showShareButton && news.activityId" @click="$root.$emit('activity-share-drawer-open', news.activityId, currentApp)">
-        <v-icon
-          size="16">
-          fa fa-share
-        </v-icon>
-        <span class="ps-2 pt-1">
-          {{ $t('news.details.header.menu.share') }}
-        </span>
-      </v-list-item>
-      <v-list-item class="px-4 action-menu-item d-flex align-center" v-if="showResumeButton" @click="$emit('edit-article', news)">
-        <v-icon
-          size="16">
-          fas fa-edit
-        </v-icon>
-        <span class="ps-2 pt-1">
-          {{ $t('news.details.header.menu.resume') }}
-        </span>
-      </v-list-item>
-      <v-list-item class="px-4 action-menu-item" v-if="showPublishButton" @click="$root.$emit('open-edit-publishing-drawer')">
-        <v-icon
-          size="16">
-          fa-solid fa-paper-plane
-        </v-icon>
-        <span class="ps-2 pt-1">
-          {{ $t('news.details.header.menu.publish') }}
-        </span>
-      </v-list-item>
-      <v-list-item class="px-4 action-menu-item d-flex align-center deleteArticleOption" v-if="showDeleteButton" @click="$emit('delete-article')">
-        <v-icon
-          size="16"
-          class="clickable icon-menu deleteArticleIcon ">
-          fas fa-trash
-        </v-icon>
-        <span class="ps-2 pt-1 deleteArticleText">
-          {{ $t('news.details.header.menu.delete') }}
-        </span>
-      </v-list-item>
-    </v-list>
+    <news-action-menu-items
+      v-if="!isMobile"
+      :news="news"
+      :show-copy-link-button="showCopyLinkButton"
+      :show-delete-button="showDeleteButton"
+      :show-edit-button="showEditButton"
+      :current-app="currentApp"
+      :show-publish-button="showPublishButton"
+      :show-resume-button="showResumeButton"
+      :show-share-button="showShareButton"
+      @copy-link="copyLink"
+      @edit-article="$emit('edit-article', news)"
+      @delete-article="$emit('delete-article')" />
+    <news-mobile-action-menu
+      v-else
+      :news="news"
+      :show-copy-link-button="showCopyLinkButton"
+      :show-delete-button="showDeleteButton"
+      :show-edit-button="showEditButton"
+      :current-app="currentApp"
+      :show-publish-button="showPublishButton"
+      :show-resume-button="showResumeButton"
+      :show-share-button="showShareButton"
+      @copy-link="copyLink"
+      @edit-article="$emit('edit-article', news)"
+      @delete-article="$emit('delete-article')" />
   </v-menu>
 </template>
 
@@ -128,6 +106,11 @@ export default {
       required: false,
       default: null
     },
+    showCopyLinkButton: {
+      type: Boolean,
+      required: false,
+      default: false
+    }
   },
   data: () => ({
     actionMenu: null,
@@ -146,5 +129,34 @@ export default {
       this.actionMenu = false;
     });
   },
+  computed: {
+    isMobile() {
+      return this.$vuetify.breakpoint.name === 'xs' || this.$vuetify.breakpoint.name === 'sm';
+    }
+  },
+  methods: {
+    copyLink() {
+      let newsLink = window.location.href.split(eXo.env.portal.metaPortalName)[0];
+      if (this.news?.published && this.news.audience === 'all') {
+        newsLink = newsLink.concat(eXo.env.portal.metaPortalName).concat(`/news-detail?newsId=${this.news.id}&type=article`);
+      } else {
+        newsLink = newsLink.concat(eXo.env.portal.metaPortalName).concat(`/activity?id=${this.news.activityId}`);
+      }
+      if (this.news?.lang) {
+        newsLink = newsLink.concat(`&lang=${this.news.lang}`);
+      }
+      navigator.clipboard.writeText(newsLink);
+      document.dispatchEvent(new CustomEvent('alert-message', {detail: {
+        alertType: 'success',
+        alertMessage: this.$t('news.alert.success.label.linkCopied') ,
+      }}));
+      if (this.isMobile) {
+        this.$root.$emit('close-news-mobile-action-menu');
+      }
+    },
+    openBottomMenu() {
+      return this.isMobile && this.$root.$emit('open-news-mobile-action-menu');
+    }
+  }
 };
 </script>
