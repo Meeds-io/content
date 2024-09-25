@@ -2160,5 +2160,17 @@ public class NewsServiceImpl implements NewsService {
     }
     NewsUtils.broadcastEvent(NewsUtils.UPDATE_CONTENT_PERMISSIONS, this, updateContentPermissionEventListenerData);
   }
-}
 
+  private void updateArticlePermissions(List<Space> spaces, News article, List<String> articleAttachmentIds) {
+    Map<String, Object> updateContentPermissionEventListenerData = new HashMap<>();
+    updateContentPermissionEventListenerData.putAll(Map.of("spaces", spaces, ARTICLE_CONTENT, article.getBody()));
+    if (articleAttachmentIds != null) {
+      updateContentPermissionEventListenerData.put(NEWS_ATTACHMENTS_IDS, articleAttachmentIds);
+    }
+
+    if (article.getAudience() != null) {
+      updateContentPermissionEventListenerData.put(NEWS_AUDIENCE, article.getAudience());
+    }
+    NewsUtils.broadcastEvent(NewsUtils.UPDATE_CONTENT_PERMISSIONS, this, updateContentPermissionEventListenerData);
+  }
+}
