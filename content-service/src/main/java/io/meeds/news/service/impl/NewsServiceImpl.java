@@ -420,13 +420,7 @@ public class NewsServiceImpl implements NewsService {
 
     Space space = spaceService.getSpaceById(news.getSpaceId());
     // Update content permissions
-<<<<<<< HEAD
     updateArticlePermissions(List.of(space), news);
-=======
-    updateArticlePermissions(List.of(space),
-                             news,
-                             getArticleAttachmentIds(Long.parseLong(news.getSpaceId()), Long.parseLong(newsPageObject.getId())));
->>>>>>> 501ad675 (feat: Fix content body inserted images permissions - EXO-74263_EXO-74265_EXO-74266 - Meeds-io/MIPs#129 (#240))
     try {
       sendNotification(publisher, news, NotificationConstants.NOTIFICATION_CONTEXT.PUBLISH_NEWS);
     } catch (Error | Exception e) {
@@ -464,14 +458,7 @@ public class NewsServiceImpl implements NewsService {
       String publisherId = identityManager.getOrCreateUserIdentity(publisher).getId();
       metadataService.updateMetadataItem(newsMetadataItem, Long.parseLong(publisherId), false);
       // Update content permissions
-<<<<<<< HEAD
       updateArticlePermissions(List.of(space), news);
-=======
-      updateArticlePermissions(List.of(space),
-                               news,
-                               getArticleAttachmentIds(Long.parseLong(news.getSpaceId()),
-                                                       Long.parseLong(newsPageObject.getId())));
->>>>>>> 501ad675 (feat: Fix content body inserted images permissions - EXO-74263_EXO-74265_EXO-74266 - Meeds-io/MIPs#129 (#240))
     }
   }
 
@@ -877,14 +864,7 @@ public class NewsServiceImpl implements NewsService {
       metadataItem.setProperties(properties);
       metadataService.updateMetadataItem(metadataItem, Long.parseLong(userIdentity.getId()), false);
       // Update content permissions
-<<<<<<< HEAD
       updateArticlePermissions(List.of(space), news);
-=======
-      updateArticlePermissions(List.of(space),
-                               news,
-                               getArticleAttachmentIds(Long.parseLong(news.getSpaceId()),
-                                                       Long.parseLong(newsPageObject.getId())));
->>>>>>> 501ad675 (feat: Fix content body inserted images permissions - EXO-74263_EXO-74265_EXO-74266 - Meeds-io/MIPs#129 (#240))
       NewsUtils.broadcastEvent(NewsUtils.SHARE_NEWS, userIdentity.getRemoteId(), news);
     }
 
@@ -958,11 +938,7 @@ public class NewsServiceImpl implements NewsService {
                                          Long.parseLong(draftArticleMetadataItemCreatorIdentityId),
                                          false);
       // Update content permissions
-<<<<<<< HEAD
       updateArticlePermissions(List.of(draftArticleSpace), draftArticle);
-=======
-      updateArticlePermissions(List.of(draftArticleSpace), draftArticle, null);
->>>>>>> 501ad675 (feat: Fix content body inserted images permissions - EXO-74263_EXO-74265_EXO-74266 - Meeds-io/MIPs#129 (#240))
       return draftArticle;
     }
     return null;
@@ -1112,11 +1088,7 @@ public class NewsServiceImpl implements NewsService {
                                        false);
 
     // Update content permissions
-<<<<<<< HEAD
     updateArticlePermissions(List.of(space), draftArticle);
-=======
-    updateArticlePermissions(List.of(space), draftArticle, null);
->>>>>>> 501ad675 (feat: Fix content body inserted images permissions - EXO-74263_EXO-74265_EXO-74266 - Meeds-io/MIPs#129 (#240))
     return draftArticle;
   }
 
@@ -1214,11 +1186,7 @@ public class NewsServiceImpl implements NewsService {
       draftArticle.setIllustrationURL(NewsUtils.buildIllustrationUrl(draftPage.getProperties(), draftArticle.getLang()));
 
       // Update content permissions
-<<<<<<< HEAD
       updateArticlePermissions(List.of(space), draftArticle);
-=======
-      updateArticlePermissions(List.of(space), draftArticle, null);
->>>>>>> 501ad675 (feat: Fix content body inserted images permissions - EXO-74263_EXO-74265_EXO-74266 - Meeds-io/MIPs#129 (#240))
       return draftArticle;
     }
     return null;
@@ -1291,22 +1259,6 @@ public class NewsServiceImpl implements NewsService {
     return null;
   }
 
-<<<<<<< HEAD
-=======
-  private void buildArticleVersionProperties(News article, List<MetadataItem> newsPageVersionMetadataItems) {
-    if (!CollectionUtils.isEmpty(newsPageVersionMetadataItems)) {
-      Map<String, String> newsPageVersionMetadataItemProperties = newsPageVersionMetadataItems.getFirst().getProperties();
-      if (!MapUtils.isEmpty(newsPageVersionMetadataItemProperties)) {
-        if (newsPageVersionMetadataItemProperties.containsKey(NEWS_ATTACHMENTS_IDS)
-            && newsPageVersionMetadataItemProperties.get(NEWS_ATTACHMENTS_IDS) != null) {
-          List<String> attachmentsIds = List.of(newsPageVersionMetadataItemProperties.get(NEWS_ATTACHMENTS_IDS).split(";"));
-          article.setAttachmentsIds(attachmentsIds);
-        }
-      }
-    }
-  }
-
->>>>>>> 501ad675 (feat: Fix content body inserted images permissions - EXO-74263_EXO-74265_EXO-74266 - Meeds-io/MIPs#129 (#240))
   private void buildArticleProperties(News article, String currentUsername, MetadataItem metadataItem) throws Exception {
     if (metadataItem != null && !MapUtils.isEmpty(metadataItem.getProperties())) {
       Map<String, String> properties = metadataItem.getProperties();
@@ -2195,5 +2147,18 @@ public class NewsServiceImpl implements NewsService {
     }
     NewsUtils.broadcastEvent(NewsUtils.UPDATE_CONTENT_PERMISSIONS, this, updateContentPermissionEventListenerData);
   }
+
+  private void updateArticlePermissions(List<Space> spaces, News article, List<String> articleAttachmentIds) {
+    Map<String, Object> updateContentPermissionEventListenerData = new HashMap<>();
+    updateContentPermissionEventListenerData.putAll(Map.of("spaces", spaces, ARTICLE_CONTENT, article.getBody()));
+    if (articleAttachmentIds != null) {
+      updateContentPermissionEventListenerData.put(NEWS_ATTACHMENTS_IDS, articleAttachmentIds);
+    }
+
+    if (article.getAudience() != null) {
+      updateContentPermissionEventListenerData.put(NEWS_AUDIENCE, article.getAudience());
+    }
+    NewsUtils.broadcastEvent(NewsUtils.UPDATE_CONTENT_PERMISSIONS, this, updateContentPermissionEventListenerData);
+  }
 }
- 
+
