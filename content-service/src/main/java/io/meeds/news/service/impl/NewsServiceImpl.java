@@ -2149,7 +2149,7 @@ public class NewsServiceImpl implements NewsService {
 
   private void updateArticlePermissions(List<Space> spaces, News article, List<String> articleAttachmentIds) {
     Map<String, Object> updateContentPermissionEventListenerData = new HashMap<>();
-    updateContentPermissionEventListenerData.putAll(Map.of("spaces", spaces, ARTICLE_CONTENT, article.getBody()));
+    updateContentPermissionEventListenerData.putAll(Map.of(SPACES, spaces, ARTICLE_CONTENT, article.getBody()));
     if (articleAttachmentIds != null) {
       updateContentPermissionEventListenerData.put(NEWS_ATTACHMENTS_IDS, articleAttachmentIds);
     }
