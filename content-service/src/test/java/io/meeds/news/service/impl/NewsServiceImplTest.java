@@ -933,6 +933,7 @@ public class NewsServiceImplTest {
 
     News newsArticle = mock(News.class);
     when(newsArticle.getId()).thenReturn("1");
+    when(newsArticle.getBody()).thenReturn("body");
 
     DraftPage draftPage = mock(DraftPage.class);
     when(draftPage.getUpdatedDate()).thenReturn(new Date());

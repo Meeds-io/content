@@ -119,8 +119,6 @@ public class NewsRest {
 
   private ScheduledExecutorService  scheduledExecutor;
 
-  private static final int          CACHE_DURATION_SECONDS          = 31536000;
-
   private enum FilterType {
     PINNED, MYPOSTED, DRAFTS, SCHEDULED, ALL
   }
