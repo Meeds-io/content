@@ -59,4 +59,14 @@
       </init-params>
     </component-plugin>
   </external-component-plugins>
+  
+  <external-component-plugins>
+    <target-component>org.exoplatform.social.core.space.spi.SpaceService</target-component>
+    <component-plugin>
+      <name>content.listeners.social.space</name>
+      <set-method>addSpaceListener</set-method>
+      <type>io.meeds.news.listener.SpaceNewsTargetAutoCreationListener</type>
+      <description>Create a space news when a new space is created</description>
+    </component-plugin>
+  </external-component-plugins>
 </configuration>

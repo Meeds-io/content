@@ -63,8 +63,7 @@ public interface NewsTargetingService {
    * Gets the {@link List} of {@link News} targets linked to a given
    * {@link News}
    * 
-   * @param news {@link News} for which targets to be
-   *          retrieved
+   * @param news {@link News} for which targets to be retrieved
    * @return {@link List} of {@link News} targets by {@link News} news object
    */
   List<String> getTargetsByNews(News news);
@@ -126,6 +125,23 @@ public interface NewsTargetingService {
   Metadata createNewsTarget(NewsTargetingEntity newsTargetingEntity,
                             org.exoplatform.services.security.Identity currentIdentity) throws IllegalArgumentException,
                                                                                         IllegalAccessException;
+
+  /**
+   * Create news target
+   * 
+   * @param newsTargetingEntity {@link News} TargetingEntity
+   * @param currentIdentity current {@link Identity} attempting to create
+   *          {@link News} target
+   * @param checkPermissions true if permissions are checked
+   * @return created {@link News} target {@link Metadata}
+   * @throws IllegalArgumentException when user creates a {@link News} target
+   *           that already exists
+   * @throws IllegalAccessException when user doesn't have access to create
+   *           {@link News} target
+   */
+  Metadata createNewsTarget(NewsTargetingEntity newsTargetingEntity,
+                            org.exoplatform.services.security.Identity currentIdentity,
+                            boolean checkPermissions) throws IllegalArgumentException, IllegalAccessException;
 
   /**
    * Update news target
