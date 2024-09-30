@@ -45,13 +45,6 @@
           :current-app="currentApplication"
           @delete-article="deleteConfirmDialog"
           @edit-article="editLink(news)" />
-        <exo-confirm-dialog
-          ref="deleteConfirmDialog"
-          :message="confirmDeleteNewsDialogMessage"
-          :title="confirmDeleteNewsDialogTitle"
-          :ok-label="$t('news.button.ok')"
-          :cancel-label="$t('news.button.cancel')"
-          @ok="$emit('delete-news',news)" />
       </div>
       <div class="newsInfo d-flex pb-1">
         <div class="newsOwner d-flex align-center pe-4">
@@ -146,17 +139,8 @@ export default {
     isDraftsFilter() {
       return this.newsFilter === 'drafts';
     },
-    confirmDeleteNewsDialogMessage() {
-      return this.isDraftsFilter ? this.$t('news.message.confirmDeleteDraftNews') : this.$t('news.message.confirmDeleteNews');
-    },
-    confirmDeleteNewsDialogTitle() {
-      return this.isDraftsFilter ? this.$t('news.title.confirmDeleteDraftNews') : this.$t('news.title.confirmDeleteNews');
-    },
     displayClock() {
       return this.news && (this.news.schedulePostDate || this.news.updatedDate);
-    },
-    draftNews() {
-      return this.news && this.news.draft;
     },
     spaceId() {
       return this.news && this.news.spaceId;
@@ -170,28 +154,15 @@ export default {
   },
   methods: {
     getEditUrl(news) {
-      let editUrl = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news/editor?newsId=${news.targetPageId || news.newsId}`;
-      if (news.spaceId) {
-        editUrl += `&spaceId=${news.spaceId}`;
-      }
-      if (news.activityId) {
-        editUrl += `&activityId=${news.activityId}`;
-      }
-      if (news.spaceUrl) {
-        editUrl += `&spaceName=${news.spaceUrl.substring(news.spaceUrl.lastIndexOf('/') + 1)}`;
-      }
-      editUrl += `&type=${news.activityId && 'latest_draft' || 'draft'}`;
-      if (news.lang) {
-        editUrl += `&lang=${news.lang}`;
-      }
-      return editUrl;
+      return this.$parent.$parent.getEditUrl(news);
     },
     editLink(news) {
       const editUrl = this.getEditUrl(news);
       window.open(editUrl, '_blank');
+      this.$refs?.mobileActionMenu?.close();
     },
     deleteConfirmDialog() {
-      this.$refs.deleteConfirmDialog.open();
+      this.$emit('open-delete-confirm-dialog', this.news);
     },
   }
 };
