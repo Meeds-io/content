@@ -23,7 +23,7 @@
   </parent>
   <groupId>io.meeds.content</groupId>
   <artifactId>content</artifactId>
-  <version>7.0.x-exo-SNAPSHOT</version>
+  <version>7.0.0-exo-20240930</version>
   <packaging>pom</packaging>
   <name>Meeds - Content Addon - Parent POM</name>
   <description>Content</description>
@@ -142,4 +142,8 @@
       </build>
     </profile>
   </profiles>
+
+  <scm>
+    <tag>7.0.0-exo-20240930</tag>
+  </scm>
 </project>
