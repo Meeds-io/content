@@ -277,6 +277,20 @@ export function deleteArticleTranslation(newsId, lang) {
   });
 }
 
+export function getAvailableLanguages() {
+  const lang = eXo?.env.portal.language || 'en';
+  return fetch(`${newsConstants.PORTAL}/${newsConstants.PORTAL_REST}/notes/languages?lang=${lang}`, {
+    method: 'GET',
+    credentials: 'include',
+  }).then(resp => {
+    if (!resp || !resp.ok) {
+      throw new Error('Response code indicates a server error', resp);
+    } else {
+      return resp.json();
+    }
+  });
+}
+
 export function getArticleLanguages(articleId, withDrafts) {
   return fetch(`${newsConstants.CONTENT_API}/contents/translation/${articleId}?withDrafts=${withDrafts}`, {
     credentials: 'include',

@@ -101,7 +101,7 @@ export default {
   },
   methods: {
     getAvailableLanguages() {
-      return this.$notesService.getAvailableLanguages().then(data => {
+      return this.$newsServices.getAvailableLanguages().then(data => {
         this.languages = data || [];
       });
     },
