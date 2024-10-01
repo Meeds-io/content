@@ -659,7 +659,7 @@ export default {
       this.$refs.editor.closePluginsDrawer();
     },
     getAvailableLanguages() {
-      return this.$notesService.getAvailableLanguages().then(data => {
+      return this.$newsServices.getAvailableLanguages().then(data => {
         this.languages = data || [];
         this.languages.sort((a, b) => a.text.localeCompare(b.text));
         this.allLanguages = this.languages;
