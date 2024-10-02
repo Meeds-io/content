@@ -557,7 +557,11 @@ public class NewsRest {
       org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
       List<News> news = newsService.getNewsByTargetName(newsFilter, targetName, currentIdentity);
       Locale userLocale = LocalizationFilter.getCurrentLocale();
-      news.forEach(news1 -> news1.setBody(MentionUtils.substituteRoleWithLocale(news1.getBody(), userLocale)));
+      news.forEach(newsArticle -> {
+        if (newsArticle != null) {
+          newsArticle.setBody(MentionUtils.substituteRoleWithLocale(newsArticle.getBody(), userLocale));
+        }
+      });
       newsEntity.setNews(news);
       newsEntity.setOffset(offset);
       newsEntity.setLimit(limit);
