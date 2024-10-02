@@ -588,7 +588,11 @@ public class NewsServiceImpl implements NewsService {
                                        newsTargetingService.getNewsTargetItemsByTargetName(targetName, newsFilter.getOffset(), 0);
     return newsTargetItems.stream().filter(target -> {
       try {
-        News news = getNewsArticleById(target.getObjectId());
+        News news = getNewsByIdAndLang(target.getObjectId(),
+                                       currentIdentity,
+                                       false,
+                                       ARTICLE.name().toLowerCase(),
+                                       newsFilter.getLang());
         return news != null && (StringUtils.isEmpty(news.getAudience()) || news.getAudience().equals(NewsUtils.ALL_NEWS_AUDIENCE)
             || news.isSpaceMember());
       } catch (Exception e) {
@@ -606,7 +610,7 @@ public class NewsServiceImpl implements NewsService {
       } catch (Exception e) {
         return null;
       }
-    }).limit(newsFilter.getLimit()).toList();
+    }).filter(Objects::nonNull).limit(newsFilter.getLimit()).toList();
   }
 
   /**
