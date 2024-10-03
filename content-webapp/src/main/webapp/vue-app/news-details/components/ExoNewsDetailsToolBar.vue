@@ -19,11 +19,29 @@
 
 -->
 <template>
-  <div :class="!showEditButton && 'me-5'" class="newsDetailsTopBar">
-    <a class="backBtn" @click="goBack"><i class="uiIconBack my-4"></i></a>
+  <div
+    :class="{'me-5': !showEditButton}"
+    class="newsDetailsTopBar">
+    <a
+      v-if="!articleNewLayoutEnabled"
+      class="backBtn"
+      @click="goBack">
+      <i class="uiIconBack my-4"></i>
+    </a>
+    <v-btn
+      v-else
+      class="go-back-button"
+      icon
+      @click.stop="goBack">
+      <v-icon
+        size="15">
+        fas fa-arrow-left
+      </v-icon>
+    </v-btn>
     <v-btn
       v-if="publicationState === 'staged'"
-      class="btn newsDetailsActionMenu mt-6 mr-2 pull-right"
+      class="btn pull-right"
+      :class="{'newsDetailsActionMenu mt-6 mr-2 ': !articleNewLayoutEnabled}"
       @click="$root.$emit('open-schedule-drawer','editScheduledNews')">
       {{ $t("news.composer.btn.scheduleArticle") }}
     </v-btn>
@@ -42,7 +60,8 @@
       v-if="displayFavoriteButton"
       :news="news"
       :activity-id="activityId"
-      class="mt-6 pull-right" />
+      :class="[{'pull-right mt-1 me-2': articleNewLayoutEnabled},
+               {'mt-6 pull-right': !articleNewLayoutEnabled}]" />
   </div>
 </template>
 
@@ -108,6 +127,9 @@ export default {
     };
   },
   computed: {
+    articleNewLayoutEnabled() {
+      return eXo?.env?.portal?.articleNewLayoutEnabled;
+    },
     historyClearedBackUrl() {
       return this.news && this.news.spaceMember ? this.news.spaceUrl : `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}`;
     },
@@ -129,7 +151,7 @@ export default {
   },
   methods: {
     goBack() {
-      if (this.lastVisitedPage){
+      if (this.lastVisitedPage) {
         history.back();
       }
       else {

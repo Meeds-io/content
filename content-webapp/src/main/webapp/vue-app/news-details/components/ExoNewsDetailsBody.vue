@@ -20,7 +20,105 @@
 -->
 <template>
   <div v-if="news">
-    <div class="newsDetails-description">
+    <div
+      v-if="articleNewLayoutEnabled"
+      class="newsDetails-description">
+      <div
+        class="newsDetails-header">
+        <v-img
+          v-if="illustrationURL"
+          :lazy-src="`${illustrationURL}&size=0x400`"
+          :alt="featuredImageAltText"
+          :src="`${illustrationURL}&size=0x400`"
+          contain
+          class="mt-5"
+          width="100%"
+          max-height="400" />
+      </div>
+      <div class="newsDetails">
+        <div class="news-top-information d-flex">
+          <p class="text-color font-weight-bold articleTitle text-break mt-5 mb-0">
+            <span>
+              {{ newsTitle }}
+            </span>
+            <span class="ms-3">
+              <content-translation-menu
+                :translations="translations"
+                :selected-translation="selectedTranslation"
+                :article="news" />
+            </span>
+          </p>
+        </div>
+        <p
+          v-if="newsSummary"
+          class="article-summary text-break text-sub-title mt-4 mb-0">
+          {{ newsSummary }}
+        </p>
+        <div class="mt-4">
+          <div
+            v-if="!hiddenSpace && !isPublicAccess"
+            class="d-flex">
+            <exo-space-avatar
+              :space-id="spaceId"
+              size="30"
+              link-style
+              avatar />
+            <exo-space-avatar
+              :space-id="spaceId"
+              size="30"
+              extra-class="ms-4 fill-height"
+              fullname
+              popover />
+          </div>
+          <div>
+            <div
+              v-if="showUpdaterInfo"
+              class="d-flex">
+              <exo-user-avatar
+                :profile-id="articleUpdater"
+                :size="25"
+                :class="{'ms-4 mt-n3': !hiddenSpace}"
+                avatar />
+              <div
+                :class="{'mt-n2': !hiddenSpace}"
+                class="text-sub-title align-center d-flex">
+                <exo-user-avatar
+                  :profile-id="articleUpdater"
+                  extra-class="ms-2"
+                  fullname
+                  small-font-size />
+                <span class="px-1">-</span>
+                <date-format
+                  :value="updatedDate"
+                  :format="dateFormat"
+                  class="text-caption" />
+              </div>
+            </div>
+            <div
+              v-else
+              :class="{'no-updater-info': !hiddenSpace && !isPublicAccess}"
+              class="text-sub-title">
+              <date-format
+                :value="updatedDate"
+                :format="dateFormat"
+                class="text-caption" />
+            </div>
+          </div>
+        </div>
+        <div
+          class="mt-8 rich-editor-content extended-rich-content"
+          v-sanitized-html="newsBody">
+          <extension-registry-components
+            :params="{attachmentsIds: attachmentsIds}"
+            name="NewsDetails"
+            type="news-details-attachments"
+            element="div" />
+        </div>
+      </div>
+    </div>
+    <div
+      v-else
+      class="newsDetails-description">
       <div :class="[illustrationURL ? 'newsDetails-header' : '']" class="newsDetails-header">
         <div v-if="illustrationURL" class="illustration center">
           <img
@@ -37,8 +135,8 @@
           </div>
           <div class="newsInformationBackground center">
             <div :class="[showUpdateInfo ? 'news-update-details-header' : 'news-details-header']" class="news-header-content  d-inline-flex align-center">
-              <div :class="[ showUpdateInfo ? 'newsUpdateInfo' : '']" v-if="currentUser"> 
-                <exo-user-avatar 
+              <div :class="[ showUpdateInfo ? 'newsUpdateInfo' : '']" v-if="currentUser">
+                <exo-user-avatar
                   :profile-id="authorProfile"
                   :size="50"
                   class="me-1"
@@ -71,9 +169,9 @@
                   </template>
                   <div class="mb-1 ml-2">
                     <content-translation-menu
-                        :translations="translations"
-                        :selected-translation="selectedTranslation"
-                        :article="news" />
+                      :translations="translations"
+                      :selected-translation="selectedTranslation"
+                      :article="news" />
                   </div>
                 </div>
                 <div class="newsUpdater text-subtitle">
@@ -180,7 +278,7 @@ export default {
     },
     newsTitleContent: null,
     newsSummaryContent: null,
-    newsBodyContent: null
+    newsBodyContent: null,
   }),
   created() {
     this.setNewsTitle(this.news?.title);
@@ -191,6 +289,15 @@ export default {
     this.$root.$on('update-news-body', this.setNewsContent);
   },
   computed: {
+    articleNewLayoutEnabled() {
+      return eXo?.env?.portal?.articleNewLayoutEnabled;
+    },
+    showUpdaterInfo() {
+      return !this.isPublicAccess;
+    },
+    isPublicAccess() {
+      return !eXo?.env?.portal?.userIdentityId;
+    },
     params() {
       return {
         news: this.news,
@@ -206,10 +313,13 @@ export default {
       return this.news && this.newsTitleContent;
     },
     showUpdateInfo() {
-      return this.news && this.news.updateDate && this.news.updater !=='__system' && this.news.updateDate !== 'null' && this.news.publicationDate && this.news.publicationDate !== 'null' && new Date(this.news.updateDate).getTime() > new Date(this.news.publicationDate).getTime();
+      return this.news && this.news.updateDate && this.news.updater !== '__system' && this.news.updateDate !== 'null' && this.news.publicationDate && this.news.publicationDate !== 'null' && new Date(this.news.updateDate).getTime() > new Date(this.news.publicationDate).getTime();
     },
     authorProfile() {
       return this.news && this.news.author;
+    },
+    articleUpdater() {
+      return this.news?.updater || this.news?.author;
     },
     hiddenSpace() {
       return this.news && this.news.hiddenSpace;
@@ -227,10 +337,10 @@ export default {
       return this.news && this.news.updater;
     },
     publicationDate() {
-      return this.news && this.news.publicationDate && new Date(this.news.publicationDate);
+      return this.news?.publicationDate && new Date(this.news.publicationDate);
     },
     updatedDate() {
-      return this.news && this.news.updateDate && new Date(this.news.updateDate);
+      return this.news?.updateDate && new Date(this.news.updateDate);
     },
     newsSummary() {
       return this.news && this.newsSummaryContent;
