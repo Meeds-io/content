@@ -1,0 +1,10 @@
+<%
+  import org.exoplatform.commons.api.settings.ExoFeatureService;
+  def rcontext = _ctx.getRequestContext();
+  ExoFeatureService featureService = uicomponent.getApplicationComponent(ExoFeatureService.class);
+  def userName = rcontext.getRemoteUser();
+%>
+
+<script type="text/javascript" id="contentHeadScripts">
+    eXo.env.portal.articleNewLayoutEnabled = <%=featureService.isFeatureActiveForUser("articleNewLayout", userName)%>;
+</script>
