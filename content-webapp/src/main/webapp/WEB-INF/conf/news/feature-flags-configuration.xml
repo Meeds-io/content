@@ -21,15 +21,36 @@
 <configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                xsi:schemaLocation="http://www.exoplatform.org/xml/ns/kernel_1_3.xsd http://www.exoplatform.org/xml/ns/kernel_1_3.xsd"
                xmlns="http://www.exoplatform.org/xml/ns/kernel_1_3.xsd">
-  <component>
-    <key>ContentFeatureProperties</key>
-    <type>org.exoplatform.container.ExtendedPropertyConfigurator</type>
-    <init-params>
-      <properties-param>
-        <name>ContentFeatureProperties</name>
-        <description>Content Feature enablement flag</description>
-        <property name="exo.feature.spaceNewsTargetAutoCreation.enabled" value="${exo.feature.spaceNewsTargetAutoCreation.enabled:false}"/>
-      </properties-param>
-    </init-params>
-  </component>
+
+    <component>
+        <key>ContentFeatureProperties</key>
+        <type>org.exoplatform.container.ExtendedPropertyConfigurator</type>
+        <init-params>
+            <properties-param>
+                <name>ContentFeatureProperties</name>
+                <description>Content Feature enablement flag</description>
+                <property name="exo.feature.spaceNewsTargetAutoCreation.enabled"
+                          value="${exo.feature.spaceNewsTargetAutoCreation.enabled:false}"/>
+                <property name="exo.feature.articleNewLayout.enabled"
+                          value="${exo.feature.articleNewLayout.enabled:false}"/>
+            </properties-param>
+        </init-params>
+    </component>
+
+    <external-component-plugins>
+        <target-component>org.exoplatform.groovyscript.text.TemplateService</target-component>
+        <component-plugin>
+            <name>UIPortalApplication-head</name>
+            <set-method>addTemplateExtension</set-method>
+            <type>org.exoplatform.groovyscript.text.TemplateExtensionPlugin</type>
+            <init-params>
+                <values-param>
+                    <name>templates</name>
+                    <description>The list of templates to include in HTML Page Header with UIPortalApplication.gtmpl
+                    </description>
+                    <value>war:/groovy/webui/workspace/UIContentHeadTemplate.gtmpl</value>
+                </values-param>
+            </init-params>
+        </component-plugin>
+    </external-component-plugins>
 </configuration>

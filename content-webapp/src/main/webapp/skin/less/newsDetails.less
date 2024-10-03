@@ -104,6 +104,10 @@
       opacity: 0.4;
     }
 
+    .go-back-button {
+      background: rgba(0, 0, 0, 0.5);
+      color: @whiteColorDefault
+    }
   }
 }
 
@@ -177,11 +181,26 @@
 
   .newsDetails {
     .news-top-information {
+      .articleTitle {
+        font-size: 34px!important;
+      }
+
       .newsTitle {
         max-width: 80%;
         margin: 20px auto 0;
       }
     }
+
+    .article-summary {
+      font-size: 24px;
+      line-height: 1.2;
+    }
+
+    .no-updater-info {
+      margin-left: 54px ~'!important; /** orientation=lt */ ';
+      margin-right: 54px ~'!important; /** orientation=rt */ ';
+    }
+
     .news-header-content {
       display: inline-flex;
       .newsInformation {

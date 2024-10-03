@@ -33,7 +33,10 @@
         {{ $t('news.details.header.menu.copy.link') }}
       </span>
     </v-list-item>
-    <v-list-item class="ps-2 pe-4 action-menu-item d-flex align-center" v-if="showEditButton" @click="$emit('edit-article', news)">
+    <v-list-item
+      v-if="showEditButton"
+      class="ps-2 pe-4 action-menu-item d-flex align-center"
+      @click="$emit('edit-article', news)">
       <v-icon
         size="16"
         class="clickable icon-menu">
@@ -43,7 +46,10 @@
         {{ $t('news.details.header.menu.edit') }}
       </span>
     </v-list-item>
-    <v-list-item  class="ps-2 pe-4 action-menu-item d-flex align-center" v-if="showShareButton && news.activityId" @click="$root.$emit('activity-share-drawer-open', news.activityId, currentApp)">
+    <v-list-item
+      v-if="showShareButton && news.activityId"
+      class="ps-2 pe-4 action-menu-item d-flex align-center"
+      @click="$root.$emit('activity-share-drawer-open', news.activityId, currentApp)">
       <v-icon
         size="16"
         class="clickable icon-menu">
@@ -53,7 +59,10 @@
         {{ $t('news.details.header.menu.share') }}
       </span>
     </v-list-item>
-    <v-list-item class="ps-2 pe-4 action-menu-item d-flex align-center" v-if="showResumeButton" @click="$emit('edit-article', news)">
+    <v-list-item
+      v-if="showResumeButton"
+      class="ps-2 pe-4 action-menu-item d-flex align-center"
+      @click="$emit('edit-article', news)">
       <v-icon
         size="16"
         class="clickable icon-menu">
@@ -63,7 +72,10 @@
         {{ $t('news.details.header.menu.resume') }}
       </span>
     </v-list-item>
-    <v-list-item class="ps-2 pe-4 action-menu-item" v-if="showPublishButton" @click="$root.$emit('open-edit-publishing-drawer')">
+    <v-list-item
+      v-if="showPublishButton"
+      class="ps-2 pe-4 action-menu-item"
+      @click="$root.$emit('open-edit-publishing-drawer')">
       <v-icon
         size="16"
         class="clickable icon-menu">
@@ -73,7 +85,10 @@
         {{ $t('news.details.header.menu.publish') }}
       </span>
     </v-list-item>
-    <v-list-item class="ps-2 pe-4 action-menu-item d-flex align-center deleteArticleOption" v-if="showDeleteButton" @click="$emit('delete-article')">
+    <v-list-item
+      v-if="showDeleteButton"
+      class="ps-2 pe-4 action-menu-item d-flex align-center deleteArticleOption"
+      @click="$emit('delete-article')">
       <v-icon
         size="16"
         class="clickable icon-menu deleteArticleIcon">
