@@ -21,7 +21,7 @@
 <template>
   <div
     :class="{'me-5': !showEditButton}"
-    class="newsDetailsTopBar mb-5">
+    class="newsDetailsTopBar">
     <a
       v-if="!articleNewLayoutEnabled"
       class="backBtn"

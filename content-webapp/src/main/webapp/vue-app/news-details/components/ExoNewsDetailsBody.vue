@@ -31,17 +31,17 @@
           :alt="featuredImageAltText"
           :src="`${illustrationURL}&size=0x400`"
           contain
-          class="mb-5"
+          class="mt-5 mb-5"
           width="100%"
           max-height="400" />
       </div>
       <div class="newsDetails">
         <div class="news-top-information d-flex">
-          <p class="text-color font-weight-bold articleTitle text-break mb-0">
-            <span class="me-5">
+          <p class="text-color font-weight-bold articleTitle text-break mt-5 mb-0">
+            <span>
               {{ newsTitle }}
             </span>
-            <span>
+            <span class="ms-3">
               <content-translation-menu
                 :translations="translations"
                 :selected-translation="selectedTranslation"
@@ -54,9 +54,9 @@
           class="article-summary text-break text-sub-title mt-4 mb-0">
           {{ newsSummary }}
         </p>
-        <div class="mt-5">
+        <div class="mt-4">
           <div
-            v-if="!hiddenSpace"
+            v-if="!hiddenSpace && !isPublicAccess"
             class="d-flex">
             <exo-space-avatar
               :space-id="spaceId"
@@ -96,7 +96,7 @@
             </div>
             <div
               v-else
-              :class="{'no-updater-info': !hiddenSpace}"
+              :class="{'no-updater-info': !hiddenSpace && !isPublicAccess}"
               class="text-sub-title">
               <date-format
                 :value="updatedDate"
@@ -279,7 +279,6 @@ export default {
     newsTitleContent: null,
     newsSummaryContent: null,
     newsBodyContent: null,
-    showUpdaterInfo: true
   }),
   created() {
     this.setNewsTitle(this.news?.title);
@@ -292,6 +291,12 @@ export default {
   computed: {
     articleNewLayoutEnabled() {
       return eXo?.env?.portal?.articleNewLayoutEnabled;
+    },
+    showUpdaterInfo() {
+      return !this.isPublicAccess;
+    },
+    isPublicAccess() {
+      return !eXo?.env?.portal?.userIdentityId;
     },
     params() {
       return {
