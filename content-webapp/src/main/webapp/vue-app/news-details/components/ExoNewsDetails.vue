@@ -56,9 +56,16 @@
         :cancel-label="$t('news.button.cancel')"
         @ok="deleteNews" />
       <exo-news-edit-publishing-drawer
-        v-if="news && currentUser"
+        v-if="news && currentUser && !newPublicationDrawerEnabled"
         :news="news"
         @refresh-news="getNewsById(newsId)" />
+      <note-publication-drawer
+        v-if="newPublicationDrawerEnabled"
+        ref="publicationDrawer"
+        :is-publishing="isPublishing"
+        :space-id="spaceId"
+        :edit-mode="true"
+        @publish="publishArticle" />
       <news-mobile-action-menu
         :news="news"
         @edit-article="editLink"
@@ -139,7 +146,8 @@ export default {
         hour: '2-digit',
         minute: '2-digit',
       },
-      iframelyOriginRegex: /^https?:\/\/if-cdn.com/
+      iframelyOriginRegex: /^https?:\/\/if-cdn.com/,
+      isPublishing: false
     };
   },
   computed: {
@@ -148,6 +156,9 @@ export default {
     },
     processedNewsType() {
       return this.activityId && this.activityId !== '' ? this.$newsConstants.newsObjectType.ARTICLE : this.newsType;
+    },
+    newPublicationDrawerEnabled() {
+      return eXo?.env?.portal?.newPublicationDrawerEnabled;
     }
   },
   created() {
@@ -169,11 +180,17 @@ export default {
         }
       }
     });
+    this.$root.$on('open-edit-publishing-drawer', this.openPublicationDrawer);
   },
   mounted() {
     this.markNewsAsRead(this.newsId);
   },
   methods: {
+    openPublicationDrawer() {
+      if (this.newPublicationDrawerEnabled) {
+        this.$refs.publicationDrawer.open(this.news);
+      }
+    },
     markNewsAsRead(newsId) {
       if (newsId) {
         this.$newsServices.markNewsAsRead(newsId);
@@ -222,7 +239,18 @@ export default {
         }
       }, redirectionTime);
     },
-
+    publishArticle(publicationSettings) {
+      this.isPublishing = true;
+      this.news.activityPosted = publicationSettings?.post;
+      return this.$newsServices.updateNews(this.news, false, this.$newsConstants.newsObjectType.ARTICLE, this.$newsConstants.newsUpdateType.POSTING_AND_PUBLISHING).then(() => {
+        this.isPublishing = false;
+        this.$root.$emit('alert-message', this.$t('news.composer.alert.success.UpdateTargets'), 'success');
+        this.$refs.publicationDrawer.close();
+      }).catch(() => {
+        this.isPublishing = false;
+        this.$root.$emit('alert-message', this.$t('news.composer.alert.error.UpdateTargets'), 'error');
+      });
+    },
     postNews(schedulePostDate, postArticleMode, publish, isActivityPosted, selectedTargets, selectedAudience) {
       this.news.timeZoneId = USER_TIMEZONE_ID;
       this.news.activityPosted = isActivityPosted;
