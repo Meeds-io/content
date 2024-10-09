@@ -509,6 +509,7 @@ export default {
     },
     postAndPublish(editMode, publicationSettings) {
       if (editMode) {
+        this.article.activityPosted = publicationSettings?.post;
         this.updateAndPostArticle();
         return;
       }
