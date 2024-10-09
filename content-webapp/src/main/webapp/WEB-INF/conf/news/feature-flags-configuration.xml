@@ -33,6 +33,8 @@
                           value="${exo.feature.spaceNewsTargetAutoCreation.enabled:false}"/>
                 <property name="exo.feature.articleNewLayout.enabled"
                           value="${exo.feature.articleNewLayout.enabled:false}"/>
+                <property name="exo.feature.newPublicationDrawer.enabled"
+                          value="${exo.feature.newPublicationDrawer.enabled:false}"/>
             </properties-param>
         </init-params>
     </component>
