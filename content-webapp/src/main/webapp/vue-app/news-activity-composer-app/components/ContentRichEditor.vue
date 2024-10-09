@@ -30,8 +30,6 @@
       :form-title="contentFormTitle"
       :suggester-space-url="spacePrettyName"
       :app-name="appName"
-      :web-page-note="false"
-      :web-page-url="false"
       :languages="languages"
       :translations="translations"
       :selected-language="selectedLanguage"
@@ -44,6 +42,8 @@
       :save-button-icon="saveButtonIcon"
       :save-button-disabled="disableSaveButton"
       :editor-icon="editorIcon"
+      :space-id="spaceId"
+      :can-publish="canScheduleArticle"
       :images-download-folder="'DRIVE_ROOT_NODE/News/images'"
       @editor-closed="editorClosed"
       @open-treeview="openTreeView"
@@ -55,7 +55,7 @@
       ref="noteTreeview"
       @closed="closePluginsDrawer()" />
     <schedule-news-drawer
-      v-if="canScheduleArticle"
+      v-if="canScheduleArticle && !newPublicationDrawerEnabled"
       :posting-news="postingNews"
       :news-id="articleId"
       :news-type="articleType"
@@ -140,6 +140,9 @@ export default {
         this.autoSave();
       }
     },
+    postingNews() {
+      this.$refs.editor.setPublishing(this.postingNews);
+    }
   },
   computed: {
     editMode() {
@@ -175,6 +178,9 @@ export default {
     propertiesModified() {
       return JSON.stringify(this.article?.properties) !== JSON.stringify(this.originalArticle?.properties);
     },
+    newPublicationDrawerEnabled() {
+      return eXo?.env?.portal?.newPublicationDrawerEnabled;
+    }
   },
   created() {
     this.getAvailableLanguages();
@@ -407,11 +413,7 @@ export default {
       }
     },
     postArticle(schedulePostDate, postArticleMode, publish, isActivityPosted, selectedTargets, selectedAudience) {
-      if (typeof isActivityPosted === 'undefined') {
-        this.article.activityPosted = true;
-      } else {
-        this.article.activityPosted = isActivityPosted;
-      }
+      this.article.activityPosted = isActivityPosted;
       this.article.published = publish;
       this.article.targets = selectedTargets;
       if (selectedAudience !== null) {
@@ -474,6 +476,7 @@ export default {
             alertLinkText: this.$t('news.view.label'),
             alertLink: this.isSpaceMember ? `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/activity?id=${createdArticle.activityId}` : `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news-detail?newsId=${createdArticle.id}`
           });
+          this.enableClickOnce();
         }).catch(error => {
           this.displayAlert({type: 'error', message: this.$t('news.save.error.message', error.message)});
           this.enableClickOnce();
@@ -504,7 +507,19 @@ export default {
       window.history.pushState('news', '', `${url.origin}${url.pathname}?${params.toString()}`);
 
     },
-    postArticleActions() {
+    postAndPublish(editMode, publicationSettings) {
+      if (editMode) {
+        this.updateAndPostArticle();
+        return;
+      }
+      this.postingNews = true;
+      this.postArticle(null, null, false, publicationSettings?.post);
+    },
+    postArticleActions(publicationSettings) {
+      if (this.newPublicationDrawerEnabled) {
+        this.postAndPublish(this.editMode, publicationSettings);
+        return;
+      }
       if (this.editMode) {
         this.updateAndPostArticle();
         return;
@@ -514,9 +529,7 @@ export default {
         this.$root.$emit('open-schedule-drawer', this.scheduleMode);
         this.postKey++;
       } else {
-        this.postingNews = true;
-        this.postArticle();
-        this.enableClickOnce();
+        this.postAndPublish();
       }
     },
     updateArticleData(article) {
