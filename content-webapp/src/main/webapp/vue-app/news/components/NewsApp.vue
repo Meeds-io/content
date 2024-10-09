@@ -92,9 +92,10 @@
           :key="news.newsId"
           :news="news"
           :news-filter="newsFilter"
+          class="newsItem"
           @update-news-list="updateNewsList"
           @delete-news="deleteNews"
-          class="newsItem" />
+          @open-delete-confirm-dialog="deleteConfirmDialog" />
       </div>
       <div v-if="newsList.length === 0 && !loadingNews" class="articleNotFound">
         <span class="iconNotFound"></span>
@@ -107,8 +108,19 @@
           {{ $t('news.app.loadMore') }}
         </v-btn>
       </div>
+      <exo-confirm-dialog
+        ref="deleteConfirmDialog"
+        :message="confirmDeleteNewsDialogMessage"
+        :title="confirmDeleteNewsDialogTitle"
+        :ok-label="$t('news.button.ok')"
+        :cancel-label="$t('news.button.cancel')"
+        @ok="deleteByConfirm" />
       <news-activity-sharing-spaces-drawer />
       <activity-share-drawer />
+      <news-mobile-action-menu
+        ref="mobileActionMenu"
+        @edit-article="editLink"
+        @delete-article="deleteConfirmDialog" />
     </div>
   </v-app>
 </template>
@@ -144,6 +156,7 @@ export default {
         day: 'numeric',
       },
       newsScheduleAndFilterDisplaying: false,
+      newsToDelete: null
     };
   },
   computed: {
@@ -165,6 +178,12 @@ export default {
     },
     isDraftsFilter() {
       return this.newsFilter === 'drafts';
+    },
+    confirmDeleteNewsDialogMessage() {
+      return this.isDraftsFilter ? this.$t('news.message.confirmDeleteDraftNews') : this.$t('news.message.confirmDeleteNews');
+    },
+    confirmDeleteNewsDialogTitle() {
+      return this.isDraftsFilter ? this.$t('news.title.confirmDeleteDraftNews') : this.$t('news.title.confirmDeleteNews');
     },
   },
   watch: {
@@ -250,6 +269,36 @@ export default {
     });
   },
   methods: {
+    editLink(news) {
+      const editUrl = this.getEditUrl(news);
+      window.open(editUrl, '_blank');
+      this.$refs?.mobileActionMenu?.close();
+    },
+    deleteByConfirm() {
+      this.deleteNews(this.newsToDelete);
+    },
+    deleteConfirmDialog(news) {
+      this.newsToDelete = news;
+      this.$refs.deleteConfirmDialog.open();
+      this.$refs.mobileActionMenu.close();
+    },
+    getEditUrl(news) {
+      let editUrl = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news/editor?newsId=${news.targetPageId || news.newsId}`;
+      if (news.spaceId) {
+        editUrl += `&spaceId=${news.spaceId}`;
+      }
+      if (news.activityId) {
+        editUrl += `&activityId=${news.activityId}`;
+      }
+      if (news.spaceUrl) {
+        editUrl += `&spaceName=${news.spaceUrl.substring(news.spaceUrl.lastIndexOf('/') + 1)}`;
+      }
+      editUrl += `&type=${news.activityId && 'latest_draft' || 'draft'}`;
+      if (news.lang) {
+        editUrl += `&lang=${news.lang}`;
+      }
+      return editUrl;
+    },
     getDraftUrl(item) {
       let draftUrl = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news/editor`;
       draftUrl += `?newsId=${item.activityId && item.targetPageId || item.id}`;

@@ -31,29 +31,17 @@
       <v-btn
         v-bind="attrs"
         :aria-label="$t('news.details.menu.open')"
-        class="newsDetailsActionMenu pull-right"
-        :class="isMobile && 'pl-4' || ''"
+        :class="['pull-right', {'newsDetailsActionMenu': !articleNewLayoutEnabled}, { 'pl-4': isMobile && !articleNewLayoutEnabled }]"
         icon
         v-on="on"
-        @click="openBottomMenu">
-        <v-icon>mdi-dots-vertical</v-icon>
+        @click.prevent="openBottomMenu">
+        <v-icon size="20">
+          fas fa-ellipsis-v
+        </v-icon>
       </v-btn>
     </template>
     <news-action-menu-items
       v-if="!isMobile"
-      :news="news"
-      :show-copy-link-button="showCopyLinkButton"
-      :show-delete-button="showDeleteButton"
-      :show-edit-button="showEditButton"
-      :current-app="currentApp"
-      :show-publish-button="showPublishButton"
-      :show-resume-button="showResumeButton"
-      :show-share-button="showShareButton"
-      @copy-link="copyLink"
-      @edit-article="$emit('edit-article', news)"
-      @delete-article="$emit('delete-article')" />
-    <news-mobile-action-menu
-      v-else
       :news="news"
       :show-copy-link-button="showCopyLinkButton"
       :show-delete-button="showDeleteButton"
@@ -132,6 +120,9 @@ export default {
   computed: {
     isMobile() {
       return this.$vuetify.breakpoint.name === 'xs' || this.$vuetify.breakpoint.name === 'sm';
+    },
+    articleNewLayoutEnabled() {
+      return eXo?.env?.portal?.articleNewLayoutEnabled;
     }
   },
   methods: {
@@ -155,7 +146,18 @@ export default {
       }
     },
     openBottomMenu() {
-      return this.isMobile && this.$root.$emit('open-news-mobile-action-menu');
+      if (this.isMobile) {
+        this.$root.$emit('open-news-mobile-action-menu', {
+          news: this.news,
+          showShareButton: this.showShareButton,
+          showEditButton: this.showEditButton,
+          showResumeButton: this.showResumeButton,
+          showDeleteButton: this.showDeleteButton,
+          showPublishButton: this.showCopyLinkButton,
+          showCopyLinkButton: this.showCopyLinkButton,
+          currentApp: this.currentApp
+        });
+      }
     }
   }
 };
