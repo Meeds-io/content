@@ -19,57 +19,69 @@
 
 -->
 <template>
-  <div id="newsDetails">
-    <div v-if="isMobile" class="application-body">
-      <exo-news-details-toolbar-mobile
-        :news="news"
-        :show-edit-button="showEditButton"
-        :show-delete-button="showDeleteButton"
-        :show-copy-link-button="showCopyLinkButton"
-        :show-publish-button="showPublishButton"
-        @delete-article="deleteConfirmDialog"
-        @edit-article="editLink" />
-      <exo-news-details-body-mobile
-        :news="news"
+  <v-app>
+    <div
+      id="newsDetails"
+      :class="{'pa-5': articleNewLayoutEnabled}">
+      <div
+        v-if="isMobile && !articleNewLayoutEnabled"
+        class="application-body">
+        <exo-news-details-toolbar-mobile
+          :news="news"
+          :show-edit-button="showEditButton"
+          :show-delete-button="showDeleteButton"
+          :show-copy-link-button="showCopyLinkButton"
+          :show-publish-button="showPublishButton"
+          @delete-article="deleteConfirmDialog"
+          @edit-article="editLink" />
+        <exo-news-details-body-mobile
+          :news="news"
+          :news-id="newsId"
+          :space="currentSpace" />
+      </div>
+      <div
+        v-else
+        class="application-body">
+        <exo-news-details-toolbar
+          :news="news"
+          :news-id="newsId"
+          :current-user="currentUser"
+          :activity-id="activityId"
+          :show-edit-button="showEditButton"
+          :show-delete-button="showDeleteButton"
+          :show-publish-button="showPublishButton"
+          :show-copy-link-button="showCopyLinkButton"
+          @delete-article="deleteConfirmDialog"
+          @edit-article="editLink" />
+        <exo-news-details-body
+          :current-user="currentUser"
+          :news="news"
+          :translations="translations"
+          :selected-translation="selectedTranslation" />
+      </div>
+      <schedule-news-drawer
+        v-if="currentUser"
+        @post-article="postNews"
         :news-id="newsId"
-        :space="currentSpace" />
-    </div>
-    <div v-else class="application-body">
-      <exo-news-details-toolbar
+        :news-type="processedNewsType" />
+      <exo-confirm-dialog
+        v-if="currentUser"
+        ref="deleteConfirmDialog"
+        :message="$t('news.message.confirmDeleteNews')"
+        :title="$t('news.title.confirmDeleteNews')"
+        :ok-label="$t('news.button.ok')"
+        :cancel-label="$t('news.button.cancel')"
+        @ok="deleteNews" />
+      <exo-news-edit-publishing-drawer
+        v-if="news && currentUser"
         :news="news"
-        :news-id="newsId"
-        :current-user="currentUser"
-        :activity-id="activityId"
-        :show-edit-button="showEditButton"
-        :show-delete-button="showDeleteButton"
-        :show-publish-button="showPublishButton"
-        :show-copy-link-button="showCopyLinkButton"
-        @delete-article="deleteConfirmDialog"
-        @edit-article="editLink" />
-      <exo-news-details-body
-        :current-user="currentUser"
+        @refresh-news="getNewsById(newsId)" />
+      <news-mobile-action-menu
         :news="news"
-        :translations="translations"
-        :selected-translation="selectedTranslation" />
+        @edit-article="editLink"
+        @delete-article="deleteConfirmDialog" />
     </div>
-    <schedule-news-drawer
-      v-if="currentUser"
-      @post-article="postNews"
-      :news-id="newsId"
-      :news-type="processedNewsType" />
-    <exo-confirm-dialog
-      v-if="currentUser"
-      ref="deleteConfirmDialog"
-      :message="$t('news.message.confirmDeleteNews')"
-      :title="$t('news.title.confirmDeleteNews')"
-      :ok-label="$t('news.button.ok')"
-      :cancel-label="$t('news.button.cancel')"
-      @ok="deleteNews" />
-    <exo-news-edit-publishing-drawer
-      v-if="news && currentUser"
-      :news="news"
-      @refresh-news="getNewsById(newsId)" />
-  </div>
+  </v-app>
 </template>
 <script>
 
@@ -153,6 +165,9 @@ export default {
     },
     processedNewsType() {
       return this.activityId && this.activityId !== '' ? this.$newsConstants.newsObjectType.ARTICLE : this.newsType;
+    },
+    articleNewLayoutEnabled() {
+      return eXo?.env?.portal?.articleNewLayoutEnabled;
     }
   },
   created() {

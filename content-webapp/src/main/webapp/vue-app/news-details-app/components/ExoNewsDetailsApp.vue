@@ -1,5 +1,7 @@
 <template>
-  <div id="newsDetails">
+  <div
+    id="newsDetails"
+    :class="{'pa-5': articleNewLayoutEnabled}">
     <div v-if="notFound" class="articleNotFound">
       <i class="iconNotFound"></i>
       <h3>{{ $t('news.details.restricted') }}</h3>
@@ -17,8 +19,7 @@
       :show-delete-button="showDeleteButton"
       :translations="translations"
       :selected-translation="selectedTranslation"
-      :show-copy-link-button="true"
-    />
+      :show-copy-link-button="true" />
   </div>
 </template>
 
@@ -47,6 +48,11 @@ export default {
     originalVersion: null,
     previousSelectedTranslation: null
   }),
+  computed: {
+    articleNewLayoutEnabled() {
+      return eXo?.env?.portal?.articleNewLayoutEnabled;
+    }
+  },
   created() {
     this.getAvailableLanguages();
     const url = new URL(window.location.href);
