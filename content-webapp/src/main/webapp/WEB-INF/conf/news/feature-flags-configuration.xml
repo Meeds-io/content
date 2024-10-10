@@ -29,8 +29,6 @@
             <properties-param>
                 <name>ContentFeatureProperties</name>
                 <description>Content Feature enablement flag</description>
-                <property name="exo.feature.spaceNewsTargetAutoCreation.enabled"
-                          value="${exo.feature.spaceNewsTargetAutoCreation.enabled:false}"/>
                 <property name="exo.feature.newPublicationDrawer.enabled"
                           value="${exo.feature.newPublicationDrawer.enabled:false}"/>
             </properties-param>
