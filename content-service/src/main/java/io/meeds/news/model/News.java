@@ -137,5 +137,7 @@ public class News {
 
   private String                          illustrationURL;
 
+  private String                          latestVersionId;
+
   private NotePageProperties              properties;
 }
