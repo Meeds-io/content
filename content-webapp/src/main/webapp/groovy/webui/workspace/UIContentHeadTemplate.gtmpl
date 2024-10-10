@@ -6,6 +6,5 @@
 %>
 
 <script type="text/javascript" id="contentHeadScripts">
-    eXo.env.portal.articleNewLayoutEnabled = <%=featureService.isFeatureActiveForUser("articleNewLayout", userName)%>;
     eXo.env.portal.newPublicationDrawerEnabled = <%=featureService.isFeatureActiveForUser("newPublicationDrawer", userName)%>;
 </script>
