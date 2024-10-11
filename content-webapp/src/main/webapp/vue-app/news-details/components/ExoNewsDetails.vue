@@ -22,25 +22,8 @@
   <v-app>
     <div
       id="newsDetails"
-      :class="{'pa-5': articleNewLayoutEnabled}">
+      class="pa-5">
       <div
-        v-if="isMobile && !articleNewLayoutEnabled"
-        class="application-body">
-        <exo-news-details-toolbar-mobile
-          :news="news"
-          :show-edit-button="showEditButton"
-          :show-delete-button="showDeleteButton"
-          :show-copy-link-button="showCopyLinkButton"
-          :show-publish-button="showPublishButton"
-          @delete-article="deleteConfirmDialog"
-          @edit-article="editLink" />
-        <exo-news-details-body-mobile
-          :news="news"
-          :news-id="newsId"
-          :space="currentSpace" />
-      </div>
-      <div
-        v-else
         class="application-body">
         <exo-news-details-toolbar
           :news="news"
@@ -165,9 +148,6 @@ export default {
     },
     processedNewsType() {
       return this.activityId && this.activityId !== '' ? this.$newsConstants.newsObjectType.ARTICLE : this.newsType;
-    },
-    articleNewLayoutEnabled() {
-      return eXo?.env?.portal?.articleNewLayoutEnabled;
     }
   },
   created() {

@@ -21,7 +21,6 @@
 <template>
   <div v-if="news">
     <div
-      v-if="articleNewLayoutEnabled"
       class="newsDetails-description">
       <div
         class="newsDetails-header">
@@ -116,127 +115,6 @@
         </div>
       </div>
     </div>
-    <div
-      v-else
-      class="newsDetails-description">
-      <div :class="[illustrationURL ? 'newsDetails-header' : '']" class="newsDetails-header">
-        <div v-if="illustrationURL" class="illustration center">
-          <img
-            :src="`${illustrationURL}&size=0x400`"
-            :alt="featuredImageAltText"
-            class="newsDetailsImage illustrationPicture"
-            longdesc="#newsSummary">
-        </div>
-        <div class="newsDetails">
-          <div class="news-top-information d-flex">
-            <div id="titleNews" class="newsTitle newsTitleMobile">
-              <a class="activityLinkColor newsTitleLink text-title">{{ newsTitle }}</a>
-            </div>
-          </div>
-          <div class="newsInformationBackground center">
-            <div :class="[showUpdateInfo ? 'news-update-details-header' : 'news-details-header']" class="news-header-content  d-inline-flex align-center">
-              <div :class="[ showUpdateInfo ? 'newsUpdateInfo' : '']" v-if="currentUser">
-                <exo-user-avatar
-                  :profile-id="authorProfile"
-                  :size="50"
-                  class="me-1"
-                  popover
-                  avatar />
-              </div>
-              <div id="informationNews" class="newsInformation pa-1">
-                <div class="newsPosted d-flex align-center">
-                  <exo-user-avatar
-                    v-if="currentUser"
-                    :profile-id="authorProfile"
-                    extra-class="me-1"
-                    fullname
-                    link-style
-                    popover />
-                  <span v-if="!hiddenSpace && currentUser"> {{ $t('news.activity.in') }} </span>
-                  <exo-space-avatar
-                    v-if="!hiddenSpace && currentUser"
-                    :space-id="spaceId"
-                    fullname
-                    extra-class="me-1 ms-n1"
-                    link-style
-                    popover />
-                  <template v-if="publicationDate">
-                    <span v-if="currentUser"> - </span>
-                    <date-format
-                      :value="publicationDate"
-                      :format="dateFormat"
-                      class="newsInformationValue newsPostedDate news-details-information ms-1" />
-                  </template>
-                  <div class="mb-1 ml-2">
-                    <content-translation-menu
-                      :translations="translations"
-                      :selected-translation="selectedTranslation"
-                      :article="news" />
-                  </div>
-                </div>
-                <div class="newsUpdater text-subtitle">
-                  <div v-if="publicationState !== 'staged' && showUpdateInfo">
-                    {{ $t('news.activity.lastUpdated') }}
-                  </div>
-                  <div v-else-if="publicationState === 'staged'">
-                    {{ $t('news.details.scheduled') }}
-                  </div>
-                  <div>
-                    <template v-if="publicationState !== 'staged' && updatedDate && showUpdateInfo">
-                      <date-format
-                        :value="updatedDate"
-                        :format="dateFormat"
-                        class="newsInformationValue newsUpdatedDate" />
-                    </template>
-                    <template v-else-if="publicationState === 'staged'">
-                      <date-format
-                        :value="scheduleDate"
-                        :format="dateFormat"
-                        class="newsInformationValue newsUpdatedDate" />
-                      <span class="newsInformationValue">-</span>
-                      <date-format
-                        :value="scheduleDate"
-                        :format="dateTimeFormat"
-                        class="newsInformationValue newsUpdatedDate ml-1 me-1" />
-                    </template>
-                    <div v-if="notSameUpdater && showUpdateInfo && currentUser" class="text-subtitle">
-                      <span> {{ $t('news.activity.by') }} </span>
-                      <exo-user-avatar
-                        :profile-id="newsUpdater"
-                        extra-class="ms-1"
-                        fullname
-                        link-style
-                        popover />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div
-            v-if="newsSummary"
-            id="newsSummary"
-            class="summary text-header center ms-13 me-13">
-            <span v-sanitized-html="newsSummary"></span>
-          </div>
-
-          <div
-            id="newsBody"
-            :class="[!summary ? 'fullDetailsBodyNoSummary' : '']"
-            class="fullDetailsBody ms-13 me-13 clearfix">
-            <div
-              class="rich-editor-content extended-rich-content"
-              v-html="newsBody"></div>
-          </div>
-          <extension-registry-components
-            :params="{attachmentsIds: attachmentsIds}"
-            name="NewsDetails"
-            type="news-details-attachments"
-            element="div" />
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -289,9 +167,6 @@ export default {
     this.$root.$on('update-news-body', this.setNewsContent);
   },
   computed: {
-    articleNewLayoutEnabled() {
-      return eXo?.env?.portal?.articleNewLayoutEnabled;
-    },
     showUpdaterInfo() {
       return !this.isPublicAccess;
     },
@@ -312,12 +187,6 @@ export default {
     newsTitle() {
       return this.news && this.newsTitleContent;
     },
-    showUpdateInfo() {
-      return this.news && this.news.updateDate && this.news.updater !== '__system' && this.news.updateDate !== 'null' && this.news.publicationDate && this.news.publicationDate !== 'null' && new Date(this.news.updateDate).getTime() > new Date(this.news.publicationDate).getTime();
-    },
-    authorProfile() {
-      return this.news && this.news.author;
-    },
     articleUpdater() {
       return this.news?.updater || this.news?.author;
     },
@@ -329,12 +198,6 @@ export default {
     },
     updaterFullName() {
       return this.news && this.news.updaterFullName;
-    },
-    updaterProfileURL() {
-      return this.news && `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/profile/${this.news.updater}`;
-    },
-    newsUpdater() {
-      return this.news && this.news.updater;
     },
     publicationDate() {
       return this.news?.publicationDate && new Date(this.news.publicationDate);
@@ -359,13 +222,7 @@ export default {
     },
     publicationState() {
       return this.news && this.news.publicationState;
-    },
-    notSameUpdater() {
-      return this.news && this.news.updater !== this.news.author;
-    },
-    scheduleDate() {
-      return this.news && this.news.schedulePostDate;
-    },
+    }
   },
   methods: {
     setNewsTitle(title) {

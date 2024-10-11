@@ -1,7 +1,7 @@
 <template>
   <div
     id="newsDetails"
-    :class="{'pa-5': articleNewLayoutEnabled}">
+    class="pa-5">
     <div v-if="notFound" class="articleNotFound">
       <i class="iconNotFound"></i>
       <h3>{{ $t('news.details.restricted') }}</h3>
@@ -48,11 +48,6 @@ export default {
     originalVersion: null,
     previousSelectedTranslation: null
   }),
-  computed: {
-    articleNewLayoutEnabled() {
-      return eXo?.env?.portal?.articleNewLayoutEnabled;
-    }
-  },
   created() {
     this.getAvailableLanguages();
     const url = new URL(window.location.href);

@@ -22,14 +22,7 @@
   <div
     :class="{'me-5': !showEditButton}"
     class="newsDetailsTopBar">
-    <a
-      v-if="!articleNewLayoutEnabled"
-      class="backBtn"
-      @click="goBack">
-      <i class="uiIconBack my-4"></i>
-    </a>
     <v-btn
-      v-else
       class="go-back-button"
       icon
       @click.stop="goBack">
@@ -41,7 +34,6 @@
     <v-btn
       v-if="publicationState === 'staged'"
       class="btn pull-right"
-      :class="{'newsDetailsActionMenu mt-6 mr-2 ': !articleNewLayoutEnabled}"
       @click="$root.$emit('open-schedule-drawer','editScheduledNews')">
       {{ $t("news.composer.btn.scheduleArticle") }}
     </v-btn>
@@ -60,8 +52,7 @@
       v-if="displayFavoriteButton"
       :news="news"
       :activity-id="activityId"
-      :class="[{'pull-right mt-1 me-2': articleNewLayoutEnabled},
-               {'mt-6 pull-right': !articleNewLayoutEnabled}]" />
+      class="pull-right mt-1 me-2" />
   </div>
 </template>
 
@@ -127,9 +118,6 @@ export default {
     };
   },
   computed: {
-    articleNewLayoutEnabled() {
-      return eXo?.env?.portal?.articleNewLayoutEnabled;
-    },
     historyClearedBackUrl() {
       return this.news && this.news.spaceMember ? this.news.spaceUrl : `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}`;
     },
