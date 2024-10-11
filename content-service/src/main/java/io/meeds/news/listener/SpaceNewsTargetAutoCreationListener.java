@@ -21,7 +21,6 @@ package io.meeds.news.listener;
 
 import java.util.Map;
 
-import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
 import org.exoplatform.services.security.ConversationState;
@@ -35,12 +34,9 @@ import io.meeds.news.service.NewsTargetingService;
 
 public class SpaceNewsTargetAutoCreationListener extends SpaceListenerPlugin {
 
-  private static final Log     LOG                                     =
-                                   ExoLogger.getLogger(SpaceNewsTargetAutoCreationListener.class);
+  private static final Log     LOG = ExoLogger.getLogger(SpaceNewsTargetAutoCreationListener.class);
 
   private NewsTargetingService newsTargetingService;
-
-  private static final String  SPACE_NEWS_TARGET_AUTO_CREATION_FEATURE = "spaceNewsTargetAutoCreation";
 
   public SpaceNewsTargetAutoCreationListener(NewsTargetingService newsTargetingService) {
     this.newsTargetingService = newsTargetingService;
@@ -48,17 +44,15 @@ public class SpaceNewsTargetAutoCreationListener extends SpaceListenerPlugin {
 
   @Override
   public void spaceCreated(SpaceLifeCycleEvent event) {
-    if (CommonsUtils.isFeatureActive(SPACE_NEWS_TARGET_AUTO_CREATION_FEATURE)) {
-      Identity currentIdentity = ConversationState.getCurrent().getIdentity();
-      Space space = event.getSpace();
-      NewsTargetingEntity spaceNewsTargetEntity = new NewsTargetingEntity();
-      spaceNewsTargetEntity.setName(space.getDisplayName());
-      spaceNewsTargetEntity.setProperties(Map.of("label", space.getDisplayName(), "permissions", "space:" + space.getId()));
-      try {
-        newsTargetingService.createNewsTarget(spaceNewsTargetEntity, currentIdentity, false);
-      } catch (Exception e) {
-        LOG.warn("Can't create space {} news target", space.getPrettyName());
-      }
+    Identity currentIdentity = ConversationState.getCurrent().getIdentity();
+    Space space = event.getSpace();
+    NewsTargetingEntity spaceNewsTargetEntity = new NewsTargetingEntity();
+    spaceNewsTargetEntity.setName(space.getDisplayName());
+    spaceNewsTargetEntity.setProperties(Map.of("label", space.getDisplayName(), "permissions", "space:" + space.getId()));
+    try {
+      newsTargetingService.createNewsTarget(spaceNewsTargetEntity, currentIdentity, false);
+    } catch (Exception e) {
+      LOG.warn("Can't create space {} news target", space.getPrettyName());
     }
   }
 }
