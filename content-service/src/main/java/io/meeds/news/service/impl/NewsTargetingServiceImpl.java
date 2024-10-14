@@ -25,6 +25,9 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Primary;
+import org.springframework.stereotype.Service;
 
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
@@ -48,9 +51,6 @@ import io.meeds.news.rest.NewsTargetingEntity;
 import io.meeds.news.rest.NewsTargetingPermissionsEntity;
 import io.meeds.news.service.NewsTargetingService;
 import io.meeds.news.utils.NewsUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Primary;
-import org.springframework.stereotype.Service;
 
 /**
  * Service managing News Targeting
@@ -118,7 +118,7 @@ public class NewsTargetingServiceImpl implements NewsTargetingService {
   @Override
   public void deleteTargetByName(String targetName,
                                  org.exoplatform.services.security.Identity currentIdentity) throws IllegalAccessException {
-    if (currentIdentity != null && !NewsUtils.canManageNewsPublishTargets(currentIdentity)) {
+    if (!NewsUtils.canManageNewsPublishTargets(currentIdentity)) {
       throw new IllegalArgumentException("User " + currentIdentity.getUserId()
           + " not authorized to delete news target with name " + targetName);
     }
@@ -129,7 +129,10 @@ public class NewsTargetingServiceImpl implements NewsTargetingService {
 
   @Override
   public List<String> getTargetsByNews(News news) {
-    NewsTargetObject newsTargetObject = new NewsTargetObject(NewsUtils.NEWS_METADATA_OBJECT_TYPE, news.getId(), null, Long.parseLong(news.getSpaceId()));
+    NewsTargetObject newsTargetObject = new NewsTargetObject(NewsUtils.NEWS_METADATA_OBJECT_TYPE,
+                                                             news.getId(),
+                                                             null,
+                                                             Long.parseLong(news.getSpaceId()));
     List<MetadataItem> newsTargets = metadataService.getMetadataItemsByMetadataTypeAndObject(METADATA_TYPE.getName(),
                                                                                              newsTargetObject);
     return newsTargets.stream().map(MetadataItem::getMetadata).map(Metadata::getName).toList();
@@ -144,14 +147,21 @@ public class NewsTargetingServiceImpl implements NewsTargetingService {
     if (!NewsUtils.canPublishNews(news.getSpaceId(), currentIdentity)) {
       throw new IllegalAccessException("User " + currentUserId + " not authorized to save news targets");
     }
-    NewsTargetObject newsTargetObject = new NewsTargetObject(NewsUtils.NEWS_METADATA_OBJECT_TYPE, news.getId(), null, Long.parseLong(news.getSpaceId()));
+    NewsTargetObject newsTargetObject = new NewsTargetObject(NewsUtils.NEWS_METADATA_OBJECT_TYPE,
+                                                             news.getId(),
+                                                             null,
+                                                             Long.parseLong(news.getSpaceId()));
     Identity currentSocIdentity = identityManager.getOrCreateIdentity(OrganizationIdentityProvider.NAME, currentUserId);
     Map<String, String> properties = new LinkedHashMap<>();
     properties.put(NewsUtils.DISPLAYED_STATUS, String.valueOf(displayed));
     targets.stream().forEach(targetName -> {
       try {
         MetadataKey metadataKey = new MetadataKey(NewsTargetingService.METADATA_TYPE.getName(), targetName, 0);
-        metadataService.createMetadataItem(newsTargetObject, metadataKey, properties, Long.parseLong(currentSocIdentity.getId()), false);
+        metadataService.createMetadataItem(newsTargetObject,
+                                           metadataKey,
+                                           properties,
+                                           Long.parseLong(currentSocIdentity.getId()),
+                                           false);
       } catch (ObjectAlreadyExistsException e) {
         LOG.warn("Targets with name {} is already associated to object {}. Ignore error since it will not affect result.",
                  targetName,
@@ -174,7 +184,10 @@ public class NewsTargetingServiceImpl implements NewsTargetingService {
 
   @Override
   public void deleteNewsTargets(News news) {
-    NewsTargetObject newsTargetObject = new NewsTargetObject(NewsUtils.NEWS_METADATA_OBJECT_TYPE, news.getId(), null, Long.parseLong(news.getSpaceId()));
+    NewsTargetObject newsTargetObject = new NewsTargetObject(NewsUtils.NEWS_METADATA_OBJECT_TYPE,
+                                                             news.getId(),
+                                                             null,
+                                                             Long.parseLong(news.getSpaceId()));
     metadataService.deleteMetadataItemsByMetadataTypeAndObject(METADATA_TYPE.getName(), newsTargetObject);
   }
 
@@ -191,13 +204,21 @@ public class NewsTargetingServiceImpl implements NewsTargetingService {
   public Metadata createNewsTarget(NewsTargetingEntity newsTargetingEntity,
                                    org.exoplatform.services.security.Identity currentIdentity) throws IllegalArgumentException,
                                                                                                IllegalAccessException {
+    return createNewsTarget(newsTargetingEntity, currentIdentity, true);
+  }
+
+  @Override
+  public Metadata createNewsTarget(NewsTargetingEntity newsTargetingEntity,
+                                   org.exoplatform.services.security.Identity currentIdentity,
+                                   boolean withPermissions) throws IllegalArgumentException, IllegalAccessException {
+    if (withPermissions && !NewsUtils.canManageNewsPublishTargets(currentIdentity)) {
+      throw new IllegalAccessException("User " + currentIdentity.getUserId() + " not authorized to create news targets");
+    }
     Identity identity = identityManager.getOrCreateIdentity(OrganizationIdentityProvider.NAME, currentIdentity.getUserId());
     long userIdentityId = identity == null ? 0 : Long.parseLong(identity.getId());
     Metadata metadata = fromEntity(newsTargetingEntity);
     metadata.setCreatorId(userIdentityId);
-    if (!NewsUtils.canManageNewsPublishTargets(currentIdentity)) {
-      throw new IllegalAccessException("User " + currentIdentity.getUserId() + " not authorized to create news targets");
-    }
+
     MetadataKey targetMetadataKey = new MetadataKey(METADATA_TYPE.getName(), metadata.getName(), 0);
     Metadata storedMetadata = metadataService.getMetadataByKey(targetMetadataKey);
     if (storedMetadata != null) {

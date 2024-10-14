@@ -337,10 +337,11 @@ public interface NewsService {
    * @param updater
    * @param page
    * @param creationDate
+   * @param space
    * @return the created news draft for an existing news article
    * @throws Exception when error occurs
    */
-  News createDraftForExistingPage(News news, String updater, Page page, long creationDate) throws Exception;
+  News createDraftForExistingPage(News news, String updater, Page page, long creationDate, Space space) throws Exception;
 
   /**
    * @param news {@link News} news article to be deleted

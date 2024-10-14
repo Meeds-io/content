@@ -28,6 +28,7 @@
     :show-edit-button="showEditButton"
     :show-publish-button="showPublishButton"
     :show-delete-button="showDeleteButton"
+    :show-copy-link-button="true"
     :translations="translations"
     :selected-translation="selectedTranslation" />
 </template>
@@ -47,7 +48,8 @@ export default {
     translations: [],
     languages: [],
     originalVersion: null,
-    previousSelectedTranslation: null
+    previousSelectedTranslation: null,
+    switchTranslation: false
   }),
   computed: {
     activityId() {
@@ -97,10 +99,25 @@ export default {
       this.updateSelectedTranslation(translation);
       this.previousSelectedTranslation = translation.value;
     });
+    window.addEventListener('popstate', () => {
+      this.handleUrlUpdate();
+    });
   },
   methods: {
+    handleUrlUpdate() {
+      const url = new URL(window.location.href);
+      const params = new URLSearchParams(url.search);
+      const langParam = params?.get('lang');
+      const targetLang = this.languages.find(lang => lang.value === langParam);
+      if (targetLang) {
+        this.selectedTranslation = targetLang;
+      } else {
+        this.selectedTranslation = this.originalVersion;
+      }
+      this.retrieveNews();
+    },
     getAvailableLanguages() {
-      return this.$notesService.getAvailableLanguages().then(data => {
+      return this.$newsServices.getAvailableLanguages().then(data => {
         this.languages = data || [];
       });
     },
@@ -156,17 +173,24 @@ export default {
         }
       });
     },
+    updateBrowserHistoryState(url) {
+      if (this.switchTranslation) {
+        history.pushState({}, null, url.toString());
+        this.switchTranslation = false;
+      }
+    },
     addParamToUrl(paramName, paramValue) {
       const url = new URL(window.location.href);
       url.searchParams.set(paramName, paramValue);
-      history.pushState({}, null, url.toString());
+      this.updateBrowserHistoryState(url);
     },
     removeParamFromUrl(paramName) {
       const url = new URL(window.location.href);
       url.searchParams.delete(paramName);
-      history.pushState({}, null, url.toString());
+      this.updateBrowserHistoryState(url);
     },
     changeTranslation(translation) {
+      this.switchTranslation = true;
       this.selectedTranslation = translation;
       this.getArticleVersionWithLang(this.news.id, this.selectedTranslation.value);
       this.$forceUpdate();
@@ -174,7 +198,7 @@ export default {
     fetchTranslation(articleId) {
       this.$newsServices.getArticleLanguages(articleId, false).then((resp) => {
         this.translations =  resp || [];
-        if (this.translations.length>0) {
+        if (this.translations.length) {
           this.translations = this.languages.filter(item1 => this.translations.some(item2 => item2 === item1.value));
           this.translations.sort((a, b) => a.text.localeCompare(b.text));
         }

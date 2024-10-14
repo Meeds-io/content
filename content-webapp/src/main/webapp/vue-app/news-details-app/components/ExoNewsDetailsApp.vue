@@ -1,5 +1,7 @@
 <template>
-  <div id="newsDetails">
+  <div
+    id="newsDetails"
+    class="pa-5">
     <div v-if="notFound" class="articleNotFound">
       <i class="iconNotFound"></i>
       <h3>{{ $t('news.details.restricted') }}</h3>
@@ -17,7 +19,7 @@
       :show-delete-button="showDeleteButton"
       :translations="translations"
       :selected-translation="selectedTranslation"
-    />
+      :show-copy-link-button="true" />
   </div>
 </template>
 
@@ -67,7 +69,7 @@ export default {
   },
   methods: {
     getAvailableLanguages() {
-      return this.$notesService.getAvailableLanguages().then(data => {
+      return this.$newsServices.getAvailableLanguages().then(data => {
         this.languages = data || [];
       });
     },

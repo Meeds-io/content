@@ -42,6 +42,7 @@
     <portlet-name>News</portlet-name>
     <skin-name>Enterprise</skin-name>
     <css-path>/skin/css/newsApp.css</css-path>
+    <additional-module>newsDetails</additional-module>
   </portlet-skin>
 
   <portlet-skin>
@@ -50,6 +51,7 @@
     <skin-name>Enterprise</skin-name>
     <css-path>/skin/css/newsComposer.css</css-path>
     <additional-module>Notes</additional-module>
+    <additional-module>ImageCropper</additional-module>
   </portlet-skin>
 
   <portlet-skin>

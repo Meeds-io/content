@@ -189,8 +189,6 @@
       <init-params>
         <values-param>
           <name>notification.plugin.ids</name>
-          <value>PublishNewsNotificationPlugin</value>
-          <value>MentionInNewsNotificationPlugin</value>
           <value>PostNewsNotificationPlugin</value>
         </values-param>
       </init-params>

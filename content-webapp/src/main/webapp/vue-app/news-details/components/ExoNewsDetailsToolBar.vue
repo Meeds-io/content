@@ -19,27 +19,40 @@
 
 -->
 <template>
-  <div :class="!showEditButton && 'me-5'" class="newsDetailsTopBar">
-    <a class="backBtn" @click="goBack"><i class="uiIconBack my-4"></i></a>
+  <div
+    :class="{'me-5': !showEditButton}"
+    class="newsDetailsTopBar">
+    <v-btn
+      class="go-back-button"
+      icon
+      @click.stop="goBack">
+      <v-icon
+        size="15">
+        fas fa-arrow-left
+      </v-icon>
+    </v-btn>
     <v-btn
       v-if="publicationState === 'staged'"
-      class="btn newsDetailsActionMenu mt-6 mr-2 pull-right"
+      class="btn pull-right"
       @click="$root.$emit('open-schedule-drawer','editScheduledNews')">
       {{ $t("news.composer.btn.scheduleArticle") }}
     </v-btn>
-    <exo-news-details-action-menu
-      v-if="publicationState !== 'staged' && (showEditButton || showDeleteButton || showPublishButton)"
+    <exo-news-details-action-menu-app
+      v-if="publicationState !== 'staged' && (showEditButton || showDeleteButton || showPublishButton || showCopyLinkButton)"
       class="pull-right"
       :news="news"
-      :news-published="newsPublished"
+      :current-app="currentApplication"
       :show-edit-button="showEditButton"
       :show-delete-button="showDeleteButton"
-      :show-publish-button="showPublishButton" />
+      :show-publish-button="showPublishButton"
+      :show-copy-link-button="showCopyLinkButton"
+      @delete-article="$emit('delete-article')"
+      @edit-article="$emit('edit-article')" />
     <exo-news-favorite-action
       v-if="displayFavoriteButton"
       :news="news"
       :activity-id="activityId"
-      class="mt-6 pull-right" />
+      class="pull-right mt-1 me-2" />
   </div>
 </template>
 
@@ -81,10 +94,16 @@ export default {
       required: false,
       default: false
     },
+    showCopyLinkButton: {
+      type: Boolean,
+      required: false,
+      default: false
+    }
   },
   data() {
     return {
       spaceId: null,
+      currentApplication: 'newsDetails',
       updaterIdentity: null,
       BYTES_IN_MB: 1048576,
       dateFormat: {
@@ -120,7 +139,7 @@ export default {
   },
   methods: {
     goBack() {
-      if (this.lastVisitedPage){
+      if (this.lastVisitedPage) {
         history.back();
       }
       else {

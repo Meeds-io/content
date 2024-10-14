@@ -53,39 +53,39 @@ import org.exoplatform.wiki.model.DraftPage;
 
 public class NewsUtils {
 
-  private static final Log    LOG                             = ExoLogger.getLogger(NewsUtils.class);
+  private static final Log   LOG                             = ExoLogger.getLogger(NewsUtils.class);
 
-  public static final String  POST_NEWS                       = "exo.news.postArticle";
+  public static final String POST_NEWS                       = "exo.news.postArticle";
 
-  public static final String  POST_NEWS_ARTICLE               = "exo.news.gamification.postArticle";
+  public static final String POST_NEWS_ARTICLE               = "exo.news.gamification.postArticle";
 
-  public static final String  PUBLISH_NEWS                    = "exo.news.gamification.PublishArticle";
+  public static final String PUBLISH_NEWS                    = "exo.news.gamification.PublishArticle";
 
-  public static final String  VIEW_NEWS                       = "exo.news.viewArticle";
+  public static final String VIEW_NEWS                       = "exo.news.viewArticle";
 
-  public static final String  SHARE_NEWS                      = "exo.news.shareArticle";
+  public static final String SHARE_NEWS                      = "exo.news.shareArticle";
 
-  public static final String  COMMENT_NEWS                    = "exo.news.commentArticle";
+  public static final String COMMENT_NEWS                    = "exo.news.commentArticle";
 
-  public static final String  LIKE_NEWS                       = "exo.news.likeArticle";
+  public static final String LIKE_NEWS                       = "exo.news.likeArticle";
 
-  public static final String  DELETE_NEWS                     = "exo.news.deleteArticle";
+  public static final String DELETE_NEWS                     = "exo.news.deleteArticle";
 
-  public static final String  UPDATE_NEWS                     = "exo.news.updateArticle";
+  public static final String UPDATE_NEWS                     = "exo.news.updateArticle";
 
-  public static final String  SCHEDULE_NEWS                   = "exo.news.scheduleArticle";
+  public static final String SCHEDULE_NEWS                   = "exo.news.scheduleArticle";
 
-  public static final String  UNSCHEDULE_NEWS                 = "exo.news.unscheduleArticle";
+  public static final String UNSCHEDULE_NEWS                 = "exo.news.unscheduleArticle";
 
-  public static final String  NEWS_METADATA_OBJECT_TYPE       = "news";
+  public static final String NEWS_METADATA_OBJECT_TYPE       = "news";
 
-  public static final String  DISPLAYED_STATUS                = "displayed";
+  public static final String DISPLAYED_STATUS                = "displayed";
 
-  public static final String  TARGET_PERMISSIONS              = "permissions";
+  public static final String TARGET_PERMISSIONS              = "permissions";
 
-  public static final String  SPACE_NEWS_AUDIENCE             = "space";
+  public static final String SPACE_NEWS_AUDIENCE             = "space";
 
-  public static final String  ALL_NEWS_AUDIENCE               = "all";
+  public static final String ALL_NEWS_AUDIENCE               = "all";
 
   public static final String PUBLISHER_MEMBERSHIP_NAME       = "publisher";
 
@@ -93,11 +93,11 @@ public class NewsUtils {
 
   public static final String PLATFORM_WEB_CONTRIBUTORS_GROUP = "/platform/web-contributors";
 
-  public static final String SHARE_CONTENT_ATTACHMENTS       = "content.share.attachments";
-  
-  public static final String  ADD_ARTICLE_TRANSLATION         = "content.add.article.translation";
+  public static final String ADD_ARTICLE_TRANSLATION         = "content.add.article.translation";
 
-  public static final String  REMOVE_ARTICLE_TRANSLATION      = "content.remove.article.translation";
+  public static final String REMOVE_ARTICLE_TRANSLATION      = "content.remove.article.translation";
+
+  public static final String UPDATE_CONTENT_PERMISSIONS      = "content.update.permissions";
 
   public enum NewsObjectType {
     DRAFT, LATEST_DRAFT, ARTICLE;
@@ -160,43 +160,36 @@ public class NewsUtils {
     return getMySpaces(userIdentity).stream().map(space -> Long.valueOf(space.getId())).toList();
   }
 
-  public static List<Long> getAllowedDraftArticleSpaceIds(org.exoplatform.services.security.Identity userIdentity, List<String> filteredSpacesIds) throws Exception {
+  public static List<Long> getAllowedDraftArticleSpaceIds(org.exoplatform.services.security.Identity userIdentity,
+                                                          List<String> filteredSpacesIds) throws Exception {
     SpaceService spaceService = CommonsUtils.getService(SpaceService.class);
-    return getMySpaces(userIdentity).stream()
-                                    .filter(space -> {
-                                      boolean allowed = spaceService.canRedactOnSpace(space, userIdentity)
-                                          || canPublishNews(space.getId(), userIdentity);
-                                      if (!CollectionUtils.isEmpty(filteredSpacesIds)) {
-                                        return allowed && filteredSpacesIds.contains(space.getId());
-                                      }
-                                      return allowed;
-                                    })
-                                    .map(space -> Long.valueOf(space.getId()))
-                                    .toList();
+    return getMySpaces(userIdentity).stream().filter(space -> {
+      boolean allowed = spaceService.canRedactOnSpace(space, userIdentity) || canPublishNews(space.getId(), userIdentity);
+      if (!CollectionUtils.isEmpty(filteredSpacesIds)) {
+        return allowed && filteredSpacesIds.contains(space.getId());
+      }
+      return allowed;
+    }).map(space -> Long.valueOf(space.getId())).toList();
   }
 
-  public static List<Long> getAllowedScheduledNewsSpacesIds(org.exoplatform.services.security.Identity currentIdentity, List<String> filteredSpacesIds) throws Exception {
+  public static List<Long> getAllowedScheduledNewsSpacesIds(org.exoplatform.services.security.Identity currentIdentity,
+                                                            List<String> filteredSpacesIds) throws Exception {
     SpaceService spaceService = CommonsUtils.getService(SpaceService.class);
-    return getMySpaces(currentIdentity).stream()
-            .filter(space -> {
-              boolean allowed = (spaceService.isManager(space, currentIdentity.getUserId())
-                      || spaceService.isRedactor(space, currentIdentity.getUserId())
-                      || canPublishNews(space.getId(), currentIdentity));
-              if (!CollectionUtils.isEmpty(filteredSpacesIds)) {
-                return allowed && filteredSpacesIds.contains(space.getId());
-              }
-              return allowed;
-            })
-            .map(space -> Long.valueOf(space.getId()))
-            .toList();
+    return getMySpaces(currentIdentity).stream().filter(space -> {
+      boolean allowed = (spaceService.isManager(space, currentIdentity.getUserId())
+          || spaceService.isRedactor(space, currentIdentity.getUserId()) || canPublishNews(space.getId(), currentIdentity));
+      if (!CollectionUtils.isEmpty(filteredSpacesIds)) {
+        return allowed && filteredSpacesIds.contains(space.getId());
+      }
+      return allowed;
+    }).map(space -> Long.valueOf(space.getId())).toList();
   }
 
   public static boolean canPublishNews(String spaceId, org.exoplatform.services.security.Identity currentIdentity) {
     if (!StringUtils.isBlank(spaceId)) {
       SpaceService spaceService = CommonsUtils.getService(SpaceService.class);
       Space space = spaceService.getSpaceById(spaceId);
-      return currentIdentity != null
-          && space != null
+      return currentIdentity != null && space != null
           && (currentIdentity.isMemberOf(PLATFORM_WEB_CONTRIBUTORS_GROUP, PUBLISHER_MEMBERSHIP_NAME)
               || spaceService.isPublisher(space, currentIdentity.getUserId())
               || spaceService.isManager(space, currentIdentity.getUserId())
@@ -227,7 +220,7 @@ public class NewsUtils {
     }
     return identity;
   }
-  
+
   public static String buildDraftUrl(DraftPage draftPage) {
     StringBuilder draftArticleUrl = new StringBuilder();
     draftArticleUrl.append("/")
@@ -245,19 +238,19 @@ public class NewsUtils {
     SpaceService spaceService = CommonsUtils.getService(SpaceService.class);
     if (currentUsername != null && spaceService.isMember(news.getSpaceId(), currentUsername) && news.getActivityId() != null) {
       newsArticleUrl.append("/")
-              .append(PortalContainer.getCurrentPortalContainerName())
-              .append("/")
-              .append(CommonsUtils.getCurrentPortalOwner())
-              .append("/activity?id=")
-              .append(news.getActivityId());
+                    .append(PortalContainer.getCurrentPortalContainerName())
+                    .append("/")
+                    .append(CommonsUtils.getCurrentPortalOwner())
+                    .append("/activity?id=")
+                    .append(news.getActivityId());
     } else {
       newsArticleUrl.append("/")
-              .append(PortalContainer.getCurrentPortalContainerName())
-              .append("/")
-              .append(CommonsUtils.getCurrentPortalOwner())
-              .append("/news-detail?newsId=")
-              .append(news.getId())
-              .append("&type=article");
+                    .append(PortalContainer.getCurrentPortalContainerName())
+                    .append("/")
+                    .append(CommonsUtils.getCurrentPortalOwner())
+                    .append("/news-detail?newsId=")
+                    .append(news.getId())
+                    .append("&type=article");
     }
     if (news.getLang() != null) {
       newsArticleUrl.append("&lang=");
@@ -265,6 +258,7 @@ public class NewsUtils {
     }
     return newsArticleUrl.toString();
   }
+
   public static String buildSpaceUrl(String spaceId) {
     StringBuilder spaceUrl = new StringBuilder();
     SpaceService spaceService = CommonsUtils.getService(SpaceService.class);
@@ -305,6 +299,5 @@ public class NewsUtils {
     ListAccess<Space> memberSpacesListAccess = spaceService.getMemberSpaces(userIdentity.getUserId());
     return Arrays.asList(memberSpacesListAccess.load(0, memberSpacesListAccess.getSize()));
   }
-
 
 }

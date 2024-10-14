@@ -27,6 +27,8 @@ import NewsFilterSpaceList from './components/NewsFilterSpaceList.vue';
 import NewsFilterSpaceSearch from './components/NewsFilterSpaceSearch.vue';
 import ExoNewsDetailsActionMenuApp from './components/ExoNewsDetailsActionMenuApp.vue';
 import NewsAppItem from './components/NewsAppItem.vue';
+import NewsActionMenuItems from './components/NewsActionMenuItems.vue';
+import NewsMobileActionMenu from './components/NewsMobileActionMenu.vue';
 
 const components = {
   'news-app': NewsApp,
@@ -38,6 +40,8 @@ const components = {
   'news-filter-space-search': NewsFilterSpaceSearch,
   'exo-news-details-action-menu-app': ExoNewsDetailsActionMenuApp,
   'news-app-item': NewsAppItem,
+  'news-action-menu-items': NewsActionMenuItems,
+  'news-mobile-action-menu': NewsMobileActionMenu
 };
 
 for (const key in components) {

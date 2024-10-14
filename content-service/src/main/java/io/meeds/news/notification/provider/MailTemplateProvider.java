@@ -111,8 +111,7 @@ public class MailTemplateProvider extends TemplateProvider {
       templateContext.put("AUTHOR_AVATAR_URL", encoder.encode(authorAvatarUrl));
       templateContext.put("CONTEXT", encoder.encode(context));
       StringBuilder activityUrl = new StringBuilder();
-      Space space = spaceService.getSpaceByDisplayName(contentSpaceName);
-      if (pluginId.equals(PublishNewsNotificationPlugin.ID) && !spaceService.isMember(space, notification.getTo())) {
+      if (pluginId.equals(PublishNewsNotificationPlugin.ID)) {
         String portalName = PortalContainer.getCurrentPortalContainerName();
         String portalOwner = CommonsUtils.getCurrentPortalOwner();
         String currentDomain = CommonsUtils.getCurrentDomain();

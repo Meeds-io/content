@@ -119,8 +119,6 @@ public class NewsRest {
 
   private ScheduledExecutorService  scheduledExecutor;
 
-  private static final int          CACHE_DURATION_SECONDS          = 31536000;
-
   private enum FilterType {
     PINNED, MYPOSTED, DRAFTS, SCHEDULED, ALL
   }
@@ -750,51 +748,6 @@ public class NewsRest {
     }
   }
 
-  private NewsFilter buildFilter(List<String> spaces, String filter, String text, String author, int limit, int offset) {
-    NewsFilter newsFilter = new NewsFilter();
-
-    newsFilter.setSpaces(spaces);
-    if (StringUtils.isNotEmpty(filter)) {
-      FilterType filterType = FilterType.valueOf(filter.toUpperCase());
-      switch (filterType) {
-      case PINNED: {
-        newsFilter.setPublishedNews(true);
-        break;
-      }
-
-      case MYPOSTED: {
-        if (StringUtils.isNotEmpty(author)) {
-          newsFilter.setAuthor(author);
-        }
-        break;
-      }
-      case DRAFTS: {
-        if (StringUtils.isNotEmpty(author)) {
-          newsFilter.setAuthor(author);
-        }
-        newsFilter.setDraftNews(true);
-        break;
-      }
-      case SCHEDULED: {
-        if (StringUtils.isNotEmpty(author)) {
-          newsFilter.setAuthor(author);
-        }
-        newsFilter.setScheduledNews(true);
-        break;
-      }
-      }
-      newsFilter.setOrder("UPDATED_DATE");
-    }
-    // Set text to search news with
-    if (StringUtils.isNotEmpty(text) && text.indexOf("#") != 0) {
-      newsFilter.setSearchText(text);
-    }
-    newsFilter.setLimit(limit);
-    newsFilter.setOffset(offset);
-
-    return newsFilter;
-  }
-  
   @DeleteMapping(path = "translation/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
   @Secured("users")
   @Operation(summary = "Delete article version with language", method = "DELETE", description = "This deletes the article version ")
@@ -859,4 +812,50 @@ public class NewsRest {
       return ResponseEntity.internalServerError().build();
     }
   }
+
+  private NewsFilter buildFilter(List<String> spaces, String filter, String text, String author, int limit, int offset) {
+    NewsFilter newsFilter = new NewsFilter();
+
+    newsFilter.setSpaces(spaces);
+    if (StringUtils.isNotEmpty(filter)) {
+      FilterType filterType = FilterType.valueOf(filter.toUpperCase());
+      switch (filterType) {
+        case PINNED: {
+          newsFilter.setPublishedNews(true);
+          break;
+        }
+
+        case MYPOSTED: {
+          if (StringUtils.isNotEmpty(author)) {
+            newsFilter.setAuthor(author);
+          }
+          break;
+        }
+        case DRAFTS: {
+          if (StringUtils.isNotEmpty(author)) {
+            newsFilter.setAuthor(author);
+          }
+          newsFilter.setDraftNews(true);
+          break;
+        }
+        case SCHEDULED: {
+          if (StringUtils.isNotEmpty(author)) {
+            newsFilter.setAuthor(author);
+          }
+          newsFilter.setScheduledNews(true);
+          break;
+        }
+      }
+      newsFilter.setOrder("UPDATED_DATE");
+    }
+    // Set text to search news with
+    if (StringUtils.isNotEmpty(text) && text.indexOf("#") != 0) {
+      newsFilter.setSearchText(text);
+    }
+    newsFilter.setLimit(limit);
+    newsFilter.setOffset(offset);
+
+    return newsFilter;
+  }
+
 }

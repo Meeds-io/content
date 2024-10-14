@@ -163,7 +163,7 @@ export default {
     },
     disableSaveButton() {
       return this.postingNews || !this.article.title
-                              || this.isEmptyArticleContent
+                              || this.savingDraft
                               || (!this.propertiesModified
                               && this.articleNotChanged
                               && this.article.publicationState !== 'draft');
@@ -171,9 +171,6 @@ export default {
     articleNotChanged() {
       return this.originalArticle?.title === this.article.title && this.isSameArticleContent()
                                                                 && !this.propertiesModified;
-    },
-    isEmptyArticleContent() {
-      return this.article.content === '' || Array.from(new DOMParser().parseFromString(this.article.content, 'text/html').body.childNodes).every(node => (node.nodeName === 'P' && !node.textContent.trim() && node.children.length === 0) || (node.nodeType === Node.TEXT_NODE && !node.textContent.trim()));
     },
     propertiesModified() {
       return JSON.stringify(this.article?.properties) !== JSON.stringify(this.originalArticle?.properties);
@@ -303,6 +300,7 @@ export default {
       }).then(() => this.$emit('draftUpdated'))
         .then(() => this.draftSavingStatus = this.$t('news.composer.draft.savedDraftStatus'))
         .finally(() => {
+          this.savingDraft = false;
           this.enableClickOnce();
           if (this.articleType === 'latest_draft' && this.selectedLanguage) {
             this.updateUrl();
@@ -378,14 +376,19 @@ export default {
               this.article.draftPage = true;
             })
             .then(() => this.$emit('draftUpdated'))
-            .then(() => this.draftSavingStatus = this.$t('news.composer.draft.savedDraftStatus'));
+            .then(() => {
+              this.draftSavingStatus = this.$t('news.composer.draft.savedDraftStatus');
+              this.savingDraft = false;
+            });
         } else {
           this.$newsServices.deleteDraft(this.article.id)
             .then(() => this.$emit('draftDeleted'))
-            .then(() => this.draftSavingStatus = this.$t('news.composer.draft.savedDraftStatus'));
+            .then(() => {
+              this.draftSavingStatus = this.$t('news.composer.draft.savedDraftStatus');
+              this.savingDraft = false;
+            });
           this.article.id = null;
         }
-        this.savingDraft = false;
       } else if (this.article.title || this.article.body) {
         article.publicationState = 'draft';
         this.$newsServices.saveNews(article).then((createdArticle) => {
@@ -396,8 +399,8 @@ export default {
           if (!this.articleId) {
             this.articleId = createdArticle.id;
           }
-          this.savingDraft = false;
           this.$emit('draftCreated');
+          this.savingDraft = false;
         });
       } else {
         this.draftSavingStatus = '';
@@ -656,7 +659,7 @@ export default {
       this.$refs.editor.closePluginsDrawer();
     },
     getAvailableLanguages() {
-      return this.$notesService.getAvailableLanguages().then(data => {
+      return this.$newsServices.getAvailableLanguages().then(data => {
         this.languages = data || [];
         this.languages.sort((a, b) => a.text.localeCompare(b.text));
         this.allLanguages = this.languages;
@@ -696,7 +699,7 @@ export default {
       return this.$noteUtils.isSameContent(this.article.content, this.originalArticle.content);
     },
     refreshTranslationExtensions() {
-      this.editorExtensions = extensionRegistry.loadExtensions('notesEditor', 'translation-extension');
+      this.editorExtensions = extensionRegistry.loadExtensions('contentEditor', 'translation-extension');
     },
     isEmptyDraft() {
       const isTitleEmpty = !this.article?.title;

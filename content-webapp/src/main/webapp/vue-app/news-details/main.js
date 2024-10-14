@@ -33,7 +33,6 @@ if (extensionRegistry) {
   }
 }
 
-let newsDetails;
 // getting locale resources
 export function init(params) {
   // getting language of the PLF
@@ -44,14 +43,10 @@ export function init(params) {
   ];
 
   const appId = 'newsDetailsApp';
-  const cacheId = `${appId}_${params.activityId}`;
-
-  const appElement = document.createElement('div');
-  appElement.id = appId;
 
   exoi18n.loadLanguageAsync(lang, urls).then(i18n => {
     // init Vue app when locale resources are ready
-    newsDetails = new Vue({
+    Vue.createApp({
       data: function() {
         return {
           news: params.news,
@@ -60,27 +55,21 @@ export function init(params) {
           newsType: params.newsType,
           showEditButton: params.news.canEdit,
           showPublishButton: params.news.canPublish,
+          showCopyLinkButton: true,
           showDeleteButton: params.news.canDelete,
         };
       },
-      template: `<v-app id="${appId}" v-cacheable="{cacheId: '${cacheId}'}">
-                  <exo-news-details
+      template: `<exo-news-details
+                    id="${appId}"
                     :news="news"
                     :news-id="newsId"
                     :activity-id="activityId"
                     :news-type="newsType"
                     :show-edit-button="showEditButton"
                     :show-publish-button="showPublishButton"
-                    :show-delete-button="showDeleteButton" />
-                 </v-app>`,
+                    :show-delete-button="showDeleteButton" />`,
       i18n,
       vuetify
-    }).$mount(appElement);
+    }, `#${appId}`, 'Article Details');
   });
-}
-
-export function destroy() {
-  if (newsDetails) {
-    newsDetails.$destroy();
-  }
 }
