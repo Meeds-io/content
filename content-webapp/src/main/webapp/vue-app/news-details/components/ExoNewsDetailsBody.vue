@@ -40,12 +40,23 @@
             <span>
               {{ newsTitle }}
             </span>
-            <span class="ms-3">
+            <span>
               <content-translation-menu
                 :translations="translations"
                 :selected-translation="selectedTranslation"
                 :article="news" />
             </span>
+            <extension-registry-components
+              name="NewsDetails"
+              type="content-details-extension"
+              :params="{
+                entityId: news.latestVersionId,
+                editMode: false,
+                entityType: 'WIKI_PAGE_VERSIONS'
+              }"
+              element-class="ms-3"
+              parent-element="span"
+              element="span" />
           </p>
         </div>
         <p
@@ -107,11 +118,6 @@
         <div
           class="mt-8 rich-editor-content extended-rich-content"
           v-sanitized-html="newsBody">
-          <extension-registry-components
-            :params="{attachmentsIds: attachmentsIds}"
-            name="NewsDetails"
-            type="news-details-attachments"
-            element="div" />
         </div>
       </div>
     </div>
