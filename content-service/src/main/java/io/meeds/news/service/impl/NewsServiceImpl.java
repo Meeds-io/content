@@ -992,9 +992,10 @@ public class NewsServiceImpl implements NewsService {
       newsArticlePage.setAuthor(newsArticle.getAuthor());
       newsArticlePage.setLang(null);
       newsArticlePage.setProperties(newsArticle.getProperties());
+      if (newsArticlePage.getProperties() == null) {
+        newsArticlePage.setProperties(new NotePageProperties(Long.valueOf(draftNewsId), null, null, true));
+      }
       newsArticlePage = noteService.createNote(wiki, newsArticlesRootNotePage.getName(), newsArticlePage, poster);
-      // create the version
-      noteService.createVersionOfNote(newsArticlePage, poster.getUserId());
       if (newsArticlePage != null) {
         PageVersion pageVersion = noteService.getPublishedVersionByPageIdAndLang(Long.parseLong(newsArticlePage.getId()), null);
         // set properties
@@ -1002,6 +1003,7 @@ public class NewsServiceImpl implements NewsService {
         newsArticle.setLang(newsArticlePage.getLang());
         newsArticle.setCreationDate(pageVersion.getCreatedDate());
         newsArticle.setProperties(newsArticlePage.getProperties());
+        newsArticle.setLatestVersionId(pageVersion.getId());
         newsArticle.setIllustrationURL(NewsUtils.buildIllustrationUrl(newsArticlePage.getProperties(), newsArticle.getLang()));
 
         NewsPageVersionObject newsArticleVersionMetaDataObject = new NewsPageVersionObject(NEWS_METADATA_PAGE_VERSION_OBJECT_TYPE,
@@ -1827,6 +1829,7 @@ public class NewsServiceImpl implements NewsService {
       // create the version
       if (newsUpdateType.equalsIgnoreCase(CONTENT_AND_TITLE.name())) {
         noteService.createVersionOfNote(existingPage, updater.getUserId());
+        news.setLatestVersionId(noteService.getPublishedVersionByPageIdAndLang(Long.valueOf(news.getId()), news.getLang()).getId());
         // remove the draft
         DraftPage draftPage = noteService.getLatestDraftPageByUserAndTargetPageAndLang(Long.parseLong(existingPage.getId()),
                                                                                        updater.getUserId(),
@@ -1908,6 +1911,7 @@ public class NewsServiceImpl implements NewsService {
         news.setUpdateDate(new Date(metadataItem.getUpdatedDate()));
         news.setProperties(pageVersion.getProperties());
         news.setUrl(NewsUtils.buildNewsArticleUrl(news, currentUsername));
+        news.setLatestVersionId(pageVersion.getId());
         if (news.getProperties() != null && news.getProperties().getFeaturedImage() != null
             && news.getProperties().getFeaturedImage().getId() != 0) {
           news.setIllustrationURL(NewsUtils.buildIllustrationUrl(news.getProperties(), pageVersion.getLang()));
@@ -1954,7 +1958,7 @@ public class NewsServiceImpl implements NewsService {
       draftPage.setProperties(news.getProperties());
 
       draftPage = noteService.updateDraftForExistPage(draftPage, page, null, System.currentTimeMillis(), updater);
-
+      news.setId(draftPage.getId());
       news.setDraftUpdateDate(draftPage.getUpdatedDate());
       news.setDraftUpdater(draftPage.getAuthor());
       news.setTargetPageId(draftPage.getTargetPageId());
@@ -2015,7 +2019,6 @@ public class NewsServiceImpl implements NewsService {
     }
     News draftArticle = buildDraftArticle(latestDraft.getId(), currentIdentityId);
 
-    draftArticle.setId(latestDraft.getId());
     draftArticle.setTargetPageId(latestDraft.getTargetPageId());
     draftArticle.setLang(latestDraft.getLang());
     return draftArticle;
@@ -2114,6 +2117,7 @@ public class NewsServiceImpl implements NewsService {
       }
       existingPage.setProperties(properties);
       noteService.createVersionOfNote(existingPage, versionCreator.getUserId());
+      news.setLatestVersionId(noteService.getPublishedVersionByPageIdAndLang(Long.valueOf(newsId), news.getLang()).getId());
       news.setIllustrationURL(NewsUtils.buildIllustrationUrl(news.getProperties(), news.getLang()));
       DraftPage draftPage = noteService.getLatestDraftPageByTargetPageAndLang(Long.parseLong(newsId), news.getLang());
       if (draftPage != null) {
