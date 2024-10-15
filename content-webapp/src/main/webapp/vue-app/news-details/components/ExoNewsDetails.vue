@@ -63,9 +63,14 @@
         v-if="newPublicationDrawerEnabled"
         ref="publicationDrawer"
         :is-publishing="isPublishing"
-        :space-id="spaceId"
+        :params="{
+          spaceId: spaceId,
+          allowedTargets: allowedTargets,
+          canPublish: news?.canPublish
+        }"
         :edit-mode="true"
         @publish="publishArticle" />
+      <note-publication-target-drawer v-if="newPublicationDrawerEnabled" />
       <news-mobile-action-menu
         :news="news"
         @edit-article="editLink"
@@ -147,13 +152,11 @@ export default {
         minute: '2-digit',
       },
       iframelyOriginRegex: /^https?:\/\/if-cdn.com/,
-      isPublishing: false
+      isPublishing: false,
+      allowedTargets: []
     };
   },
   computed: {
-    isMobile() {
-      return this.$vuetify.breakpoint.name === 'xs' || this.$vuetify.breakpoint.name === 'sm';
-    },
     processedNewsType() {
       return this.activityId && this.activityId !== '' ? this.$newsConstants.newsObjectType.ARTICLE : this.newsType;
     },
@@ -162,6 +165,7 @@ export default {
     }
   },
   created() {
+    this.getAllowedTargets();
     if (!this.news || !this.news.spaceId) {
       this.getNewsById(this.newsId);
     } else {
@@ -188,7 +192,7 @@ export default {
   methods: {
     openPublicationDrawer() {
       if (this.newPublicationDrawerEnabled) {
-        this.$refs.publicationDrawer.open(this.news);
+        this.$refs?.publicationDrawer?.open(this.news);
       }
     },
     markNewsAsRead(newsId) {
@@ -239,9 +243,24 @@ export default {
         }
       }, redirectionTime);
     },
+    getAllowedTargets() {
+      this.$newsTargetingService.getAllowedTargets()
+        .then(targets => {
+          this.allowedTargets = targets.map(target => ({
+            name: target.name,
+            label: target?.properties?.label,
+            tooltipInfo: `${target?.properties?.label}: ${target?.properties?.description}`,
+            description: target?.properties?.description,
+            restrictedAudience: target?.restrictedAudience,
+          }));
+        });
+    },
     publishArticle(publicationSettings) {
       this.isPublishing = true;
       this.news.activityPosted = publicationSettings?.post;
+      this.news.published = publicationSettings?.publish;
+      this.news.targets = publicationSettings?.selectedTargets;
+      this.news.audience = publicationSettings?.selectedAudience;
       return this.$newsServices.updateNews(this.news, false, this.$newsConstants.newsObjectType.ARTICLE, this.$newsConstants.newsUpdateType.POSTING_AND_PUBLISHING).then(() => {
         this.isPublishing = false;
         this.$root.$emit('alert-message', this.$t('news.composer.alert.success.UpdateTargets'), 'success');
