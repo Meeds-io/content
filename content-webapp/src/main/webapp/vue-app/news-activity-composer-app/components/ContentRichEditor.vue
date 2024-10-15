@@ -129,6 +129,7 @@ export default {
       autosaveProcessedFromEditorExtension: false,
       allowedTargets: [],
       draftObjectType: 'wikiDraft',
+      autosaveProcessedFromEditorExtension: false
     };
   },
   watch: {
@@ -332,6 +333,8 @@ export default {
         this.article.publicationState = createdArticle.publicationState;
         this.article.scheduleUnpublishDate = createdArticle.scheduleUnpublishDate;
         this.article.body = createdArticle.body;
+        this.article.targetPageId = createdArticle.targetPageId;
+        this.article.publicationState = createdArticle.publicationState;
         this.article.lang = createdArticle.lang;
         if (this.article.body !== createdArticle.body) {
           this.imagesURLs = this.extractImagesURLsDiffs(this.article.body, createdArticle.body);
