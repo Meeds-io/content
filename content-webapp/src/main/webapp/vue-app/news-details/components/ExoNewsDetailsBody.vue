@@ -76,7 +76,7 @@
             <exo-space-avatar
               :space-id="spaceId"
               size="30"
-              extra-class="ms-4 fill-height"
+              extra-class="ms-4 fill-height text-truncate"
               fullname
               popover />
           </div>
