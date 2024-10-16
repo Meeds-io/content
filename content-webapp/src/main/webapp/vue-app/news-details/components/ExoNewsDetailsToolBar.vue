@@ -52,6 +52,7 @@
       v-if="displayFavoriteButton"
       :news="news"
       :activity-id="activityId"
+      :icon-size="20"
       class="pull-right mt-1 me-2" />
   </div>
 </template>
