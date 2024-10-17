@@ -27,6 +27,7 @@
     :right="right"
     :template-params="templateParams"
     :space-id="spaceId"
+    :icon-size="iconSize"
     type="news"
     type-label="News"
     @removed="removed"
@@ -57,6 +58,10 @@ export default {
     right: {
       type: Number,
       default: () => 0,
+    },
+    iconSize: {
+      type: Number,
+      default: () => 16,
     },
   },
   data: () => ({
