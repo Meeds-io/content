@@ -39,7 +39,7 @@
         v-if="canPublishNews"
         :saved-header-translations="headerTranslations"
         :language="language"
-        :application-id="applicationId"/>
+        :application-id="applicationId" />
       <news-publish-targets-management-drawer v-if="canManageNewsPublishTargets" />
     </v-app>
   </v-hover>
