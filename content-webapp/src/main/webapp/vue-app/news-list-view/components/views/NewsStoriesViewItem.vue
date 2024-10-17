@@ -24,7 +24,7 @@
       <news-settings
         v-if="!showSeeAll && lastItem && hover"
         hide-see-all-button
-        class-button-open-settings="settingNewsButton"/>
+        class-button-open-settings="settingNewsButton" />
       <a
         class="articleLink"
         target="_self"
