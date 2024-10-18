@@ -29,7 +29,7 @@
       <v-icon
         size="22"
         :class="langButtonColor"
-        class="ms-5 remove-focus my-auto pa-0  pe-1"
+        class="ms-3 remove-focus my-auto pa-0  pe-1"
         v-bind="attrs"
         v-on="on">
         fa-language
