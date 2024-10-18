@@ -522,6 +522,7 @@ public class NewsServiceImplTest {
     newsArticlePage.setContent(newsArticle.getBody());
     newsArticlePage.setParentPageId(rootPage.getId());
     newsArticlePage.setAuthor(newsArticle.getAuthor());
+    newsArticlePage.setProperties(new NotePageProperties(Long.valueOf(newsArticle.getId()), null, null, true));
     newsArticlePage.setLang(null);
 
     Page createdPage = mock(Page.class);
@@ -536,7 +537,6 @@ public class NewsServiceImplTest {
 
     // Then
     verify(noteService, times(1)).createNote(wiki, rootPage.getName(), newsArticlePage, identity);
-    verify(noteService, times(1)).createVersionOfNote(createdPage, identity.getUserId());
     verify(noteService, times(1)).getPublishedVersionByPageIdAndLang(1L, null);
     verify(metadataService, atLeast(1)).createMetadataItem(any(MetadataObject.class),
                                                          any(MetadataKey.class),
@@ -768,7 +768,7 @@ public class NewsServiceImplTest {
     // Then
     verify(noteService, times(1)).updateNote(any(Page.class), any(), any());
     verify(noteService, times(1)).createVersionOfNote(existingPage, identity.getUserId());
-    verify(noteService, times(1)).getPublishedVersionByPageIdAndLang(1L, null);
+    verify(noteService, times(2)).getPublishedVersionByPageIdAndLang(1L, null);
   }
 
   @Test
