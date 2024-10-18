@@ -129,7 +129,8 @@ export default {
       autosaveProcessedFromEditorExtension: false,
       allowedTargets: [],
       draftObjectType: 'wikiDraft',
-      autosaveProcessedFromEditorExtension: false
+      autosaveProcessedFromEditorExtension: false,
+      allowedTargets: []
     };
   },
   watch: {
