@@ -40,6 +40,23 @@
             <span>
               {{ newsTitle }}
             </span>
+            <v-tooltip bottom v-if="newsViews">
+              <template #activator="{ on, attrs }">
+                <span v-on="on" v-bind="attrs">
+                  <v-icon 
+                    size="20"
+                    class="ms-3 article-views-icon">
+                    fas fa-eye
+                  </v-icon>
+                  <span class="article-views text-subtitle">
+                    {{ newsViews }}
+                  </span>
+                </span>
+              </template>
+              <span class="caption">
+                {{ newsViewsCount }}
+              </span>
+            </v-tooltip>
             <span>
               <content-translation-menu
                 :translations="translations"
@@ -192,6 +209,21 @@ export default {
     },
     newsTitle() {
       return this.news && this.newsTitleContent;
+    },
+    newsViewsCount() {
+      return `${this.news?.viewsCount} ${this.news?.viewsCount === 1 ? this.$t('news.details.view') : this.$t('news.details.views')}`;
+    },
+    newsViews() {
+      if (this.news?.viewsCount < 1000) {
+        return this.news?.viewsCount;
+      }
+      if (this.news?.viewsCount < 10000) {
+        return `${(this.news?.viewsCount / 1000).toFixed(1)}k`;
+      }
+      if (this.news?.viewsCount < 1000000) {
+        return `${parseInt(this.news?.viewsCount / 1000)}k`;
+      }
+      return '+999k';
     },
     articleUpdater() {
       return this.news?.updater || this.news?.author;

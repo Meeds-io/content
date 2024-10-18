@@ -646,7 +646,7 @@ public class NewsServiceImpl implements NewsService {
           if (isUserInNewsViewers) {
             return;
           }
-          newsViewers.concat("," + userId);
+          newsViewers = newsViewers.concat("," + userId);
           properties.put(NEWS_VIEWERS, newsViewers);
           if (properties.containsKey(NEWS_VIEWS) && StringUtils.isNotEmpty(properties.get(NEWS_VIEWS))) {
             Long newsViewsCount = Long.parseLong(properties.get(NEWS_VIEWS)) + 1L;
