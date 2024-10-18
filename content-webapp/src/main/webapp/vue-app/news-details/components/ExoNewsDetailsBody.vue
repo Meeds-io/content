@@ -45,10 +45,10 @@
                 <span v-on="on" v-bind="attrs">
                   <v-icon 
                     size="20"
-                    class="ms-3 article-views-icon">
+                    class="ms-3 icon-default-color">
                     fas fa-eye
                   </v-icon>
-                  <span class="article-views text-subtitle">
+                  <span class="article-views position-relative text-subtitle">
                     {{ newsViews }}
                   </span>
                 </span>
@@ -93,7 +93,7 @@
             <exo-space-avatar
               :space-id="spaceId"
               size="30"
-              extra-class="ms-4 fill-height"
+              extra-class="ms-4 fill-height text-truncate"
               fullname
               popover />
           </div>

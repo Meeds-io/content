@@ -42,8 +42,11 @@
       :save-button-icon="saveButtonIcon"
       :save-button-disabled="disableSaveButton"
       :editor-icon="editorIcon"
-      :space-id="spaceId"
-      :can-publish="canScheduleArticle"
+      :publication-params="{
+        spaceId: spaceId,
+        canPublish: canScheduleArticle,
+        allowedTargets: allowedTargets
+      }"
       :images-download-folder="'DRIVE_ROOT_NODE/News/images'"
       @editor-closed="editorClosed"
       @open-treeview="openTreeView"
@@ -129,7 +132,8 @@ export default {
       spacePrettyName: null,
       editorExtensions: null,
       draftObjectType: 'wikiDraft',
-      autosaveProcessedFromEditorExtension: false
+      autosaveProcessedFromEditorExtension: false,
+      allowedTargets: []
     };
   },
   watch: {
@@ -187,6 +191,7 @@ export default {
     this.getAvailableLanguages();
     this.initDataPropertiesFromUrl();
     this.getArticle();
+    this.getAllowedTargets();
     this.refreshTranslationExtensions();
     document.addEventListener('automatic-translation-extensions-updated', () => {
       this.refreshTranslationExtensions();
@@ -576,11 +581,15 @@ export default {
     postAndPublish(editMode, publicationSettings) {
       if (editMode) {
         this.article.activityPosted = publicationSettings?.post;
+        this.article.published = publicationSettings?.publish;
+        this.article.targets = publicationSettings?.selectedTargets;
+        this.article.audience = publicationSettings?.selectedAudience;
         this.updateAndPostArticle();
         return;
       }
       this.postingNews = true;
-      this.postArticle(null, null, false, publicationSettings?.post);
+      this.postArticle(null, null, publicationSettings?.publish, publicationSettings?.post,
+        publicationSettings?.selectedTargets, publicationSettings?.selectedAudience);
     },
     postArticleActions(publicationSettings) {
       if (this.newPublicationDrawerEnabled) {
@@ -778,6 +787,18 @@ export default {
     },
     refreshTranslationExtensions() {
       this.editorExtensions = extensionRegistry.loadExtensions('contentEditor', 'translation-extension');
+    },
+    getAllowedTargets() {
+      this.$newsTargetingService.getAllowedTargets()
+        .then(targets => {
+          this.allowedTargets = targets.map(target => ({
+            name: target.name,
+            label: target?.properties?.label,
+            tooltipInfo: `${target?.properties?.label}: ${target?.properties?.description || ''}`,
+            description: target?.properties?.description,
+            restrictedAudience: target?.restrictedAudience,
+          }));
+        });
     },
     isEmptyDraft() {
       const isTitleEmpty = !this.article?.title;
