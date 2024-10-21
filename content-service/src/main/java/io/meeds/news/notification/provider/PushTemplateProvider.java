@@ -94,7 +94,7 @@ public class PushTemplateProvider extends TemplateProvider {
       templateContext.put("CURRENT_USER", currentUser);
       templateContext.put("ILLUSTRATION_URL", encoder.encode(illustrationUrl));
       templateContext.put("AUTHOR_AVATAR_URL", encoder.encode(authorAvatarUrl));
-      Space space = spaceService.getSpaceByDisplayName(contentSpaceName);
+      Space space = spaceService.getSpaceById(String.valueOf(notification.getSpaceId()));
       StringBuilder activityUrl = new StringBuilder();
       String portalName = PortalContainer.getCurrentPortalContainerName();
       String portalOwner = CommonsUtils.getCurrentPortalOwner();
