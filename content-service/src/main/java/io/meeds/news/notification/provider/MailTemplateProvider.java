@@ -165,8 +165,7 @@ public class MailTemplateProvider extends TemplateProvider {
       NotificationInfo notificationInfo = notifications.get(0);
       try {
         String pluginId = notificationInfo.getKey().getId();
-        String spaceId = notificationInfo.getValueOwnerParameter(NotificationConstants.CONTENT_SPACE);
-        Space space = spaceService.getSpaceByDisplayName(spaceId);
+        Space space = spaceService.getSpaceById(String.valueOf(notificationInfo.getSpaceId()));
         if ((!pluginId.equals(PublishNewsNotificationPlugin.ID) && !spaceService.isMember(space, notificationInfo.getTo()))
             || notificationInfo.getTo().equals(notificationInfo.getFrom())) {
           return false;
