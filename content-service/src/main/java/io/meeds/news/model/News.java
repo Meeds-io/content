@@ -103,8 +103,6 @@ public class News {
 
   private String                          activityId;
 
-  private List<String>                    attachmentsIds;
-
   private String                          spaceAvatarUrl;
 
   private boolean                         canEdit;
@@ -136,6 +134,8 @@ public class News {
   private String                          lang;
 
   private String                          illustrationURL;
+
+  private String                          latestVersionId;
 
   private NotePageProperties              properties;
 }
