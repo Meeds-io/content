@@ -52,7 +52,7 @@ public class SpaceNewsTargetAutoCreationListener extends SpaceListenerPlugin {
     try {
       newsTargetingService.createNewsTarget(spaceNewsTargetEntity, currentIdentity, false);
     } catch (Exception e) {
-      LOG.warn("Can't create space {} news target", space.getPrettyName());
+      LOG.warn("Can't create space {} news target", space.getPrettyName(), e);
     }
   }
 }
