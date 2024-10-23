@@ -62,7 +62,6 @@ const newsActivityTypeExtensionOptions = {
   summaryLinesToDisplay: 2,
   windowTitlePrefixKey: 'news.window.title',
   addMargin: true,
-
   getThumbnail: (activity) => activity?.news?.illustrationURL && `${activity?.news?.illustrationURL}&size=305x285` || '/content/images/news.webp',
   getThumbnailProperties: (activity) => !(activity?.news?.illustrationURL) && {
     height: '120px',
@@ -92,8 +91,10 @@ const newsActivityTypeExtensionOptions = {
     const news = activity?.news;
     const viewsCount = newsViews(news);
     return {
-      tooltip: 'content.activity.views',
-      viewsCount: viewsCount
+      tooltip: news?.viewsCount === 1 ? 'news.details.view' : 'news.details.views',
+      originalViewsCount: news.viewsCount,
+      viewsCount: viewsCount,
+
     };
   }
 };
