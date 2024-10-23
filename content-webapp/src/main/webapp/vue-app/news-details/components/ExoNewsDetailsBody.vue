@@ -211,7 +211,7 @@ export default {
       return this.news && this.newsTitleContent;
     },
     newsViewsCount() {
-      return `${this.news?.viewsCount} ${this.news?.viewsCount === 1 ? this.$t('news.details.view') : this.$t('news.details.views')}`;
+      return `${this.news?.viewsCount === 1 ? this.$t('news.details.view',{ 0: this.news.viewsCount }) : this.$t('news.details.views', { 0: this.news.viewsCount })}`;
     },
     newsViews() {
       if (this.news?.viewsCount < 1000) {
