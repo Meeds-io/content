@@ -103,8 +103,6 @@ public class News {
 
   private String                          activityId;
 
-  private List<String>                    attachmentsIds;
-
   private String                          spaceAvatarUrl;
 
   private boolean                         canEdit;
