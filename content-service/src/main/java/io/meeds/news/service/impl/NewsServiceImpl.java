@@ -422,9 +422,7 @@ public class NewsServiceImpl implements NewsService {
 
     Space space = spaceService.getSpaceById(news.getSpaceId());
     // Update content permissions
-    updateArticlePermissions(List.of(space),
-                             news,
-                             getArticleAttachmentIds(Long.parseLong(news.getSpaceId()), Long.parseLong(newsPageObject.getId())));
+    updateArticlePermissions(List.of(space), news);
     try {
       sendNotification(publisher, news, NotificationConstants.NOTIFICATION_CONTEXT.PUBLISH_NEWS);
     } catch (Error | Exception e) {
@@ -462,10 +460,7 @@ public class NewsServiceImpl implements NewsService {
       String publisherId = identityManager.getOrCreateUserIdentity(publisher).getId();
       metadataService.updateMetadataItem(newsMetadataItem, Long.parseLong(publisherId), false);
       // Update content permissions
-      updateArticlePermissions(List.of(space),
-                               news,
-                               getArticleAttachmentIds(Long.parseLong(news.getSpaceId()),
-                                                       Long.parseLong(newsPageObject.getId())));
+      updateArticlePermissions(List.of(space), news);
     }
   }
 
@@ -875,10 +870,7 @@ public class NewsServiceImpl implements NewsService {
       metadataItem.setProperties(properties);
       metadataService.updateMetadataItem(metadataItem, Long.parseLong(userIdentity.getId()), false);
       // Update content permissions
-      updateArticlePermissions(List.of(space),
-                               news,
-                               getArticleAttachmentIds(Long.parseLong(news.getSpaceId()),
-                                                       Long.parseLong(newsPageObject.getId())));
+      updateArticlePermissions(List.of(space), news);
       NewsUtils.broadcastEvent(NewsUtils.SHARE_NEWS, userIdentity.getRemoteId(), news);
     }
 
@@ -954,7 +946,7 @@ public class NewsServiceImpl implements NewsService {
                                          Long.parseLong(draftArticleMetadataItemCreatorIdentityId),
                                          false);
       // Update content permissions
-      updateArticlePermissions(List.of(draftArticleSpace), draftArticle, null);
+      updateArticlePermissions(List.of(draftArticleSpace), draftArticle);
       return draftArticle;
     }
     return null;
@@ -1055,9 +1047,6 @@ public class NewsServiceImpl implements NewsService {
                                            false);
         // delete the draft
         deleteDraftArticle(draftNewsId, poster.getUserId());
-
-        // Update content permissions
-        updateArticlePermissions(List.of(space), newsArticle, null);
         return newsArticle;
       }
     }
@@ -1108,7 +1097,7 @@ public class NewsServiceImpl implements NewsService {
                                        false);
 
     // Update content permissions
-    updateArticlePermissions(List.of(space), draftArticle, null);
+    updateArticlePermissions(List.of(space), draftArticle);
     return draftArticle;
   }
 
@@ -1199,7 +1188,7 @@ public class NewsServiceImpl implements NewsService {
       draftArticle.setIllustrationURL(NewsUtils.buildIllustrationUrl(draftPage.getProperties(), draftArticle.getLang()));
 
       // Update content permissions
-      updateArticlePermissions(List.of(space), draftArticle, null);
+      updateArticlePermissions(List.of(space), draftArticle);
       return draftArticle;
     }
     return null;
@@ -1269,19 +1258,6 @@ public class NewsServiceImpl implements NewsService {
       return draftArticle;
     }
     return null;
-  }
-
-  private void buildArticleVersionProperties(News article, List<MetadataItem> newsPageVersionMetadataItems) {
-    if (!CollectionUtils.isEmpty(newsPageVersionMetadataItems)) {
-      Map<String, String> newsPageVersionMetadataItemProperties = newsPageVersionMetadataItems.getFirst().getProperties();
-      if (!MapUtils.isEmpty(newsPageVersionMetadataItemProperties)) {
-        if (newsPageVersionMetadataItemProperties.containsKey(NEWS_ATTACHMENTS_IDS)
-            && newsPageVersionMetadataItemProperties.get(NEWS_ATTACHMENTS_IDS) != null) {
-          List<String> attachmentsIds = List.of(newsPageVersionMetadataItemProperties.get(NEWS_ATTACHMENTS_IDS).split(";"));
-          article.setAttachmentsIds(attachmentsIds);
-        }
-      }
-    }
   }
 
   private void buildArticleProperties(News article, String currentUsername, MetadataItem metadataItem) throws Exception {
@@ -1866,7 +1842,7 @@ public class NewsServiceImpl implements NewsService {
             articleSpaces.add(space);
           }
         }
-        updateArticlePermissions(articleSpaces, news, null);
+        updateArticlePermissions(articleSpaces, news);
       }
       return news;
     }
@@ -1943,7 +1919,6 @@ public class NewsServiceImpl implements NewsService {
         List<MetadataItem> newsPageVersionMetadataItems =
                                                         metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY,
                                                                                                             newsPageVersionObject);
-        buildArticleVersionProperties(news, newsPageVersionMetadataItems);
         return news;
       }
     }
@@ -2014,7 +1989,7 @@ public class NewsServiceImpl implements NewsService {
 
       }
       // Update content permissions
-      updateArticlePermissions(List.of(space), news, null);
+      updateArticlePermissions(List.of(space), news);
     } catch (Exception exception) {
       return null;
     }
@@ -2149,42 +2124,31 @@ public class NewsServiceImpl implements NewsService {
       NewsUtils.broadcastEvent(NewsUtils.ADD_ARTICLE_TRANSLATION, versionCreator, news);
       String newsTranslationId = news.getId().concat("-").concat(news.getLang());
       indexingService.index(NewsIndexingServiceConnector.TYPE, newsTranslationId);
-      updateArticlePermissions(List.of(space), news, null);
+      updateArticlePermissions(List.of(space), news);
       return news;
     }
     return null;
   }
 
-  private List<String> getArticleAttachmentIds(long spaceId, long articlePageId) {
-    List<String> attachmentIds = new ArrayList<>();
-    PageVersion pageVersion = noteService.getPublishedVersionByPageIdAndLang(articlePageId, null);
-    NewsPageVersionObject newsPageVersionObject = new NewsPageVersionObject(NEWS_METADATA_PAGE_VERSION_OBJECT_TYPE,
-                                                                            pageVersion.getId(),
-                                                                            null,
-                                                                            spaceId);
-    List<MetadataItem> newsPageVersionMetadataItems = metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY,
-                                                                                                          newsPageVersionObject);
-    if (!CollectionUtils.isEmpty(newsPageVersionMetadataItems)) {
-      MetadataItem newsPageVersionMetadataItem = newsPageVersionMetadataItems.get(0);
-      if (newsPageVersionMetadataItem != null) {
-        Map<String, String> newsPageVersionMetadataItemProperties = newsPageVersionMetadataItem.getProperties();
-        if (!MapUtils.isEmpty(newsPageVersionMetadataItemProperties)
-            && newsPageVersionMetadataItemProperties.containsKey(NEWS_ATTACHMENTS_IDS)
-            && newsPageVersionMetadataItemProperties.get(NEWS_ATTACHMENTS_IDS) != null) {
-          attachmentIds.addAll(List.of(newsPageVersionMetadataItemProperties.get(NEWS_ATTACHMENTS_IDS).split(";")));
-        }
-      }
-    }
-    return attachmentIds;
-  }
-
-  private void updateArticlePermissions(List<Space> spaces, News article, List<String> articleAttachmentIds) {
+  private void updateArticlePermissions(List<Space> spaces, News article) {
     Map<String, Object> updateContentPermissionEventListenerData = new HashMap<>();
-    updateContentPermissionEventListenerData.putAll(Map.of("spaces", spaces, ARTICLE_CONTENT, article.getBody()));
-    if (articleAttachmentIds != null) {
-      updateContentPermissionEventListenerData.put(NEWS_ATTACHMENTS_IDS, articleAttachmentIds);
+    if (CollectionUtils.isNotEmpty(article.getSharedInSpacesList())) {
+      List<Space> spaceList = article.getSharedInSpacesList().stream().map(spaceId -> {
+        try {
+          return spaceService.getSpaceById(spaceId);
+        } catch (Exception e) {
+          return null;
+        }
+      }).filter(Objects::nonNull).toList();
+      // create new ref to avoid ImmutableCollections exception
+      spaces = new ArrayList<>(spaces);
+      spaces.addAll(spaceList);
     }
-
+    updateContentPermissionEventListenerData.putAll(Map.of("spaces", spaces, ARTICLE_CONTENT, article.getBody()));
+    String entityType = article.getPublicationState().equals(DRAFT) ? "WIKI_DRAFT_PAGES" : "WIKI_PAGE_VERSIONS";
+    String entityId = entityType.equals("WIKI_DRAFT_PAGES") ? article.getId() : article.getLatestVersionId();
+    updateContentPermissionEventListenerData.put("entityId", entityId);
+    updateContentPermissionEventListenerData.put("entityType", entityType);
     if (article.getAudience() != null) {
       updateContentPermissionEventListenerData.put(NEWS_AUDIENCE, article.getAudience());
     }
