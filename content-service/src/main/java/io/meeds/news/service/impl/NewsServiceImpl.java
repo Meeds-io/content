@@ -2132,4 +2132,3 @@ public class NewsServiceImpl implements NewsService {
     NewsUtils.broadcastEvent(NewsUtils.UPDATE_CONTENT_PERMISSIONS, this, updateContentPermissionEventListenerData);
   }
 }
- 

@@ -935,7 +935,7 @@ public class NewsServiceImplTest {
     when(newsArticle.getId()).thenReturn("1");
     when(newsArticle.getBody()).thenReturn("body");
     when(newsArticle.getPublicationState()).thenReturn("staged");
-
+    
     DraftPage draftPage = mock(DraftPage.class);
     when(draftPage.getUpdatedDate()).thenReturn(new Date());
     when(draftPage.getCreatedDate()).thenReturn(new Date());
