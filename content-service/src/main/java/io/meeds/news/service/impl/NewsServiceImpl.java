@@ -24,10 +24,10 @@ import static io.meeds.news.utils.NewsUtils.NewsObjectType.LATEST_DRAFT;
 import static io.meeds.news.utils.NewsUtils.NewsUpdateType.CONTENT_AND_TITLE;
 
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.time.OffsetTime;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -37,7 +37,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.TimeZone;
 import java.util.regex.Matcher;
 import java.util.stream.Stream;
 
@@ -173,7 +172,9 @@ public class NewsServiceImpl implements NewsService {
 
   public static final String       ARTICLE_CONTENT                        = "content";
 
-  public static final String       SPACES                                 = "spaces";
+  public static final String       UNPUBLISH_SCHEDULED                    = "unpublishScheduled";
+
+  public static final String       UNPUBLISH_SCHEDULED_DATE               = "unpublishScheduledDate";
 
   public static final MetadataKey  NEWS_METADATA_KEY                      =
                                                      new MetadataKey(NEWS_METADATA_TYPE.getName(), NEWS_METADATA_NAME, 0);
@@ -450,6 +451,8 @@ public class NewsServiceImpl implements NewsService {
       Map<String, String> properties = newsMetadataItem.getProperties();
       if (properties != null) {
         properties.put(PUBLISHED, String.valueOf(false));
+        properties.put(UNPUBLISH_SCHEDULED, "false");
+        properties.remove(UNPUBLISH_SCHEDULED_DATE);
         properties.remove(NEWS_AUDIENCE);
       }
       newsMetadataItem.setProperties(properties);
@@ -1021,9 +1024,9 @@ public class NewsServiceImpl implements NewsService {
         if (StringUtils.isNotEmpty(newsArticle.getAudience())) {
           newsPageProperties.put(NEWS_AUDIENCE, newsArticle.getAudience());
         }
-        if (StringUtils.isNotEmpty(newsArticle.getSchedulePostDate())) {
-          setSchedulePostDate(newsArticle, newsPageProperties);
-        }
+
+        setScheduleProperties(newsArticle, newsPageProperties);
+        
         if (StringUtils.isNotEmpty(newsArticle.getPublicationState())) {
           newsPageProperties.put(NEWS_PUBLICATION_STATE, newsArticle.getPublicationState());
         }
@@ -1076,7 +1079,7 @@ public class NewsServiceImpl implements NewsService {
 
     Map<String, String> draftArticleMetadataItemProperties = new HashMap<>();
     draftArticleMetadataItemProperties.put(NEWS_ACTIVITY_POSTED, String.valueOf(draftArticle.isActivityPosted()));
-
+    setScheduleProperties(draftArticle, draftArticleMetadataItemProperties);
     String draftArticleMetadataItemCreatorIdentityId = identityManager.getOrCreateUserIdentity(updater).getId();
     metadataService.createMetadataItem(latestDraftObject,
                                        NEWS_METADATA_KEY,
@@ -1285,6 +1288,9 @@ public class NewsServiceImpl implements NewsService {
       if (properties.containsKey(SCHEDULE_POST_DATE) && StringUtils.isNotEmpty(properties.get(SCHEDULE_POST_DATE))) {
         article.setSchedulePostDate(properties.get(SCHEDULE_POST_DATE));
       }
+      if (properties.containsKey(UNPUBLISH_SCHEDULED_DATE) && StringUtils.isNotEmpty(properties.get(UNPUBLISH_SCHEDULED_DATE))) {
+        article.setScheduleUnpublishDate(properties.get(UNPUBLISH_SCHEDULED_DATE));
+      }
       if (properties.containsKey(NEWS_PUBLICATION_STATE) && StringUtils.isNotEmpty(properties.get(NEWS_PUBLICATION_STATE))) {
         article.setPublicationState(properties.get(NEWS_PUBLICATION_STATE));
       }
@@ -1327,6 +1333,12 @@ public class NewsServiceImpl implements NewsService {
         }
         if (properties.containsKey(NEWS_VIEWS) && StringUtils.isNotEmpty(properties.get(NEWS_VIEWS))) {
           draftArticle.setViewsCount(Long.parseLong(properties.get(NEWS_VIEWS)));
+        }
+        if (properties.containsKey(SCHEDULE_POST_DATE) && StringUtils.isNotEmpty(properties.get(SCHEDULE_POST_DATE))) {
+          draftArticle.setSchedulePostDate(properties.get(SCHEDULE_POST_DATE));
+        }
+        if (properties.containsKey(UNPUBLISH_SCHEDULED_DATE) && StringUtils.isNotEmpty(properties.get(UNPUBLISH_SCHEDULED_DATE))) {
+          draftArticle.setScheduleUnpublishDate(properties.get(UNPUBLISH_SCHEDULED_DATE));
         }
       }
     }
@@ -1765,6 +1777,7 @@ public class NewsServiceImpl implements NewsService {
       news.setLang(existingPage.getLang());
       news.setUpdaterFullName(existingPage.getAuthorFullName());
       news.setProperties(existingPage.getProperties());
+      news.setUrl(NewsUtils.buildNewsArticleUrl(news, updater.getUserId()));
       news.setIllustrationURL(NewsUtils.buildIllustrationUrl(existingPage.getProperties(), news.getLang()));
 
       String newsArticleUpdaterIdentityId = identityManager.getOrCreateUserIdentity(updater.getUserId()).getId();
@@ -1784,12 +1797,9 @@ public class NewsServiceImpl implements NewsService {
         if (StringUtils.isNotEmpty(news.getAudience())) {
           newsPageProperties.put(NEWS_AUDIENCE, news.getAudience());
         }
-        if (StringUtils.isNotEmpty(news.getSchedulePostDate())) {
-          String existingSchedulePostDate = newsPageProperties.getOrDefault(SCHEDULE_POST_DATE, null);
-          if (existingSchedulePostDate == null || !existingSchedulePostDate.equals(news.getSchedulePostDate())) {
-            setSchedulePostDate(news, newsPageProperties);
-          }
-        }
+
+        setScheduleProperties(news, newsPageProperties);
+
         if (StringUtils.isNotEmpty(news.getPublicationState())) {
           newsPageProperties.put(NEWS_PUBLICATION_STATE, news.getPublicationState());
         }
@@ -1978,6 +1988,7 @@ public class NewsServiceImpl implements NewsService {
 
   private void setLatestDraftProperties(Map<String, String> properties, News news) {
     properties.put(NEWS_ACTIVITY_POSTED, String.valueOf(news.isActivityPosted()));
+    setScheduleProperties(news, properties);
   }
 
   private News buildLatestDraftArticle(String parentPageId, String currentIdentityId, String lang) throws Exception {
@@ -2008,25 +2019,34 @@ public class NewsServiceImpl implements NewsService {
     news.setOriginalBody(sanitizedBody);
   }
 
-  private void setSchedulePostDate(News news, Map<String, String> newsProperties) throws ParseException {
-    String schedulePostDate = news.getSchedulePostDate();
-    ZoneId userTimeZone = StringUtils.isBlank(news.getTimeZoneId()) ? ZoneOffset.UTC : ZoneId.of(news.getTimeZoneId());
-    String offsetTimeZone = String.valueOf(OffsetTime.now(userTimeZone).getOffset()).replace(":", "");
-    schedulePostDate = schedulePostDate.concat(" ").concat(offsetTimeZone);
+  private String parseAndNormalizeScheduleDate(String date, String timeZoneId) {
+    if(StringUtils.isBlank(date)) {
+      return null;
+    }
+    ZoneId userTimeZone = StringUtils.isBlank(timeZoneId) ? ZoneId.of("UTC") : ZoneId.of(timeZoneId);
+    ZonedDateTime zonedDateTime = ZonedDateTime.parse(date);
+    ZonedDateTime userZonedDateTime = zonedDateTime.withZoneSameInstant(userTimeZone);
+    ZonedDateTime utcDateTime = userZonedDateTime.withZoneSameInstant(ZoneId.of("UTC"));
 
-    // Create a SimpleDateFormat object to parse the scheduled post date given
-    // by the front
-    SimpleDateFormat format = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss" + "Z");
-    Calendar startPublishedDate = Calendar.getInstance();
-    startPublishedDate.setTime(format.parse(schedulePostDate));
+    DateTimeFormatter outputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+    return utcDateTime.format(outputFormatter);
+  }
 
-    // create a SimpleDateFormat to format the parsed date and then save it as
-    // string
-    SimpleDateFormat defaultFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
-    defaultFormat.setTimeZone(TimeZone.getTimeZone(ZoneOffset.UTC));
-    String startPublishedDateString = defaultFormat.format(startPublishedDate.getTime());
-
-    newsProperties.put(SCHEDULE_POST_DATE, startPublishedDateString);
+  private void setScheduleProperties(News news, Map<String, String> newsProperties) throws DateTimeParseException {
+    String scheduledPostDate = parseAndNormalizeScheduleDate(news.getSchedulePostDate(), news.getTimeZoneId());
+    String scheduledUnpublishDate = parseAndNormalizeScheduleDate(news.getScheduleUnpublishDate(), news.getTimeZoneId());
+    if (scheduledPostDate != null) {
+      newsProperties.put(SCHEDULE_POST_DATE, scheduledPostDate);
+    } else {
+      newsProperties.remove(SCHEDULE_POST_DATE);
+    }
+    if (scheduledUnpublishDate != null) {
+      newsProperties.put(UNPUBLISH_SCHEDULED_DATE, scheduledUnpublishDate);
+      newsProperties.put(UNPUBLISH_SCHEDULED, "true");
+    } else {
+      newsProperties.remove(UNPUBLISH_SCHEDULED_DATE);
+      newsProperties.remove(UNPUBLISH_SCHEDULED);
+    }
   }
 
   private News postScheduledArticle(News news) throws ObjectNotFoundException {
@@ -2132,4 +2152,3 @@ public class NewsServiceImpl implements NewsService {
     NewsUtils.broadcastEvent(NewsUtils.UPDATE_CONTENT_PERMISSIONS, this, updateContentPermissionEventListenerData);
   }
 }
- 
