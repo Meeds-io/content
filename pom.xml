@@ -35,7 +35,7 @@
   </modules>
 
   <properties>
-    <addon.meeds.notes.version>7.0.x-SNAPSHOT</addon.meeds.notes.version>
+    <addon.meeds.notes.version>7.0.0-M18</addon.meeds.notes.version>
     <pitest.version>1.4.10</pitest.version>
     <sonar.organization>meeds-io</sonar.organization>
   </properties>
