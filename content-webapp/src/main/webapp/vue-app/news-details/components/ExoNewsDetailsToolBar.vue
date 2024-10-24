@@ -31,14 +31,8 @@
         fas fa-arrow-left
       </v-icon>
     </v-btn>
-    <v-btn
-      v-if="publicationState === 'staged'"
-      class="btn pull-right"
-      @click="$root.$emit('open-schedule-drawer','editScheduledNews')">
-      {{ $t("news.composer.btn.scheduleArticle") }}
-    </v-btn>
     <exo-news-details-action-menu-app
-      v-if="publicationState !== 'staged' && (showEditButton || showDeleteButton || showPublishButton || showCopyLinkButton)"
+      v-if="(showEditButton || showDeleteButton || showPublishButton || showCopyLinkButton)"
       class="pull-right"
       :news="news"
       :current-app="currentApplication"
@@ -48,6 +42,18 @@
       :show-copy-link-button="showCopyLinkButton"
       @delete-article="$emit('delete-article')"
       @edit-article="$emit('edit-article')" />
+    <v-btn
+      v-if="publicationState === 'staged'"
+      class="btn btn-primary pull-right me-3"
+      outlined
+      @click="$emit('open-publication-drawer')">
+      <v-icon
+        class="me-2"
+        size="20">
+        far fa-clock
+      </v-icon>
+      {{ $t("news.composer.btn.scheduleArticle") }}
+    </v-btn>
     <exo-news-favorite-action
       v-if="displayFavoriteButton"
       :news="news"

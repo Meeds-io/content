@@ -35,7 +35,8 @@
           :show-publish-button="showPublishButton"
           :show-copy-link-button="showCopyLinkButton"
           @delete-article="deleteConfirmDialog"
-          @edit-article="editLink" />
+          @edit-article="editLink"
+          @open-publication-drawer="openPublicationDrawer" />
         <exo-news-details-body
           :current-user="currentUser"
           :news="news"
@@ -162,6 +163,12 @@ export default {
     },
     newPublicationDrawerEnabled() {
       return eXo?.env?.portal?.newPublicationDrawerEnabled;
+    },
+    scheduled() {
+      return !!this.news.schedulePostDate || this.staged;
+    },
+    staged() {
+      return this.news?.publicationState === 'staged';
     }
   },
   created() {
@@ -211,7 +218,7 @@ export default {
         });
     },
     editLink() {
-      const newsType = this.activityId && this.activityId !== '' ? this.$newsConstants.newsObjectType.LATEST_DRAFT : this.newsType;
+      const newsType = this.activityId || this.scheduled ? this.$newsConstants.newsObjectType.LATEST_DRAFT : this.newsType;
       let editUrl = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news/editor?spaceId=${this.spaceId}&newsId=${this.newsId}&activityId=${this.activityId}&spaceName=${this.currentSpace.prettyName}&type=${newsType}`;
       if (this.news.lang) {
         editUrl = `${editUrl}&lang=${this.news.lang}`;
@@ -261,14 +268,27 @@ export default {
       this.news.published = publicationSettings?.publish;
       this.news.targets = publicationSettings?.selectedTargets;
       this.news.audience = publicationSettings?.selectedAudience;
-      return this.$newsServices.updateNews(this.news, false, this.$newsConstants.newsObjectType.ARTICLE, this.$newsConstants.newsUpdateType.POSTING_AND_PUBLISHING).then(() => {
-        this.isPublishing = false;
-        this.$root.$emit('alert-message', this.$t('news.composer.alert.success.UpdateTargets'), 'success');
-        this.$refs.publicationDrawer.close();
-      }).catch(() => {
-        this.isPublishing = false;
-        this.$root.$emit('alert-message', this.$t('news.composer.alert.error.UpdateTargets'), 'error');
-      });
+      const scheduleSettings = publicationSettings?.scheduleSettings;
+      this.news.timeZoneId = USER_TIMEZONE_ID;
+      this.news.publicationState = publicationSettings?.post || '';
+      this.news.schedulePostDate = scheduleSettings?.postDate;
+      this.news.scheduleUnpublishDate = scheduleSettings?.unpublishDate;
+      if (scheduleSettings?.schedule) {
+        return this.$newsServices.scheduleNews(this.news, this.$newsConstants.newsObjectType.ARTICLE).then(() => {
+          this.isPublishing = false;
+          this.$root.$emit('alert-message', this?.$t('news.schedule.success.message'), 'success');
+          this.$refs.publicationDrawer.close();
+        });
+      } else {
+        return this.$newsServices.updateNews(this.news, this.news.activityPosted, this.$newsConstants.newsObjectType.ARTICLE, this.$newsConstants.newsUpdateType.POSTING_AND_PUBLISHING).then(() => {
+          this.isPublishing = false;
+          this.$root.$emit('alert-message', this?.$t('news.composer.alert.success.UpdateTargets'), 'success');
+          this.$refs.publicationDrawer.close();
+        }).catch(() => {
+          this.isPublishing = false;
+          this.$root.$emit('alert-message', this?.$t('news.composer.alert.error.UpdateTargets'), 'error');
+        });
+      }
     },
     postNews(schedulePostDate, postArticleMode, publish, isActivityPosted, selectedTargets, selectedAudience) {
       this.news.timeZoneId = USER_TIMEZONE_ID;
