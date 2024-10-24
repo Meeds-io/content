@@ -31,6 +31,8 @@
                 <description>Content Feature enablement flag</description>
                 <property name="exo.feature.newPublicationDrawer.enabled"
                           value="${exo.feature.newPublicationDrawer.enabled:false}"/>
+                <property name="exo.feature.newPublicationDrawerScheduleOption.enabled"
+                          value="${exo.feature.newPublicationDrawer.enabled:false}"/>
             </properties-param>
         </init-params>
     </component>
