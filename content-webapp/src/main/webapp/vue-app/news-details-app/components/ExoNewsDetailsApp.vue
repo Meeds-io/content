@@ -56,7 +56,9 @@ export default {
       this.selectedTranslation.value = params.get('lang');
     }
     this.originalVersion = { value: '', text: this.$root.$t('article.label.translation.originalVersion') };
-    this.getArticleVersionWithLang(this.newsId, this.selectedTranslation.value);
+    this.markAsRead(this.newsId).then(() => {
+      this.getArticleVersionWithLang(this.newsId, this.selectedTranslation.value);
+    });
     this.fetchTranslation(this.newsId);
     this.$root.$on('change-article-translation', (translation) => {
       this.previousSelectedTranslation = this.selectedTranslation.value;
@@ -127,6 +129,9 @@ export default {
     updateSelectedTranslation(translation) {
       this.selectedTranslation = translation;
     },
+    markAsRead(newsId) {
+      return this.$newsServices.markNewsAsRead(newsId);
+    }
   }
 };
 </script>
