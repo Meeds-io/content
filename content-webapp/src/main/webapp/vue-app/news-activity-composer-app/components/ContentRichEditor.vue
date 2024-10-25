@@ -336,6 +336,9 @@ export default {
         this.article.body = createdArticle.body;
         this.article.targetPageId = createdArticle.targetPageId;
         this.article.publicationState = createdArticle.publicationState;
+        this.article.schedulePostDate = createdArticle.schedulePostDate;
+        this.article.publicationState = createdArticle.publicationState;
+        this.article.scheduleUnpublishDate = createdArticle.scheduleUnpublishDate;
         this.article.lang = createdArticle.lang;
         if (this.article.body !== createdArticle.body) {
           this.imagesURLs = this.extractImagesURLsDiffs(this.article.body, createdArticle.body);
