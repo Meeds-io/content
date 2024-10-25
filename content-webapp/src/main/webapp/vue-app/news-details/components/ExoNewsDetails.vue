@@ -254,6 +254,22 @@ export default {
           }));
         });
     },
+    publish(editScheduleAction, scheduleSettings) {
+      if (editScheduleAction === 'schedule') {
+        this.news.publicationState = scheduleSettings?.postDate && 'staged' || '';
+        return this.$newsServices.scheduleNews(this.news, this.$newsConstants.newsObjectType.ARTICLE);
+      } else if (editScheduleAction === 'publish_now') {
+        this.news.publicationState = 'posted';
+        return this.$newsServices.saveNews(this.news);
+      } else {
+        this.news.publicationState = 'posted';
+        return this.$newsServices.updateNews(this.news, this.news.activityPosted,
+          this.$newsConstants.newsObjectType.ARTICLE, this.$newsConstants.newsUpdateType.POSTING_AND_PUBLISHING);
+      }
+    },
+    redirectToDrafts() {
+      window.location.href = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news?filter=drafts`;
+    },
     publishArticle(publicationSettings) {
       this.isPublishing = true;
       this.news.activityPosted = publicationSettings?.post;
@@ -261,24 +277,27 @@ export default {
       this.news.targets = publicationSettings?.selectedTargets;
       this.news.audience = publicationSettings?.selectedAudience;
       const scheduleSettings = publicationSettings?.scheduleSettings;
+      const editScheduleAction = scheduleSettings?.editScheduleAction;
       this.news.timeZoneId = USER_TIMEZONE_ID;
-      this.news.publicationState = publicationSettings?.post || '';
       this.news.schedulePostDate = scheduleSettings?.postDate;
       this.news.scheduleUnpublishDate = scheduleSettings?.unpublishDate;
-      if (scheduleSettings?.schedule) {
-        return this.$newsServices.scheduleNews(this.news, this.$newsConstants.newsObjectType.ARTICLE).then(() => {
-          this.isPublishing = false;
-          this.$root.$emit('alert-message', this?.$t('news.schedule.success.message'), 'success');
-          this.$refs.publicationDrawer.close();
+      if (editScheduleAction === 'cancel_schedule') {
+        this.news.schedulePostDate = 0;
+        this.news.publicationState = 'draft';
+        this.$newsServices.saveNews(this.news).then((createdNews) => {
+          this.news.id = createdNews.id;
+          this.$emit('draftCreated');
+          this.redirectToDrafts();
         });
       } else {
-        return this.$newsServices.updateNews(this.news, this.news.activityPosted, this.$newsConstants.newsObjectType.ARTICLE, this.$newsConstants.newsUpdateType.POSTING_AND_PUBLISHING).then(() => {
-          this.isPublishing = false;
-          this.$root.$emit('alert-message', this?.$t('news.composer.alert.success.UpdateTargets'), 'success');
-          this.$refs.publicationDrawer.close();
+        this.publish(editScheduleAction, scheduleSettings).then((article) => {
+          this.$root.$emit('alert-message', this.$t('notes.publication.settings.update.success'), 'success');
+          history.replaceState({}, article.url);
         }).catch(() => {
+          this.$root.$emit('alert-message', this.$t('notes.publication.settings.update.error'), 'error');
+        }).finally(() => {
           this.isPublishing = false;
-          this.$root.$emit('alert-message', this?.$t('news.composer.alert.error.UpdateTargets'), 'error');
+          this.$refs.publicationDrawer.close();
         });
       }
     },
