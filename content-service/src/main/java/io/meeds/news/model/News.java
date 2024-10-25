@@ -119,6 +119,8 @@ public class News {
 
   private String                          schedulePostDate;
 
+  private String                          scheduleUnpublishDate;
+
   private String                          timeZoneId;
 
   private boolean                         activityPosted;
