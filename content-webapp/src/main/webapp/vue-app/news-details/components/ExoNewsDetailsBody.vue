@@ -40,7 +40,7 @@
             <span>
               {{ newsTitle }}
             </span>
-            <v-tooltip bottom v-if="newsViews">
+            <v-tooltip bottom>
               <template #activator="{ on, attrs }">
                 <span v-on="on" v-bind="attrs">
                   <v-icon 
