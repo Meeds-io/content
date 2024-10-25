@@ -230,6 +230,8 @@ public class NewsRest {
       news.setActivityPosted(updatedNews.isActivityPosted());
       news.setTargets(updatedNews.getTargets());
       news.setAudience(updatedNews.getAudience());
+      news.setSchedulePostDate(updatedNews.getSchedulePostDate());
+      news.setScheduleUnpublishDate(updatedNews.getScheduleUnpublishDate());
       news.setProperties(updatedNews.getProperties());
       news.setLang(updatedNews.getLang());
       news = newsService.updateNews(news, currentIdentity.getUserId(), post, updatedNews.isPublished(), newsObjectType, newsUpdateType);
