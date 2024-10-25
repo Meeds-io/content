@@ -92,7 +92,7 @@ const newsActivityTypeExtensionOptions = {
     const viewsCount = newsViews(news);
     return {
       tooltip: news?.viewsCount === 1 ? 'news.details.view' : 'news.details.views',
-      originalViewsCount: news.viewsCount,
+      originalViewsCount: news.viewsCount || 0,
       viewsCount: viewsCount,
 
     };

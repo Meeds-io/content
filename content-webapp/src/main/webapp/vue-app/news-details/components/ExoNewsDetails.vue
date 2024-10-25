@@ -186,18 +186,10 @@ export default {
     });
     this.$root.$on('open-edit-publishing-drawer', this.openPublicationDrawer);
   },
-  mounted() {
-    this.markNewsAsRead(this.newsId);
-  },
   methods: {
     openPublicationDrawer() {
       if (this.newPublicationDrawerEnabled) {
         this.$refs?.publicationDrawer?.open(this.news);
-      }
-    },
-    markNewsAsRead(newsId) {
-      if (newsId) {
-        this.$newsServices.markNewsAsRead(newsId);
       }
     },
     getSpaceById(spaceId) {
