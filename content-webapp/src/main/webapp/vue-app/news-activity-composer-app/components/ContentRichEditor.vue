@@ -151,8 +151,14 @@ export default {
     }
   },
   computed: {
+    scheduled() {
+      return !!this.article.schedulePostDate || this.staged;
+    },
+    staged() {
+      return this.article?.publicationState === 'staged';
+    },
     editMode() {
-      return !!this.activityId;
+      return !!this.activityId || this.scheduled;
     },
     spaceGroupId() {
       return this.currentSpace?.groupId;
@@ -217,7 +223,7 @@ export default {
           this.savingDraft = true;
           this.draftSavingStatus = this.$t('news.composer.draft.savingDraftStatus');
           this.$nextTick(() => {
-            if (this.activityId) {
+            if (this.activityId || this.scheduled) {
               this.saveDraftForExistingArticle();
             } else {
               this.saveArticleDraft();
@@ -308,7 +314,7 @@ export default {
         this.savingDraft = true;
         this.draftSavingStatus = this.$t('news.composer.draft.savingDraftStatus');
         this.$nextTick(() => {
-          if (this.activityId) {
+          if (this.activityId || this.scheduled) {
             this.saveDraftForExistingArticle();
           } else {
             this.saveArticleDraft();
@@ -331,6 +337,9 @@ export default {
         this.article.draftPage = true;
         this.article.targetPageId = createdArticle.targetPageId;
         this.article.publicationState = createdArticle.publicationState;
+        this.article.schedulePostDate = createdArticle.schedulePostDate;
+        this.article.publicationState = createdArticle.publicationState;
+        this.article.scheduleUnpublishDate = createdArticle.scheduleUnpublishDate;
         this.article.lang = createdArticle.lang;
         if (this.article.body !== createdArticle.body) {
           this.imagesURLs = this.extractImagesURLsDiffs(this.article.body, createdArticle.body);
@@ -356,22 +365,18 @@ export default {
     updateAndPostArticle() {
       this.postingNews = true;
       const updatedArticle = this.getArticleToBeUpdated();
-      updatedArticle.publicationState = 'posted';
+      updatedArticle.publicationState = this.scheduled && 'staged' || 'posted';
       return this.$newsServices.updateNews(updatedArticle, true, 'article').then((createdArticle) => {
         this.spaceUrl = createdArticle.spaceUrl;
         if (this.article.body !== createdArticle.body) {
           this.imagesURLs = this.extractImagesURLsDiffs(this.article.body, createdArticle.body);
         }
         this.fillArticle(createdArticle.id, false, createdArticle.lang);
-        let alertLink = this.isSpaceMember ? `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/activity?id=${createdArticle.activityId}` : `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news-detail?newsId=${createdArticle.id}`;
-        if (createdArticle.lang) {
-          alertLink = `${alertLink}&lang=${createdArticle.lang}`;
-        }
         this.displayAlert({
           message: this.$t('news.save.success.message'),
           type: 'success',
           alertLinkText: this.$t('news.view.label'),
-          alertLink: alertLink
+          alertLink: createdArticle.url
         });
       }).then(() => {
         this.draftSavingStatus = '';
@@ -383,18 +388,20 @@ export default {
       });
     },
     getArticleToBeUpdated() {
-      const updatedArticle = {
-        id: this.article.activityId && this.article.targetPageId || this.article.id,
+      return {
+        id: (this.article.activityId || this.scheduled) && this.article.targetPageId || this.article.id,
         targetPageId: this.article.targetPageId,
         title: this.article.title,
         body: this.replaceImagesURLs(this.$noteUtils.getContentToSave(this.editorBodyInputRef, this.oembedMinWidth)),
         published: this.article.published,
         activityPosted: this.article.activityPosted,
+        schedulePostDate: this.article.schedulePostDate,
+        publicationState: this.article.publicationState,
+        scheduleUnpublishDate: this.article.scheduleUnpublishDate,
         audience: this.article.audience,
         properties: this.article?.properties,
         lang: this.article?.lang
       };
-      return updatedArticle;
     },
     saveArticleDraft() {
       const properties = this.article?.properties;
@@ -499,21 +506,32 @@ export default {
         activityPosted: this.article.activityPosted,
         audience: this.article.audience,
         draftPage: this.article.publicationState === 'draft',
+        scheduleUnpublishDate: this.article.scheduleUnpublishDate,
         properties: this.article?.properties
       };
 
       if (schedulePostDate){
         article.publicationState ='staged';
         article.schedulePostDate = schedulePostDate;
+      }
+      if (article.scheduleUnpublishDate || schedulePostDate) {
         article.timeZoneId = new window.Intl.DateTimeFormat().resolvedOptions().timeZone;
       }
       if (article.publicationState ==='staged') {
         this.$newsServices.scheduleNews(article, this.articleType).then((scheduleArticle) => {
-          if (scheduleArticle) {
-            history.replaceState(null,'',scheduleArticle.spaceUrl);
-            window.location.href = scheduleArticle.url;
-          }
-        });
+          this.articleType = 'latest_draft';
+          this.fillArticle(scheduleArticle.id, false, null).then(() => {
+            this.updateUrl();
+            this.initDataPropertiesFromUrl();
+          });
+          this.displayAlert({
+            message: this.$t('news.schedule.success.message'),
+            type: 'success',
+            alertLinkText: this.$t('news.view.label'),
+            alertLink: scheduleArticle.url
+          });
+          this.enableClickOnce();
+        }).finally(() => this.draftSavingStatus = '');
       } else {
         this.$newsServices.saveNews(article).then((createdArticle) => {
           this.articleType = 'latest_draft';
@@ -545,10 +563,13 @@ export default {
       params.append('newsId', this.article?.targetPageId ? this.article?.targetPageId : this.article?.id);
       if (this.article.activityId){
         params.append('activityId', this.article.activityId);
+      }
+      if (this.article?.activityId || this.scheduled) {
         params.append('type', 'latest_draft');
       } else {
         params.append('type', 'draft');
       }
+
       if (params.has('lang')) {
         params.delete('lang');
       }
@@ -560,15 +581,21 @@ export default {
     },
     postAndPublish(editMode, publicationSettings) {
       if (editMode) {
-        this.article.activityPosted = publicationSettings?.post;
-        this.article.published = publicationSettings?.publish;
-        this.article.targets = publicationSettings?.selectedTargets;
-        this.article.audience = publicationSettings?.selectedAudience;
+        if (publicationSettings) {
+          this.article.activityPosted = publicationSettings.post;
+          this.article.published = publicationSettings.publish;
+          this.article.targets = publicationSettings.selectedTargets;
+          this.article.audience = publicationSettings.selectedAudience;
+        }
         this.updateAndPostArticle();
         return;
       }
       this.postingNews = true;
-      this.postArticle(null, null, publicationSettings?.publish, publicationSettings?.post,
+      const scheduleSettings = publicationSettings?.scheduleSettings;
+      const schedulePostDate = scheduleSettings?.postDate;
+      const postArticleMode = schedulePostDate ?? 'later';
+      this.article.scheduleUnpublishDate = scheduleSettings?.unpublishDate;
+      this.postArticle(schedulePostDate, postArticleMode, publicationSettings?.publish, publicationSettings?.post,
         publicationSettings?.selectedTargets, publicationSettings?.selectedAudience);
     },
     postArticleActions(publicationSettings) {
@@ -670,27 +697,30 @@ export default {
         if (article === 401) {
           this.unAuthorizedAccess = true;
         } else {
-          this.article.id = article?.id;
-          this.article.targetPageId = article?.targetPageId;
-          this.article.title = article.title;
-          this.article.content = this.$noteUtils.getContentToEdit(article.body);
-          this.article.body = article.body;
-          this.article.published = article.published;
-          this.article.spaceId = article.spaceId;
-          this.article.publicationState = article.publicationState;
-          this.article.draftPage =  article.publicationState === 'draft';
-          this.article.latestVersionId = article.latestVersionId;
-          this.article.activityId = article.activityId;
-          this.article.updater = article.updater;
-          this.article.draftUpdaterDisplayName = article.draftUpdaterDisplayName;
-          this.article.draftUpdaterUserName = article.draftUpdaterUserName;
-          this.article.draftUpdateDate = article.draftUpdateDate;
-          this.article.activityPosted = article.activityPosted;
-          this.article.audience = article.audience;
-          this.article.url = article.url;
-          this.article.publicationState = article.publicationState;
-          this.article.properties = article.properties;
-          this.article.lang = article.lang;
+          this.article = structuredClone({
+            id: article?.id,
+            targetPageId: article?.targetPageId,
+            title: article.title,
+            content: this.$noteUtils.getContentToEdit(article.body),
+            body: article.body,
+            published: article.published,
+            spaceId: article.spaceId,
+            schedulePostDate: article.schedulePostDate,
+            scheduleUnpublishDate: article.scheduleUnpublishDate,
+            publicationState: article.publicationState,
+            draftPage: article.publicationState === 'draft',
+            latestVersionId: article.latestVersionId,
+            activityId: article.activityId,
+            updater: article.updater,
+            draftUpdaterDisplayName: article.draftUpdaterDisplayName,
+            draftUpdaterUserName: article.draftUpdaterUserName,
+            draftUpdateDate: article.draftUpdateDate,
+            activityPosted: article.activityPosted,
+            audience: article.audience,
+            url: article.url,
+            properties: article.properties,
+            lang: article.lang
+          });
           this.originalArticle = structuredClone(this.article);
           if (setData) {
             this.setEditorData(this.article?.content);
