@@ -131,12 +131,6 @@ export default {
     publicationState() {
       return this.news && this.news.publicationState;
     },
-    newsTitle() {
-      return this.news && this.news.title;
-    },
-    newsPublished() {
-      return this.news && this.news.published;
-    },
     lastVisitedPage(){
       return history && history.length && history.length > 2;
     },
