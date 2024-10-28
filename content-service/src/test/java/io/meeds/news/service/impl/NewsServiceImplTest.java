@@ -875,18 +875,25 @@ public class NewsServiceImplTest {
     NewsFilter newsFilter = new NewsFilter();
     newsFilter.setScheduledNews(true);
     Map<String, String> properties = new HashMap<>();
+    Map<String, String> properties2 = new HashMap<>();
     properties.put(NEWS_PUBLICATION_STATE, "staged");
     properties.put(NEWS_DELETED, String.valueOf(false));
     MetadataItem metadataItem = mock(MetadataItem.class);
-    List<MetadataItem> metadataItems = List.of(metadataItem);
+    MetadataItem metadataItem2 = mock(MetadataItem.class);
+    properties2.put(UNPUBLISH_SCHEDULED, "true");
+    properties2.put(NEWS_DELETED, String.valueOf(false));
+    List<MetadataItem> metadataItems = List.of(metadataItem, metadataItem2);
     when(metadataItem.getObjectId()).thenReturn("1");
     when(metadataItem.getProperties()).thenReturn(properties);
+    when(metadataItem2.getObjectId()).thenReturn("2");
+    when(metadataItem2.getProperties()).thenReturn(properties2);
 
     mockBuildArticle(metadataItems);
 
+
     List<News> newsList = newsService.getNews(newsFilter, johnIdentity);
     assertNotNull(newsList);
-    assertEquals(newsList.size(), 1);
+    assertEquals(newsList.size(), 2);
   }
 
   @Test
