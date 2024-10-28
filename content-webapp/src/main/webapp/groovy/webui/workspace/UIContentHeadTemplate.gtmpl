@@ -7,5 +7,4 @@
 
 <script type="text/javascript" id="contentHeadScripts">
     eXo.env.portal.newPublicationDrawerEnabled = <%=featureService.isFeatureActiveForUser("newPublicationDrawer", userName)%>;
-    eXo.env.portal.newPublicationDrawerScheduleOptionEnabled = <%=featureService.isFeatureActiveForUser("newPublicationDrawerScheduleOption", userName)%>;
 </script>
