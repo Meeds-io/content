@@ -41,6 +41,7 @@ import static io.meeds.news.utils.NewsUtils.SCHEDULE_NEWS;
 import static io.meeds.news.utils.NewsUtils.SHARE_NEWS;
 import static io.meeds.news.utils.NewsUtils.UNSCHEDULE_NEWS;
 import static io.meeds.news.utils.NewsUtils.UPDATE_NEWS;
+import static io.meeds.news.utils.NewsUtils.VIEW_NEWS;
 
 /**
  * A listener to clear cached news inside
@@ -58,7 +59,7 @@ public class AttachedActivityCacheUpdater extends Listener<String, News> {
 
   private CachedActivityStorage cachedActivityStorage;
 
-  private String[] LISTENER_EVENTS = { POST_NEWS, UPDATE_NEWS, SHARE_NEWS, SCHEDULE_NEWS, UNSCHEDULE_NEWS, ADD_ARTICLE_TRANSLATION, REMOVE_ARTICLE_TRANSLATION };
+  private String[] LISTENER_EVENTS = { POST_NEWS, UPDATE_NEWS, SHARE_NEWS, SCHEDULE_NEWS, UNSCHEDULE_NEWS, ADD_ARTICLE_TRANSLATION, REMOVE_ARTICLE_TRANSLATION, VIEW_NEWS };
 
   @PostConstruct
   public void init() {
