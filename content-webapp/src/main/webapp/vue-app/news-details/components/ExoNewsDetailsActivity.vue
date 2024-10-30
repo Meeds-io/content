@@ -71,13 +71,13 @@ export default {
       return this.sharedTemplateParams && this.sharedTemplateParams.newsId;
     },
     showDeleteButton() {
-      return this.news && this.news.canDelete;
+      return this.news?.canDelete;
     },
     showEditButton() {
-      return this.news && this.news.canEdit;
+      return this.news?.canEdit;
     },
     showPublishButton() {
-      return this.news && this.news.canPublish;
+      return this.news?.canPublish || this.news?.canSchedule;
     },
   },
   created() {
