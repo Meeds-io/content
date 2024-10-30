@@ -156,7 +156,7 @@ export default {
           showEditButton: this.showEditButton,
           showResumeButton: this.showResumeButton,
           showDeleteButton: this.showDeleteButton,
-          showPublishButton: this.showCopyLinkButton,
+          showPublishButton: this.showPublishButton,
           showCopyLinkButton: this.showCopyLinkButton,
           currentApp: this.currentApp
         });
