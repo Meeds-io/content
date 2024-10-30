@@ -44,7 +44,8 @@
       :editor-icon="editorIcon"
       :publication-params="{
         spaceId: spaceId,
-        canPublish: canScheduleArticle,
+        canPublish: canPublishArticle,
+        canSchedule: true,
         allowedTargets: allowedTargets
       }"
       :images-download-folder="'DRIVE_ROOT_NODE/News/images'"
@@ -120,6 +121,7 @@ export default {
       editorTitleInputRef: 'articleTitle',
       imagesURLs: new Map(),
       canScheduleArticle: false,
+      canPublishArticle: false,
       postKey: 1,
       editorIcon: 'fas fa-newspaper',
       articleId: null,
@@ -686,8 +688,11 @@ export default {
           }
           this.loading = false;
         });
-        this.$newsServices.canScheduleNews(this.currentSpace.id).then(canScheduleArticle => {
+        this.$newsServices.canScheduleNews(this.currentSpace.id, this.article?.id).then(canScheduleArticle => {
           this.canScheduleArticle = canScheduleArticle;
+        });
+        this.$newsServices.canPublishNews(this.currentSpace.id).then(canPublishArticle => {
+          this.canPublishArticle = canPublishArticle;
         });
       });
     },

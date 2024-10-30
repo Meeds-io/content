@@ -511,6 +511,10 @@ public class NewsServiceImpl implements NewsService {
       news.setCanEdit(canEditNews(news, currentIdentity.getUserId()));
       news.setCanDelete(canDeleteNews(currentIdentity, news.getAuthor(), news.getSpaceId()));
       news.setCanPublish(NewsUtils.canPublishNews(news.getSpaceId(), currentIdentity));
+      Space space = spaceService.getSpaceById(news.getSpaceId());
+      if (space != null) {
+        news.setCanSchedule(canScheduleNews(space, currentIdentity, news));
+      }
       news.setTargets(newsTargetingService.getTargetsByNews(news));
       ExoSocialActivity activity = null;
       try {
@@ -573,6 +577,10 @@ public class NewsServiceImpl implements NewsService {
       news.setCanEdit(canEditNews(news, currentIdentity.getUserId()));
       news.setCanDelete(canDeleteNews(currentIdentity, news.getAuthor(), news.getSpaceId()));
       news.setCanPublish(NewsUtils.canPublishNews(news.getSpaceId(), currentIdentity));
+      Space space = spaceService.getSpaceById(news.getSpaceId());
+      if (space != null) {
+        news.setCanSchedule(canScheduleNews(space, currentIdentity, news));
+      }
     });
     return newsList;
   }
@@ -733,7 +741,7 @@ public class NewsServiceImpl implements NewsService {
   @Override
   public News scheduleNews(News news, Identity currentIdentity, String newsObjectType) throws Exception {
     Space space = news.getSpaceId() == null ? null : spaceService.getSpaceById(news.getSpaceId());
-    if (!canScheduleNews(space, currentIdentity)) {
+    if (!canScheduleNews(space, currentIdentity, news)) {
       throw new IllegalArgumentException("User " + currentIdentity.getUserId() + " is not authorized to schedule news");
     }
     if (newsObjectType.equalsIgnoreCase(NewsObjectType.DRAFT.name())) {
@@ -787,8 +795,10 @@ public class NewsServiceImpl implements NewsService {
    * {@inheritDoc}
    */
   @Override
-  public boolean canScheduleNews(Space space, Identity currentIdentity) {
-    return spaceService.isManager(space, currentIdentity.getUserId())
+  public boolean canScheduleNews(Space space, Identity currentIdentity, News article) {
+    boolean isArticleAuthor = article.getAuthor() != null && article.getAuthor().equals(currentIdentity.getUserId());
+    boolean spaceMemberCanSchedule = isArticleAuthor && spaceService.isMember(space, currentIdentity.getUserId());
+    return spaceMemberCanSchedule || spaceService.isManager(space, currentIdentity.getUserId())
         || spaceService.isRedactor(space, currentIdentity.getUserId())
         || NewsUtils.canPublishNews(space.getId(), currentIdentity);
   }
@@ -816,7 +826,7 @@ public class NewsServiceImpl implements NewsService {
         return false;
       }
       if (StringUtils.equals(news.getPublicationState(), STAGED)
-          && !canScheduleNews(space, NewsUtils.getUserIdentity(authenticatedUser))) {
+          && !canScheduleNews(space, NewsUtils.getUserIdentity(authenticatedUser), news)) {
         return false;
       }
     } catch (Exception e) {
