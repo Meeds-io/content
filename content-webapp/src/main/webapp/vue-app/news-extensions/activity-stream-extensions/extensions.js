@@ -88,14 +88,16 @@ const newsActivityTypeExtensionOptions = {
   },
   getTooltip: (activity, isActivityDetail) => !isActivityDetail && activity && 'news.activity.clickToShowDetail',
   getActivityViews: (activity) => {
-    const news = activity?.news;
-    const viewsCount = newsViews(news);
-    return {
-      tooltip: news?.viewsCount === 1 ? 'news.details.view' : 'news.details.views',
-      originalViewsCount: news.viewsCount || 0,
-      viewsCount: viewsCount,
-
-    };
+    if (activity?.news?.viewsCount > 0) {
+      const news = activity?.news;
+      const viewsCount = newsViews(news);
+      return {
+        tooltip: news?.viewsCount === 1 ? 'news.details.view' : 'news.details.views',
+        originalViewsCount: news.viewsCount,
+        viewsCount: viewsCount,
+      };
+    }
+    return null;
   }
 };
 
