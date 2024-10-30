@@ -19,27 +19,44 @@
  */
 package io.meeds.news.listener;
 
+import java.util.HashMap;
 import java.util.Map;
 
+import jakarta.annotation.PostConstruct;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
 import org.exoplatform.services.security.ConversationState;
 import org.exoplatform.services.security.Identity;
 import org.exoplatform.social.core.space.SpaceListenerPlugin;
+import org.exoplatform.social.core.space.impl.SpaceServiceImpl;
 import org.exoplatform.social.core.space.model.Space;
 import org.exoplatform.social.core.space.spi.SpaceLifeCycleEvent;
 
 import io.meeds.news.rest.NewsTargetingEntity;
 import io.meeds.news.service.NewsTargetingService;
+import org.exoplatform.social.core.space.spi.SpaceService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
+@Component
 public class SpaceNewsTargetAutoCreationListener extends SpaceListenerPlugin {
 
   private static final Log     LOG = ExoLogger.getLogger(SpaceNewsTargetAutoCreationListener.class);
 
+  @Autowired
   private NewsTargetingService newsTargetingService;
 
-  public SpaceNewsTargetAutoCreationListener(NewsTargetingService newsTargetingService) {
-    this.newsTargetingService = newsTargetingService;
+  @Autowired
+  private SpaceService spaceService;
+
+  private SpaceServiceImpl spaceServiceImpl;
+
+  @PostConstruct
+  public void init() {
+    if (spaceService instanceof SpaceServiceImpl) {
+      this.spaceServiceImpl = (SpaceServiceImpl) spaceService;
+    }
+    spaceServiceImpl.addSpaceListener(this);
   }
 
   @Override
@@ -47,12 +64,36 @@ public class SpaceNewsTargetAutoCreationListener extends SpaceListenerPlugin {
     Identity currentIdentity = ConversationState.getCurrent().getIdentity();
     Space space = event.getSpace();
     NewsTargetingEntity spaceNewsTargetEntity = new NewsTargetingEntity();
-    spaceNewsTargetEntity.setName(space.getDisplayName());
-    spaceNewsTargetEntity.setProperties(Map.of("label", space.getDisplayName(), "permissions", "space:" + space.getId()));
+    String spaceGroupId = space.getGroupId();
+    String spaceGroupName = spaceGroupId.substring(spaceGroupId.lastIndexOf("/") + 1);
+    spaceNewsTargetEntity.setName(spaceGroupName);
+    Map<String, String> properties = new HashMap<>();
+    properties.put("label", space.getDisplayName());
+    properties.put("permissions", "space:" + space.getId());
+    spaceNewsTargetEntity.setProperties(properties);
     try {
       newsTargetingService.createNewsTarget(spaceNewsTargetEntity, currentIdentity, false);
     } catch (Exception e) {
       LOG.warn("Can't create space {} news target", space.getPrettyName());
+    }
+  }
+
+  @Override
+  public void spaceRenamed(SpaceLifeCycleEvent event) {
+    Identity currentIdentity = ConversationState.getCurrent().getIdentity();
+    Space space = event.getSpace();
+    NewsTargetingEntity spaceNewsTargetEntity = new NewsTargetingEntity();
+    Map<String, String> properties = new HashMap<>();
+    properties.put("label", space.getDisplayName());
+    properties.put("permissions", "space:" + space.getId());
+    spaceNewsTargetEntity.setProperties(properties);
+    String spaceGroupId = space.getGroupId();
+    String spaceGroupName = spaceGroupId.substring(spaceGroupId.lastIndexOf("/") + 1);
+    spaceNewsTargetEntity.setName(spaceGroupName);
+    try {
+      newsTargetingService.updateNewsTargets(spaceGroupName, spaceNewsTargetEntity, currentIdentity);
+    } catch (Exception e) {
+      LOG.warn("Can't rename space {} news target", space.getPrettyName());
     }
   }
 }
