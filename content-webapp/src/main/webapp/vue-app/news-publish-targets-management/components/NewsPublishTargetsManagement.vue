@@ -87,7 +87,7 @@
                   <v-btn
                     icon
                     text
-                    @click="openDrawer(props.item.name, props.item.description, props.item.permissions)">
+                    @click="openDrawer(props.item.name, props.item.label, props.item.description, props.item.permissions)">
                     <v-icon
                       dark
                       color="primary"
@@ -147,7 +147,7 @@ export default {
   },
   created() {
     this.headers = [
-      { text: this.$t('newsTargets.settings.name'), align: 'center' },
+      { text: this.$t('newsTargets.settings.displayName'), align: 'center' },
       { text: this.$t('newsTargets.settings.description'), align: 'center' },
       { text: this.$t('news.publishTargets.managementDrawer.permissions'), align: 'center' },
       { text: this.$t('newsTargets.settings.actions'), align: 'center' },
@@ -203,10 +203,11 @@ export default {
       this.selectedTargetName = target;
       this.$refs.deleteConfirmDialog.open();
     },
-    openDrawer(targetName, targetDescription, targetPermissions) {
+    openDrawer(targetName, targetLabel, targetDescription, targetPermissions) {
       let selectedTarget = null;
       selectedTarget = {
         targetName: targetName && targetName.trim(),
+        targetLabel: targetLabel,
         targetDescription: targetDescription && targetDescription.trim(),
         targetPermissions: targetPermissions,
       };
