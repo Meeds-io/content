@@ -285,11 +285,12 @@ public interface NewsService {
   /**
    * Checks if the user can schedule publishinga News
    * 
-   * @param space
-   * @param currentIdentity
+   * @param space target space
+   * @param currentIdentity current user identity
+   * @param article target article
    * @return boolean : true if the user can schedule publishing a News
    */
-  boolean canScheduleNews(Space space, org.exoplatform.services.security.Identity currentIdentity);
+  boolean canScheduleNews(Space space, org.exoplatform.services.security.Identity currentIdentity, News article);
 
   /**
    * Checks if the user can view the News

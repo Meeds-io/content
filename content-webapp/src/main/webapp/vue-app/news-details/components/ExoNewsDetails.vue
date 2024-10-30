@@ -67,7 +67,8 @@
         :params="{
           spaceId: spaceId,
           allowedTargets: allowedTargets,
-          canPublish: news?.canPublish
+          canPublish: news?.canPublish,
+          canSchedule: news?.canSchedule
         }"
         :edit-mode="true"
         @publish="publishArticle" />
@@ -87,7 +88,9 @@ export default {
     news: {
       type: Object,
       required: false,
-      default: function() { return new Object(); }
+      default: () => {
+        return {};
+      }
     },
     newsId: {
       type: String,
@@ -200,7 +203,7 @@ export default {
       }
     },
     getSpaceById(spaceId) {
-      this.$spaceService.getSpaceById(spaceId, 'identity')
+      return this.$spaceService.getSpaceById(spaceId, 'identity')
         .then((space) => {
           if (space && space.identity && space.identity.id) {
             this.currentSpace = space;
