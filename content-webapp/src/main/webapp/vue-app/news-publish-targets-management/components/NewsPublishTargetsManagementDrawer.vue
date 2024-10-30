@@ -46,11 +46,10 @@
             <v-text-field
               id="targetName"
               ref="targetName"
-              v-model="targetName"
+              v-model="targetLabel"
               type="string"
               name="newsHeader"
               :placeholder="$t('news.publishTargets.managementDrawer.placeholder.name')"
-              :error-messages="checkAlphanumeric"
               maxlength="100"
               class="targetName input-block-level ignore-vuetify-classes"
               counter
@@ -166,7 +165,7 @@ export default {
     saving: false,
     targetDescriptionTextLength: 1000,
     targetDescription: '',
-    targetName: '',
+    targetLabel: '',
     sameTargetError: false,
     selectedTarget: '',
     originalTargetName: '',
@@ -184,11 +183,8 @@ export default {
         noDataLabel: this.$t('news.publishTargets.managementDrawer.permissions.noData')
       };
     },
-    checkAlphanumeric() {
-      return this.targetName && !this.targetName.trim().match(/^[a-zA-Z\u00C0-\u00FF ]*$/) && this.targetName.length > 0 ? this.$t('news.list.settings.name.errorMessage') : '';
-    },
     disabled() {
-      return (this.selectedTarget.targetName === this.targetName && this.selectedTarget.targetDescription === this.targetDescription && !this.permissionsUpdated) || this.checkAlphanumeric !== '' || this.targetName.length === 0 || this.permissions.length === 0 || this.sameTargetError || (typeof this.targetDescription !== 'undefined' && this.targetDescription.length > this.targetDescriptionTextLength);
+      return (this.selectedTarget.targetLabel === this.targetLabel && this.selectedTarget.targetDescription === this.targetDescription && !this.permissionsUpdated) || this.permissions.length === 0 || (typeof this.targetDescription !== 'undefined' && this.targetDescription.length > this.targetDescriptionTextLength);
     },
     saveButtonLabel() {
       return this.saveMode === 'edit' ? this.$t('news.publishTargets.managementDrawer.btn.update') : this.$t('news.publishTargets.managementDrawer.btn.confirm');
@@ -221,20 +217,15 @@ export default {
         this.$refs.newsPublishTargetsManagementDrawer.endLoading();
       }
     },
-    targetName(newVal, oldVal) {
-      this.sameTargetError = newVal && newVal.length > 0 && oldVal.length > 0 && newVal === oldVal;
-    },
   },
   created() {
     this.$root.$on('selected-target', (selectedTarget) => {
       this.selectedTarget = selectedTarget;
+      console.log(this.selectedTarget);
       this.originalTargetName = selectedTarget.targetName;
-      this.targetName = selectedTarget.targetName;
+      this.targetLabel = selectedTarget.targetLabel;
       this.targetDescription = selectedTarget.targetDescription;
       this.permissions = JSON.parse(JSON.stringify(selectedTarget.targetPermissions));
-      if ( this.targetName === selectedTarget.targetName && this.targetDescription === selectedTarget.targetDescription) {
-        this.sameTargetError = true;
-      }
       this.saveMode = 'edit';
     });
     this.$root.$on('open-news-publish-targets-management-drawer', () => { this.open(); });
@@ -292,10 +283,10 @@ export default {
           permissions = `${permissions + permission.id},`;
         }); 
       } 
-      target.name = this.targetName;
+      target.name = this.targetLabel;
       target.properties = {
         description: this.targetDescription,
-        label: this.targetName,
+        label: this.targetLabel,
         permissions: permissions,
       };
       this.sameTargetError = false;
@@ -328,10 +319,10 @@ export default {
           permissions = `${permissions + permission.id},`;
         }); 
       } 
-      target.name = this.targetName;
+      target.name = this.selectedTarget?.targetName;
       target.properties = {
         description: this.targetDescription,
-        label: this.targetName,
+        label: this.targetLabel,
         permissions: permissions,
       };
       this.$newsTargetingService.updateTarget(target, this.originalTargetName)
@@ -346,7 +337,7 @@ export default {
     },
     reset() {
       this.targetDescription = '';
-      this.targetName = '';
+      this.targetLabel = '';
       this.saveMode = 'creationMode';
       this.permissions=[];
       this.permissionsUpdated= false;
