@@ -41,6 +41,7 @@ import org.exoplatform.container.component.RequestLifeCycle;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
 import org.exoplatform.services.security.ConversationState;
+import org.exoplatform.social.common.Utils;
 import org.exoplatform.social.metadata.model.Metadata;
 
 import io.meeds.news.service.NewsTargetingService;
@@ -215,6 +216,11 @@ public class NewsTargetingRest {
     }
     org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
     try {
+      StringBuilder targetName = new StringBuilder();
+      targetName.append(Utils.cleanString(newsTargetingEntity.getName()));
+      targetName.append('_');
+      targetName.append(System.currentTimeMillis());
+      newsTargetingEntity.setName(targetName.toString());
       Metadata addedNewsTarget = newsTargetingService.createNewsTarget(newsTargetingEntity, currentIdentity);
       return Response.ok(addedNewsTarget).build();
     } catch (IllegalAccessException e) {
