@@ -712,7 +712,9 @@ public class NewsRest {
       @ApiResponse(responseCode = "401", description = "User not authorized to schedule a news"),
       @ApiResponse(responseCode = "404", description = "Space not found"),
       @ApiResponse(responseCode = "500", description = "Internal server error") })
-  public ResponseEntity<Boolean> canScheduleNews(@PathVariable("spaceId") String spaceId) {
+  public ResponseEntity<Boolean> canScheduleNews(@PathVariable("spaceId") String spaceId,
+                                                 @Parameter(description = "target article id")
+                                                 @RequestParam("articleId") String articleId) {
     org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
     try {
       if (StringUtils.isBlank(spaceId)) {
@@ -722,8 +724,12 @@ public class NewsRest {
       if (space == null) {
         return ResponseEntity.notFound().build();
       }
+      News news = newsService.getNewsArticleById(articleId);
+      if (news == null) {
+        return ResponseEntity.notFound().build();
+      }
 
-      return ResponseEntity.ok(newsService.canScheduleNews(space, currentIdentity));
+      return ResponseEntity.ok(newsService.canScheduleNews(space, currentIdentity, news));
     } catch (Exception e) {
       LOG.error("Error when checking if the authenticated user can schedule a news", e);
       return ResponseEntity.internalServerError().build();
