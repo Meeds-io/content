@@ -84,7 +84,7 @@ export default {
         if (resp !== null && resp !== UNAUTHORIZED_CODE) {
           this.news = resp;
           this.showEditButton = this.news.canEdit;
-          this.showPublishButton = this.news.canPublish;
+          this.showPublishButton = this.news.canPublish || this.news?.canSchedule;
           this.showDeleteButton = this.news.canDelete;
           if (this.news.lang) {
             this.addParamToUrl('lang', this.news.lang);

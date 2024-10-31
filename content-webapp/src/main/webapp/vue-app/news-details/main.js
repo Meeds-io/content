@@ -54,7 +54,7 @@ export function init(params) {
           activityId: params.activityId,
           newsType: params.newsType,
           showEditButton: params.news.canEdit,
-          showPublishButton: params.news.canPublish,
+          showPublishButton: params.news.canPublish || params.news?.canSchedule,
           showCopyLinkButton: true,
           showDeleteButton: params.news.canDelete,
         };

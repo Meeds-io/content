@@ -111,6 +111,8 @@ public class News {
 
   private boolean                         canPublish;
 
+  private boolean                         canSchedule;
+
   private List<String>                    sharedInSpacesList;
 
   private String                          url;
