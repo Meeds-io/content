@@ -191,7 +191,10 @@ export default {
   },
   computed: {
     showUpdaterInfo() {
-      return !this.isPublicAccess;
+      return !this.isPublicAccess && !this.hideAuthor;
+    },
+    hideAuthor() {
+      return this.news?.properties?.hideAuthor;
     },
     isPublicAccess() {
       return !eXo?.env?.portal?.userIdentityId;
