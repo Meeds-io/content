@@ -260,18 +260,7 @@ public class NewsUtils {
   }
 
   public static String buildSpaceUrl(String spaceId) {
-    StringBuilder spaceUrl = new StringBuilder();
-    SpaceService spaceService = CommonsUtils.getService(SpaceService.class);
-    Space space = spaceService.getSpaceById(spaceId);
-    if (space != null) {
-      String spaceGroupId = space.getGroupId().split("/")[2];
-      spaceUrl.append("/portal/g/:spaces:");
-      spaceUrl.append(spaceGroupId);
-      spaceUrl.append("/");
-      spaceUrl.append(space.getPrettyName());
-      return spaceUrl.toString();
-    }
-    return null;
+    return String.format("/portal/s/%s", spaceId);
   }
 
   public static String buildIllustrationUrl(NotePageProperties properties, String lang) {

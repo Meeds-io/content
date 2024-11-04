@@ -63,7 +63,7 @@ public class NotificationUtilsTest {
     // When
     String activityUrl = NotificationUtils.getNotificationActivityLink(space1, "13", false);
 
-    assertEquals("http://localhost:8080/portal/g/:spaces:space1/space1", activityUrl);
+    assertEquals("http://localhost:8080/portal/s/" + space1.getId(), activityUrl);
   }
 
   @Test
@@ -81,13 +81,13 @@ public class NotificationUtilsTest {
     // When
     String activityUrl = NotificationUtils.getNotificationActivityLink(space, "13", false);
 
-    assertEquals("http://localhost:8080/portal/g/:spaces:space1/space1", activityUrl);
+    assertEquals("http://localhost:8080/portal/s/" + space.getId(), activityUrl);
 
     Space updatedSpace = space;
     updatedSpace.setDisplayName("Space One");
     updatedSpace.setPrettyName(updatedSpace.getDisplayName());
 
     activityUrl = NotificationUtils.getNotificationActivityLink(updatedSpace, "13", false);
-    assertEquals("http://localhost:8080/portal/g/:spaces:space1/space_one", activityUrl);
+    assertEquals("http://localhost:8080/portal/s/" + updatedSpace.getId(), activityUrl);
   }
 }
