@@ -102,8 +102,11 @@ export default {
     showArticleImage() {
       return this.selectedOption?.showArticleImage;
     },
+    hideAuthor() {
+      return this.item?.properties?.hideAuthor;
+    },
     showArticleAuthor() {
-      return this.selectedOption?.showArticleAuthor;
+      return this.selectedOption?.showArticleAuthor && !this.hideAuthor ;
     },
     showArticleSpace() {
       return this.selectedOption?.showArticleSpace;
