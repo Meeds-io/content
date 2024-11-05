@@ -68,7 +68,6 @@ export function init(maxToUpload, maxFileSize) {
       vuetify
     });
   }).finally(() => {
-    Vue.prototype.$utils.includeExtensions('WYSIWYGPluginsExtensions');
     Vue.prototype.$utils.includeExtensions('AutomaticTranslationNotesEditorExtension');
   });
 }
