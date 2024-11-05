@@ -34,6 +34,7 @@
         height="36"
         class="pa-0 ms-3"
         :class="langButtonColor"
+        :aria-label="this.$t('content.label.button.translations.options')"
         icon>
         <v-icon
           size="22">
