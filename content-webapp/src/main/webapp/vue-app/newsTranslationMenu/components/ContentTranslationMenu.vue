@@ -34,6 +34,7 @@
         height="36"
         class="pa-0 ms-3"
         :class="langButtonColor"
+        :aria-label="langButtonLabel"
         icon>
         <v-icon
           size="22">
@@ -107,6 +108,9 @@ export default {
     langButtonColor(){
       return this.selectedTranslation.value ? 'primary--text':'';
     },
+    langButtonLabel() {
+      return this.$t('content.label.button.translations.options');
+    }
   },
   created() {
     this.refreshTranslationExtensions();
