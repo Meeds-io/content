@@ -98,7 +98,8 @@ const newsActivityTypeExtensionOptions = {
       };
     }
     return null;
-  }
+  },
+  reactionEnabled: (activity) => !activity?.news?.properties?.hideReaction
 };
 
 export function initExtensions() {
