@@ -527,7 +527,7 @@ public class NewsServiceImplTest {
     newsArticlePage.setContent(newsArticle.getBody());
     newsArticlePage.setParentPageId(rootPage.getId());
     newsArticlePage.setAuthor(newsArticle.getAuthor());
-    newsArticlePage.setProperties(new NotePageProperties(Long.valueOf(newsArticle.getId()), null, null, true));
+    newsArticlePage.setProperties(new NotePageProperties(Long.parseLong(newsArticle.getId()), null, null, false, false, true));
     newsArticlePage.setLang(null);
     newsArticlePage.setAttachmentObjectType(ArticlePageAttachmentPlugin.OBJECT_TYPE);
 

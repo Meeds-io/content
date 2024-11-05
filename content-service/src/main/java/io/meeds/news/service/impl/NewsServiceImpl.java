@@ -1007,7 +1007,7 @@ public class NewsServiceImpl implements NewsService {
       newsArticlePage.setLang(null);
       newsArticlePage.setProperties(newsArticle.getProperties());
       if (newsArticlePage.getProperties() == null) {
-        newsArticlePage.setProperties(new NotePageProperties(Long.valueOf(draftNewsId), null, null, true));
+        newsArticlePage.setProperties(new NotePageProperties(Long.parseLong(draftNewsId), null, null, false, false, true));
       }
       newsArticlePage = noteService.createNote(wiki, newsArticlesRootNotePage.getName(), newsArticlePage, poster);
       if (newsArticlePage != null) {
