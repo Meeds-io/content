@@ -25,6 +25,7 @@
     <v-btn
       class="go-back-button"
       icon
+      :aria-label="this.$t('article.details.goBack.label')"
       @click.stop="goBack">
       <v-icon
         size="15">
