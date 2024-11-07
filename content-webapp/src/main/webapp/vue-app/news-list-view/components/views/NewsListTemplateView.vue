@@ -44,29 +44,20 @@
 <script>
 export default {
   props: {
-    newsTarget: {
+    newsList: {
+      type: Array,
+      default: () => {
+        return [];
+      }
+    },
+    selectedOption: {
       type: Object,
-      required: false,
-      default: null
+      default: () => {
+        return {};
+      }
     },
   },
   data: () => ({
-    initialized: false,
-    newsInfo: null,
-    limit: 4,
-    offset: 0,
-    space: null,
-    seeAllUrl: '',
-    selectedOption: null,
-    showHeader: true,
-    showSeeAll: true,
-    showArticleTitle: true,
-    showArticleSummary: true,
-    showArticleImage: true,
-    showArticleAuthor: true,
-    showArticleSpace: true,
-    showArticleDate: true,
-    showArticleReactions: true,
     canPublishNews: false,
     parentWidth: 0
   }),
@@ -74,15 +65,15 @@ export default {
     numberOfColumns(){
       const thresholds = this.$vuetify.breakpoint?.thresholds;
       return this.parentWidth < thresholds.sm ? 12 : this.parentWidth < thresholds.md ? 6 : this.parentWidth < thresholds.lg ? 4 : 3;
+    },
+    newsInfo(){
+      return this.newsList && this.newsList.filter(news => !!news);
     }
   },
   created() {
     this.$newsServices.canPublishNews().then(canPublishNews => {
       this.canPublishNews = canPublishNews;
     });
-    this.reset();
-    this.$root.$on('saved-news-settings', this.refreshNewsViews);
-    this.getNewsList();
   },
   mounted() {
     // get the initial width of the parent element
@@ -94,55 +85,5 @@ export default {
     });
     this.$nextTick().then(() => this.$root.$emit('application-loaded'));
   },
-  methods: {
-    getNewsList() {
-      if (!this.initialized) {
-        this.$newsListService.getNewsList(this.newsTarget, this.offset, this.limit, true)
-          .then(newsList => {
-            this.newsInfo = newsList.news.filter(news => !!news);
-            this.initialized = true;
-          })
-          .finally(() => this.initialized = false);
-      }
-    },
-    refreshNewsViews(selectedTarget, selectedOption) {
-      this.showArticleSummary = selectedOption.showArticleSummary;
-      this.showArticleTitle = selectedOption.showArticleTitle;
-      this.showArticleImage = selectedOption.showArticleImage;
-      this.selectedOption = selectedOption;
-      this.newsHeader = selectedOption.header;
-      this.seeAllUrl = selectedOption.seeAllUrl;
-      this.limit = selectedOption.limit;
-      this.newsTarget = selectedTarget;
-      this.getNewsList();
-    },
-    reset() {
-      this.limit = this.$root.limit;
-      this.showHeader = this.$root.showHeader;
-      this.newsHeader = this.$root.header;
-      this.showSeeAll = this.$root.showSeeAll;
-      this.showArticleTitle = this.$root.showArticleTitle;
-      this.showArticleImage = this.$root.showArticleImage;
-      this.showArticleSummary = this.$root.showArticleSummary;
-      this.showArticleAuthor = this.$root.showArticleAuthor;
-      this.showArticleSpace = this.$root.showArticleSpace;
-      this.showArticleDate = this.$root.showArticleDate;
-      this.showArticleReactions = this.$root.showArticleReactions;
-      this.seeAllUrl = this.$root.seeAllUrl;
-      this.selectedOption = {
-        limit: this.limit,
-        showHeader: this.showHeader,
-        showSeeAll: this.showSeeAll,
-        showArticleTitle: this.showArticleTitle,
-        showArticleSummary: this.showArticleSummary,
-        showArticleAuthor: this.showArticleAuthor,
-        showArticleSpace: this.showArticleSpace,
-        showArticleDate: this.showArticleDate,
-        showArticleReactions: this.showArticleReactions,
-        showArticleImage: this.showArticleImage,
-        seeAllUrl: this.seeAllUrl,
-      };
-    },
-  }
 };
 </script>
