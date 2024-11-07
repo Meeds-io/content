@@ -63,31 +63,21 @@
 <script>
 export default {
   props: {
-    newsTarget: {
-      type: String,
-      required: false,
-      default: null
+    newsList: {
+      type: Array,
+      default: () => {
+        return [];
+      }
+    },
+    selectedOption: {
+      type: Object,
+      default: () => {
+        return {};
+      }
     },
   },
   data () {
     return {
-      news: [],
-      initialized: false,
-      limit: 4,
-      offset: 0,
-
-      showHeader: false,
-      showSeeAll: true,
-      showArticleTitle: true,
-      showArticleSummary: false,
-      showArticleImage: true,
-      showArticleAuthor: true,
-      showArticleSpace: true,
-      showArticleDate: true,
-      showArticleReactions: true,
-      seeAllUrl: '',
-      newsHeader: '',
-      selectedOption: null,
       dateFormat: {
         year: 'numeric',
         month: 'long',
@@ -96,11 +86,6 @@ export default {
       isSmallWidth: false
     };
   },
-  created() {
-    this.reset();
-    this.$root.$on('saved-news-settings', this.refreshNewsViews);
-    this.getNewsList();
-  },
   mounted() {
     this.isSmallWidth =  this.$refs?.['top-news-mosaic']?.clientWidth < 600;
     window.addEventListener('resize', () => {
@@ -108,6 +93,15 @@ export default {
     });
   },
   computed: {
+    showArticleTitle() {
+      return this.selectedOption.showArticleTitle;
+    },
+    showArticleImage() {
+      return this.selectedOption.showArticleImage;
+    },
+    showArticleDate() {
+      return this.selectedOption.showArticleDate;
+    },
     isMobile() {
       return this.$vuetify.breakpoint.name === 'xs' || this.$vuetify.breakpoint.name === 'sm' || this.$vuetify.breakpoint.name === 'md';
     },
@@ -121,59 +115,14 @@ export default {
       return (item) => {
         return eXo.env.portal.userName !== '' ? item.url : `${eXo.env.portal.context}/${eXo.env.portal.portalName}/news-detail?newsId=${item.id}&type=article`;
       };
-    }
+    },
+    news(){
+      return this.newsList && this.newsList.filter(news => !!news);
+    },
   },
   methods: {
-    getNewsList() {
-      if (!this.initialized) {
-        this.$newsListService.getNewsList(this.newsTarget, this.offset, this.limit, true)
-          .then(newsList => {
-            this.news = newsList.news.filter(news => !!news);
-            this.initialized = true;
-          })
-          .finally(() => this.initialized = false);
-      }
-    },
     minLength(lengthNews){
       return lengthNews < 5 && lengthNews > 0 ? 100 / lengthNews : 25;
-    },
-    refreshNewsViews(selectedTarget, selectedOption) {
-      this.showArticleTitle = selectedOption.showArticleTitle;
-      this.showArticleDate = selectedOption.showArticleDate;
-      this.showHeader = selectedOption.showHeader;
-      this.selectedOption = selectedOption;
-      this.newsHeader = selectedOption.header;
-      this.seeAllUrl = selectedOption.seeAllUrl;
-      this.limit = selectedOption.limit;
-      this.newsTarget = selectedTarget;
-      this.getNewsList();
-    },
-    reset() {
-      this.limit = this.$root.limit;
-      this.showHeader = this.$root.showHeader;
-      this.newsHeader = this.$root.header;
-      this.showSeeAll = this.$root.showSeeAll;
-      this.showArticleTitle = this.$root.showArticleTitle;
-      this.showArticleImage = this.$root.showArticleImage;
-      this.showArticleSummary = this.$root.showArticleSummary;
-      this.showArticleAuthor = this.$root.showArticleAuthor;
-      this.showArticleSpace = this.$root.showArticleSpace;
-      this.showArticleDate = this.$root.showArticleDate;
-      this.showArticleReactions = this.$root.showArticleReactions;
-      this.seeAllUrl = this.$root.seeAllUrl;
-      this.selectedOption = {
-        limit: this.limit,
-        showHeader: this.showHeader,
-        showSeeAll: this.showSeeAll,
-        showArticleTitle: this.showArticleTitle,
-        showArticleSummary: this.showArticleSummary,
-        showArticleAuthor: this.showArticleAuthor,
-        showArticleSpace: this.showArticleSpace,
-        showArticleDate: this.showArticleDate,
-        showArticleReactions: this.showArticleReactions,
-        showArticleImage: this.showArticleImage,
-        seeAllUrl: this.seeAllUrl,
-      };
     },
     styleArticleTitle(){
       return  (this.isSmallWidth ? 'articleTitle ' : '').concat(this.isSmallBreakpoint ? 'text-truncate' : 'articleTitleTruncate');
