@@ -65,84 +65,29 @@
 <script>
 export default {
   props: {
-    newsTarget: {
-      type: String,
-      required: false,
-      default: null
-    },
-  },
-  data () {
-    return {
-      news: [],
-      initialized: false,
-      limit: 10,
-      offset: 0,
-
-      showHeader: false,
-      showSeeAll: false,
-      showArticleTitle: true,
-      showArticleSummary: false,
-      showArticleImage: true,
-      showArticleAuthor: true,
-      showArticleSpace: false,
-      showArticleDate: true,
-      showArticleReactions: true,
-      seeAllUrl: '',
-      selectedOption: null,
-    };
-  },
-  created() {
-    this.reset();
-    this.$root.$on('saved-news-settings', this.refreshNewsViews);
-    this.getNewsList();
-  },
-  methods: {
-    getNewsList() {
-      if (!this.initialized) {
-        this.$newsListService.getNewsList(this.newsTarget, this.offset, this.limit, true)
-          .then(newsList => {
-            this.news = newsList.news.filter(news => !!news);
-            this.initialized = true;
-          })
-          .finally(() => this.initialized = false);
+    newsList: {
+      type: Array,
+      default: () => {
+        return [];
       }
     },
-    refreshNewsViews(selectedTarget, selectedOption) {
-      this.showArticleSummary = selectedOption.showArticleSummary;
-      this.showArticleTitle = selectedOption.showArticleTitle;
-      this.showArticleImage = selectedOption.showArticleImage;
-      this.seeAllUrl = selectedOption.seeAllUrl;
-      this.limit = selectedOption.limit;
-      this.selectedOption = selectedOption;
-      this.newsTarget = selectedTarget;
-      this.getNewsList();
+    selectedOption: {
+      type: Object,
+      default: () => {
+        return {};
+      }
     },
-    reset() {
-      this.limit = this.$root.limit;
-      this.showHeader = this.$root.showHeader;
-      this.showSeeAll = this.$root.showSeeAll;
-      this.showArticleTitle = this.$root.showArticleTitle;
-      this.showArticleImage = this.$root.showArticleImage;
-      this.showArticleSummary = this.$root.showArticleSummary;
-      this.showArticleAuthor = this.$root.showArticleAuthor;
-      this.showArticleSpace = this.$root.showArticleSpace;
-      this.showArticleDate = this.$root.showArticleDate;
-      this.showArticleReactions = this.$root.showArticleReactions;
-      this.seeAllUrl = this.$root.seeAllUrl;
-      this.selectedOption = {
-        limit: this.limit,
-        showHeader: this.showHeader,
-        showSeeAll: this.showSeeAll,
-        showArticleTitle: this.showArticleTitle,
-        showArticleSummary: this.showArticleSummary,
-        showArticleAuthor: this.showArticleAuthor,
-        showArticleSpace: this.showArticleSpace,
-        showArticleDate: this.showArticleDate,
-        showArticleReactions: this.showArticleReactions,
-        showArticleImage: this.showArticleImage,
-        seeAllUrl: this.seeAllUrl,
-      };
+  },
+  computed: {
+    news(){
+      return this.newsList && this.newsList.filter(news => !!news);
     },
-  }
+    showSeeAll() {
+      return this.selectedOption.showSeeAll;
+    },
+    seeAllUrl() {
+      return this.selectedOption.seeAllUrl;
+    },
+  },
 };
 </script>
