@@ -91,40 +91,21 @@
 <script>
 export default {
   props: {
-    newsTarget: {
-      type: String,
-      required: false,
-      default: 'snapshotSliderNews'
-    },
     newsList: {
       type: Array,
       default: () => {
         return [];
       }
     },
+    selectedOption: {
+      type: Object,
+      default: () => {
+        return {};
+      }
+    },
   },
   data () {
     return {
-      limit: 4,
-      offset: 0,
-      fullDateFormat: {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      },
-      showHeader: false,
-      showSeeAll: false,
-      showArticleTitle: true,
-      showArticleSummary: true,
-      showArticleImage: true,
-      showArticleAuthor: true,
-      showArticleSpace: true,
-      showArticleDate: true,
-      showArticleReactions: true,
-      seeAllUrl: '',
-      selectedOption: null,
       canPublishNews: false,
     };
   },
@@ -139,54 +120,25 @@ export default {
       return (item) => {
         return eXo.env.portal.userName !== '' ? item.url : `${eXo.env.portal.context}/${eXo.env.portal.portalName}/news-detail?newsId=${item.id}&type=article`;
       };
-    }
+    },
+    showArticleTitle() {
+      return this.selectedOption.showArticleTitle;
+    },
+    showArticleImage() {
+      return this.selectedOption.showArticleImage;
+    },
+    showArticleSummary() {
+      return this.selectedOption.showArticleSummary;
+    },
   },
   created() {
     this.$newsServices.canPublishNews().then(canPublishNews => {
       this.canPublishNews = canPublishNews;
     });
-    this.reset();
-    this.$root.$on('saved-news-settings', this.refreshNewsViews);
   },
   methods: {
     openDrawer() {
       this.$root.$emit('news-settings-drawer-open');
-    },
-    refreshNewsViews(selectedTarget, selectedOption){
-      this.showArticleSummary = selectedOption.showArticleSummary;
-      this.showArticleTitle = selectedOption.showArticleTitle;
-      this.showArticleImage = selectedOption.showArticleImage;
-      this.seeAllUrl = selectedOption.seeAllUrl;
-      this.limit = selectedOption.limit;
-      this.selectedOption = selectedOption;
-      this.newsTarget = selectedTarget;
-      this.getNewsList();
-    },
-    reset() {
-      this.limit = this.$root.limit;
-      this.showHeader = this.$root.showHeader;
-      this.showSeeAll = this.$root.showSeeAll;
-      this.showArticleTitle = this.$root.showArticleTitle;
-      this.showArticleImage = this.$root.showArticleImage;
-      this.showArticleSummary = this.$root.showArticleSummary;
-      this.showArticleAuthor = this.$root.showArticleAuthor;
-      this.showArticleSpace = this.$root.showArticleSpace;
-      this.showArticleDate = this.$root.showArticleDate;
-      this.showArticleReactions = this.$root.showArticleReactions;
-      this.seeAllUrl = this.$root.seeAllUrl;
-      this.selectedOption = {
-        limit: this.limit,
-        showHeader: this.showHeader,
-        showSeeAll: this.showSeeAll,
-        showArticleTitle: this.showArticleTitle,
-        showArticleSummary: this.showArticleSummary,
-        showArticleAuthor: this.showArticleAuthor,
-        showArticleSpace: this.showArticleSpace,
-        showArticleDate: this.showArticleDate,
-        showArticleReactions: this.showArticleReactions,
-        showArticleImage: this.showArticleImage,
-        seeAllUrl: this.seeAllUrl,
-      };
     },
   }
 };

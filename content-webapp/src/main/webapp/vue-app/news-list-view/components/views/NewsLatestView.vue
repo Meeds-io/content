@@ -50,11 +50,6 @@
 <script>
 export default {
   props: {
-    newsTarget: {
-      type: Object,
-      required: false,
-      default: null
-    },
     newsList: {
       type: Array,
       default: () => {
@@ -64,34 +59,15 @@ export default {
     loading: {
       type: Boolean,
       default: false
-    }
+    },
+    selectedOption: {
+      type: Object,
+      default: () => {
+        return {};
+      }
+    },
   },
   data: ()=> ({
-    initialized: false,
-    limit: 4,
-    offset: 0,
-    space: null,
-    isHovered: false,
-    commentsSize: 0,
-    likeSize: 0,
-    fullDateFormat: {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    },
-    seeAllUrl: '',
-    selectedOption: null,
-    showHeader: false,
-    showSeeAll: false,
-    showArticleTitle: false,
-    showArticleSummary: false,
-    showArticleImage: false,
-    showArticleAuthor: false,
-    showArticleSpace: false,
-    showArticleDate: false,
-    showArticleReactions: false,
     hasSmallWidthContainer: false,
     canPublishNews: false,
   }),
@@ -100,56 +76,17 @@ export default {
       return this.newsList && this.newsList.filter(news => !!news);
     },
     extraClass() {
-      return (!this.showHeader && !this.showSeeAll && !this.canPublishNews ) && 'mt-5' || ' ';
+      return (!this.selectedOption.showHeader && !this.selectedOption.showSeeAll && !this.canPublishNews ) && 'mt-5' || ' ';
     }
   },
   created() {
-    this.reset();
     this.$newsServices.canPublishNews().then(canPublishNews => {
       this.canPublishNews = canPublishNews;
     });
-    this.$root.$on('saved-news-settings', this.refreshNewsViews);
   },
   mounted() {
     this.$nextTick().then(() => this.$root.$emit('application-loaded'));
     this.hasSmallWidthContainer = (this.$refs['news-latest-view']?.clientWidth *100 / window.screen.width) < 33;
   },
-  methods: {
-    refreshNewsViews(selectedTarget, selectedOption){
-      this.selectedOption = selectedOption;
-      this.newsHeader = selectedOption.header;
-      this.seeAllUrl = selectedOption.seeAllUrl;
-      this.limit = selectedOption.limit;
-      this.newsTarget = selectedTarget;
-      this.getNewsList();
-    },
-    reset() {
-      this.limit = this.$root.limit;
-      this.showHeader = this.$root.showHeader;
-      this.newsHeader = this.$root.header;
-      this.showSeeAll = this.$root.showSeeAll;
-      this.showArticleTitle = this.$root.showArticleTitle;
-      this.showArticleImage = this.$root.showArticleImage;
-      this.showArticleSummary = this.$root.showArticleSummary;
-      this.showArticleAuthor = this.$root.showArticleAuthor;
-      this.showArticleSpace = this.$root.showArticleSpace;
-      this.showArticleDate = this.$root.showArticleDate;
-      this.showArticleReactions = this.$root.showArticleReactions;
-      this.seeAllUrl = this.$root.seeAllUrl;
-      this.selectedOption = {
-        limit: this.limit,
-        showHeader: this.showHeader,
-        showSeeAll: this.showSeeAll,
-        showArticleTitle: this.showArticleTitle,
-        showArticleSummary: this.showArticleSummary,
-        showArticleAuthor: this.showArticleAuthor,
-        showArticleSpace: this.showArticleSpace,
-        showArticleDate: this.showArticleDate,
-        showArticleReactions: this.showArticleReactions,
-        showArticleImage: this.showArticleImage,
-        seeAllUrl: this.seeAllUrl,
-      };
-    },
-  }
 };
 </script>

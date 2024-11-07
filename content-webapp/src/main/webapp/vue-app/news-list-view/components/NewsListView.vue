@@ -177,6 +177,19 @@ export default {
         seeAllUrl: this.seeAllUrl,
         hasMore: this.hasMore,
         loading: this.loading,
+        selectedOption: {
+          limit: this.limit,
+          showHeader: this.showHeader,
+          showSeeAll: this.showSeeAll,
+          showArticleTitle: this.showArticleTitle,
+          showArticleSummary: this.showArticleSummary,
+          showArticleAuthor: this.showArticleAuthor,
+          showArticleSpace: this.showArticleSpace,
+          showArticleDate: this.showArticleDate,
+          showArticleReactions: this.showArticleReactions,
+          showArticleImage: this.showArticleImage,
+          seeAllUrl: this.seeAllUrl,
+        }
       };
     },
     hideEmptyNewsTemplateForNonPublisher() {
