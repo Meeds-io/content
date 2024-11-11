@@ -475,7 +475,7 @@ public class NewsRest {
         for (String spaceId : spaces.split(",")) {
           Space space = spaceService.getSpaceById(spaceId);
           if (space == null
-              || (!spaceService.isSuperManager(authenticatedUser) && !spaceService.isMember(space, authenticatedUser))) {
+              || (!spaceService.isSuperManager(space, authenticatedUser) && !spaceService.isMember(space, authenticatedUser))) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
           }
           spacesList.add(spaceId);
