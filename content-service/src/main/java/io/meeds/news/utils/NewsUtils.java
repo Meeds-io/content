@@ -193,7 +193,7 @@ public class NewsUtils {
           && (currentIdentity.isMemberOf(PLATFORM_WEB_CONTRIBUTORS_GROUP, PUBLISHER_MEMBERSHIP_NAME)
               || spaceService.isPublisher(space, currentIdentity.getUserId())
               || spaceService.isManager(space, currentIdentity.getUserId())
-              || spaceService.isSuperManager(currentIdentity.getUserId()));
+              || spaceService.isSuperManager(space, currentIdentity.getUserId()));
     }
     return currentIdentity != null && currentIdentity.isMemberOf(PLATFORM_WEB_CONTRIBUTORS_GROUP, PUBLISHER_MEMBERSHIP_NAME);
   }

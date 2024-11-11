@@ -89,7 +89,7 @@ public class NewsUtilsTest {
     assertTrue(NewsUtils.canPublishNews(space.getId(), userAclIdentity));
     when(spaceService.isManager(space, userAclIdentity.getUserId())).thenReturn(false);
 
-    when(spaceService.isSuperManager(userAclIdentity.getUserId())).thenReturn(true);
+    when(spaceService.isSuperManager(space, userAclIdentity.getUserId())).thenReturn(true);
     assertTrue(NewsUtils.canPublishNews(space.getId(), userAclIdentity));
   }
 
