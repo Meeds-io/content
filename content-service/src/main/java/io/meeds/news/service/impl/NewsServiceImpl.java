@@ -808,7 +808,7 @@ public class NewsServiceImpl implements NewsService {
         return false;
       }
       if (!news.isPublished() && StringUtils.equals(news.getPublicationState(), POSTED)
-          && !(spaceService.isSuperManager(authenticatedUser) || spaceService.isMember(space, authenticatedUser)
+          && !(spaceService.isSuperManager(space, authenticatedUser) || spaceService.isMember(space, authenticatedUser)
               || isMemberOfsharedInSpaces(news, authenticatedUser))) {
         return false;
       }
@@ -1228,10 +1228,9 @@ public class NewsServiceImpl implements NewsService {
       draftArticle.setSpaceAvatarUrl(draftArticleSpace.getAvatarUrl());
       draftArticle.setSpaceDisplayName(draftArticleSpace.getDisplayName());
       boolean hiddenSpace = draftArticleSpace.getVisibility().equals(Space.HIDDEN)
-          && !spaceService.isMember(draftArticleSpace, currentUserId) && !spaceService.isSuperManager(currentUserId);
+          && !spaceService.isMember(draftArticleSpace, currentUserId) && !spaceService.isSuperManager(draftArticleSpace, currentUserId);
       draftArticle.setHiddenSpace(hiddenSpace);
-      boolean isSpaceMember =
-                            spaceService.isSuperManager(currentUserId) || spaceService.isMember(draftArticleSpace, currentUserId);
+      boolean isSpaceMember = spaceService.isMember(draftArticleSpace, currentUserId) || spaceService.isSuperManager(draftArticleSpace, currentUserId);
       draftArticle.setSpaceMember(isSpaceMember);
       if (StringUtils.isNotEmpty(draftArticleSpace.getGroupId())) {
         draftArticle.setSpaceUrl(NewsUtils.buildSpaceUrl(draftArticleSpace.getId()));
@@ -1875,10 +1874,12 @@ public class NewsServiceImpl implements NewsService {
         news.setSpaceId(space.getId());
         news.setSpaceAvatarUrl(space.getAvatarUrl());
         news.setSpaceDisplayName(space.getDisplayName());
-        boolean hiddenSpace = space.getVisibility().equals(Space.HIDDEN) && !spaceService.isMember(space, currentUsername)
-            && !spaceService.isSuperManager(currentUsername);
+        boolean hiddenSpace = space.getVisibility().equals(Space.HIDDEN)
+                              && !spaceService.isSuperManager(space, currentUsername)
+                              && !spaceService.isMember(space, currentUsername);
         news.setHiddenSpace(hiddenSpace);
-        boolean isSpaceMember = spaceService.isSuperManager(currentUsername) || spaceService.isMember(space, currentUsername);
+        boolean isSpaceMember = spaceService.isSuperManager(space, currentUsername)
+                                || spaceService.isMember(space, currentUsername);
         news.setSpaceMember(isSpaceMember);
         if (StringUtils.isNotEmpty(space.getGroupId())) {
           news.setSpaceUrl(NewsUtils.buildSpaceUrl(space.getId()));
