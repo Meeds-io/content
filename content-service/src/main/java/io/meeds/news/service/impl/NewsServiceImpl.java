@@ -806,15 +806,16 @@ public class NewsServiceImpl implements NewsService {
       if (space == null) {
         LOG.warn("Can't find space with id {} when checking access on news with id {}", spaceId, news.getId());
         return false;
+      } else if (spaceService.isSuperManager(space, authenticatedUser)) {
+        return true;
       }
       if (!news.isPublished() && StringUtils.equals(news.getPublicationState(), POSTED)
-          && !(spaceService.isSuperManager(authenticatedUser) || spaceService.isMember(space, authenticatedUser)
-              || isMemberOfsharedInSpaces(news, authenticatedUser))) {
+          && !(spaceService.canViewSpace(space, authenticatedUser) || canViewSharedInSpaces(news, authenticatedUser))) {
         return false;
       }
       if (news.isPublished() && StringUtils.equals(news.getPublicationState(), POSTED)
           && NewsUtils.SPACE_NEWS_AUDIENCE.equals(news.getAudience())
-          && !(spaceService.isMember(space, authenticatedUser) || isMemberOfsharedInSpaces(news, authenticatedUser))) {
+          && !(spaceService.canViewSpace(space, authenticatedUser) || canViewSharedInSpaces(news, authenticatedUser))) {
         return false;
       }
       if (StringUtils.equals(news.getPublicationState(), STAGED)
@@ -1228,10 +1229,9 @@ public class NewsServiceImpl implements NewsService {
       draftArticle.setSpaceAvatarUrl(draftArticleSpace.getAvatarUrl());
       draftArticle.setSpaceDisplayName(draftArticleSpace.getDisplayName());
       boolean hiddenSpace = draftArticleSpace.getVisibility().equals(Space.HIDDEN)
-          && !spaceService.isMember(draftArticleSpace, currentUserId) && !spaceService.isSuperManager(currentUserId);
+          && !spaceService.canViewSpace(draftArticleSpace, currentUserId);
       draftArticle.setHiddenSpace(hiddenSpace);
-      boolean isSpaceMember =
-                            spaceService.isSuperManager(currentUserId) || spaceService.isMember(draftArticleSpace, currentUserId);
+      boolean isSpaceMember = spaceService.canViewSpace(draftArticleSpace, currentUserId);
       draftArticle.setSpaceMember(isSpaceMember);
       if (StringUtils.isNotEmpty(draftArticleSpace.getGroupId())) {
         draftArticle.setSpaceUrl(NewsUtils.buildSpaceUrl(draftArticleSpace.getId()));
@@ -1293,7 +1293,7 @@ public class NewsServiceImpl implements NewsService {
           sharedInSpacesList.add(sharedInSpaceId);
           Space sharedInSpace = spaceService.getSpaceById(sharedInSpaceId);
           String activityId = activities[i].split(":")[1];
-          if (sharedInSpace != null && currentUsername != null && spaceService.isMember(sharedInSpace, currentUsername)
+          if (sharedInSpace != null && currentUsername != null && spaceService.canViewSpace(sharedInSpace, currentUsername)
               && activityManager.isActivityExists(activityId)) {
             memberSpaceActivities.append(activities[i]).append(";");
           }
@@ -1525,10 +1525,10 @@ public class NewsServiceImpl implements NewsService {
     return spaceService.canRedactOnSpace(space, currentIdentity);
   }
 
-  private boolean isMemberOfsharedInSpaces(News news, String username) {
+  private boolean canViewSharedInSpaces(News news, String username) {
     for (String sharedInSpaceId : news.getSharedInSpacesList()) {
       Space sharedInSpace = spaceService.getSpaceById(sharedInSpaceId);
-      if (sharedInSpace != null && spaceService.isMember(sharedInSpace, username)) {
+      if (sharedInSpace != null && spaceService.canViewSpace(sharedInSpace, username)) {
         return true;
       }
     }
@@ -1582,13 +1582,13 @@ public class NewsServiceImpl implements NewsService {
     String contentSpaceId = lastSpaceIdActivityId.split(":")[0];
     String contentActivityId = lastSpaceIdActivityId.split(":")[1];
     Space contentSpace = spaceService.getSpaceById(contentSpaceId);
-    boolean isMember = spaceService.isMember(contentSpace, contentAuthor);
+    boolean canView = spaceService.canViewSpace(contentSpace, contentAuthor);
     if (contentSpace == null) {
       throw new NullPointerException("Cannot find a space with id " + contentSpaceId + ", it may not exist");
     }
     org.exoplatform.social.core.identity.model.Identity identity = identityManager.getOrCreateUserIdentity(contentAuthor);
     String authorAvatarUrl = LinkProviderUtils.getUserAvatarUrl(identity.getProfile());
-    String activityLink = NotificationUtils.getNotificationActivityLink(contentSpace, contentActivityId, isMember);
+    String activityLink = NotificationUtils.getNotificationActivityLink(contentSpace, contentActivityId, canView);
     String contentSpaceName = contentSpace.getDisplayName();
 
     // Send Notification
@@ -1875,10 +1875,9 @@ public class NewsServiceImpl implements NewsService {
         news.setSpaceId(space.getId());
         news.setSpaceAvatarUrl(space.getAvatarUrl());
         news.setSpaceDisplayName(space.getDisplayName());
-        boolean hiddenSpace = space.getVisibility().equals(Space.HIDDEN) && !spaceService.isMember(space, currentUsername)
-            && !spaceService.isSuperManager(currentUsername);
+        boolean hiddenSpace = space.getVisibility().equals(Space.HIDDEN) && !spaceService.canViewSpace(space, currentUsername);
         news.setHiddenSpace(hiddenSpace);
-        boolean isSpaceMember = spaceService.isSuperManager(currentUsername) || spaceService.isMember(space, currentUsername);
+        boolean isSpaceMember = spaceService.canViewSpace(space, currentUsername);
         news.setSpaceMember(isSpaceMember);
         if (StringUtils.isNotEmpty(space.getGroupId())) {
           news.setSpaceUrl(NewsUtils.buildSpaceUrl(space.getId()));
