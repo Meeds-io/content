@@ -701,7 +701,7 @@ public class NewsRestTest {
     space1.setPrettyName("space1");
     lenient().when(spaceService.getSpaceById(anyString())).thenReturn(space1);
     lenient().when(spaceService.isMember(any(Space.class), eq(JOHN))).thenReturn(true);
-    lenient().when(spaceService.isSuperManager(eq(JOHN))).thenReturn(true);
+    lenient().when(spaceService.isSuperManager(JOHN)).thenReturn(true);
 
     // When
     Response response = newsRestController.deleteNews("1", ARTICLE.name().toLowerCase(), 0L);
