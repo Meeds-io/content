@@ -334,7 +334,7 @@ public class NewsServiceImpl implements NewsService {
     }
     if (!news.getPublicationState().isEmpty() && !DRAFT.equals(news.getPublicationState())) {
       if (post != null) {
-        updateNewsActivity(news, post);
+        updateNewsActivity(news, post, originalNews.isActivityPosted());
       }
       NewsUtils.broadcastEvent(NewsUtils.UPDATE_NEWS, updater, news);
     }
@@ -1659,10 +1659,10 @@ public class NewsServiceImpl implements NewsService {
     }
   }
 
-  private void updateNewsActivity(News news, boolean post) {
+  private void updateNewsActivity(News news, boolean post, boolean isPosted) {
     ExoSocialActivity activity = activityManager.getActivity(news.getActivityId());
     if (activity != null) {
-      if (post) {
+      if (post && !isPosted) {
         activity.setUpdated(System.currentTimeMillis());
       }
       activity.isHidden(!news.isActivityPosted());
