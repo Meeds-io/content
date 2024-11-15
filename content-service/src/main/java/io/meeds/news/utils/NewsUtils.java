@@ -100,7 +100,7 @@ public class NewsUtils {
   public static final String UPDATE_CONTENT_PERMISSIONS      = "content.update.permissions";
 
   public enum NewsObjectType {
-    DRAFT, LATEST_DRAFT, ARTICLE;
+    DRAFT, LATEST_DRAFT, ARTICLE, EXISTING_PAGE
   }
 
   public enum NewsUpdateType {

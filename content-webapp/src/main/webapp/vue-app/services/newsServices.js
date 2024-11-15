@@ -31,8 +31,6 @@ export function getNewsById(id, editMode, type, lang) {
     } else if ( resp.status === 401) {
       return resp.status;
     }
-  }).catch((error) => {
-    return error;
   });
 }
 
