@@ -587,4 +587,32 @@
       <as>$</as>
     </depends>
   </module>
+
+  <module>
+    <name>NotePublishExtensions</name>
+    <script>
+      <minify>false</minify>
+      <path>/js/notePublishExtensions.bundle.js</path>
+    </script>
+    <depends>
+      <module>vue</module>
+    </depends>
+    <depends>
+      <module>vuetify</module>
+    </depends>
+    <depends>
+      <module>eXoVueI18n</module>
+    </depends>
+    <depends>
+      <module>jquery</module>
+      <as>$</as>
+    </depends>
+    <depends>
+      <module>extensionRegistry</module>
+    </depends>
+    <depends>
+      <module>commonVueComponents</module>
+    </depends>
+  </module>
+
 </gatein-resources>
