@@ -134,7 +134,8 @@ export default {
       spacePrettyName: null,
       editorExtensions: null,
       autosaveProcessedFromEditorExtension: false,
-      allowedTargets: []
+      allowedTargets: [],
+      draftObjectType: 'wikiDraft',
     };
   },
   watch: {
@@ -329,6 +330,8 @@ export default {
       if (updatedArticle?.properties) {
         updatedArticle.properties.draft = true;
       }
+      updatedArticle.body = this.$noteUtils.sanitizeSrcImageTags(updatedArticle.body);
+      const setEditorDataMutely = this.$noteUtils.isHasImagesToBeProcessed(updatedArticle.body, this.draftObjectType);
       updatedArticle.publicationState = 'draft';
       return this.$newsServices.updateNews(updatedArticle, false, this.articleType).then((createdArticle) => {
         this.spaceUrl = createdArticle.spaceUrl;
@@ -345,6 +348,9 @@ export default {
         this.article.lang = createdArticle.lang;
         if (this.article.body !== createdArticle.body) {
           this.imagesURLs = this.extractImagesURLsDiffs(this.article.body, createdArticle.body);
+        }
+        if (setEditorDataMutely) {
+          this.$refs?.editor?.setEditorDataMutely?.(createdArticle.body);
         }
       }).then(() => this.$emit('draftUpdated'))
         .then(() => this.draftSavingStatus = this.$t('news.composer.draft.savedDraftStatus'))
@@ -374,6 +380,7 @@ export default {
           this.imagesURLs = this.extractImagesURLsDiffs(this.article.body, createdArticle.body);
         }
         this.fillArticle(createdArticle.id, false, createdArticle.lang);
+        this.$refs?.editor?.setEditorDataMutely?.(createdArticle.body);
         this.displayAlert({
           message: this.$t('news.save.success.message'),
           type: 'success',
@@ -420,6 +427,8 @@ export default {
         properties: properties,
         draftPage: true
       };
+      article.body = this.$noteUtils.sanitizeSrcImageTags(article.body);
+      const setEditorDataMutely = this.$noteUtils.isHasImagesToBeProcessed(article.body, this.draftObjectType);
       if (this.article.id) {
         if (this.article.title || this.article.body) {
           article.id = this.article.id;
@@ -431,6 +440,9 @@ export default {
               this.article.draftPage = true;
               this.article.id = updatedArticle.id;
               this.article.properties = updatedArticle?.properties;
+              if (setEditorDataMutely) {
+                this.$refs?.editor?.setEditorDataMutely?.(updatedArticle.body);
+              }
             })
             .then(() => this.$emit('draftUpdated'))
             .then(() => {
@@ -456,6 +468,9 @@ export default {
           this.article.properties = createdArticle?.properties;
           if (!this.articleId) {
             this.articleId = createdArticle.id;
+          }
+          if (setEditorDataMutely) {
+            this.$refs?.editor?.setEditorDataMutely?.(createdArticle.body);
           }
           this.$emit('draftCreated');
           this.savingDraft = false;
@@ -523,6 +538,7 @@ export default {
       if (article.publicationState ==='staged') {
         this.$newsServices.scheduleNews(article, this.articleType).then((scheduleArticle) => {
           this.articleType = 'latest_draft';
+          this.$refs?.editor?.setEditorDataMutely?.(scheduleArticle.body);
           this.fillArticle(scheduleArticle.id, false, null).then(() => {
             this.updateUrl();
             this.initDataPropertiesFromUrl();
@@ -538,6 +554,7 @@ export default {
       } else {
         this.$newsServices.saveNews(article).then((createdArticle) => {
           this.articleType = 'latest_draft';
+          this.$refs?.editor?.setEditorDataMutely?.(createdArticle.body);
           this.fillArticle(createdArticle.id, false, createdArticle.lang || this.selectedLanguage).then(() => {
             this.updateUrl();
             this.initDataPropertiesFromUrl();
