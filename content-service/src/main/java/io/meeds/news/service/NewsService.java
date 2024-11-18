@@ -284,7 +284,7 @@ public interface NewsService {
 
   /**
    * Checks if the user can schedule publishinga News
-   * 
+   *
    * @param space target space
    * @param currentIdentity current user identity
    * @param article target article
@@ -303,7 +303,7 @@ public interface NewsService {
 
   /**
    * Shares a news item into a dedicated space
-   * 
+   *
    * @param news {@link News} to share
    * @param space {@link Space} to share with, the news
    * @param userIdentity {@link Identity} of user making the modification
@@ -324,6 +324,16 @@ public interface NewsService {
                                     String pageOwnerId,
                                     String draftArticleCreator,
                                     long creationDate) throws Exception;
+
+  /**
+   * Create an article from exiting page
+   *
+   * @param article article object
+   * @param creator article creator
+   * @return {@link News}
+   * @throws Exception
+   */
+  News createArticleFromExistingPage(News article, String creator) throws Exception;
 
   /**
    * @param newsArticle {@link News} news article to be created

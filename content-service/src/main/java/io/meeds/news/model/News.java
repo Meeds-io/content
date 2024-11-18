@@ -142,4 +142,6 @@ public class News {
   private String                          latestVersionId;
 
   private NotePageProperties              properties;
+
+  private boolean                         fromDraft;
 }
