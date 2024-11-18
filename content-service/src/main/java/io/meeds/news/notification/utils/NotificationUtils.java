@@ -40,9 +40,9 @@ public class NotificationUtils {
     return user.getFullName();
   }
 
-  public static String getNotificationActivityLink(Space space, String activityId, boolean isMember) {
+  public static String getNotificationActivityLink(Space space, String activityId, boolean canView) {
     String activityLink = "";
-    if (isMember) {
+    if (canView) {
       activityLink = getActivityPermalink(activityId);
     } else {
       activityLink = getNotificationActivityLinkForNotSpaceMembers(space);
