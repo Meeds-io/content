@@ -20,6 +20,7 @@
 package io.meeds.news.rest;
 
 import static io.meeds.news.utils.NewsUtils.NewsObjectType.ARTICLE;
+import static io.meeds.news.utils.NewsUtils.NewsObjectType.EXISTING_PAGE;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -634,12 +635,13 @@ public class NewsRest {
     }
     org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
     try {
-      News news = newsService.getNewsById(scheduledNews.getId(), currentIdentity, false, newsObjectType);
-      if (news == null) {
-        return ResponseEntity.notFound().build();
+      if (!newsObjectType.equalsIgnoreCase(EXISTING_PAGE.name())) {
+        News news = newsService.getNewsById(scheduledNews.getId(), currentIdentity, false, newsObjectType);
+        if (news == null) {
+          return ResponseEntity.notFound().build();
+        }
       }
-      news = newsService.scheduleNews(scheduledNews, currentIdentity, newsObjectType);
-      return ResponseEntity.ok(news);
+      return ResponseEntity.ok(newsService.scheduleNews(scheduledNews, currentIdentity, newsObjectType));
     } catch (IllegalAccessException e) {
       LOG.warn("User '{}' is not autorized to schedule news", currentIdentity.getUserId(), e);
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
