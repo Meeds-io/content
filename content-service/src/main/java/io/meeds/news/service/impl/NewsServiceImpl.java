@@ -23,7 +23,6 @@ import static io.meeds.news.utils.NewsUtils.NewsObjectType.ARTICLE;
 import static io.meeds.news.utils.NewsUtils.NewsObjectType.LATEST_DRAFT;
 import static io.meeds.news.utils.NewsUtils.NewsUpdateType.CONTENT_AND_TITLE;
 
-import java.text.ParseException;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -242,6 +241,8 @@ public class NewsServiceImpl implements NewsService {
   public News postNews(News news, String poster) throws Exception {
     if (news.getPublicationState().equals(STAGED) || news.getSchedulePostDate() != null) {
       news = postScheduledArticle(news);
+    } else if (!news.isFromDraft() && noteService.getNoteById(news.getId()) != null) {
+      news = createArticleFromExistingPage(news, poster);
     } else {
       news = createNewsArticlePage(news, poster);
     }
@@ -752,6 +753,8 @@ public class NewsServiceImpl implements NewsService {
       // it will be posted and published by the news schedule job or the edit
       // scheduling.
       news = createNewsArticlePage(news, currentIdentity.getUserId());
+    } else if (newsObjectType.equalsIgnoreCase(NewsObjectType.EXISTING_PAGE.name())) {
+      news = createArticleFromExistingPage(news, currentIdentity.getUserId());
     } else if (newsObjectType.equalsIgnoreCase(ARTICLE.name())) {
       updateArticle(news, currentIdentity, NewsUtils.NewsUpdateType.SCHEDULE.name().toLowerCase());
     }
@@ -969,6 +972,21 @@ public class NewsServiceImpl implements NewsService {
    * {@inheritDoc}
    */
   @Override
+  public News createArticleFromExistingPage(News article, String creator) throws Exception {
+    Page articlePage = noteService.getNoteById(article.getId());
+    Space space = spaceService.getSpaceById(article.getSpaceId());
+    if (articlePage != null && space != null) {
+      PageVersion pageVersion = noteService.getPublishedVersionByPageIdAndLang(Long.parseLong(articlePage.getId()), null);
+      article.setIllustrationURL(NewsUtils.buildIllustrationUrl(articlePage.getProperties(), articlePage.getLang()));
+      buildNewArticleProperties(article, articlePage, creator, space.getId(), pageVersion.getId());
+    }
+    return article;
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
   public News createNewsArticlePage(News newsArticle, String newsArticleCreator) throws Exception {
     // get the news draft article from the news model before setting the news
     // article id to the news model
@@ -1020,44 +1038,8 @@ public class NewsServiceImpl implements NewsService {
         newsArticle.setProperties(newsArticlePage.getProperties());
         newsArticle.setLatestVersionId(pageVersion.getId());
         newsArticle.setIllustrationURL(NewsUtils.buildIllustrationUrl(newsArticlePage.getProperties(), newsArticle.getLang()));
-
-        NewsPageVersionObject newsArticleVersionMetaDataObject = new NewsPageVersionObject(NEWS_METADATA_PAGE_VERSION_OBJECT_TYPE,
-                                                                                           pageVersion.getId(),
-                                                                                           null,
-                                                                                           Long.parseLong(space.getId()));
-        String newsArticleMetadataItemCreatorIdentityId = identityManager.getOrCreateUserIdentity(newsArticleCreator).getId();
-        Map<String, String> newsArticleVersionMetadataItemProperties = new HashMap<>();
-
-        // create the page version metadata item
-        metadataService.createMetadataItem(newsArticleVersionMetaDataObject,
-                                           NEWS_METADATA_KEY,
-                                           newsArticleVersionMetadataItemProperties,
-                                           Long.parseLong(newsArticleMetadataItemCreatorIdentityId),
-                                           false);
-
-        // create metadata item page
-        NewsPageObject newsPageObject = new NewsPageObject(NEWS_METADATA_PAGE_OBJECT_TYPE,
-                                                           newsArticlePage.getId(),
-                                                           null,
-                                                           Long.parseLong(space.getId()));
-        Map<String, String> newsPageProperties = new HashMap<>();
-        if (StringUtils.isNotEmpty(newsArticle.getAudience())) {
-          newsPageProperties.put(NEWS_AUDIENCE, newsArticle.getAudience());
-        }
-
-        setScheduleProperties(newsArticle, newsPageProperties);
         
-        if (StringUtils.isNotEmpty(newsArticle.getPublicationState())) {
-          newsPageProperties.put(NEWS_PUBLICATION_STATE, newsArticle.getPublicationState());
-        }
-        newsPageProperties.put(NEWS_ACTIVITY_POSTED, String.valueOf(newsArticle.isActivityPosted()));
-        newsPageProperties.put(PUBLISHED, String.valueOf(newsArticle.isPublished()));
-        newsPageProperties.put(NEWS_DELETED, String.valueOf(newsArticlePage.isDeleted()));
-        metadataService.createMetadataItem(newsPageObject,
-                                           NEWS_METADATA_KEY,
-                                           newsPageProperties,
-                                           Long.parseLong(newsArticleMetadataItemCreatorIdentityId),
-                                           false);
+        buildNewArticleProperties(newsArticle, newsArticlePage, newsArticleCreator, space.getId(), pageVersion.getId());
         // delete the draft
         deleteDraftArticle(draftNewsId, poster.getUserId());
         return newsArticle;
@@ -1180,6 +1162,65 @@ public class NewsServiceImpl implements NewsService {
   @Override
   public List<String> getArticleLanguages(String articleId, boolean withDrafts) throws WikiException {
     return noteService.getPageAvailableTranslationLanguages(Long.parseLong(articleId), withDrafts);
+  }
+
+  private void postProcessing(News news, String poster) throws Exception {
+    if (news.getAuthor() == null) {
+      news.setAuthor(poster);
+    }
+
+    postNewsActivity(news);
+    sendNotification(poster, news, NotificationConstants.NOTIFICATION_CONTEXT.POST_NEWS);
+
+    if (news.isPublished()) {
+      publishNews(news, poster);
+    }
+    news.setUrl(NewsUtils.buildNewsArticleUrl(news, poster));
+    // Broadcast events for gamification and analytics
+    NewsUtils.broadcastEvent(NewsUtils.POST_NEWS_ARTICLE, news.getId(), news);
+    NewsUtils.broadcastEvent(NewsUtils.POST_NEWS, news.getAuthor(), news);
+  }
+
+  private void buildNewArticleProperties(News article,
+                                         Page articlePage,
+                                         String creator,
+                                         String spaceId,
+                                         String versionId) throws Exception {
+    NewsPageVersionObject articleVersionMetaDataObject = new NewsPageVersionObject(NEWS_METADATA_PAGE_VERSION_OBJECT_TYPE,
+                                                                                   versionId,
+                                                                                   null,
+                                                                                   Long.parseLong(spaceId));
+    String creatorIdentityId = identityManager.getOrCreateUserIdentity(creator).getId();
+    Map<String, String> newsArticleVersionMetadataItemProperties = new HashMap<>();
+    // create the page version metadata item
+    metadataService.createMetadataItem(articleVersionMetaDataObject,
+                                       NEWS_METADATA_KEY,
+                                       newsArticleVersionMetadataItemProperties,
+                                       Long.parseLong(creatorIdentityId),
+                                       false);
+
+    // create metadata item page
+    NewsPageObject newsPageObject = new NewsPageObject(NEWS_METADATA_PAGE_OBJECT_TYPE,
+                                                       articlePage.getId(),
+                                                       null,
+                                                       Long.parseLong(spaceId));
+    Map<String, String> newsPageProperties = new HashMap<>();
+    if (StringUtils.isNotEmpty(article.getAudience())) {
+      newsPageProperties.put(NEWS_AUDIENCE, article.getAudience());
+    }
+    setScheduleProperties(article, newsPageProperties);
+
+    if (StringUtils.isNotEmpty(article.getPublicationState())) {
+      newsPageProperties.put(NEWS_PUBLICATION_STATE, article.getPublicationState());
+    }
+    newsPageProperties.put(NEWS_ACTIVITY_POSTED, String.valueOf(article.isActivityPosted()));
+    newsPageProperties.put(PUBLISHED, String.valueOf(article.isPublished()));
+    newsPageProperties.put(NEWS_DELETED, String.valueOf(articlePage.isDeleted()));
+    metadataService.createMetadataItem(newsPageObject,
+                                       NEWS_METADATA_KEY,
+                                       newsPageProperties,
+                                       Long.parseLong(creatorIdentityId),
+                                       false);
   }
 
   private News updateDraftArticleForNewPage(News draftArticle, String draftArticleUpdater, Space space) throws WikiException,
@@ -1915,7 +1956,7 @@ public class NewsServiceImpl implements NewsService {
                                                            articlePage.getId(),
                                                            null,
                                                            Long.parseLong(space.getId()));
-        MetadataItem metadataItem = metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY, newsPageObject).get(0);
+        MetadataItem metadataItem = metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY, newsPageObject).getFirst();
         buildArticleProperties(news, currentUsername, metadataItem);
         news.setDeleted(articlePage.isDeleted());
         news.setPublicationDate(articlePage.getCreatedDate());
@@ -1932,14 +1973,6 @@ public class NewsServiceImpl implements NewsService {
           news.setIllustrationURL(NewsUtils.buildIllustrationUrl(news.getProperties(), pageVersion.getLang()));
 
         }
-
-        NewsPageVersionObject newsPageVersionObject = new NewsPageVersionObject(NEWS_METADATA_PAGE_VERSION_OBJECT_TYPE,
-                                                                                pageVersion.getId(),
-                                                                                null,
-                                                                                Long.parseLong(space.getId()));
-        List<MetadataItem> newsPageVersionMetadataItems =
-                                                        metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY,
-                                                                                                            newsPageVersionObject);
         return news;
       }
     }
@@ -2051,7 +2084,7 @@ public class NewsServiceImpl implements NewsService {
   }
 
   private String parseAndNormalizeScheduleDate(String date, String timeZoneId) {
-    if(StringUtils.isBlank(date)) {
+    if(StringUtils.isBlank(date) || date.equals("0")) {
       return null;
     }
     ZoneId userTimeZone = StringUtils.isBlank(timeZoneId) ? ZoneId.of("UTC") : ZoneId.of(timeZoneId);

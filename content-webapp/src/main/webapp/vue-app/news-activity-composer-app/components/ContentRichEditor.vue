@@ -521,6 +521,7 @@ export default {
         audience: this.article.audience,
         draftPage: this.article.publicationState === 'draft',
         scheduleUnpublishDate: this.article.scheduleUnpublishDate,
+        fromDraft: true,
         properties: this.article?.properties
       };
 

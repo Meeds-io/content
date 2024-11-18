@@ -546,9 +546,25 @@ public class NewsServiceImplTest {
     verify(noteService, times(1)).getPublishedVersionByPageIdAndLang(1L, null);
     verify(metadataService, atLeast(1)).createMetadataItem(any(MetadataObject.class),
                                                          any(MetadataKey.class),
-                                                         any(Map.class),
+                                                         anyMap(),
                                                          anyLong(),
                                                          anyBoolean());
+    Page note = new Page();
+    note.setId("1");
+    note.setTitle(newsArticle.getTitle());
+    note.setContent(newsArticle.getBody());
+    note.setParentPageId(rootPage.getId());
+    note.setAuthor(newsArticle.getAuthor());
+    when(noteService.getNoteById(anyString())).thenReturn(note);
+    clearInvocations(noteService, metadataService);
+    newsService.createNews(newsArticle, identity);
+    verify(noteService, times(0)).createNote(wiki, rootPage.getName(), newsArticlePage, identity);
+    verify(noteService, times(1)).getPublishedVersionByPageIdAndLang(1L, null);
+    verify(metadataService, atLeast(1)).createMetadataItem(any(MetadataObject.class),
+            any(MetadataKey.class),
+            anyMap(),
+            anyLong(),
+            anyBoolean());
   }
 
   @Test
