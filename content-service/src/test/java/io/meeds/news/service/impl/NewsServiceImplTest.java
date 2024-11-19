@@ -44,6 +44,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
+import io.meeds.news.plugin.ArticlePageVersionAttachmentPlugin;
 import io.meeds.news.search.NewsSearchConnector;
 import io.meeds.news.search.NewsESSearchResult;
 import io.meeds.notes.model.NoteFeaturedImage;
@@ -625,6 +626,7 @@ public class NewsServiceImplTest {
     when(draftPage.getCreatedDate()).thenReturn(new Date());
     when(draftPage.getAuthor()).thenReturn("john");
     when(draftPage.getId()).thenReturn("1");
+    when(draftPage.getContent()).thenReturn("content");
     when(noteService.createDraftForExistPage(any(DraftPage.class),
                                              any(Page.class),
                                              nullable(String.class),
@@ -784,7 +786,7 @@ public class NewsServiceImplTest {
 
     // Then
     verify(noteService, times(1)).updateNote(any(Page.class), any(), any());
-    verify(noteService, times(1)).createVersionOfNote(existingPage, identity.getUserId());
+    verify(noteService, times(1)).createVersionOfNote(existingPage, identity.getUserId(), ArticlePageVersionAttachmentPlugin.OBJECT_TYPE, null);
     verify(noteService, times(2)).getPublishedVersionByPageIdAndLang(1L, null);
   }
 
@@ -1020,6 +1022,7 @@ public class NewsServiceImplTest {
     when(pageVersion.getAuthor()).thenReturn("john");
     when(pageVersion.getUpdatedDate()).thenReturn(new Date());
     when(pageVersion.getAuthorFullName()).thenReturn("full name");
+    when(pageVersion.getContent()).thenReturn("content");
 
     News news = new News();
     news.setAuthor("john");
@@ -1047,7 +1050,7 @@ public class NewsServiceImplTest {
 
     // Then
     verify(noteService, times(1)).updateNote(any(Page.class), any(), any());
-    verify(noteService, times(1)).createVersionOfNote(existingPage, identity.getUserId());
+    verify(noteService, times(1)).createVersionOfNote(existingPage, identity.getUserId(), ArticlePageVersionAttachmentPlugin.OBJECT_TYPE, null);
     verify(noteService, times(2)).getPublishedVersionByPageIdAndLang(1L, null);
     NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.ADD_ARTICLE_TRANSLATION), anyObject(), anyObject()), times(1));
   }
