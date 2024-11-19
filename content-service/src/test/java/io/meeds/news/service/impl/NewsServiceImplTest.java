@@ -947,6 +947,7 @@ public class NewsServiceImplTest {
 
     mockBuildArticle(metadataItems);
     Space space = mockSpace();
+    when(space.getGroupId()).thenReturn("/spaces/test");
     Wiki wiki = mock(Wiki.class);
     when(wikiService.getWikiByTypeAndOwner(anyString(), anyString())).thenReturn(wiki);
     org.exoplatform.wiki.model.Page rootPage = mock(org.exoplatform.wiki.model.Page.class);
@@ -973,10 +974,17 @@ public class NewsServiceImplTest {
     when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(identity1);
     when(identity1.getId()).thenReturn("1");
 
-    newsService.unScheduleNews(newsArticle, space.getGroupId(), "john");
+    newsService.unScheduleNews(newsArticle, space, "john");
 
     verify(noteService, times(1)).createDraftForNewPage(any(DraftPage.class), anyLong(), anyLong());
     verify(noteService, times(1)).deleteNote(anyString(), anyString(), anyString());
+
+    clearInvocations(noteService);
+    properties.put(EXTERNAL_PAGE, "true");
+    newsService.unScheduleNews(newsArticle, space, "john");
+    verify(noteService, times(0)).createDraftForNewPage(any(DraftPage.class), anyLong(), anyLong());
+    verify(noteService, times(0)).deleteNote(anyString(), anyString(), anyString());
+    verify(metadataService, times(2)).deleteMetadataItemsByObject(any());
   }
 
   @Test
