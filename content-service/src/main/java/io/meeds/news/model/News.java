@@ -144,4 +144,7 @@ public class News {
   private NotePageProperties              properties;
 
   private boolean                         fromDraft;
+
+  private boolean                         fromExternalPage;
+
 }

@@ -265,13 +265,13 @@ public interface NewsService {
   /**
    * Un-schedule publishing a News
    *
-   * @param news
-   * @param pageOwnerId
-   * @param newsArticleCreator
+   * @param news news article
+   * @param space owner space
+   * @param newsArticleCreator article creator
    * @return unscheduled News
    * @throws Exception when error occurs
    */
-  News unScheduleNews(News news, String pageOwnerId, String newsArticleCreator) throws Exception;
+  News unScheduleNews(News news, Space space, String newsArticleCreator) throws Exception;
 
   /**
    * Search news by term
