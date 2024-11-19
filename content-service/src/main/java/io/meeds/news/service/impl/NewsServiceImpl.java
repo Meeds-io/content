@@ -238,20 +238,21 @@ public class NewsServiceImpl implements NewsService {
 
   @Override
   public News postNews(News news, String poster) throws Exception {
-    if (news.getPublicationState().equals(STAGED) || news.getSchedulePostDate() != null) {
+    if (news == null || poster == null || poster.isBlank()) {
+      throw new IllegalArgumentException("News and poster cannot be null or empty.");
+    }
+
+    if (STAGED.equals(news.getPublicationState()) || news.getSchedulePostDate() != null) {
       news = postScheduledArticle(news);
     } else if (!news.isFromDraft() && noteService.getNoteById(news.getId()) != null) {
       news = createArticleFromExistingPage(news, poster);
     } else {
       news = createNewsArticlePage(news, poster);
     }
-    postNewsActivity(news);
-    sendNotification(poster, news, NotificationConstants.NOTIFICATION_CONTEXT.POST_NEWS);
-    if (news.isPublished()) {
-      publishNews(news, poster);
+
+    if (news != null) {
+      postProcessing(news, poster);
     }
-    NewsUtils.broadcastEvent(NewsUtils.POST_NEWS_ARTICLE, news.getId(), news);// Gamification
-    NewsUtils.broadcastEvent(NewsUtils.POST_NEWS, news.getAuthor(), news);// Analytics
     return news;
   }
 
@@ -1178,6 +1179,23 @@ public class NewsServiceImpl implements NewsService {
   @Override
   public List<String> getArticleLanguages(String articleId, boolean withDrafts) throws WikiException {
     return noteService.getPageAvailableTranslationLanguages(Long.parseLong(articleId), withDrafts);
+  }
+
+  private void postProcessing(News news, String poster) throws Exception {
+    if (news.getAuthor() == null) {
+      news.setAuthor(poster);
+    }
+
+    postNewsActivity(news);
+    sendNotification(poster, news, NotificationConstants.NOTIFICATION_CONTEXT.POST_NEWS);
+
+    if (news.isPublished()) {
+      publishNews(news, poster);
+    }
+
+    // Broadcast events for gamification and analytics
+    NewsUtils.broadcastEvent(NewsUtils.POST_NEWS_ARTICLE, news.getId(), news);
+    NewsUtils.broadcastEvent(NewsUtils.POST_NEWS, news.getAuthor(), news);
   }
   
   private void buildNewArticleProperties(News article,
