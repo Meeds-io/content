@@ -169,7 +169,7 @@ public class NewsServiceImpl implements NewsService {
   /** The Constant NEWS_METADATA_LATEST_DRAFT_OBJECT_TYPE. */
   public static final String       NEWS_METADATA_LATEST_DRAFT_OBJECT_TYPE = "newsLatestDraftPage";
 
-  public static final String       NEWS_ATTACHMENTS_IDS                   = "attachmentsIds";
+  public static final String       EXTERNAL_PAGE                          = "externalPage";
 
   public static final String       ARTICLE_CONTENT                        = "content";
 
@@ -223,7 +223,7 @@ public class NewsServiceImpl implements NewsService {
       if (POSTED.equals(news.getPublicationState())) {
         createdNews = postNews(news, currentIdentity.getUserId());
       } else if (news.getSchedulePostDate() != null) {
-        createdNews = unScheduleNews(news, space.getGroupId(), currentIdentity.getUserId());
+        createdNews = unScheduleNews(news, space, currentIdentity.getUserId());
       } else {
         createdNews = createDraftArticleForNewPage(news,
                                                    space.getGroupId(),
@@ -239,20 +239,21 @@ public class NewsServiceImpl implements NewsService {
 
   @Override
   public News postNews(News news, String poster) throws Exception {
-    if (news.getPublicationState().equals(STAGED) || news.getSchedulePostDate() != null) {
+    if (news == null || poster == null || poster.isBlank()) {
+      throw new IllegalArgumentException("News and poster cannot be null or empty.");
+    }
+
+    if (STAGED.equals(news.getPublicationState()) || news.getSchedulePostDate() != null) {
       news = postScheduledArticle(news);
     } else if (!news.isFromDraft() && noteService.getNoteById(news.getId()) != null) {
       news = createArticleFromExistingPage(news, poster);
     } else {
       news = createNewsArticlePage(news, poster);
     }
-    postNewsActivity(news);
-    sendNotification(poster, news, NotificationConstants.NOTIFICATION_CONTEXT.POST_NEWS);
-    if (news.isPublished()) {
-      publishNews(news, poster);
+
+    if (news != null) {
+      postProcessing(news, poster);
     }
-    NewsUtils.broadcastEvent(NewsUtils.POST_NEWS_ARTICLE, news.getId(), news);// Gamification
-    NewsUtils.broadcastEvent(NewsUtils.POST_NEWS, news.getAuthor(), news);// Analytics
     return news;
   }
 
@@ -778,15 +779,28 @@ public class NewsServiceImpl implements NewsService {
    * {@inheritDoc}
    */
   @Override
-  public News unScheduleNews(News news, String pageOwnerId, String articleCreator) throws Exception {
+  public News unScheduleNews(News news, Space space, String articleCreator) throws Exception {
     News existingNews = getNewsArticleById(news.getId());
-    if (existingNews != null) {
+    if (existingNews != null && !existingNews.isFromExternalPage()) {
       if (news.getProperties() != null) {
         news.getProperties().setDraft(true);
       }
-      news = createDraftArticleForNewPage(news, pageOwnerId, articleCreator, System.currentTimeMillis());
+      news = createDraftArticleForNewPage(news, space.getGroupId(), articleCreator, System.currentTimeMillis());
       deleteArticle(existingNews, articleCreator);
       return buildDraftArticle(news.getId(), articleCreator);
+    } else if (existingNews != null) {
+      PageVersion pageVersion = noteService.getPublishedVersionByPageIdAndLang(Long.parseLong(existingNews.getId()), null);
+      NewsPageVersionObject articleVersionMetaDataObject = new NewsPageVersionObject(NEWS_METADATA_PAGE_VERSION_OBJECT_TYPE,
+                                                                                     pageVersion.getId(),
+                                                                                     null,
+                                                                                     Long.parseLong(space.getId()));
+      NewsPageObject newsPageObject = new NewsPageObject(NEWS_METADATA_PAGE_OBJECT_TYPE,
+                                                         existingNews.getId(),
+                                                         null,
+                                                         Long.parseLong(space.getId()));
+      metadataService.deleteMetadataItemsByObject(articleVersionMetaDataObject);
+      metadataService.deleteMetadataItemsByObject(newsPageObject);
+      return existingNews;
     }
     return null;
   }
@@ -978,7 +992,7 @@ public class NewsServiceImpl implements NewsService {
     if (articlePage != null && space != null) {
       PageVersion pageVersion = noteService.getPublishedVersionByPageIdAndLang(Long.parseLong(articlePage.getId()), null);
       article.setIllustrationURL(NewsUtils.buildIllustrationUrl(articlePage.getProperties(), articlePage.getLang()));
-      buildNewArticleProperties(article, articlePage, creator, space.getId(), pageVersion.getId());
+      buildNewArticleProperties(article, articlePage, creator, space.getId(), pageVersion.getId(), true);
     }
     return article;
   }
@@ -1039,7 +1053,7 @@ public class NewsServiceImpl implements NewsService {
         newsArticle.setLatestVersionId(pageVersion.getId());
         newsArticle.setIllustrationURL(NewsUtils.buildIllustrationUrl(newsArticlePage.getProperties(), newsArticle.getLang()));
         
-        buildNewArticleProperties(newsArticle, newsArticlePage, newsArticleCreator, space.getId(), pageVersion.getId());
+        buildNewArticleProperties(newsArticle, newsArticlePage, newsArticleCreator, space.getId(), pageVersion.getId(), false);
         // delete the draft
         deleteDraftArticle(draftNewsId, poster.getUserId());
         return newsArticle;
@@ -1185,7 +1199,8 @@ public class NewsServiceImpl implements NewsService {
                                          Page articlePage,
                                          String creator,
                                          String spaceId,
-                                         String versionId) throws Exception {
+                                         String versionId,
+                                         boolean externalPage) throws Exception {
     NewsPageVersionObject articleVersionMetaDataObject = new NewsPageVersionObject(NEWS_METADATA_PAGE_VERSION_OBJECT_TYPE,
                                                                                    versionId,
                                                                                    null,
@@ -1213,6 +1228,7 @@ public class NewsServiceImpl implements NewsService {
     if (StringUtils.isNotEmpty(article.getPublicationState())) {
       newsPageProperties.put(NEWS_PUBLICATION_STATE, article.getPublicationState());
     }
+    newsPageProperties.put(EXTERNAL_PAGE, String.valueOf(externalPage));
     newsPageProperties.put(NEWS_ACTIVITY_POSTED, String.valueOf(article.isActivityPosted()));
     newsPageProperties.put(PUBLISHED, String.valueOf(article.isPublished()));
     newsPageProperties.put(NEWS_DELETED, String.valueOf(articlePage.isDeleted()));
@@ -1351,6 +1367,9 @@ public class NewsServiceImpl implements NewsService {
       }
       if (properties.containsKey(PUBLISHED) && StringUtils.isNotEmpty(properties.get(PUBLISHED))) {
         article.setPublished(Boolean.parseBoolean(properties.get(PUBLISHED)));
+      }
+      if (properties.containsKey(EXTERNAL_PAGE) && StringUtils.isNotEmpty(properties.get(EXTERNAL_PAGE))) {
+        article.setFromExternalPage(Boolean.parseBoolean(properties.get(EXTERNAL_PAGE)));
       }
       if (properties.containsKey(NEWS_VIEWS) && StringUtils.isNotEmpty(properties.get(NEWS_VIEWS))) {
         article.setViewsCount(Long.parseLong(properties.get(NEWS_VIEWS)));
