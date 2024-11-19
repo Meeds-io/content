@@ -564,6 +564,11 @@ public class NewsServiceImplTest {
             anyMap(),
             anyLong(),
             anyBoolean());
+    
+    clearInvocations(activityManager);
+    newsArticlePage.setAuthor(null);
+    newsService.createNews(newsArticle, identity);
+    verify(activityManager, times(1)).saveActivityNoReturn(any(), any());
   }
 
   @Test
