@@ -319,7 +319,7 @@ public class NewsServiceImplTest {
     assertThrows(IllegalAccessException.class, () -> newsService.updateNews(news, "john", false, false, NewsUtils.NewsObjectType.DRAFT.name().toLowerCase(), CONTENT_AND_TITLE.name()));
 
     // Given
-    when(spaceService.canRedactOnSpace(space, identity)).thenReturn(true);
+    when(spaceService.isSuperManager(any(Space.class), anyString())).thenReturn(true);
     org.exoplatform.social.core.identity.model.Identity identity1 =
                                                                   mock(org.exoplatform.social.core.identity.model.Identity.class);
     when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(identity1);
@@ -364,9 +364,13 @@ public class NewsServiceImplTest {
     when(rootPage.getName()).thenReturn(NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME);
     when(noteService.getDraftNoteById(anyString(), anyString())).thenReturn(draftPage);
     NEWS_UTILS.when(() -> NewsUtils.getUserIdentity(anyString())).thenReturn(identity);
-    when(spaceService.canRedactOnSpace(space, identity)).thenReturn(true);
+
+    //
+    assertThrows(IllegalAccessException.class, () -> newsService.deleteNews(draftPage.getId(), identity, NewsUtils.NewsObjectType.DRAFT.name().toLowerCase()));
 
     // When
+    when(spaceService.isSuperManager(any(Space.class), anyString())).thenReturn(true);
+
     newsService.deleteNews(draftPage.getId(), identity, NewsUtils.NewsObjectType.DRAFT.name().toLowerCase());
 
     // Then
@@ -594,8 +598,7 @@ public class NewsServiceImplTest {
       assertThrows(IllegalAccessException.class, () -> newsService.updateNews(news, "john", false, false, NewsUtils.NewsObjectType.DRAFT.name().toLowerCase(), CONTENT_AND_TITLE.name()));
 
     // Given
-    when(spaceService.canRedactOnSpace(space, identity)).thenReturn(true);
-    when(spaceService.isSuperManager(anyString())).thenReturn(true);
+    when(spaceService.isSuperManager(any(Space.class), anyString())).thenReturn(true);
     org.exoplatform.social.core.identity.model.Identity identity1 =
                                                                   mock(org.exoplatform.social.core.identity.model.Identity.class);
     when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(identity1);
@@ -677,8 +680,7 @@ public class NewsServiceImplTest {
     assertThrows(IllegalAccessException.class, () -> newsService.updateNews(news, "john", false, false, NewsUtils.NewsObjectType.DRAFT.name().toLowerCase(), CONTENT_AND_TITLE.name()));
 
     // Given
-    when(spaceService.canRedactOnSpace(space, identity)).thenReturn(true);
-    when(spaceService.isSuperManager(anyString())).thenReturn(true);
+    when(spaceService.isSuperManager(any(Space.class), anyString())).thenReturn(true);
     org.exoplatform.social.core.identity.model.Identity identity1 =
                                                                   mock(org.exoplatform.social.core.identity.model.Identity.class);
     when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(identity1);
@@ -753,8 +755,7 @@ public class NewsServiceImplTest {
     assertThrows(IllegalAccessException.class, () -> newsService.updateNews(news, "john", false, false, NewsUtils.NewsObjectType.DRAFT.name().toLowerCase(), CONTENT_AND_TITLE.name()));
 
     // Given
-    when(spaceService.canRedactOnSpace(space, identity)).thenReturn(true);
-    when(spaceService.isSuperManager(anyString())).thenReturn(true);
+    when(spaceService.isSuperManager(any(Space.class), anyString())).thenReturn(true);
     org.exoplatform.social.core.identity.model.Identity identity1 =
                                                                   mock(org.exoplatform.social.core.identity.model.Identity.class);
     when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(identity1);
@@ -806,7 +807,11 @@ public class NewsServiceImplTest {
     assertThrows(IllegalAccessException.class, () -> newsService.deleteNews(existingPage.getId(), identity, ARTICLE.name().toLowerCase()));
 
     // when
-    when(spaceService.canRedactOnSpace(space, identity)).thenReturn(true);
+    when(spaceService.isSuperManager(any(Space.class), anyString())).thenReturn(false);
+    when(spaceService.isRedactor(any(Space.class), anyString())).thenReturn(false);
+    when(spaceService.isManager(any(Space.class), anyString())).thenReturn(false);
+    when(spaceService.isMember(anyString(), anyString())).thenReturn(true);
+
     when(noteService.deleteNote(existingPage.getWikiType(), existingPage.getWikiOwner(), existingPage.getName())).thenReturn(true);
     DraftPage draftPage = mock(DraftPage.class);
     NotePageProperties draftProperties = new NotePageProperties();
@@ -1006,8 +1011,7 @@ public class NewsServiceImplTest {
     assertThrows(IllegalAccessException.class, () -> newsService.updateNews(news, "john", false, false, NewsUtils.NewsObjectType.DRAFT.name().toLowerCase(), CONTENT_AND_TITLE.name()));
 
     // Given
-    when(spaceService.canRedactOnSpace(space, identity)).thenReturn(true);
-    when(spaceService.isSuperManager(anyString())).thenReturn(true);
+    when(spaceService.isSuperManager(any(Space.class), anyString())).thenReturn(true);
     org.exoplatform.social.core.identity.model.Identity identity1 =
             mock(org.exoplatform.social.core.identity.model.Identity.class);
     when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(identity1);
