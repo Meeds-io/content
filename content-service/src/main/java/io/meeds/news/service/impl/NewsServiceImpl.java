@@ -509,7 +509,7 @@ public class NewsServiceImpl implements NewsService {
         throw new IllegalAccessException("User " + currentIdentity.getUserId() + " is not authorized to view News");
       }
       news.setCanEdit(canEditNews(news, currentIdentity.getUserId()));
-      news.setCanDelete(canDeleteNews(currentIdentity, news.getAuthor(), news.getSpaceId()));
+      news.setCanDelete(canDeleteNews(currentIdentity, news));
       news.setCanPublish(NewsUtils.canPublishNews(news.getSpaceId(), currentIdentity));
       Space space = spaceService.getSpaceById(news.getSpaceId());
       if (space != null) {
@@ -575,7 +575,7 @@ public class NewsServiceImpl implements NewsService {
     }
     newsList.stream().filter(Objects::nonNull).forEach(news -> {
       news.setCanEdit(canEditNews(news, currentIdentity.getUserId()));
-      news.setCanDelete(canDeleteNews(currentIdentity, news.getAuthor(), news.getSpaceId()));
+      news.setCanDelete(canDeleteNews(currentIdentity, news));
       news.setCanPublish(NewsUtils.canPublishNews(news.getSpaceId(), currentIdentity));
       Space space = spaceService.getSpaceById(news.getSpaceId());
       if (space != null) {
@@ -1514,16 +1514,28 @@ public class NewsServiceImpl implements NewsService {
       LOG.warn("Can't find user with id {} when checking access on news with id {}", authenticatedUser, news.getId());
       return false;
     }
-    return NewsUtils.canPublishNews(news.getSpaceId(), authenticatedUserIdentity)
-        || spaceService.canRedactOnSpace(space, authenticatedUserIdentity);
+    boolean isSpaceMemberCanEdit = isArticleAuthor(news, authenticatedUser) && spaceService.isMember(spaceId, authenticatedUser);
+    return  isSpaceMemberCanEdit || NewsUtils.canPublishNews(news.getSpaceId(), authenticatedUserIdentity)
+        || (spaceService.isManager(space, authenticatedUser)
+            || spaceService.isSuperManager(space, authenticatedUser)
+            || spaceService.isRedactor(space, authenticatedUser));
   }
 
-  private boolean canDeleteNews(Identity currentIdentity, String posterId, String spaceId) {
-    Space space = spaceId == null ? null : spaceService.getSpaceById(spaceId);
+  private boolean isArticleAuthor(News article, String userName) {
+    return StringUtils.isNotEmpty(article.getAuthor()) && article.getAuthor().equals(userName);
+  }
+  
+  private boolean canDeleteNews(Identity currentIdentity, News news) {
+    Space space = news.getSpaceId() == null ? null : spaceService.getSpaceById(news.getSpaceId());
     if (space == null) {
       return false;
     }
-    return spaceService.canRedactOnSpace(space, currentIdentity);
+    boolean isMemberCanDelete = isArticleAuthor(news, currentIdentity.getUserId())
+        && spaceService.isMember(space.getId(), currentIdentity.getUserId());
+    return isMemberCanDelete || NewsUtils.canPublishNews(news.getSpaceId(), currentIdentity)
+        || (spaceService.isManager(space, currentIdentity.getUserId())
+            || spaceService.isSuperManager(space, currentIdentity.getUserId())
+            || spaceService.isRedactor(space, currentIdentity.getUserId()));
   }
 
   private boolean canViewSharedInSpaces(News news, String username) {
