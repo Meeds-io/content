@@ -796,6 +796,7 @@ public class NewsServiceImpl implements NewsService {
                                                          Long.parseLong(space.getId()));
       metadataService.deleteMetadataItemsByObject(articleVersionMetaDataObject);
       metadataService.deleteMetadataItemsByObject(newsPageObject);
+      newsTargetingService.deleteNewsTargets(news);
       return existingNews;
     }
     return null;

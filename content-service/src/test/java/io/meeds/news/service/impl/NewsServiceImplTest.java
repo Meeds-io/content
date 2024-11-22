@@ -995,6 +995,7 @@ public class NewsServiceImplTest {
     verify(noteService, times(0)).createDraftForNewPage(any(DraftPage.class), anyLong(), anyLong());
     verify(noteService, times(0)).deleteNote(anyString(), anyString(), anyString());
     verify(metadataService, times(2)).deleteMetadataItemsByObject(any());
+    verify(newsTargetingService, times(1)).deleteNewsTargets(any());
   }
 
   @Test
