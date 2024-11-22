@@ -1192,7 +1192,7 @@ public class NewsServiceImpl implements NewsService {
     if (news.isPublished()) {
       publishNews(news, poster);
     }
-
+    news.setUrl(NewsUtils.buildNewsArticleUrl(news, poster));
     // Broadcast events for gamification and analytics
     NewsUtils.broadcastEvent(NewsUtils.POST_NEWS_ARTICLE, news.getId(), news);
     NewsUtils.broadcastEvent(NewsUtils.POST_NEWS, news.getAuthor(), news);

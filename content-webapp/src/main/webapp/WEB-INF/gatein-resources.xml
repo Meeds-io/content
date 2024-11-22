@@ -589,7 +589,8 @@
   </module>
 
   <module>
-    <name>NotePublishExtensions</name>
+    <name>PublishNotesExtension</name>
+    <load-group>NotesGRP</load-group>
     <script>
       <minify>false</minify>
       <path>/js/notePublishExtensions.bundle.js</path>
