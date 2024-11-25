@@ -43,16 +43,13 @@ import static org.mockito.Mockito.when;
 public class ArticleAttachmentPluginTest {
 
   @Mock
-  private NoteService                        noteService;
-
-  @Mock
   private NewsService                        newsService;
 
   @Mock
   private AttachmentService                  attachmentService;
 
   @InjectMocks
-  private ArticlePageVersionAttachmentPlugin plugin;
+  private ArticlePageAttachmentPlugin plugin;
 
   @Before
   public void setUp() {
@@ -61,20 +58,14 @@ public class ArticleAttachmentPluginTest {
 
   @Test
   public void testGetObjectType() {
-    Assert.assertEquals("articlePageVersion", plugin.getObjectType());
+    Assert.assertEquals("articlePage", plugin.getObjectType());
   }
 
   @Test
   public void testHasAccessPermission() throws Exception {
     org.exoplatform.services.security.Identity userIdentity = mock(org.exoplatform.services.security.Identity.class);
-    PageVersion pageVersion = mock(PageVersion.class);
-    Page page = mock(Page.class);
     News news = mock(News.class);
 
-    when(userIdentity.getUserId()).thenReturn("user123");
-    when(noteService.getPageVersionById(anyLong())).thenReturn(pageVersion);
-    when(pageVersion.getParent()).thenReturn(page);
-    when(page.getId()).thenReturn("1");
     when(newsService.getNewsArticleById(anyString())).thenReturn(news);
     when(newsService.canViewNews(news, userIdentity.getUserId())).thenReturn(true);
 
@@ -84,13 +75,8 @@ public class ArticleAttachmentPluginTest {
   @Test
   public void testHasEditPermission() throws Exception {
     org.exoplatform.services.security.Identity userIdentity = mock(org.exoplatform.services.security.Identity.class);
-    PageVersion pageVersion = mock(PageVersion.class);
-    Page page = mock(Page.class);
     News news = mock(News.class);
 
-    when(noteService.getPageVersionById(anyLong())).thenReturn(pageVersion);
-    when(pageVersion.getParent()).thenReturn(page);
-    when(page.getId()).thenReturn("1");
     when(newsService.getNewsById("1", userIdentity, false, ARTICLE.name())).thenReturn(news);
     when(news.isCanEdit()).thenReturn(true);
 

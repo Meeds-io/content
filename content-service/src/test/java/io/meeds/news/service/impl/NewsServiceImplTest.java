@@ -44,7 +44,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
-import io.meeds.news.plugin.ArticlePageVersionAttachmentPlugin;
+import io.meeds.news.plugin.ArticlePageAttachmentPlugin;
 import io.meeds.news.search.NewsSearchConnector;
 import io.meeds.news.search.NewsESSearchResult;
 import io.meeds.notes.model.NoteFeaturedImage;
@@ -529,6 +529,7 @@ public class NewsServiceImplTest {
     newsArticlePage.setAuthor(newsArticle.getAuthor());
     newsArticlePage.setProperties(new NotePageProperties(Long.parseLong(newsArticle.getId()), null, null, false, false, true));
     newsArticlePage.setLang(null);
+    newsArticlePage.setAttachmentObjectType(ArticlePageAttachmentPlugin.OBJECT_TYPE);
 
     Page createdPage = mock(Page.class);
     when(createdPage.getId()).thenReturn("1");
@@ -791,7 +792,7 @@ public class NewsServiceImplTest {
 
     // Then
     verify(noteService, times(1)).updateNote(any(Page.class), any(), any());
-    verify(noteService, times(1)).createVersionOfNote(existingPage, identity.getUserId(), ArticlePageVersionAttachmentPlugin.OBJECT_TYPE, null);
+    verify(noteService, times(1)).createVersionOfNote(existingPage, identity.getUserId());
     verify(noteService, times(2)).getPublishedVersionByPageIdAndLang(1L, null);
   }
 
@@ -1063,7 +1064,7 @@ public class NewsServiceImplTest {
 
     // Then
     verify(noteService, times(1)).updateNote(any(Page.class), any(), any());
-    verify(noteService, times(1)).createVersionOfNote(existingPage, identity.getUserId(), ArticlePageVersionAttachmentPlugin.OBJECT_TYPE, null);
+    verify(noteService, times(1)).createVersionOfNote(existingPage, identity.getUserId());
     verify(noteService, times(2)).getPublishedVersionByPageIdAndLang(1L, null);
     NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.ADD_ARTICLE_TRANSLATION), anyObject(), anyObject()), times(1));
   }
