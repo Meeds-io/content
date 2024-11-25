@@ -1152,15 +1152,6 @@ public class NewsServiceImpl implements NewsService {
   public void deleteDraftArticle(String draftArticleId, String draftArticleCreator) throws Exception {
     DraftPage draftArticlePage = noteService.getDraftNoteById(draftArticleId, draftArticleCreator);
     if (draftArticlePage != null) {
-      if (draftArticlePage.getProperties() != null && draftArticlePage.getProperties().getFeaturedImage() != null) {
-        long featuredImageId = draftArticlePage.getProperties().getFeaturedImage().getId();
-        String userIdentityId = identityManager.getOrCreateUserIdentity(draftArticleCreator).getId();
-        noteService.removeNoteFeaturedImage(Long.parseLong(draftArticlePage.getId()),
-                                            featuredImageId,
-                                            null,
-                                            true,
-                                            Long.parseLong(userIdentityId));
-      }
       noteService.removeDraftById(draftArticlePage.getId());
       Space draftArticleSpace = spaceService.getSpaceByGroupId(draftArticlePage.getWikiOwner());
       MetadataObject draftArticleMetaDataObject =
