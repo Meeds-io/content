@@ -25,15 +25,13 @@ import org.exoplatform.commons.exception.ObjectNotFoundException;
 import org.exoplatform.services.security.Identity;
 import org.exoplatform.social.attachment.AttachmentPlugin;
 import org.exoplatform.social.attachment.AttachmentService;
-import org.exoplatform.wiki.model.PageVersion;
-import org.exoplatform.wiki.service.NoteService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import static io.meeds.news.utils.NewsUtils.NewsObjectType.ARTICLE;
 
 @Component
-public class ArticlePageVersionAttachmentPlugin extends AttachmentPlugin {
+public class ArticlePageAttachmentPlugin extends AttachmentPlugin {
 
   @Autowired
   private AttachmentService  attachmentService;
@@ -41,10 +39,7 @@ public class ArticlePageVersionAttachmentPlugin extends AttachmentPlugin {
   @Autowired
   private NewsService        newsService;
 
-  @Autowired
-  private NoteService        noteService;
-
-  public static final String OBJECT_TYPE = "articlePageVersion";
+  public static final String OBJECT_TYPE = "articlePage";
 
   @PostConstruct
   public void init() {
@@ -57,18 +52,16 @@ public class ArticlePageVersionAttachmentPlugin extends AttachmentPlugin {
   }
 
   @Override
-  public boolean hasAccessPermission(Identity identity, String articleVersionId) throws ObjectNotFoundException {
-    PageVersion pageVersion = noteService.getPageVersionById(Long.parseLong(articleVersionId));
-    News news = newsService.getNewsArticleById(pageVersion.getParent().getId());
+  public boolean hasAccessPermission(Identity identity, String articleId) throws ObjectNotFoundException {
+    News news = newsService.getNewsArticleById(articleId);
     return news != null && newsService.canViewNews(news, identity.getUserId());
   }
 
   @Override
-  public boolean hasEditPermission(Identity identity, String articleVersionId) throws ObjectNotFoundException {
+  public boolean hasEditPermission(Identity identity, String articleId) throws ObjectNotFoundException {
     News news = null;
     try {
-      PageVersion pageVersion = noteService.getPageVersionById(Long.parseLong(articleVersionId));
-      news = newsService.getNewsById(pageVersion.getParent().getId(), identity, false, ARTICLE.name());
+      news = newsService.getNewsById(articleId, identity, false, ARTICLE.name());
     } catch (IllegalAccessException e) {
       return false;
     }
@@ -81,9 +74,8 @@ public class ArticlePageVersionAttachmentPlugin extends AttachmentPlugin {
   }
 
   @Override
-  public long getSpaceId(String articleVersionId) throws ObjectNotFoundException {
-    PageVersion pageVersion = noteService.getPageVersionById(Long.parseLong(articleVersionId));
-    News news = newsService.getNewsArticleById(pageVersion.getParent().getId());
+  public long getSpaceId(String articleId) throws ObjectNotFoundException {
+    News news = newsService.getNewsArticleById(articleId);
     return news != null ? Long.parseLong(news.getSpaceId()) : 0;
   }
 }
