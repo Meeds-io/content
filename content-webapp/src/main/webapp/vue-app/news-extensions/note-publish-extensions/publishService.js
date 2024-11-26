@@ -94,6 +94,7 @@ function noteToArticle(note, spaceId) {
     activityPosted: note.activityPosted,
     audience: note.audience,
     draftPage: false,
+    fromExternalPage: true,
     scheduleUnpublishDate: note.scheduleUnpublishDate,
     properties: note?.properties
   };
