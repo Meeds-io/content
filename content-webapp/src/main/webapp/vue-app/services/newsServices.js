@@ -223,7 +223,14 @@ export function canScheduleNews(spaceId, articleId) {
       'Content-Type': 'application/json'
     },
     method: 'GET'
-  }).then((resp) => resp && resp.ok && resp.json());
+  }).then((response) => {
+    if (!response?.ok) {
+      throw response;
+    }
+    return response.json();
+  }).catch(err => {
+    throw err;
+  });
 }
 
 export function deleteNews(newsId, newsObjectType, delay) {
