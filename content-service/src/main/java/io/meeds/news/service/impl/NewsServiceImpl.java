@@ -39,9 +39,11 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.stream.Stream;
 
+import io.meeds.news.plugin.ArticlePageAttachmentPlugin;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.exoplatform.wiki.service.plugin.WikiDraftPageAttachmentPlugin;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
@@ -945,6 +947,7 @@ public class NewsServiceImpl implements NewsService {
       draftArticlePage.setParentPageId(newsArticlesRootNotePage.getId());
       draftArticlePage.setAuthor(draftArticle.getAuthor());
       draftArticlePage.setProperties(draftArticle.getProperties());
+      draftArticlePage.setAttachmentObjectType(WikiDraftPageAttachmentPlugin.OBJECT_TYPE);
       draftArticlePage =
                        noteService.createDraftForNewPage(draftArticlePage,
                                                          creationDate,
@@ -956,6 +959,7 @@ public class NewsServiceImpl implements NewsService {
       draftArticle.setId(draftArticlePage.getId());
       draftArticle.setCreationDate(draftArticlePage.getCreatedDate());
       draftArticle.setUpdateDate(draftArticlePage.getUpdatedDate());
+      draftArticle.setBody(draftArticlePage.getContent());
       Space draftArticleSpace = spaceService.getSpaceByGroupId(pageOwnerId);
       draftArticle.setSpaceId(draftArticleSpace.getId());
       NewsDraftObject draftArticleMetaDataObject = new NewsDraftObject(NEWS_METADATA_DRAFT_OBJECT_TYPE,
@@ -1024,6 +1028,7 @@ public class NewsServiceImpl implements NewsService {
 
     if (newsArticlesRootNotePage != null) {
       Page newsArticlePage = new Page();
+      newsArticlePage.setAttachmentObjectType(ArticlePageAttachmentPlugin.OBJECT_TYPE);
       newsArticlePage.setName(newsArticle.getName());
       newsArticlePage.setTitle(newsArticle.getTitle());
       newsArticlePage.setContent(newsArticle.getBody());
@@ -1039,6 +1044,7 @@ public class NewsServiceImpl implements NewsService {
         PageVersion pageVersion = noteService.getPublishedVersionByPageIdAndLang(Long.parseLong(newsArticlePage.getId()), null);
         // set properties
         newsArticle.setId(newsArticlePage.getId());
+        newsArticle.setBody(pageVersion.getContent());
         newsArticle.setLang(newsArticlePage.getLang());
         newsArticle.setCreationDate(pageVersion.getCreatedDate());
         newsArticle.setProperties(newsArticlePage.getProperties());
@@ -1064,6 +1070,7 @@ public class NewsServiceImpl implements NewsService {
                                          long creationDate,
                                          Space space) throws Exception {
     DraftPage draftArticlePage = new DraftPage();
+    draftArticlePage.setAttachmentObjectType(ArticlePageAttachmentPlugin.OBJECT_TYPE);
     draftArticlePage.setNewPage(false);
     draftArticlePage.setTargetPageId(targetArticlePage.getId());
     draftArticlePage.setTitle(draftArticle.getTitle());
@@ -1080,6 +1087,7 @@ public class NewsServiceImpl implements NewsService {
     draftArticle.setTargetPageId(draftArticlePage.getTargetPageId());
     draftArticle.setProperties(draftArticlePage.getProperties());
     draftArticle.setId(draftArticlePage.getId());
+    draftArticle.setBody(draftArticlePage.getContent());
     NewsLatestDraftObject latestDraftObject = new NewsLatestDraftObject(NEWS_METADATA_LATEST_DRAFT_OBJECT_TYPE,
                                                                         draftArticlePage.getId(),
                                                                         targetArticlePage.getId(),
@@ -1236,6 +1244,7 @@ public class NewsServiceImpl implements NewsService {
       draftArticlePage.setTitle(draftArticle.getTitle());
       draftArticlePage.setContent(draftArticle.getBody());
       draftArticlePage.setProperties(draftArticle.getProperties());
+      draftArticlePage.setAttachmentObjectType(WikiDraftPageAttachmentPlugin.OBJECT_TYPE);
       // created and updated date set by default during the draft creation
       DraftPage draftPage =
                           noteService.updateDraftForNewPage(draftArticlePage,
@@ -1243,6 +1252,7 @@ public class NewsServiceImpl implements NewsService {
                                                             Long.parseLong(identityManager.getOrCreateUserIdentity(draftArticleUpdater)
                                                                                           .getId()));
       draftArticle.setProperties(draftPage.getProperties());
+      draftArticle.setBody(draftPage.getContent());
       draftArticle.setIllustrationURL(NewsUtils.buildIllustrationUrl(draftPage.getProperties(), draftArticle.getLang()));
 
       // Update content permissions
@@ -1846,6 +1856,7 @@ public class NewsServiceImpl implements NewsService {
         existingPage.setContent(news.getBody());
       }
       existingPage.setProperties(news.getProperties());
+      existingPage.setAttachmentObjectType(ArticlePageAttachmentPlugin.OBJECT_TYPE);
       existingPage = noteService.updateNote(existingPage, PageUpdateType.EDIT_PAGE_CONTENT_AND_TITLE, updater);
       news.setUpdateDate(existingPage.getUpdatedDate());
       news.setUpdater(existingPage.getAuthor());
@@ -1890,7 +1901,9 @@ public class NewsServiceImpl implements NewsService {
       // create the version
       if (newsUpdateType.equalsIgnoreCase(CONTENT_AND_TITLE.name())) {
         noteService.createVersionOfNote(existingPage, updater.getUserId());
-        news.setLatestVersionId(noteService.getPublishedVersionByPageIdAndLang(Long.valueOf(news.getId()), news.getLang()).getId());
+        PageVersion pageVersion = noteService.getPublishedVersionByPageIdAndLang(Long.valueOf(news.getId()), news.getLang());
+        news.setLatestVersionId(pageVersion.getId());
+        news.setBody(pageVersion.getContent());
         // remove the draft
         DraftPage draftPage = noteService.getLatestDraftPageByUserAndTargetPageAndLang(Long.parseLong(existingPage.getId()),
                                                                                        updater.getUserId(),
@@ -2007,6 +2020,7 @@ public class NewsServiceImpl implements NewsService {
       draftPage.setTargetPageId(page.getId());
       draftPage.setLang(news.getLang());
       draftPage.setProperties(news.getProperties());
+      draftPage.setAttachmentObjectType(ArticlePageAttachmentPlugin.OBJECT_TYPE);
 
       draftPage = noteService.updateDraftForExistPage(draftPage, page, null, System.currentTimeMillis(), updater);
       news.setId(draftPage.getId());
@@ -2014,6 +2028,7 @@ public class NewsServiceImpl implements NewsService {
       news.setDraftUpdater(draftPage.getAuthor());
       news.setTargetPageId(draftPage.getTargetPageId());
       news.setProperties(draftPage.getProperties());
+      news.setBody(draftPage.getContent());
       news.setIllustrationURL(NewsUtils.buildIllustrationUrl(draftPage.getProperties(), news.getLang()));
 
       NewsLatestDraftObject latestDraftObject = new NewsLatestDraftObject(NEWS_METADATA_LATEST_DRAFT_OBJECT_TYPE,
@@ -2149,7 +2164,7 @@ public class NewsServiceImpl implements NewsService {
     String newsId = news.getTargetPageId() != null ? news.getTargetPageId() : news.getId();
     Page existingPage = noteService.getNoteById(newsId);
     if (existingPage != null) {
-      existingPage.setLang(news.getLang());
+      existingPage.setAttachmentObjectType(ArticlePageAttachmentPlugin.OBJECT_TYPE);
       existingPage = noteService.updateNote(existingPage, PageUpdateType.EDIT_PAGE_CONTENT_AND_TITLE, versionCreator);
       news.setPublicationState(POSTED);
       // update the metadata item
@@ -2172,13 +2187,16 @@ public class NewsServiceImpl implements NewsService {
       }
       existingPage.setTitle(news.getTitle());
       existingPage.setContent(news.getBody());
+      existingPage.setLang(news.getLang());
       NotePageProperties properties = news.getProperties();
       if (properties != null) {
         properties.setDraft(false);
       }
       existingPage.setProperties(properties);
       noteService.createVersionOfNote(existingPage, versionCreator.getUserId());
-      news.setLatestVersionId(noteService.getPublishedVersionByPageIdAndLang(Long.valueOf(newsId), news.getLang()).getId());
+      PageVersion pageVersion = noteService.getPublishedVersionByPageIdAndLang(Long.valueOf(newsId), news.getLang());
+      news.setLatestVersionId(pageVersion.getId());
+      news.setBody(pageVersion.getContent());
       news.setIllustrationURL(NewsUtils.buildIllustrationUrl(news.getProperties(), news.getLang()));
       DraftPage draftPage = noteService.getLatestDraftPageByTargetPageAndLang(Long.parseLong(newsId), news.getLang());
       if (draftPage != null) {

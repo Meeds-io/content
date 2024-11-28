@@ -134,7 +134,8 @@ export default {
       spacePrettyName: null,
       editorExtensions: null,
       autosaveProcessedFromEditorExtension: false,
-      allowedTargets: []
+      allowedTargets: [],
+      draftObjectType: 'wikiDraft',
     };
   },
   watch: {
@@ -342,10 +343,14 @@ export default {
         this.article.schedulePostDate = createdArticle.schedulePostDate;
         this.article.publicationState = createdArticle.publicationState;
         this.article.scheduleUnpublishDate = createdArticle.scheduleUnpublishDate;
+        this.article.body = createdArticle.body;
         this.article.lang = createdArticle.lang;
         if (this.article.body !== createdArticle.body) {
           this.imagesURLs = this.extractImagesURLsDiffs(this.article.body, createdArticle.body);
         }
+        document.dispatchEvent(new CustomEvent('update-processed-image-url', {detail: {
+          content: createdArticle.body
+        }}));
       }).then(() => this.$emit('draftUpdated'))
         .then(() => this.draftSavingStatus = this.$t('news.composer.draft.savedDraftStatus'))
         .finally(() => {
@@ -374,6 +379,9 @@ export default {
           this.imagesURLs = this.extractImagesURLsDiffs(this.article.body, createdArticle.body);
         }
         this.fillArticle(createdArticle.id, false, createdArticle.lang);
+        document.dispatchEvent(new CustomEvent('update-processed-image-url', {detail: {
+          content: updatedArticle.body
+        }}));
         this.displayAlert({
           message: this.$t('news.save.success.message'),
           type: 'success',
@@ -431,6 +439,9 @@ export default {
               this.article.draftPage = true;
               this.article.id = updatedArticle.id;
               this.article.properties = updatedArticle?.properties;
+              document.dispatchEvent(new CustomEvent('update-processed-image-url', {detail: {
+                content: updatedArticle.body
+              }}));
             })
             .then(() => this.$emit('draftUpdated'))
             .then(() => {
@@ -457,6 +468,9 @@ export default {
           if (!this.articleId) {
             this.articleId = createdArticle.id;
           }
+          document.dispatchEvent(new CustomEvent('update-processed-image-url', {detail: {
+            content: createdArticle.body
+          }}));
           this.$emit('draftCreated');
           this.savingDraft = false;
           if (this.autosaveProcessedFromEditorExtension) {
@@ -523,6 +537,9 @@ export default {
       if (article.publicationState ==='staged') {
         this.$newsServices.scheduleNews(article, this.articleType).then((scheduleArticle) => {
           this.articleType = 'latest_draft';
+          document.dispatchEvent(new CustomEvent('update-processed-image-url', {detail: {
+            content: scheduleArticle.body
+          }}));
           this.fillArticle(scheduleArticle.id, false, null).then(() => {
             this.updateUrl();
             this.initDataPropertiesFromUrl();
@@ -538,6 +555,9 @@ export default {
       } else {
         this.$newsServices.saveNews(article).then((createdArticle) => {
           this.articleType = 'latest_draft';
+          document.dispatchEvent(new CustomEvent('update-processed-image-url', {detail: {
+            content: createdArticle.body
+          }}));
           this.fillArticle(createdArticle.id, false, createdArticle.lang || this.selectedLanguage).then(() => {
             this.updateUrl();
             this.initDataPropertiesFromUrl();

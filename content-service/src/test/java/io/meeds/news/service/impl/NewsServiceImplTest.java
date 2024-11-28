@@ -44,6 +44,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
+import io.meeds.news.plugin.ArticlePageAttachmentPlugin;
 import io.meeds.news.search.NewsSearchConnector;
 import io.meeds.news.search.NewsESSearchResult;
 import io.meeds.notes.model.NoteFeaturedImage;
@@ -528,6 +529,7 @@ public class NewsServiceImplTest {
     newsArticlePage.setAuthor(newsArticle.getAuthor());
     newsArticlePage.setProperties(new NotePageProperties(Long.parseLong(newsArticle.getId()), null, null, false, false, true));
     newsArticlePage.setLang(null);
+    newsArticlePage.setAttachmentObjectType(ArticlePageAttachmentPlugin.OBJECT_TYPE);
 
     Page createdPage = mock(Page.class);
     when(createdPage.getId()).thenReturn("1");
@@ -630,6 +632,7 @@ public class NewsServiceImplTest {
     when(draftPage.getCreatedDate()).thenReturn(new Date());
     when(draftPage.getAuthor()).thenReturn("john");
     when(draftPage.getId()).thenReturn("1");
+    when(draftPage.getContent()).thenReturn("content");
     when(noteService.createDraftForExistPage(any(DraftPage.class),
                                              any(Page.class),
                                              nullable(String.class),
@@ -1033,6 +1036,7 @@ public class NewsServiceImplTest {
     when(pageVersion.getAuthor()).thenReturn("john");
     when(pageVersion.getUpdatedDate()).thenReturn(new Date());
     when(pageVersion.getAuthorFullName()).thenReturn("full name");
+    when(pageVersion.getContent()).thenReturn("content");
 
     News news = new News();
     news.setAuthor("john");
