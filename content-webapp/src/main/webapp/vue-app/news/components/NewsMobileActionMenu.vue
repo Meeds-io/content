@@ -51,7 +51,8 @@ export default {
       showDeleteButton: false,
       showPublishButton: false,
       currentApp: null,
-      showCopyLinkButton: false
+      showCopyLinkButton: false,
+      showReferButton: false
     };
   },
   computed: {
@@ -75,6 +76,7 @@ export default {
       this.showDeleteButton = config.showDeleteButton;
       this.showPublishButton = config.showPublishButton;
       this.showCopyLinkButton = config.showCopyLinkButton;
+      this.showReferButton = config.showReferButton;
       this.currentApp = config.currentApp;
       this.$refs.newsMobileActionMenu.open();
     },

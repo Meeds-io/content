@@ -86,6 +86,20 @@
       </span>
     </v-list-item>
     <v-list-item
+      v-if="showReferButton"
+      class="ps-2 pe-4 action-menu-item"
+      @click="$root.$emit('refer-article-to-note')">
+      <v-icon
+        size="16"
+        class="clickable icon-menu">
+        fa-solid fa-paper-plane
+      </v-icon>
+      <span class="pt-1 text-color">
+        {{ !news.referred && $t('content.article.refer.to.note')
+          || $t('content.article.deRefer.label') }}
+      </span>
+    </v-list-item>
+    <v-list-item
       v-if="showDeleteButton"
       class="ps-2 pe-4 action-menu-item d-flex align-center deleteArticleOption"
       @click="$emit('delete-article')">
@@ -142,6 +156,10 @@ export default {
     showCopyLinkButton: {
       type: Boolean,
       required: false,
+      default: false
+    },
+    showReferButton: {
+      type: Boolean,
       default: false
     }
   },

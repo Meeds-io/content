@@ -41,6 +41,7 @@
       :show-delete-button="showDeleteButton"
       :show-publish-button="showPublishButton"
       :show-copy-link-button="showCopyLinkButton"
+      :show-refer-button="showReferButton"
       @delete-article="$emit('delete-article')"
       @edit-article="$emit('edit-article')" />
     <v-btn
@@ -105,6 +106,10 @@ export default {
     showCopyLinkButton: {
       type: Boolean,
       required: false,
+      default: false
+    },
+    showReferButton: {
+      type: Boolean,
       default: false
     }
   },

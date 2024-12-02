@@ -307,3 +307,11 @@ export function getArticleLanguages(articleId, withDrafts) {
     return resp.json();
   });
 }
+
+export function getArticlePage(pageId) {
+  return Vue.prototype.$notesService.getNoteById(pageId);
+}
+
+export function moveArticlePage(page, newParentPage) {
+  return Vue.prototype.$notesService.moveNotes(page, newParentPage);
+}
