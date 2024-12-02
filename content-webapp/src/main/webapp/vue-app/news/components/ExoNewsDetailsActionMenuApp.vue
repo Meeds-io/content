@@ -50,6 +50,7 @@
       :show-publish-button="showPublishButton"
       :show-resume-button="showResumeButton"
       :show-share-button="showShareButton"
+      :show-refer-button="showReferButton"
       @copy-link="copyLink"
       @edit-article="$emit('edit-article', news)"
       @delete-article="$emit('delete-article')" />
@@ -97,6 +98,10 @@ export default {
     showCopyLinkButton: {
       type: Boolean,
       required: false,
+      default: false
+    },
+    showReferButton: {
+      type: Boolean,
       default: false
     }
   },
@@ -158,6 +163,7 @@ export default {
           showDeleteButton: this.showDeleteButton,
           showPublishButton: this.showPublishButton,
           showCopyLinkButton: this.showCopyLinkButton,
+          showReferButton: this.showReferButton,
           currentApp: this.currentApp
         });
       }

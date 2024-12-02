@@ -39,7 +39,8 @@ export const newsConstants = {
 export const newsUpdateType = {
   CONTENT_AND_TITLE: 'CONTENT_AND_TITLE',
   POSTING_AND_PUBLISHING: 'POSTING_AND_PUBLISHING',
-  SCHEDULE: 'SCHEDULE'
+  SCHEDULE: 'SCHEDULE',
+  PAGE_REFERENCE: 'PAGE_REFERENCE'
 };
 
 export const newsObjectType = {

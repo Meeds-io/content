@@ -24,7 +24,9 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
+import io.meeds.news.model.News;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -53,6 +55,11 @@ public class NewsUtilsTest {
   @Mock
   private Identity                                adminAclIdentity;
 
+  @Before
+  public void setUp() {
+    COMMONS_UTILS.when(() -> CommonsUtils.getService(SpaceService.class)).thenReturn(spaceService);
+  }
+
   @AfterClass
   public static void afterRunBare() throws Exception { // NOSONAR
     COMMONS_UTILS.close();
@@ -64,7 +71,6 @@ public class NewsUtilsTest {
     when(space.getId()).thenReturn("2");
 
     assertFalse(NewsUtils.canPublishNews(null, null));
-    COMMONS_UTILS.when(() -> CommonsUtils.getService(SpaceService.class)).thenReturn(spaceService);
     assertFalse(NewsUtils.canPublishNews(space.getId(), null));
     assertFalse(NewsUtils.canPublishNews(space.getId(), userAclIdentity));
 
@@ -93,4 +99,23 @@ public class NewsUtilsTest {
     assertTrue(NewsUtils.canPublishNews(space.getId(), userAclIdentity));
   }
 
+  @Test
+  public void testCanReferArticleToNote() {
+    News article = new News();
+    when(userAclIdentity.getUserId()).thenReturn("user");
+    when(spaceService.getSpaceById("2")).thenReturn(null, space);
+    assertFalse(NewsUtils.canReferToNote("2", article, null));
+    assertFalse(NewsUtils.canReferToNote("2", article, null));
+
+    article.setFromExternalPage(true);
+    assertFalse(NewsUtils.canReferToNote("2", article, userAclIdentity));
+    article.setFromExternalPage(false);
+    when(spaceService.canRedactOnSpace(space, userAclIdentity)).thenReturn(false, true, false, true);
+    when(spaceService.canPublishOnSpace(space, "user")).thenReturn(false, true, true, false);
+    assertFalse(NewsUtils.canReferToNote("2", article, userAclIdentity));
+
+    assertTrue(NewsUtils.canReferToNote("2", article, userAclIdentity));
+    assertTrue(NewsUtils.canReferToNote("2", article, userAclIdentity));
+    assertTrue(NewsUtils.canReferToNote("2", article, userAclIdentity));
+  }
 }

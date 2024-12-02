@@ -7,4 +7,5 @@
 
 <script type="text/javascript" id="contentHeadScripts">
     eXo.env.portal.newPublicationDrawerEnabled = <%=featureService.isFeatureActiveForUser("newPublicationDrawer", userName)%>;
+    eXo.env.portal.referArticleEnabled = <%=featureService.isFeatureActiveForUser("articleReferInTheNotes", userName)%>;
 </script>

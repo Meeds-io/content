@@ -16,6 +16,7 @@
       :news-type="newsType"
       :show-edit-button="showEditButton"
       :show-publish-button="showPublishButton"
+      :show-refer-button="showReferButton"
       :show-delete-button="showDeleteButton"
       :translations="translations"
       :selected-translation="selectedTranslation"
@@ -42,6 +43,7 @@ export default {
     showEditButton: false,
     showPublishButton: false,
     showDeleteButton: false,
+    showReferButton: false,
     selectedTranslation: {value: eXo.env.portal.language},
     translations: [],
     languages: [],
