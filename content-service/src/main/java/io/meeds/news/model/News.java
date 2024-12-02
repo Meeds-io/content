@@ -146,5 +146,11 @@ public class News {
   private boolean                         fromDraft;
 
   private boolean                         fromExternalPage;
+  
+  private boolean                         canRefer;
+  
+  private boolean                         isReferred;
+  
+  private long                            deReferPageId;
 
 }
