@@ -22,20 +22,13 @@ package io.meeds.news.service.impl;
 import static io.meeds.news.utils.NewsUtils.NewsObjectType.ARTICLE;
 import static io.meeds.news.utils.NewsUtils.NewsObjectType.LATEST_DRAFT;
 import static io.meeds.news.utils.NewsUtils.NewsUpdateType.CONTENT_AND_TITLE;
+import static io.meeds.news.utils.NewsUtils.NewsUpdateType.PAGE_REFERENCE;
 
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.stream.Stream;
 
@@ -170,6 +163,10 @@ public class NewsServiceImpl implements NewsService {
   public static final String       NEWS_METADATA_LATEST_DRAFT_OBJECT_TYPE = "newsLatestDraftPage";
 
   public static final String       EXTERNAL_PAGE                          = "externalPage";
+  
+  public static final String       PAGE_REFERRED                          = "pageReferred";
+
+  public static final String       DE_REFER_PAGE_ID                       = "deReferPageId";
 
   public static final String       ARTICLE_CONTENT                        = "content";
 
@@ -294,6 +291,8 @@ public class NewsServiceImpl implements NewsService {
     } else if (ARTICLE.name().equalsIgnoreCase(newsObjectType) && CONTENT_AND_TITLE.name().equalsIgnoreCase(newsUpdateType)
         && StringUtils.isNotEmpty(news.getLang())) {
       return addNewArticleVersionWithLang(news, updaterIdentity, space);
+    } else if (ARTICLE.name().equalsIgnoreCase(newsObjectType) && PAGE_REFERENCE.name().equalsIgnoreCase(newsUpdateType)) {
+      return updateArticle(news, updaterIdentity, newsUpdateType);
     }
     if (publish != news.isPublished() && news.isCanPublish()) {
       news.setPublished(publish);
@@ -515,6 +514,7 @@ public class NewsServiceImpl implements NewsService {
       news.setCanEdit(canEditNews(news, currentIdentity.getUserId()));
       news.setCanDelete(canDeleteNews(currentIdentity, news));
       news.setCanPublish(NewsUtils.canPublishNews(news.getSpaceId(), currentIdentity));
+      news.setCanRefer(NewsUtils.canReferToNote(news.getSpaceId(), news, currentIdentity));
       Space space = spaceService.getSpaceById(news.getSpaceId());
       if (space != null) {
         news.setCanSchedule(canScheduleNews(space, currentIdentity, news));
@@ -581,6 +581,7 @@ public class NewsServiceImpl implements NewsService {
       news.setCanEdit(canEditNews(news, currentIdentity.getUserId()));
       news.setCanDelete(canDeleteNews(currentIdentity, news));
       news.setCanPublish(NewsUtils.canPublishNews(news.getSpaceId(), currentIdentity));
+      news.setCanRefer(NewsUtils.canReferToNote(news.getSpaceId(), news, currentIdentity));
       Space space = spaceService.getSpaceById(news.getSpaceId());
       if (space != null) {
         news.setCanSchedule(canScheduleNews(space, currentIdentity, news));
@@ -1240,6 +1241,16 @@ public class NewsServiceImpl implements NewsService {
                                        false);
   }
 
+  private void referOrDeReferArticlePage(News article, Page articlePage, Map<String, String> properties) {
+    if (article.isReferred()) {
+      properties.put(PAGE_REFERRED, Boolean.TRUE.toString());
+      properties.put(DE_REFER_PAGE_ID, articlePage.getParentPageId());
+    } else {
+      properties.remove(PAGE_REFERRED);
+      properties.remove(DE_REFER_PAGE_ID);
+    }
+  }
+
   private News updateDraftArticleForNewPage(News draftArticle, String draftArticleUpdater, Space space) throws WikiException,
                                                                                                         IllegalAccessException {
     DraftPage draftArticlePage = noteService.getDraftNoteById(draftArticle.getId(), draftArticleUpdater);
@@ -1371,6 +1382,12 @@ public class NewsServiceImpl implements NewsService {
       }
       if (properties.containsKey(EXTERNAL_PAGE) && StringUtils.isNotEmpty(properties.get(EXTERNAL_PAGE))) {
         article.setFromExternalPage(Boolean.parseBoolean(properties.get(EXTERNAL_PAGE)));
+      }
+      if (properties.containsKey(PAGE_REFERRED) && StringUtils.isNotEmpty(properties.get(PAGE_REFERRED))) {
+        article.setReferred(Boolean.parseBoolean(properties.get(PAGE_REFERRED)));
+      }
+      if (properties.containsKey(DE_REFER_PAGE_ID) && StringUtils.isNotEmpty(properties.get(DE_REFER_PAGE_ID))) {
+        article.setDeReferPageId(Long.parseLong(properties.get(DE_REFER_PAGE_ID)));
       }
       if (properties.containsKey(NEWS_VIEWS) && StringUtils.isNotEmpty(properties.get(NEWS_VIEWS))) {
         article.setViewsCount(Long.parseLong(properties.get(NEWS_VIEWS)));
@@ -1892,6 +1909,7 @@ public class NewsServiceImpl implements NewsService {
         if (StringUtils.isNotEmpty(news.getPublicationState())) {
           newsPageProperties.put(NEWS_PUBLICATION_STATE, news.getPublicationState());
         }
+        referOrDeReferArticlePage(news, existingPage, newsPageProperties);
         newsPageProperties.put(NEWS_ACTIVITY_POSTED, String.valueOf(news.isActivityPosted()));
         existingPageMetadataItem.setProperties(newsPageProperties);
         Date updateDate = Calendar.getInstance().getTime();
