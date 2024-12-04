@@ -29,6 +29,7 @@
     :show-publish-button="showPublishButton"
     :show-delete-button="showDeleteButton"
     :show-copy-link-button="true"
+    :show-refer-button="showReferButton"
     :translations="translations"
     :selected-translation="selectedTranslation" />
 </template>
@@ -75,6 +76,9 @@ export default {
     },
     showEditButton() {
       return this.news?.canEdit;
+    },
+    showReferButton() {
+      return eXo?.env?.portal?.referArticleEnabled && this.news?.canRefer;
     },
     showPublishButton() {
       return this.news?.canPublish || this.news?.canSchedule;

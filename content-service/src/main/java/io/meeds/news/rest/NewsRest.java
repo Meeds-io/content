@@ -235,6 +235,7 @@ public class NewsRest {
       news.setScheduleUnpublishDate(updatedNews.getScheduleUnpublishDate());
       news.setProperties(updatedNews.getProperties());
       news.setLang(updatedNews.getLang());
+      news.setReferred(updatedNews.isReferred());
       news = newsService.updateNews(news, currentIdentity.getUserId(), post, updatedNews.isPublished(), newsObjectType, newsUpdateType);
 
       return ResponseEntity.ok(news);

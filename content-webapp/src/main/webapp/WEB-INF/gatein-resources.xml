@@ -297,6 +297,9 @@
       <module>NotesPublication</module>
     </depends>
     <depends>
+      <module>NotesTreeview</module>
+    </depends>
+    <depends>
       <module>vue</module>
     </depends>
     <depends>

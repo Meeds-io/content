@@ -34,6 +34,7 @@
           :show-delete-button="showDeleteButton"
           :show-publish-button="showPublishButton"
           :show-copy-link-button="showCopyLinkButton"
+          :show-refer-button="showReferButton"
           @delete-article="deleteConfirmDialog"
           @edit-article="editLink"
           @open-publication-drawer="openPublicationDrawer" />
@@ -77,6 +78,14 @@
         :news="news"
         @edit-article="editLink"
         @delete-article="deleteConfirmDialog" />
+      <note-treeview-drawer
+        :settings="{
+          saveButtonLabel: $t('content.article.refer.label'),
+          drawerTitle: $t('content.article.refer.to.note'),
+          showCurrentDestination: false,
+          spaceDisplayName: currentSpace?.displayName
+        }"
+        ref="noteTreeview" />
     </div>
   </v-app>
 </template>
@@ -127,6 +136,10 @@ export default {
       required: false,
       default: false
     },
+    showReferButton: {
+      type: Boolean,
+      default: false
+    },
     translations: {
       type: Array,
       default: () => {
@@ -157,7 +170,8 @@ export default {
       },
       iframelyOriginRegex: /^https?:\/\/if-cdn.com/,
       isPublishing: false,
-      allowedTargets: []
+      allowedTargets: [],
+      articlePage: null
     };
   },
   computed: {
@@ -186,6 +200,7 @@ export default {
       }
       this.$root.$emit('application-loaded');
     }
+    this.getArticlePage();
     window.addEventListener('message', (event) => {
       if (this.iframelyOriginRegex.exec(event.origin)) {
         const data = JSON.parse(event.data);
@@ -195,12 +210,52 @@ export default {
       }
     });
     this.$root.$on('open-edit-publishing-drawer', this.openPublicationDrawer);
+    this.$root.$on('refer-article-to-note', this.referArticle);
+    this.$root.$on('move-page', this.moveArticlePage);
   },
   methods: {
+    moveArticlePage(page, newParentPage) {
+      const previousParentPageId = page.parentPageId;
+      page.parentPageId = newParentPage.id;
+      this.news.referred = true;
+      this.$refs.noteTreeview.isLoading = true;
+      return this.$newsServices.updateNews(this.news, false, this.$newsConstants.newsObjectType.ARTICLE,
+        this.$newsConstants.newsUpdateType.PAGE_REFERENCE).then(() => {
+        return this.$newsServices.moveArticlePage(page, newParentPage).then(() => {
+          this.news.deReferPageId = previousParentPageId;
+          this.$refs.noteTreeview.isLoading = true;
+          this.$refs.noteTreeview.close();
+          this.$root.$emit('alert-message', this.$t('content.article.referred.success'), 'success');
+        });
+      }).catch(() => {
+        this.$root.$emit('alert-message', this.$t('content.article.referred.error'), 'error');
+      });
+    },
+    referArticle() {
+      if (this.news.referred) {
+        return this.$newsServices.getArticlePage(this.news.deReferPageId).then((deReferPage) => {
+          this.articlePage.parentPageId = deReferPage.id;
+          return this.$newsServices.moveArticlePage(this.articlePage, deReferPage).then(() => {
+            this.news.referred = false;
+            return this.$newsServices.updateNews(this.news, false, this.$newsConstants.newsObjectType.ARTICLE,
+              this.$newsConstants.newsUpdateType.PAGE_REFERENCE).then(() => {
+              this.$root.$emit('alert-message', this.$t('content.article.deReferred.success'), 'success');
+            });
+          });
+        });
+      } else {
+        this.$refs.noteTreeview.open(this.articlePage, 'movePage');
+      }
+    },
     openPublicationDrawer() {
       if (this.newPublicationDrawerEnabled) {
         this.$refs?.publicationDrawer?.open(this.news);
       }
+    },
+    getArticlePage() {
+      return this.$newsServices.getArticlePage(this.news?.id || this.newsId).then((page) => {
+        this.articlePage = page;
+      });
     },
     getSpaceById(spaceId) {
       return this.$spaceService.getSpaceById(spaceId, 'identity')
