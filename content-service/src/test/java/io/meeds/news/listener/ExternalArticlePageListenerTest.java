@@ -4,6 +4,8 @@ import io.meeds.news.model.News;
 import io.meeds.news.service.NewsService;
 import org.exoplatform.services.listener.Event;
 import org.exoplatform.services.listener.ListenerService;
+import org.exoplatform.services.security.Identity;
+import org.exoplatform.services.security.IdentityRegistry;
 import org.exoplatform.social.core.storage.api.ActivityStorage;
 import org.exoplatform.social.core.storage.cache.CachedActivityStorage;
 import org.exoplatform.wiki.model.Page;
@@ -16,6 +18,7 @@ import org.mockito.junit.MockitoJUnitRunner;
 import java.lang.reflect.Field;
 
 import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
 public class ExternalArticlePageListenerTest {
@@ -25,6 +28,9 @@ public class ExternalArticlePageListenerTest {
 
   @Mock
   private NewsService                 newsService;
+
+  @Mock
+  private IdentityRegistry            identityRegistry;
 
   @Mock
   private ActivityStorage             activityStorage;
@@ -51,9 +57,15 @@ public class ExternalArticlePageListenerTest {
     note.setId("1");
     note.setWikiOwner("/spaces/space");
     note.setContent("tes");
-    Event<String, Page> event = new Event<>("note.updated", "user", note);
+    Identity identity = mock(Identity.class);
+
+    Event<Object, Page> event = new Event<>("note.updated", "user", note);
     when(newsService.getNewsArticleById("1")).thenReturn(article);
     externalArticlePageListener.onEvent(event);
     verify(cachedActivityStorage, times(1)).clearActivityCached("1");
+
+    event = new Event<>("note.deleted", identity, note);
+    externalArticlePageListener.onEvent(event);
+    verify(newsService, times(1)).deleteNews("1", identity, "article");
   }
 }
