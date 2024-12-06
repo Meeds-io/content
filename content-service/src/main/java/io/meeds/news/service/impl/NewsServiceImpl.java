@@ -783,6 +783,9 @@ public class NewsServiceImpl implements NewsService {
   public News unScheduleNews(News news, Space space, String articleCreator) throws Exception {
     News existingNews = getNewsArticleById(news.getId());
     if (existingNews != null && !existingNews.isFromExternalPage()) {
+      if (news.getProperties() != null) {
+        news.getProperties().setDraft(true);
+      }
       news = createDraftArticleForNewPage(news, space.getGroupId(), articleCreator, System.currentTimeMillis());
       deleteArticle(existingNews, articleCreator);
       return buildDraftArticle(news.getId(), articleCreator);
