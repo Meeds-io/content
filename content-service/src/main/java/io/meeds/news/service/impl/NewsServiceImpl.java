@@ -1118,37 +1118,17 @@ public class NewsServiceImpl implements NewsService {
   @Override
   public void deleteArticle(News news, String articleCreator) throws Exception {
     Page articlePage = noteService.getNoteById(news.getId());
-    if (articlePage != null && !articlePage.isDeleted()) {
-      boolean hasDraft = true;
-      while (hasDraft) {
-        try {
-          DraftPage latestDraftPage = noteService.getLatestDraftOfPage(articlePage, articleCreator);
-          if (latestDraftPage != null) {
-            deleteDraftArticle(latestDraftPage.getId(), articleCreator);
-          } else {
-            hasDraft = false;
-          }
-        } catch (Exception exception) {
-          hasDraft = false;
+
+    if (articlePage != null) {
+      if (!articlePage.isDeleted()) {
+        deleteAllDrafts(articlePage, articleCreator);
+        if (noteService.deleteNote(articlePage.getWikiType(), articlePage.getWikiOwner(), articlePage.getName())) {
+          updateDeletedArticleMetadata(news, articleCreator);
         }
-      }
-      boolean isDeleted = noteService.deleteNote(articlePage.getWikiType(), articlePage.getWikiOwner(), articlePage.getName());
-      if (isDeleted) {
-        NewsPageObject newsPageMetadataObject = new NewsPageObject(NEWS_METADATA_PAGE_OBJECT_TYPE,
-                                                                   news.getId(),
-                                                                   null,
-                                                                   Long.parseLong(news.getSpaceId()));
-        MetadataItem metadataItem = metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY, newsPageMetadataObject)
-                                                   .stream()
-                                                   .findFirst()
-                                                   .orElse(null);
-        if (metadataItem != null) {
-          Map<String, String> properties = metadataItem.getProperties();
-          properties.put(NEWS_DELETED, String.valueOf(true));
-          metadataItem.setProperties(properties);
-          String currentIdentityId = identityManager.getOrCreateUserIdentity(articleCreator).getId();
-          metadataService.updateMetadataItem(metadataItem, Long.parseLong(currentIdentityId), false);
-        }
+      } else {
+        // If the article is already deleted,
+        // case of external publish, still update metadata
+        updateDeletedArticleMetadata(news, articleCreator);
       }
     }
   }
@@ -1178,6 +1158,44 @@ public class NewsServiceImpl implements NewsService {
   @Override
   public List<String> getArticleLanguages(String articleId, boolean withDrafts) throws WikiException {
     return noteService.getPageAvailableTranslationLanguages(Long.parseLong(articleId), withDrafts);
+  }
+
+  private void deleteAllDrafts(Page articlePage, String articleCreator) {
+    boolean hasDraft = true;
+    while (hasDraft) {
+      try {
+        DraftPage latestDraft = noteService.getLatestDraftOfPage(articlePage);
+
+        if (latestDraft != null) {
+          deleteDraftArticle(latestDraft.getId(), articleCreator);
+        } else {
+          hasDraft = false;
+        }
+      } catch (Exception e) {
+        LOG.error("Error while deleting draft", e.getMessage());
+        hasDraft = false;
+      }
+    }
+  }
+
+  private void updateDeletedArticleMetadata(News news, String articleCreator) {
+    NewsPageObject newsPageObject = new NewsPageObject(NEWS_METADATA_PAGE_OBJECT_TYPE,
+                                                       news.getId(),
+                                                       null,
+                                                       Long.parseLong(news.getSpaceId()));
+
+    MetadataItem metadataItem = metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY, newsPageObject)
+                                               .stream()
+                                               .findFirst()
+                                               .orElse(null);
+
+    if (metadataItem != null) {
+      Map<String, String> properties = metadataItem.getProperties();
+      properties.put(NEWS_DELETED, String.valueOf(true));
+      metadataItem.setProperties(properties);
+      String currentIdentityId = identityManager.getOrCreateUserIdentity(articleCreator).getId();
+      metadataService.updateMetadataItem(metadataItem, Long.parseLong(currentIdentityId), false);
+    }
   }
 
   private void postProcessing(News news, String poster) throws Exception {
