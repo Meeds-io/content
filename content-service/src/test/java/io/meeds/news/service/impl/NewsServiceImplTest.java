@@ -844,16 +844,27 @@ public class NewsServiceImplTest {
     draftProperties.setFeaturedImage(noteFeaturedImage);
     when(draftPage.getId()).thenReturn("1");
     when(draftPage.getProperties()).thenReturn(draftProperties);
-    when(noteService.getLatestDraftOfPage(existingPage, identity.getUserId())).thenReturn(draftPage);
+    when(noteService.getLatestDraftOfPage(existingPage)).thenReturn(draftPage);
     when(noteService.getDraftNoteById(anyString(), anyString())).thenReturn(draftPage);
     when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(new org.exoplatform.social.core.identity.model.Identity("1"));
     doNothing().when(noteService).removeNoteFeaturedImage(anyLong(), anyLong(), anyString(), anyBoolean(), anyLong());
 
+    when(existingPage.isDeleted()).thenReturn(false);
     newsService.deleteNews(existingPage.getId(), identity, ARTICLE.name().toLowerCase());
 
     //Then
     verify(noteService, times(1)).deleteNote(existingPage.getWikiType(), existingPage.getWikiOwner(), existingPage.getName());
     verify(noteService, times(1)).removeDraftById("1");
+    verify(activityManager, times(1)).deleteActivity("1");
+    verify(metadataService, times(1)).updateMetadataItem(any(MetadataItem.class), anyLong(), anyBoolean());
+
+    clearInvocations(noteService, activityManager, metadataService);
+    when(existingPage.isDeleted()).thenReturn(true);
+
+    newsService.deleteNews(existingPage.getId(), identity, ARTICLE.name().toLowerCase());
+
+    verify(noteService, times(0)).deleteNote(existingPage.getWikiType(), existingPage.getWikiOwner(), existingPage.getName());
+    verify(noteService, times(0)).removeDraftById("1");
     verify(activityManager, times(1)).deleteActivity("1");
     verify(metadataService, times(1)).updateMetadataItem(any(MetadataItem.class), anyLong(), anyBoolean());
   }
