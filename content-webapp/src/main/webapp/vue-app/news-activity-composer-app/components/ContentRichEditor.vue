@@ -491,7 +491,7 @@ export default {
       this.article.published = publish;
       this.article.targets = selectedTargets;
       if (selectedAudience !== null) {
-        this.article.audience = selectedAudience === this.$t('news.composer.stepper.audienceSection.allUsers') ? 'all' : 'space';
+        this.article.audience = selectedAudience;
       }
       this.doPostArticle(schedulePostDate);
     },
