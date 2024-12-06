@@ -770,6 +770,9 @@ public class NewsServiceImpl implements NewsService {
   public News unScheduleNews(News news, String pageOwnerId, String articleCreator) throws Exception {
     News existingNews = getNewsArticleById(news.getId());
     if (existingNews != null) {
+      if (news.getProperties() != null) {
+        news.getProperties().setDraft(true);
+      }
       news = createDraftArticleForNewPage(news, pageOwnerId, articleCreator, System.currentTimeMillis());
       deleteArticle(existingNews, articleCreator);
       return buildDraftArticle(news.getId(), articleCreator);
@@ -2166,4 +2169,3 @@ public class NewsServiceImpl implements NewsService {
     NewsUtils.broadcastEvent(NewsUtils.UPDATE_CONTENT_PERMISSIONS, this, updateContentPermissionEventListenerData);
   }
 }
- 
