@@ -225,10 +225,17 @@ export default {
           this.news.deReferPageId = previousParentPageId;
           this.$refs.noteTreeview.isLoading = true;
           this.$refs.noteTreeview.close();
-          this.$root.$emit('alert-message', this.$t('content.article.referred.success'), 'success');
+          this.displayMessage({
+            message: this.$t('content.article.referred.success'),
+            type: 'success',
+            linkText: this.$t('notes.view.label'),
+            alertLink: this.articlePage.url
+          });
         });
       }).catch(() => {
-        this.$root.$emit('alert-message', this.$t('content.article.referred.error'), 'error');
+        this.displayMessage({
+          message: this.$t('content.article.referred.error'),
+          type: 'error'});
       });
     },
     referArticle() {
@@ -239,7 +246,9 @@ export default {
             this.news.referred = false;
             return this.$newsServices.updateNews(this.news, false, this.$newsConstants.newsObjectType.ARTICLE,
               this.$newsConstants.newsUpdateType.PAGE_REFERENCE).then(() => {
-              this.$root.$emit('alert-message', this.$t('content.article.deReferred.success'), 'success');
+              this.displayMessage({
+                message: this.$t('content.article.deReferred.success'),
+                type: 'success'});
             });
           });
         });
@@ -426,7 +435,16 @@ export default {
           const message = this.$t('news.details.deleteCanceled');
           this.$root.$emit('alert-message', message, 'success');
         });
-    }
+    },
+    displayMessage(message) {
+      document.dispatchEvent(new CustomEvent('alert-message-html', {detail: {
+        alertMessage: message?.message,
+        alertType: message?.type,
+        alertLinkText: message?.linkText,
+        alertLinkCallback: message?.linkCallback,
+        alertLink: message.alertLink
+      }}));
+    },
   }
 };
 </script>
