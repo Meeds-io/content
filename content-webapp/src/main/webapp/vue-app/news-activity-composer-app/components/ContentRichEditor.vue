@@ -145,9 +145,7 @@ export default {
       }
     },
     'article.content': function() {
-      if (!this.isSameArticleContent()) {
-        this.autoSave();
-      }
+      this.autoSave();
     },
     postingNews() {
       this.$refs.editor.setPublishing(this.postingNews);
@@ -187,7 +185,7 @@ export default {
                               && this.article.publicationState !== 'draft');
     },
     articleNotChanged() {
-      return this.originalArticle?.title === this.article.title && this.isSameArticleContent()
+      return this.originalArticle?.title === this.article.title && this.originalArticle?.content === this.article.content
                                                                 && !this.propertiesModified;
     },
     propertiesModified() {
@@ -820,9 +818,6 @@ export default {
       if (urlParams.has(paramName)) {
         return urlParams.get(paramName);
       }
-    },
-    isSameArticleContent() {
-      return this.$noteUtils.isSameContent(this.article.content, this.originalArticle.content);
     },
     refreshTranslationExtensions() {
       this.editorExtensions = extensionRegistry.loadExtensions('contentEditor', 'translation-extension');
