@@ -213,6 +213,7 @@ export default {
     this.$root.$on('open-edit-publishing-drawer', this.openPublicationDrawer);
     this.$root.$on('refer-article-to-note', this.referArticle);
     this.$root.$on('move-page', this.moveArticlePage);
+    this.bindTreeViewNavigationClickListener();
   },
   methods: {
     moveArticlePage(page, newParentPage) {
@@ -445,6 +446,14 @@ export default {
         alertLinkCallback: message?.linkCallback,
         alertLink: message.alertLink
       }}));
+    },
+    bindTreeViewNavigationClickListener() {
+      const self = this;
+      document.addEventListener('click', function (event) {
+        if (event.target.closest('.image-navigation')) {
+          window.location.href = self.articlePage.url;
+        }
+      });
     },
   }
 };

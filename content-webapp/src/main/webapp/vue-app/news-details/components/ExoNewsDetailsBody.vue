@@ -133,7 +133,7 @@
           </div>
         </div>
         <div
-          class="mt-8 rich-editor-content extended-rich-content"
+          class="mt-8 content-treeview-processor rich-editor-content extended-rich-content"
           v-sanitized-html="newsBody">
         </div>
       </div>

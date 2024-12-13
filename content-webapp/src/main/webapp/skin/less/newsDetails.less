@@ -21,6 +21,7 @@
 @import "variables.less";
 @import "../../ckeditor/skins/common/extendedRichContent.less";
 @import (less) "../../ckeditor/plugins/codesnippet/lib/highlight/styles/monokai_sublime.css";
+
 @grayDark: #333;
 
 .singlePageApplicationTDContainer {
@@ -107,6 +108,19 @@
     .go-back-button {
       background: rgba(0, 0, 0, 0.5);
       color: @whiteColorDefault
+    }
+
+    .content-treeview-processor {
+      @import (less) "../../toc/toc.css";
+
+      .navigation-img-wrapper .image-navigation,
+      .navigation-img-wrapper .image-navigation * {
+        cursor: pointer !important;
+      }
+
+      .navigation-img-wrapper figure #remove-treeview {
+        display: none !important;
+      }
     }
   }
 }
