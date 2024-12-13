@@ -62,6 +62,27 @@
       :activity-id="activityId"
       :icon-size="20"
       class="pull-right mt-1 me-2" />
+    <v-tooltip
+      v-if="canOpenInNotes"
+      bottom>
+      <template #activator="{ on, attrs }">
+        <v-btn
+          v-on="on"
+          v-bind="attrs"
+          :href="articlePageUrl"
+          :aria-label="$t('content.article.open.in.notes')"
+          class="pull-right me-2"
+          link
+          icon>
+          <v-icon
+            size="20"
+            class="icon-default-color">
+            fas fa-external-link-alt
+          </v-icon>
+        </v-btn>
+      </template>
+      {{ $t('content.article.open.in.notes') }}
+    </v-tooltip>
   </div>
 </template>
 
@@ -111,6 +132,10 @@ export default {
     showReferButton: {
       type: Boolean,
       default: false
+    },
+    articlePageUrl: {
+      type: String,
+      default: null
     }
   },
   data() {
@@ -142,6 +167,9 @@ export default {
     },
     displayFavoriteButton() {
       return this.currentUser !== '' && this.publicationState !== 'staged';
+    },
+    canOpenInNotes() {
+      return this.news?.referred || this.news?.fromExternalPage;
     }
   },
   methods: {
