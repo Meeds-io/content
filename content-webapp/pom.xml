@@ -40,6 +40,12 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
+      <groupId>io.meeds.notes</groupId>
+      <artifactId>notes-webapp</artifactId>
+      <classifier>sources</classifier>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
       <groupId>io.meeds.commons</groupId>
       <artifactId>commons-api</artifactId>
       <scope>provided</scope>
@@ -117,7 +123,7 @@
               <goal>unpack-dependencies</goal>
             </goals>
             <configuration>
-              <includeArtifactIds>platform-ui-skin,commons-extension-webapp</includeArtifactIds>
+              <includeArtifactIds>platform-ui-skin,commons-extension-webapp,notes-webapp</includeArtifactIds>
               <outputDirectory>${project.build.directory}/src/main/webapp</outputDirectory>
               <excludes>**/custom-variables.less</excludes>
             </configuration>
