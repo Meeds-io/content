@@ -35,6 +35,7 @@
           :show-publish-button="showPublishButton"
           :show-copy-link-button="showCopyLinkButton"
           :show-refer-button="showReferButton"
+          :article-page-url="articlePage.url"
           @delete-article="deleteConfirmDialog"
           @edit-article="editLink"
           @open-publication-drawer="openPublicationDrawer" />
