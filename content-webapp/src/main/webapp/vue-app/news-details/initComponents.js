@@ -24,7 +24,6 @@ import ExoNewsDetailsActivity from './components/ExoNewsDetailsActivity.vue';
 import ExoNewsDetailsToolBar from './components/ExoNewsDetailsToolBar.vue';
 import ExoNewsDetailsBody from './components/ExoNewsDetailsBody.vue';
 import ExoNewsDetailsTime from './components/ExoNewsDetailsTime.vue';
-import ExoNewsEditPublishingDrawer from './components/ExoNewsEditPublishingDrawer.vue';
 import ExoNewsFavoriteAction from './components/ExoNewsFavoriteAction.vue';
 import NewsActionMenuItems from '../news/components/NewsActionMenuItems.vue';
 import NewsMobileActionMenu from '../news/components/NewsMobileActionMenu.vue';
@@ -36,7 +35,6 @@ const components = {
   'exo-news-details-toolbar': ExoNewsDetailsToolBar,
   'exo-news-details-body': ExoNewsDetailsBody,
   'exo-news-details-time': ExoNewsDetailsTime,
-  'exo-news-edit-publishing-drawer': ExoNewsEditPublishingDrawer,
   'exo-news-favorite-action': ExoNewsFavoriteAction,
   'news-action-menu-items': NewsActionMenuItems,
   'news-mobile-action-menu': NewsMobileActionMenu

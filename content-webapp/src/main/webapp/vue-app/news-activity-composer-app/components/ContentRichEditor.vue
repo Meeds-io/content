@@ -51,20 +51,13 @@
       :images-download-folder="'DRIVE_ROOT_NODE/News/images'"
       @editor-closed="editorClosed"
       @open-treeview="openTreeView"
-      @post-note="postArticleActions"
+      @post-note="postAndPublish"
       @auto-save="autoSaveActions"
       @editor-ready="editorReady"
       @update-data="updateArticleData" />
     <note-treeview-drawer
       ref="noteTreeview"
       @closed="closePluginsDrawer()" />
-    <schedule-news-drawer
-      v-if="canScheduleArticle && !newPublicationDrawerEnabled"
-      :posting-news="postingNews"
-      :news-id="articleId"
-      :news-type="articleType"
-      :space-id="spaceId"
-      @post-article="postArticle" />
     <div
       v-for="(extension, i) in editorExtensions"
       :key="i">
@@ -190,9 +183,6 @@ export default {
     },
     propertiesModified() {
       return JSON.stringify(this.article?.properties) !== JSON.stringify(this.originalArticle?.properties);
-    },
-    newPublicationDrawerEnabled() {
-      return eXo?.env?.portal?.newPublicationDrawerEnabled;
     }
   },
   created() {
@@ -484,15 +474,6 @@ export default {
         this.draftSavingStatus = '';
       }
     },
-    postArticle(schedulePostDate, postArticleMode, publish, isActivityPosted, selectedTargets, selectedAudience) {
-      this.article.activityPosted = isActivityPosted;
-      this.article.published = publish;
-      this.article.targets = selectedTargets;
-      if (selectedAudience !== null) {
-        this.article.audience = selectedAudience;
-      }
-      this.doPostArticle(schedulePostDate);
-    },
     doPostArticle(schedulePostDate) {
       if (this.savingDraft) {
         this.$on('draftCreated', this.saveArticle);
@@ -600,41 +581,20 @@ export default {
       window.history.pushState('news', '', `${url.origin}${url.pathname}?${params.toString()}`);
 
     },
-    postAndPublish(editMode, publicationSettings) {
-      if (editMode) {
-        if (publicationSettings) {
-          this.article.activityPosted = publicationSettings.post;
-          this.article.published = publicationSettings.publish;
-          this.article.targets = publicationSettings.selectedTargets;
-          this.article.audience = publicationSettings.selectedAudience;
-        }
+    postAndPublish(publicationSettings) {
+      this.article.activityPosted = publicationSettings?.post;
+      this.article.published = publicationSettings?.publish;
+      this.article.targets = publicationSettings?.selectedTargets;
+      this.article.audience = publicationSettings?.selectedAudience;
+      if (this.editMode) {
         this.updateAndPostArticle();
         return;
       }
       this.postingNews = true;
       const scheduleSettings = publicationSettings?.scheduleSettings;
       const schedulePostDate = scheduleSettings?.postDate;
-      const postArticleMode = schedulePostDate ?? 'later';
       this.article.scheduleUnpublishDate = scheduleSettings?.unpublishDate;
-      this.postArticle(schedulePostDate, postArticleMode, publicationSettings?.publish, publicationSettings?.post,
-        publicationSettings?.selectedTargets, publicationSettings?.selectedAudience);
-    },
-    postArticleActions(publicationSettings) {
-      if (this.newPublicationDrawerEnabled) {
-        this.postAndPublish(this.editMode, publicationSettings);
-        return;
-      }
-      if (this.editMode) {
-        this.updateAndPostArticle();
-        return;
-      }
-      if (this.canScheduleArticle) {
-        this.scheduleMode = 'postScheduledNews';
-        this.$root.$emit('open-schedule-drawer', this.scheduleMode);
-        this.postKey++;
-      } else {
-        this.postAndPublish();
-      }
+      this.doPostArticle(schedulePostDate);
     },
     updateArticleData(article) {
       if (this.initDone && this.currentArticleInitDone) {

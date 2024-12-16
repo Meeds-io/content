@@ -35,7 +35,7 @@
           :show-publish-button="showPublishButton"
           :show-copy-link-button="showCopyLinkButton"
           :show-refer-button="showReferButton"
-          :article-page-url="articlePage.url"
+          :article-page-url="articlePage?.url"
           @delete-article="deleteConfirmDialog"
           @edit-article="editLink"
           @open-publication-drawer="openPublicationDrawer" />
@@ -45,11 +45,6 @@
           :translations="translations"
           :selected-translation="selectedTranslation" />
       </div>
-      <schedule-news-drawer
-        v-if="currentUser"
-        @post-article="postNews"
-        :news-id="newsId"
-        :news-type="processedNewsType" />
       <exo-confirm-dialog
         v-if="currentUser"
         ref="deleteConfirmDialog"
@@ -58,12 +53,7 @@
         :ok-label="$t('news.button.ok')"
         :cancel-label="$t('news.button.cancel')"
         @ok="deleteNews" />
-      <exo-news-edit-publishing-drawer
-        v-if="news && currentUser && !newPublicationDrawerEnabled"
-        :news="news"
-        @refresh-news="getNewsById(newsId)" />
       <note-publication-drawer
-        v-if="newPublicationDrawerEnabled"
         ref="publicationDrawer"
         :is-publishing="isPublishing"
         :params="{
@@ -74,7 +64,7 @@
         }"
         :edit-mode="true"
         @publish="publishArticle" />
-      <note-publication-target-drawer v-if="newPublicationDrawerEnabled" />
+      <note-publication-target-drawer />
       <news-mobile-action-menu
         :news="news"
         @edit-article="editLink"
@@ -179,9 +169,6 @@ export default {
     processedNewsType() {
       return this.activityId && this.activityId !== '' ? this.$newsConstants.newsObjectType.ARTICLE : this.newsType;
     },
-    newPublicationDrawerEnabled() {
-      return eXo?.env?.portal?.newPublicationDrawerEnabled;
-    },
     scheduled() {
       return !!this.news.schedulePostDate || this.staged;
     },
@@ -259,9 +246,7 @@ export default {
       }
     },
     openPublicationDrawer() {
-      if (this.newPublicationDrawerEnabled) {
-        this.$refs?.publicationDrawer?.open(this.news);
-      }
+      this.$refs?.publicationDrawer?.open(this.news);
     },
     getArticlePage() {
       return this.$newsServices.getArticlePage(this.news?.id || this.newsId).then((page) => {
@@ -361,55 +346,14 @@ export default {
         });
       } else {
         this.publish(editScheduleAction, scheduleSettings).then((article) => {
-          this.$root.$emit('alert-message', this.$t('notes.publication.settings.update.success'), 'success');
+          this.displayMessage({message: this.$t('notes.publication.settings.update.success'), type: 'success'});
           history.replaceState({}, article.url);
+          this.news = article;
         }).catch(() => {
-          this.$root.$emit('alert-message', this.$t('notes.publication.settings.update.error'), 'error');
+          this.displayMessage({message: this.$t('notes.publication.settings.update.error'), type: 'error'});
         }).finally(() => {
           this.isPublishing = false;
-          this.$refs.publicationDrawer.close();
-        });
-      }
-    },
-    postNews(schedulePostDate, postArticleMode, publish, isActivityPosted, selectedTargets, selectedAudience) {
-      this.news.timeZoneId = USER_TIMEZONE_ID;
-      this.news.activityPosted = isActivityPosted;
-      this.news.published = publish;
-      this.news.targets = selectedTargets;
-      if (selectedAudience !== null) {
-        this.news.audience = selectedAudience === this.$t('news.composer.stepper.audienceSection.allUsers') ? 'all' : 'space';
-      }
-      if (postArticleMode === 'later') {
-        this.news.schedulePostDate = schedulePostDate;
-        this.$newsServices.scheduleNews(this.news, this.newsType).then((scheduleNews) => {
-          if (scheduleNews) {
-            window.location.href = scheduleNews.url;
-          }
-        });
-      } else if (postArticleMode === 'immediate') {
-        this.news.publicationState = 'posted';
-        this.$newsServices.saveNews(this.news).then((createdNews) => {
-          let createdNewsActivity = null;
-          if (createdNews.activities) {
-            const createdNewsActivities = createdNews.activities.split(';')[0].split(':');
-            if (createdNewsActivities.length > 1) {
-              createdNewsActivity = createdNewsActivities[1];
-            }
-          }
-          if (createdNewsActivity) {
-            window.location.href = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/activity?id=${createdNewsActivity}`;
-          } else {
-            window.location.href = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}`;
-          }
-        });
-      } else {
-        this.news.publicationState = 'draft';
-        this.$newsServices.saveNews(this.news).then((createdNews) => {
-          this.news.id = createdNews.id;
-          this.$emit('draftCreated');
-          if (createdNews) {
-            window.location.href = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news?filter=drafts`;
-          }
+          this.$refs?.publicationDrawer?.close();
         });
       }
     },
