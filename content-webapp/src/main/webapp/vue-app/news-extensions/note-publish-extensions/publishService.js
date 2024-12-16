@@ -42,6 +42,14 @@ export async function getSavedNotePublicationSettings(id, lang) {
   }
 }
 
+export function getNoteHomePage(type, owner) {
+  return newsService.getPageByTypeOwnerAndName(type, owner, 'Home');
+}
+
+export function updateArticlePage(page) {
+  return newsService.updateArticlePage(page);
+}
+
 export function saveNoteArticle(article, spaceId) {
   article = noteToArticle(article, spaceId);
   if (article?.schedulePostDate) {

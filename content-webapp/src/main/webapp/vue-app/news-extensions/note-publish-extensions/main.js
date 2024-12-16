@@ -1,6 +1,18 @@
 import * as publishService from './publishService';
 import {initPublishExtension} from './extensions.js';
 
+const treeViewNavigationTemplate = `
+        <div 
+          id="note-children-container" 
+          class="navigation-img-wrapper" 
+          contenteditable="false">
+          <figure class="image-navigation" contenteditable="false">
+            <img src="/notes/images/children.png" role="presentation"/>
+            <img src="/notes/images/trash.png" id="remove-treeview" alt="remove treeview"/>
+            <figcaption class="note-navigation-label">Navigation</figcaption>
+          </figure>
+        </div>
+        <p></p>`;
 
 document.addEventListener('note-navigation-updated', handleNoteNavigationUpdate);
 document.addEventListener('publish-note', publishNote);
@@ -16,10 +28,18 @@ function publishNote(event) {
       updateSavedPublicationSettings(article.id);
     });
   } else {
+    checkInsertTocNavigationTemplate(article);
     publishService.saveNoteArticle(article, spaceId).then((article) => {
       emitNotePublished(false, !!article?.schedulePostDate, article?.url);
       updateSavedPublicationSettings(article.id);
     });
+  }
+}
+
+function checkInsertTocNavigationTemplate(article) {
+  if (article.isHomeDefaultContent && article.hasChildren) {
+    article.content = treeViewNavigationTemplate;
+    publishService.updateArticlePage(article);
   }
 }
 
@@ -42,7 +62,7 @@ function updateSavedPublicationSettings(noteId) {
   });
 }
 
-function extractNoteIdFormUrl() {
+function extractNoteIdFromUrl() {
   const url = window.location.href;
   const regex = /\/notes\/(\d+)$/;
   const match = regex.exec(url);
@@ -61,7 +81,8 @@ function emitNotePublished(edit, isPublishSchedule, link) {
 
 export async function init() {
   try {
-    const noteId = extractNoteIdFormUrl();
+    const wikiOwner = `/spaces/${eXo.env.portal.spaceGroup}`;
+    const noteId = extractNoteIdFromUrl() ?? (await publishService.getNoteHomePage('group', wikiOwner))?.id;
     const [canPublish, savedSettings, targets] = await Promise.all([
       publishService.canPublish(spaceId),
       publishService.getSavedNotePublicationSettings(noteId),
