@@ -315,3 +315,11 @@ export function getArticlePage(pageId) {
 export function moveArticlePage(page, newParentPage) {
   return Vue.prototype.$notesService.moveNotes(page, newParentPage);
 }
+
+export function getPageByTypeOwnerAndName(type, owner, name) {
+  return Vue.prototype.$notesService.getNote(type, owner, name);
+}
+
+export function updateArticlePage(page) {
+  return Vue.prototype.$notesService.updateNoteById(page);
+}
