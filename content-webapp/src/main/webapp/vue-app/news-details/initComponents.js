@@ -24,10 +24,13 @@ import ExoNewsDetailsActivity from './components/ExoNewsDetailsActivity.vue';
 import ExoNewsDetailsToolBar from './components/ExoNewsDetailsToolBar.vue';
 import ExoNewsDetailsBody from './components/ExoNewsDetailsBody.vue';
 import ExoNewsDetailsTime from './components/ExoNewsDetailsTime.vue';
-import ExoNewsEditPublishingDrawer from './components/ExoNewsEditPublishingDrawer.vue';
 import ExoNewsFavoriteAction from './components/ExoNewsFavoriteAction.vue';
 import NewsActionMenuItems from '../news/components/NewsActionMenuItems.vue';
 import NewsMobileActionMenu from '../news/components/NewsMobileActionMenu.vue';
+
+import * as  newsServices from '../services/newsServices.js';
+import * as newsConstants from '../services/newsConstants.js';
+import * as newsTargetingService from '../services/newsTargetingService.js';
 
 const components = {
   'exo-news-details': ExoNewsDetails,
@@ -36,7 +39,6 @@ const components = {
   'exo-news-details-toolbar': ExoNewsDetailsToolBar,
   'exo-news-details-body': ExoNewsDetailsBody,
   'exo-news-details-time': ExoNewsDetailsTime,
-  'exo-news-edit-publishing-drawer': ExoNewsEditPublishingDrawer,
   'exo-news-favorite-action': ExoNewsFavoriteAction,
   'news-action-menu-items': NewsActionMenuItems,
   'news-mobile-action-menu': NewsMobileActionMenu
@@ -46,8 +48,6 @@ for (const key in components) {
   Vue.component(key, components[key]);
 }
 
-import * as  newsServices from '../services/newsServices.js';
-import * as newsConstants from '../services/newsConstants.js';
 
 if (!Vue.prototype.$newsServices) {
   window.Object.defineProperty(Vue.prototype, '$newsServices', {
@@ -57,5 +57,11 @@ if (!Vue.prototype.$newsServices) {
 if (!Vue.prototype.$newsConstants) {
   window.Object.defineProperty(Vue.prototype, '$newsConstants', {
     value: newsConstants,
+  });
+}
+
+if (!Vue.prototype.$newsTargetingService) {
+  window.Object.defineProperty(Vue.prototype, '$newsTargetingService', {
+    value: newsTargetingService,
   });
 }

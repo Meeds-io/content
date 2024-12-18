@@ -78,7 +78,7 @@ export default {
       return this.news?.canEdit;
     },
     showReferButton() {
-      return eXo?.env?.portal?.referArticleEnabled && this.news?.canRefer;
+      return this.news?.canRefer;
     },
     showPublishButton() {
       return this.news?.canPublish || this.news?.canSchedule;
