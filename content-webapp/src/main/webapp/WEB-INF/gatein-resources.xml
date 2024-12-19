@@ -114,9 +114,6 @@
         <as>editor</as>
       </depends>
       <depends>
-        <module>ScheduleNewsDrawer</module>
-      </depends>
-      <depends>
         <module>jquery</module>
         <as>$</as>
       </depends>
@@ -316,14 +313,8 @@
       <module>commonVueComponents</module>
     </depends>
     <depends>
-      <module>newsTargetSelectorComponent</module>
-    </depends>
-    <depends>
       <module>commons-editor</module>
       <as>editor</as>
-    </depends>
-    <depends>
-      <module>ScheduleNewsDrawer</module>
     </depends>
     <depends>
       <module>suggester</module>
@@ -368,21 +359,6 @@
   </module>
 
   <module>
-    <name>newsTargetSelectorComponent</name>
-    <script>
-      <minify>false</minify>
-      <path>/js/newsTargetSelectorComponent.bundle.js</path>
-    </script>
-    <depends>
-      <module>vue</module>
-    </depends>
-    <depends>
-      <module>jquery</module>
-      <as>$</as>
-    </depends>
-  </module>
-
-  <module>
     <name>NewsSearchCard</name>
     <script>
       <minify>false</minify>
@@ -406,36 +382,6 @@
     </depends>
     <depends>
       <module>extensionRegistry</module>
-    </depends>
-  </module>
-
-  <module>
-    <name>ScheduleNewsDrawer</name>
-    <script>
-      <minify>false</minify>
-      <path>/js/scheduleNewsDrawer.bundle.js</path>
-    </script>
-    <depends>
-      <module>commonVueComponents</module>
-    </depends>
-    <depends>
-      <module>newsTargetSelectorComponent</module>
-    </depends>
-    <depends>
-      <module>vue</module>
-    </depends>
-    <depends>
-      <module>eXoVueI18n</module>
-    </depends>
-    <depends>
-      <module>extensionRegistry</module>
-    </depends>
-    <depends>
-      <module>vuetify</module>
-    </depends>
-    <depends>
-      <module>jquery</module>
-      <as>$</as>
     </depends>
   </module>
 

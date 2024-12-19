@@ -23,6 +23,7 @@ import ContentRichEditor from './components/ContentRichEditor.vue';
 
 import * as  newsServices from '../services/newsServices.js';
 import * as newsConstants from '../services/newsConstants.js';
+import * as newsTargetingService from '../services/newsTargetingService.js';
 
 const components = {
   'exo-news-file-drop': ExoNewsFileDrop,
@@ -42,5 +43,11 @@ if (!Vue.prototype.$newsServices) {
 if (!Vue.prototype.$newsConstants) {
   window.Object.defineProperty(Vue.prototype, '$newsConstants', {
     value: newsConstants,
+  });
+}
+
+if (!Vue.prototype.$newsTargetingService) {
+  window.Object.defineProperty(Vue.prototype, '$newsTargetingService', {
+    value: newsTargetingService,
   });
 }
