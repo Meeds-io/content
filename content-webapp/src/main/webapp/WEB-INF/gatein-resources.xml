@@ -69,6 +69,13 @@
   </portlet-skin>
 
   <portlet-skin>
+    <application-name>content</application-name>
+    <portlet-name>NewsDetail</portlet-name>
+    <skin-name>Enterprise</skin-name>
+    <additional-module>newsDetails</additional-module>
+  </portlet-skin>
+
+  <portlet-skin>
     <application-name>social</application-name>
     <portlet-name>UserActivityStreamPortlet</portlet-name>
     <skin-name>Enterprise</skin-name>
