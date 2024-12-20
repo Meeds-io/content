@@ -1099,6 +1099,8 @@ public class NewsServiceImpl implements NewsService {
 
     Map<String, String> draftArticleMetadataItemProperties = new HashMap<>();
     draftArticleMetadataItemProperties.put(NEWS_ACTIVITY_POSTED, String.valueOf(draftArticle.isActivityPosted()));
+    draftArticleMetadataItemProperties.put(PUBLISHED, String.valueOf(draftArticle.isPublished()));
+
     setScheduleProperties(draftArticle, draftArticleMetadataItemProperties);
     String draftArticleMetadataItemCreatorIdentityId = identityManager.getOrCreateUserIdentity(updater).getId();
     metadataService.createMetadataItem(latestDraftObject,
@@ -1449,6 +1451,9 @@ public class NewsServiceImpl implements NewsService {
         }
         if (properties.containsKey(UNPUBLISH_SCHEDULED_DATE) && StringUtils.isNotEmpty(properties.get(UNPUBLISH_SCHEDULED_DATE))) {
           draftArticle.setScheduleUnpublishDate(properties.get(UNPUBLISH_SCHEDULED_DATE));
+        }
+        if (properties.containsKey(PUBLISHED) && StringUtils.isNotEmpty(properties.get(PUBLISHED))) {
+          draftArticle.setPublished(Boolean.valueOf(properties.get(PUBLISHED)));
         }
       }
     }
