@@ -129,7 +129,7 @@ public class News {
 
   private Map<String, List<MetadataItem>> metadatas;
 
-  private List<String>                    targets;
+  private List<ArticleTarget>             targets;
 
   private boolean                         favorite;
 

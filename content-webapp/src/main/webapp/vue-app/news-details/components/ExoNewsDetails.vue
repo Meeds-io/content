@@ -346,11 +346,11 @@ export default {
         });
       } else {
         this.publish(editScheduleAction, scheduleSettings).then((article) => {
-          this.displayMessage({message: this.$t('notes.publication.settings.update.success'), type: 'success'});
+          this.displayMessage({message: this?.$t?.('notes.publication.settings.update.success'), type: 'success'});
           history.replaceState({}, article.url);
           this.news = article;
         }).catch(() => {
-          this.displayMessage({message: this.$t('notes.publication.settings.update.error'), type: 'error'});
+          this.displayMessage({message: this?.$t?.('notes.publication.settings.update.error'), type: 'error'});
         }).finally(() => {
           this.isPublishing = false;
           this.$refs?.publicationDrawer?.close();
@@ -383,13 +383,17 @@ export default {
         });
     },
     displayMessage(message) {
-      document.dispatchEvent(new CustomEvent('alert-message-html', {detail: {
-        alertMessage: message?.message,
-        alertType: message?.type,
-        alertLinkText: message?.linkText,
-        alertLinkCallback: message?.linkCallback,
-        alertLink: message.alertLink
-      }}));
+      setTimeout(() => {
+        document.dispatchEvent(new CustomEvent('alert-message-html', {
+          detail: {
+            alertMessage: message?.message,
+            alertType: message?.type,
+            alertLinkText: message?.linkText,
+            alertLinkCallback: message?.linkCallback,
+            alertLink: message.alertLink
+          }
+        }));
+      }, 200);
     },
     bindTreeViewNavigationClickListener() {
       const self = this;

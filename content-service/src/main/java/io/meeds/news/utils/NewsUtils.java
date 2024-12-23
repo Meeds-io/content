@@ -19,13 +19,10 @@
  */
 package io.meeds.news.utils;
 
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
+import io.meeds.news.model.ArticleTarget;
 import io.meeds.news.model.News;
 import io.meeds.notes.model.NoteFeaturedImage;
 import io.meeds.notes.model.NotePageProperties;
@@ -99,8 +96,10 @@ public class NewsUtils {
 
   public static final String UPDATE_CONTENT_PERMISSIONS      = "content.update.permissions";
 
+  public static final String PUBLISHED_DATE                  = "publishedDate";
+
   private static SpaceService       spaceService;
-  
+
   public enum NewsObjectType {
     DRAFT, LATEST_DRAFT, ARTICLE, EXISTING_PAGE
   }
@@ -297,6 +296,13 @@ public class NewsUtils {
         || getSpaceService().canPublishOnSpace(space, currentIdentity.getUserId());
   }
 
+  public static List<String> toTargetNames(List<ArticleTarget> articleTargets) {
+    if (articleTargets == null || articleTargets.isEmpty()) {
+      return new ArrayList<>();
+    }
+    return articleTargets.stream().map(ArticleTarget::getName).toList();
+  }
+  
   private static SpaceService getSpaceService() {
     if (spaceService == null) {
       spaceService = CommonsUtils.getService(SpaceService.class);
@@ -309,5 +315,5 @@ public class NewsUtils {
     ListAccess<Space> memberSpacesListAccess = spaceService.getMemberSpaces(userIdentity.getUserId());
     return Arrays.asList(memberSpacesListAccess.load(0, memberSpacesListAccess.getSize()));
   }
-  
+
 }
