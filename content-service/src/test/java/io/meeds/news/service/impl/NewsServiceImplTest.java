@@ -527,6 +527,7 @@ public class NewsServiceImplTest {
     newsArticlePage.setContent(newsArticle.getBody());
     newsArticlePage.setParentPageId(rootPage.getId());
     newsArticlePage.setAuthor(newsArticle.getAuthor());
+    newsArticlePage.setProperties(new NotePageProperties(Long.parseLong(newsArticle.getId()), null, null, false, false, true));
     newsArticlePage.setLang(null);
     newsArticlePage.setAttachmentObjectType(ArticlePageAttachmentPlugin.OBJECT_TYPE);
 
@@ -542,13 +543,33 @@ public class NewsServiceImplTest {
 
     // Then
     verify(noteService, times(1)).createNote(wiki, rootPage.getName(), newsArticlePage, identity);
-    verify(noteService, times(1)).createVersionOfNote(createdPage, identity.getUserId());
     verify(noteService, times(1)).getPublishedVersionByPageIdAndLang(1L, null);
     verify(metadataService, atLeast(1)).createMetadataItem(any(MetadataObject.class),
                                                          any(MetadataKey.class),
-                                                         any(Map.class),
+                                                         anyMap(),
                                                          anyLong(),
                                                          anyBoolean());
+    Page note = new Page();
+    note.setId("1");
+    note.setTitle(newsArticle.getTitle());
+    note.setContent(newsArticle.getBody());
+    note.setParentPageId(rootPage.getId());
+    note.setAuthor(newsArticle.getAuthor());
+    when(noteService.getNoteById(anyString())).thenReturn(note);
+    clearInvocations(noteService, metadataService);
+    newsService.createNews(newsArticle, identity);
+    verify(noteService, times(0)).createNote(wiki, rootPage.getName(), newsArticlePage, identity);
+    verify(noteService, times(1)).getPublishedVersionByPageIdAndLang(1L, null);
+    verify(metadataService, atLeast(1)).createMetadataItem(any(MetadataObject.class),
+            any(MetadataKey.class),
+            anyMap(),
+            anyLong(),
+            anyBoolean());
+    
+    clearInvocations(activityManager);
+    newsArticlePage.setAuthor(null);
+    newsService.createNews(newsArticle, identity);
+    verify(activityManager, times(1)).saveActivityNoReturn(any(), any());
   }
 
   @Test
@@ -823,16 +844,27 @@ public class NewsServiceImplTest {
     draftProperties.setFeaturedImage(noteFeaturedImage);
     when(draftPage.getId()).thenReturn("1");
     when(draftPage.getProperties()).thenReturn(draftProperties);
-    when(noteService.getLatestDraftOfPage(existingPage, identity.getUserId())).thenReturn(draftPage);
+    when(noteService.getLatestDraftOfPage(existingPage)).thenReturn(draftPage);
     when(noteService.getDraftNoteById(anyString(), anyString())).thenReturn(draftPage);
     when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(new org.exoplatform.social.core.identity.model.Identity("1"));
     doNothing().when(noteService).removeNoteFeaturedImage(anyLong(), anyLong(), anyString(), anyBoolean(), anyLong());
 
+    when(existingPage.isDeleted()).thenReturn(false);
     newsService.deleteNews(existingPage.getId(), identity, ARTICLE.name().toLowerCase());
 
     //Then
     verify(noteService, times(1)).deleteNote(existingPage.getWikiType(), existingPage.getWikiOwner(), existingPage.getName());
     verify(noteService, times(1)).removeDraftById("1");
+    verify(activityManager, times(1)).deleteActivity("1");
+    verify(metadataService, times(1)).updateMetadataItem(any(MetadataItem.class), anyLong(), anyBoolean());
+
+    clearInvocations(noteService, activityManager, metadataService);
+    when(existingPage.isDeleted()).thenReturn(true);
+
+    newsService.deleteNews(existingPage.getId(), identity, ARTICLE.name().toLowerCase());
+
+    verify(noteService, times(0)).deleteNote(existingPage.getWikiType(), existingPage.getWikiOwner(), existingPage.getName());
+    verify(noteService, times(0)).removeDraftById("1");
     verify(activityManager, times(1)).deleteActivity("1");
     verify(metadataService, times(1)).updateMetadataItem(any(MetadataItem.class), anyLong(), anyBoolean());
   }
@@ -883,18 +915,25 @@ public class NewsServiceImplTest {
     NewsFilter newsFilter = new NewsFilter();
     newsFilter.setScheduledNews(true);
     Map<String, String> properties = new HashMap<>();
+    Map<String, String> properties2 = new HashMap<>();
     properties.put(NEWS_PUBLICATION_STATE, "staged");
     properties.put(NEWS_DELETED, String.valueOf(false));
     MetadataItem metadataItem = mock(MetadataItem.class);
-    List<MetadataItem> metadataItems = List.of(metadataItem);
+    MetadataItem metadataItem2 = mock(MetadataItem.class);
+    properties2.put(UNPUBLISH_SCHEDULED, "true");
+    properties2.put(NEWS_DELETED, String.valueOf(false));
+    List<MetadataItem> metadataItems = List.of(metadataItem, metadataItem2);
     when(metadataItem.getObjectId()).thenReturn("1");
     when(metadataItem.getProperties()).thenReturn(properties);
+    when(metadataItem2.getObjectId()).thenReturn("2");
+    when(metadataItem2.getProperties()).thenReturn(properties2);
 
     mockBuildArticle(metadataItems);
 
+
     List<News> newsList = newsService.getNews(newsFilter, johnIdentity);
     assertNotNull(newsList);
-    assertEquals(newsList.size(), 1);
+    assertEquals(newsList.size(), 2);
   }
 
   @Test
@@ -930,6 +969,7 @@ public class NewsServiceImplTest {
 
     mockBuildArticle(metadataItems);
     Space space = mockSpace();
+    when(space.getGroupId()).thenReturn("/spaces/test");
     Wiki wiki = mock(Wiki.class);
     when(wikiService.getWikiByTypeAndOwner(anyString(), anyString())).thenReturn(wiki);
     org.exoplatform.wiki.model.Page rootPage = mock(org.exoplatform.wiki.model.Page.class);
@@ -942,8 +982,9 @@ public class NewsServiceImplTest {
     News newsArticle = mock(News.class);
     when(newsArticle.getId()).thenReturn("1");
     when(newsArticle.getBody()).thenReturn("body");
+    when(newsArticle.getPublicationState()).thenReturn("staged");
     when(newsArticle.getProperties()).thenReturn(new NotePageProperties());
-    
+
     DraftPage draftPage = mock(DraftPage.class);
     when(draftPage.getUpdatedDate()).thenReturn(new Date());
     when(draftPage.getCreatedDate()).thenReturn(new Date());
@@ -956,10 +997,17 @@ public class NewsServiceImplTest {
     when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(identity1);
     when(identity1.getId()).thenReturn("1");
 
-    newsService.unScheduleNews(newsArticle, space.getGroupId(), "john");
+    newsService.unScheduleNews(newsArticle, space, "john");
 
     verify(noteService, times(1)).createDraftForNewPage(any(DraftPage.class), anyLong(), anyLong());
     verify(noteService, times(1)).deleteNote(anyString(), anyString(), anyString());
+
+    clearInvocations(noteService);
+    properties.put(EXTERNAL_PAGE, "true");
+    newsService.unScheduleNews(newsArticle, space, "john");
+    verify(noteService, times(0)).createDraftForNewPage(any(DraftPage.class), anyLong(), anyLong());
+    verify(noteService, times(0)).deleteNote(anyString(), anyString(), anyString());
+    verify(metadataService, times(2)).deleteMetadataItemsByObject(any());
   }
 
   @Test

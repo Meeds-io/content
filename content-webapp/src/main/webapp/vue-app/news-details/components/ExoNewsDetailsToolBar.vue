@@ -25,20 +25,15 @@
     <v-btn
       class="go-back-button"
       icon
+      :aria-label="this.$t('article.details.goBack.label')"
       @click.stop="goBack">
       <v-icon
         size="15">
         fas fa-arrow-left
       </v-icon>
     </v-btn>
-    <v-btn
-      v-if="publicationState === 'staged'"
-      class="btn pull-right"
-      @click="$root.$emit('open-schedule-drawer','editScheduledNews')">
-      {{ $t("news.composer.btn.scheduleArticle") }}
-    </v-btn>
     <exo-news-details-action-menu-app
-      v-if="publicationState !== 'staged' && (showEditButton || showDeleteButton || showPublishButton || showCopyLinkButton)"
+      v-if="(showEditButton || showDeleteButton || showPublishButton || showCopyLinkButton)"
       class="pull-right"
       :news="news"
       :current-app="currentApplication"
@@ -46,13 +41,48 @@
       :show-delete-button="showDeleteButton"
       :show-publish-button="showPublishButton"
       :show-copy-link-button="showCopyLinkButton"
+      :show-refer-button="showReferButton"
       @delete-article="$emit('delete-article')"
       @edit-article="$emit('edit-article')" />
+    <v-btn
+      v-if="publicationState === 'staged'"
+      class="btn btn-primary pull-right me-3"
+      outlined
+      @click="$emit('open-publication-drawer')">
+      <v-icon
+        class="me-2"
+        size="20">
+        far fa-clock
+      </v-icon>
+      {{ $t("news.composer.btn.scheduleArticle") }}
+    </v-btn>
     <exo-news-favorite-action
       v-if="displayFavoriteButton"
       :news="news"
       :activity-id="activityId"
+      :icon-size="20"
       class="pull-right mt-1 me-2" />
+    <v-tooltip
+      v-if="canOpenInNotes"
+      bottom>
+      <template #activator="{ on, attrs }">
+        <v-btn
+          v-on="on"
+          v-bind="attrs"
+          :href="articlePageUrl"
+          :aria-label="$t('content.article.open.in.notes')"
+          class="pull-right me-2"
+          link
+          icon>
+          <v-icon
+            size="20"
+            class="icon-default-color">
+            fas fa-external-link-alt
+          </v-icon>
+        </v-btn>
+      </template>
+      {{ $t('content.article.open.in.notes') }}
+    </v-tooltip>
   </div>
 </template>
 
@@ -98,6 +128,14 @@ export default {
       type: Boolean,
       required: false,
       default: false
+    },
+    showReferButton: {
+      type: Boolean,
+      default: false
+    },
+    articlePageUrl: {
+      type: String,
+      default: null
     }
   },
   data() {
@@ -124,17 +162,14 @@ export default {
     publicationState() {
       return this.news && this.news.publicationState;
     },
-    newsTitle() {
-      return this.news && this.news.title;
-    },
-    newsPublished() {
-      return this.news && this.news.published;
-    },
     lastVisitedPage(){
       return history && history.length && history.length > 2;
     },
     displayFavoriteButton() {
       return this.currentUser !== '' && this.publicationState !== 'staged';
+    },
+    canOpenInNotes() {
+      return this.news?.referred || this.news?.fromExternalPage;
     }
   },
   methods: {

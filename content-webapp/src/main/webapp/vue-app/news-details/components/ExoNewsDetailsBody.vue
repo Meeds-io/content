@@ -40,12 +40,40 @@
             <span>
               {{ newsTitle }}
             </span>
-            <span class="ms-3">
+            <v-tooltip bottom>
+              <template #activator="{ on, attrs }">
+                <span v-on="on" v-bind="attrs">
+                  <v-icon 
+                    size="20"
+                    class="ms-3 icon-default-color">
+                    fas fa-eye
+                  </v-icon>
+                  <span class="article-views position-relative text-subtitle">
+                    {{ newsViews }}
+                  </span>
+                </span>
+              </template>
+              <span class="caption">
+                {{ newsViewsCount }}
+              </span>
+            </v-tooltip>
+            <span>
               <content-translation-menu
                 :translations="translations"
                 :selected-translation="selectedTranslation"
                 :article="news" />
             </span>
+            <extension-registry-components
+              name="NewsDetails"
+              type="content-details-extension"
+              :params="{
+                entityId: news.latestVersionId,
+                editMode: false,
+                entityType: 'WIKI_PAGE_VERSIONS'
+              }"
+              element-class="ms-3"
+              parent-element="span"
+              element="span" />
           </p>
         </div>
         <p
@@ -65,7 +93,7 @@
             <exo-space-avatar
               :space-id="spaceId"
               size="30"
-              extra-class="ms-4 fill-height"
+              extra-class="ms-4 fill-height text-truncate"
               fullname
               popover />
           </div>
@@ -105,13 +133,8 @@
           </div>
         </div>
         <div
-          class="mt-8 rich-editor-content extended-rich-content"
+          class="mt-8 content-treeview-processor rich-editor-content extended-rich-content"
           v-sanitized-html="newsBody">
-          <extension-registry-components
-            :params="{attachmentsIds: attachmentsIds}"
-            name="NewsDetails"
-            type="news-details-attachments"
-            element="div" />
         </div>
       </div>
     </div>
@@ -168,7 +191,10 @@ export default {
   },
   computed: {
     showUpdaterInfo() {
-      return !this.isPublicAccess;
+      return !this.isPublicAccess && !this.hideAuthor;
+    },
+    hideAuthor() {
+      return this.news?.properties?.hideAuthor;
     },
     isPublicAccess() {
       return !eXo?.env?.portal?.userIdentityId;
@@ -186,6 +212,21 @@ export default {
     },
     newsTitle() {
       return this.news && this.newsTitleContent;
+    },
+    newsViewsCount() {
+      return `${this.news?.viewsCount === 1 ? this.$t('news.details.view',{ 0: this.news.viewsCount }) : this.$t('news.details.views', { 0: this.news.viewsCount })}`;
+    },
+    newsViews() {
+      if (this.news?.viewsCount < 1000) {
+        return this.news?.viewsCount;
+      }
+      if (this.news?.viewsCount < 10000) {
+        return `${(this.news?.viewsCount / 1000).toFixed(1)}k`;
+      }
+      if (this.news?.viewsCount < 1000000) {
+        return `${parseInt(this.news?.viewsCount / 1000)}k`;
+      }
+      return '+999k';
     },
     articleUpdater() {
       return this.news?.updater || this.news?.author;

@@ -99,12 +99,14 @@ public class NewsUtils {
 
   public static final String UPDATE_CONTENT_PERMISSIONS      = "content.update.permissions";
 
+  private static SpaceService       spaceService;
+  
   public enum NewsObjectType {
-    DRAFT, LATEST_DRAFT, ARTICLE;
+    DRAFT, LATEST_DRAFT, ARTICLE, EXISTING_PAGE
   }
 
   public enum NewsUpdateType {
-    CONTENT_AND_TITLE, SCHEDULE, POSTING_AND_PUBLISHING
+    CONTENT_AND_TITLE, SCHEDULE, POSTING_AND_PUBLISHING, PAGE_REFERENCE
   }
 
   public static void broadcastEvent(String eventName, Object source, Object data) {
@@ -283,10 +285,29 @@ public class NewsUtils {
     return illustrationUrl.toString();
   }
 
+  public static boolean canReferToNote(String spaceId, News article, org.exoplatform.services.security.Identity currentIdentity) {
+    Space space = getSpaceService().getSpaceById(spaceId);
+    if (space == null || currentIdentity == null) {
+      return false;
+    }
+    if (article.isFromExternalPage()) {
+      return false;
+    }
+    return getSpaceService().canRedactOnSpace(space, currentIdentity)
+        || getSpaceService().canPublishOnSpace(space, currentIdentity.getUserId());
+  }
+
+  private static SpaceService getSpaceService() {
+    if (spaceService == null) {
+      spaceService = CommonsUtils.getService(SpaceService.class);
+    }
+    return spaceService;
+  }
+
   private static List<Space> getMySpaces(org.exoplatform.services.security.Identity userIdentity) throws Exception {
     SpaceService spaceService = CommonsUtils.getService(SpaceService.class);
     ListAccess<Space> memberSpacesListAccess = spaceService.getMemberSpaces(userIdentity.getUserId());
     return Arrays.asList(memberSpacesListAccess.load(0, memberSpacesListAccess.getSize()));
   }
-
+  
 }

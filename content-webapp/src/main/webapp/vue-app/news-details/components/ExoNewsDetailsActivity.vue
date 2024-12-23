@@ -29,6 +29,7 @@
     :show-publish-button="showPublishButton"
     :show-delete-button="showDeleteButton"
     :show-copy-link-button="true"
+    :show-refer-button="showReferButton"
     :translations="translations"
     :selected-translation="selectedTranslation" />
 </template>
@@ -71,13 +72,16 @@ export default {
       return this.sharedTemplateParams && this.sharedTemplateParams.newsId;
     },
     showDeleteButton() {
-      return this.news && this.news.canDelete;
+      return this.news?.canDelete;
     },
     showEditButton() {
-      return this.news && this.news.canEdit;
+      return this.news?.canEdit;
+    },
+    showReferButton() {
+      return this.news?.canRefer;
     },
     showPublishButton() {
-      return this.news && this.news.canPublish;
+      return this.news?.canPublish || this.news?.canSchedule;
     },
   },
   created() {
@@ -89,7 +93,9 @@ export default {
     }
     this.originalVersion = { value: '', text: this.$root.$t('article.label.translation.originalVersion') };
     if (this.newsId || this.sharedNewsId) {
-      this.retrieveNews();
+      this.markAsRead(this.newsId || this.sharedNewsId).then(() => {
+        this.retrieveNews();
+      }).catch(() => this.retrieveNews());
     }
     this.$root.$on('change-article-translation', (lang) => {
       this.previousSelectedTranslation = this.selectedTranslation.value;
@@ -208,6 +214,9 @@ export default {
     updateSelectedTranslation(translation) {
       this.selectedTranslation = translation;
     },
+    markAsRead(newsId) {
+      return this.$newsServices.markNewsAsRead(newsId);
+    }
   },
 };
 </script>

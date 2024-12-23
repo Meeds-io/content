@@ -265,13 +265,13 @@ public interface NewsService {
   /**
    * Un-schedule publishing a News
    *
-   * @param news
-   * @param pageOwnerId
-   * @param newsArticleCreator
+   * @param news news article
+   * @param space owner space
+   * @param newsArticleCreator article creator
    * @return unscheduled News
    * @throws Exception when error occurs
    */
-  News unScheduleNews(News news, String pageOwnerId, String newsArticleCreator) throws Exception;
+  News unScheduleNews(News news, Space space, String newsArticleCreator) throws Exception;
 
   /**
    * Search news by term
@@ -284,12 +284,13 @@ public interface NewsService {
 
   /**
    * Checks if the user can schedule publishinga News
-   * 
-   * @param space
-   * @param currentIdentity
+   *
+   * @param space target space
+   * @param currentIdentity current user identity
+   * @param article target article
    * @return boolean : true if the user can schedule publishing a News
    */
-  boolean canScheduleNews(Space space, org.exoplatform.services.security.Identity currentIdentity);
+  boolean canScheduleNews(Space space, org.exoplatform.services.security.Identity currentIdentity, News article);
 
   /**
    * Checks if the user can view the News
@@ -302,7 +303,7 @@ public interface NewsService {
 
   /**
    * Shares a news item into a dedicated space
-   * 
+   *
    * @param news {@link News} to share
    * @param space {@link Space} to share with, the news
    * @param userIdentity {@link Identity} of user making the modification
@@ -323,6 +324,16 @@ public interface NewsService {
                                     String pageOwnerId,
                                     String draftArticleCreator,
                                     long creationDate) throws Exception;
+
+  /**
+   * Create an article from exiting page
+   *
+   * @param article article object
+   * @param creator article creator
+   * @return {@link News}
+   * @throws Exception
+   */
+  News createArticleFromExistingPage(News article, String creator) throws Exception;
 
   /**
    * @param newsArticle {@link News} news article to be created

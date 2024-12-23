@@ -69,6 +69,13 @@
   </portlet-skin>
 
   <portlet-skin>
+    <application-name>content</application-name>
+    <portlet-name>NewsDetail</portlet-name>
+    <skin-name>Enterprise</skin-name>
+    <additional-module>newsDetails</additional-module>
+  </portlet-skin>
+
+  <portlet-skin>
     <application-name>social</application-name>
     <portlet-name>UserActivityStreamPortlet</portlet-name>
     <skin-name>Enterprise</skin-name>
@@ -112,9 +119,6 @@
       <depends>
         <module>commons-editor</module>
         <as>editor</as>
-      </depends>
-      <depends>
-        <module>ScheduleNewsDrawer</module>
       </depends>
       <depends>
         <module>jquery</module>
@@ -294,6 +298,12 @@
       <path>/js/newsDetails.bundle.js</path>
     </script>
     <depends>
+      <module>NotesPublication</module>
+    </depends>
+    <depends>
+      <module>NotesTreeview</module>
+    </depends>
+    <depends>
       <module>vue</module>
     </depends>
     <depends>
@@ -310,14 +320,8 @@
       <module>commonVueComponents</module>
     </depends>
     <depends>
-      <module>newsTargetSelectorComponent</module>
-    </depends>
-    <depends>
       <module>commons-editor</module>
       <as>editor</as>
-    </depends>
-    <depends>
-      <module>ScheduleNewsDrawer</module>
     </depends>
     <depends>
       <module>suggester</module>
@@ -362,21 +366,6 @@
   </module>
 
   <module>
-    <name>newsTargetSelectorComponent</name>
-    <script>
-      <minify>false</minify>
-      <path>/js/newsTargetSelectorComponent.bundle.js</path>
-    </script>
-    <depends>
-      <module>vue</module>
-    </depends>
-    <depends>
-      <module>jquery</module>
-      <as>$</as>
-    </depends>
-  </module>
-
-  <module>
     <name>NewsSearchCard</name>
     <script>
       <minify>false</minify>
@@ -400,36 +389,6 @@
     </depends>
     <depends>
       <module>extensionRegistry</module>
-    </depends>
-  </module>
-
-  <module>
-    <name>ScheduleNewsDrawer</name>
-    <script>
-      <minify>false</minify>
-      <path>/js/scheduleNewsDrawer.bundle.js</path>
-    </script>
-    <depends>
-      <module>commonVueComponents</module>
-    </depends>
-    <depends>
-      <module>newsTargetSelectorComponent</module>
-    </depends>
-    <depends>
-      <module>vue</module>
-    </depends>
-    <depends>
-      <module>eXoVueI18n</module>
-    </depends>
-    <depends>
-      <module>extensionRegistry</module>
-    </depends>
-    <depends>
-      <module>vuetify</module>
-    </depends>
-    <depends>
-      <module>jquery</module>
-      <as>$</as>
     </depends>
   </module>
 
@@ -584,4 +543,33 @@
       <as>$</as>
     </depends>
   </module>
+
+  <module>
+    <name>PublishNotesExtension</name>
+    <load-group>NotesGRP</load-group>
+    <script>
+      <minify>false</minify>
+      <path>/js/notePublishExtensions.bundle.js</path>
+    </script>
+    <depends>
+      <module>vue</module>
+    </depends>
+    <depends>
+      <module>vuetify</module>
+    </depends>
+    <depends>
+      <module>eXoVueI18n</module>
+    </depends>
+    <depends>
+      <module>jquery</module>
+      <as>$</as>
+    </depends>
+    <depends>
+      <module>extensionRegistry</module>
+    </depends>
+    <depends>
+      <module>commonVueComponents</module>
+    </depends>
+  </module>
+
 </gatein-resources>

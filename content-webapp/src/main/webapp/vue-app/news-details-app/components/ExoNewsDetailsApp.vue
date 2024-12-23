@@ -16,6 +16,7 @@
       :news-type="newsType"
       :show-edit-button="showEditButton"
       :show-publish-button="showPublishButton"
+      :show-refer-button="showReferButton"
       :show-delete-button="showDeleteButton"
       :translations="translations"
       :selected-translation="selectedTranslation"
@@ -42,6 +43,7 @@ export default {
     showEditButton: false,
     showPublishButton: false,
     showDeleteButton: false,
+    showReferButton: false,
     selectedTranslation: {value: eXo.env.portal.language},
     translations: [],
     languages: [],
@@ -56,7 +58,9 @@ export default {
       this.selectedTranslation.value = params.get('lang');
     }
     this.originalVersion = { value: '', text: this.$root.$t('article.label.translation.originalVersion') };
-    this.getArticleVersionWithLang(this.newsId, this.selectedTranslation.value);
+    this.markAsRead(this.newsId).then(() => {
+      this.getArticleVersionWithLang(this.newsId, this.selectedTranslation.value);
+    }).catch(() => this.getArticleVersionWithLang(this.newsId, this.selectedTranslation.value));
     this.fetchTranslation(this.newsId);
     this.$root.$on('change-article-translation', (translation) => {
       this.previousSelectedTranslation = this.selectedTranslation.value;
@@ -82,7 +86,7 @@ export default {
         if (resp !== null && resp !== UNAUTHORIZED_CODE) {
           this.news = resp;
           this.showEditButton = this.news.canEdit;
-          this.showPublishButton = this.news.canPublish;
+          this.showPublishButton = this.news.canPublish || this.news?.canSchedule;
           this.showDeleteButton = this.news.canDelete;
           if (this.news.lang) {
             this.addParamToUrl('lang', this.news.lang);
@@ -127,6 +131,9 @@ export default {
     updateSelectedTranslation(translation) {
       this.selectedTranslation = translation;
     },
+    markAsRead(newsId) {
+      return this.$newsServices.markNewsAsRead(newsId);
+    }
   }
 };
 </script>

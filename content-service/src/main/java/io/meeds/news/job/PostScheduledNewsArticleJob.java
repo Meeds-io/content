@@ -20,7 +20,9 @@
 package io.meeds.news.job;
 
 import io.meeds.common.ContainerTransactional;
+import io.meeds.news.model.News;
 import io.meeds.news.service.NewsService;
+import org.apache.commons.collections4.MapUtils;
 import org.exoplatform.social.metadata.MetadataService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,12 +36,7 @@ import java.time.ZoneOffset;
 import java.util.Calendar;
 import java.util.TimeZone;
 
-import static io.meeds.news.service.impl.NewsServiceImpl.NEWS_METADATA_NAME;
-import static io.meeds.news.service.impl.NewsServiceImpl.NEWS_METADATA_PAGE_OBJECT_TYPE;
-import static io.meeds.news.service.impl.NewsServiceImpl.NEWS_METADATA_TYPE;
-import static io.meeds.news.service.impl.NewsServiceImpl.NEWS_PUBLICATION_STATE;
-import static io.meeds.news.service.impl.NewsServiceImpl.SCHEDULE_POST_DATE;
-import static io.meeds.news.service.impl.NewsServiceImpl.STAGED;
+import static io.meeds.news.service.impl.NewsServiceImpl.*;
 
 @Component
 public class PostScheduledNewsArticleJob {
@@ -71,7 +68,7 @@ public class PostScheduledNewsArticleJob {
                          String articleScheduleDate = scheduledArticleMetadataItem.getProperties().getOrDefault(SCHEDULE_POST_DATE, null);
                          if (articleScheduleDate != null) {
 
-                           if (isSchedulePostDatePassed(articleScheduleDate)) {
+                           if (isScheduleDatePassed(articleScheduleDate)) {
                              // return only the metadata items with a schedule date property equals or prior to
                              // the current date to be mapped to news articles and then post them.
                              return true;
@@ -96,7 +93,40 @@ public class PostScheduledNewsArticleJob {
                    });
   }
 
-  private boolean isSchedulePostDatePassed(String schedulePostDateString) {
+  @Scheduled(cron = "${meeds.content.postScheduledNewsArticle.job.cron:15 */2 * * * ?}")
+  @ContainerTransactional
+  public void unpublishArticle() {
+    metadataService.getMetadataItemsByMetadataNameAndTypeAndObjectAndMetadataItemProperty(NEWS_METADATA_NAME,
+                                                                                          NEWS_METADATA_TYPE.getName(),
+                                                                                          NEWS_METADATA_PAGE_OBJECT_TYPE,
+                                                                                          UNPUBLISH_SCHEDULED,
+                                                                                          "true",
+                                                                                          0,
+                                                                                          0)
+                   .stream()
+                   .filter(item -> {
+                     if (MapUtils.isNotEmpty(item.getProperties())) {
+                       String scheduledUnpublishDate = item.getProperties().getOrDefault(UNPUBLISH_SCHEDULED_DATE, null);
+                       return scheduledUnpublishDate != null && isScheduleDatePassed(scheduledUnpublishDate);
+                     }
+                     return false;
+                   })
+                   .map(article -> newsService.getNewsArticleById(article.getObjectId()))
+                   .forEach(article -> {
+                     if (article != null) {
+                       try {
+                         newsService.unpublishNews(article.getId(), article.getAuthor());
+                         LOG.info("Unpublish schedule executed articleId: {}, articleTitle: {}",
+                                  article.getId(),
+                                  article.getTitle());
+                       } catch (Exception e) {
+                         LOG.error("Error unpublishing scheduled news article", e);
+                       }
+                     }
+                   });
+  }
+
+  private boolean isScheduleDatePassed(String schedulePostDateString) {
     Calendar schedulePostDate = Calendar.getInstance();
     try {
       SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");

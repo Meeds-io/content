@@ -30,8 +30,6 @@
       :form-title="contentFormTitle"
       :suggester-space-url="spacePrettyName"
       :app-name="appName"
-      :web-page-note="false"
-      :web-page-url="false"
       :languages="languages"
       :translations="translations"
       :selected-language="selectedLanguage"
@@ -44,23 +42,22 @@
       :save-button-icon="saveButtonIcon"
       :save-button-disabled="disableSaveButton"
       :editor-icon="editorIcon"
+      :publication-params="{
+        spaceId: spaceId,
+        canPublish: canPublishArticle,
+        canSchedule: true,
+        allowedTargets: allowedTargets
+      }"
       :images-download-folder="'DRIVE_ROOT_NODE/News/images'"
       @editor-closed="editorClosed"
       @open-treeview="openTreeView"
-      @post-note="postArticleActions"
+      @post-note="postAndPublish"
       @auto-save="autoSaveActions"
       @editor-ready="editorReady"
       @update-data="updateArticleData" />
     <note-treeview-drawer
       ref="noteTreeview"
       @closed="closePluginsDrawer()" />
-    <schedule-news-drawer
-      v-if="canScheduleArticle"
-      :posting-news="postingNews"
-      :news-id="articleId"
-      :news-type="articleType"
-      :space-id="spaceId"
-      @post-article="postArticle" />
     <div
       v-for="(extension, i) in editorExtensions"
       :key="i">
@@ -83,7 +80,8 @@ export default {
         content: '',
         body: '',
         properties: {},
-        lang: ''
+        lang: '',
+        draftPage: ''
       },
       originalArticle: {
         id: 0,
@@ -116,6 +114,7 @@ export default {
       editorTitleInputRef: 'articleTitle',
       imagesURLs: new Map(),
       canScheduleArticle: false,
+      canPublishArticle: false,
       postKey: 1,
       editorIcon: 'fas fa-newspaper',
       articleId: null,
@@ -128,6 +127,8 @@ export default {
       spacePrettyName: null,
       editorExtensions: null,
       draftObjectType: 'wikiDraft',
+      autosaveProcessedFromEditorExtension: false,
+      allowedTargets: []
     };
   },
   watch: {
@@ -139,10 +140,19 @@ export default {
     'article.content': function() {
       this.autoSave();
     },
+    postingNews() {
+      this.$refs.editor.setPublishing(this.postingNews);
+    }
   },
   computed: {
+    scheduled() {
+      return !!this.article.schedulePostDate || this.staged;
+    },
+    staged() {
+      return this.article?.publicationState === 'staged';
+    },
     editMode() {
-      return !!this.activityId;
+      return !!this.activityId || this.scheduled;
     },
     spaceGroupId() {
       return this.currentSpace?.groupId;
@@ -173,16 +183,18 @@ export default {
     },
     propertiesModified() {
       return JSON.stringify(this.article?.properties) !== JSON.stringify(this.originalArticle?.properties);
-    },
+    }
   },
   created() {
     this.getAvailableLanguages();
     this.initDataPropertiesFromUrl();
     this.getArticle();
+    this.getAllowedTargets();
     this.refreshTranslationExtensions();
     document.addEventListener('automatic-translation-extensions-updated', () => {
       this.refreshTranslationExtensions();
     });
+    document.addEventListener('note-editor-extensions-data-updated', (evt) => this.processAutoSaveFromEditorExtension(evt));
     this.$root.$on('display-treeview-items', filter => this.openTreeView(filter));
     this.$root.$on('add-translation', this.addTranslation);
     this.$root.$on('lang-translation-changed', this.changeTranslation);
@@ -193,6 +205,27 @@ export default {
     this.initEditor();
   },
   methods: {
+    processAutoSaveFromEditorExtension(event) {
+      if (event.detail.processAutoSave) {
+        this.article.title = this.article?.title || this.$t('content.draft.title.untitled');
+        this.autosaveProcessedFromEditorExtension = true;
+        clearTimeout(this.saveDraft);
+        this.saveDraft = setTimeout(() => {
+          this.savingDraft = true;
+          this.draftSavingStatus = this.$t('news.composer.draft.savingDraftStatus');
+          this.$nextTick(() => {
+            if (this.activityId || this.scheduled) {
+              this.saveDraftForExistingArticle();
+            } else {
+              this.saveArticleDraft();
+            }
+          });
+        }, this.autoSaveDelay);
+      }
+      else {
+        this.draftSavingStatus = this.$t('news.composer.draft.savedDraftStatus');
+      }
+    },
     editorClosed() {
       window.close();
     },
@@ -272,7 +305,7 @@ export default {
         this.savingDraft = true;
         this.draftSavingStatus = this.$t('news.composer.draft.savingDraftStatus');
         this.$nextTick(() => {
-          if (this.activityId) {
+          if (this.activityId || this.scheduled) {
             this.saveDraftForExistingArticle();
           } else {
             this.saveArticleDraft();
@@ -289,10 +322,16 @@ export default {
       return this.$newsServices.updateNews(updatedArticle, false, this.articleType).then((createdArticle) => {
         this.spaceUrl = createdArticle.spaceUrl;
         this.articleId = this.article.id = createdArticle.id;
+        this.article.id = this.articleId;
         this.article.targetPageId = createdArticle.targetPageId;
         this.article.properties = createdArticle.properties;
         this.article.draftPage = true;
         this.article.body = createdArticle.body;
+        this.article.targetPageId = createdArticle.targetPageId;
+        this.article.publicationState = createdArticle.publicationState;
+        this.article.schedulePostDate = createdArticle.schedulePostDate;
+        this.article.publicationState = createdArticle.publicationState;
+        this.article.scheduleUnpublishDate = createdArticle.scheduleUnpublishDate;
         this.article.lang = createdArticle.lang;
         if (this.article.body !== createdArticle.body) {
           this.imagesURLs = this.extractImagesURLsDiffs(this.article.body, createdArticle.body);
@@ -308,22 +347,26 @@ export default {
           if (this.articleType === 'latest_draft' && this.selectedLanguage) {
             this.updateUrl();
           }
+          if (this.autosaveProcessedFromEditorExtension) {
+            document.dispatchEvent(new CustomEvent('article-draft-auto-save-done', {
+              detail: {
+                draftId: this.article.id
+              }
+            }));
+          }
+          this.autosaveProcessedFromEditorExtension = false;
         });
     },
     updateAndPostArticle() {
       this.postingNews = true;
       const updatedArticle = this.getArticleToBeUpdated();
-      updatedArticle.publicationState = 'posted';
+      updatedArticle.publicationState = this.scheduled && 'staged' || 'posted';
       return this.$newsServices.updateNews(updatedArticle, true, 'article').then((createdArticle) => {
         this.spaceUrl = createdArticle.spaceUrl;
         if (this.article.body !== createdArticle.body) {
           this.imagesURLs = this.extractImagesURLsDiffs(this.article.body, createdArticle.body);
         }
         this.fillArticle(createdArticle.id, false, createdArticle.lang);
-        let alertLink = this.isSpaceMember ? `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/activity?id=${createdArticle.activityId}` : `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news-detail?newsId=${createdArticle.id}`;
-        if (createdArticle.lang) {
-          alertLink = `${alertLink}&lang=${createdArticle.lang}`;
-        }
         document.dispatchEvent(new CustomEvent('update-processed-image-url', {detail: {
           content: updatedArticle.body
         }}));
@@ -331,7 +374,7 @@ export default {
           message: this.$t('news.save.success.message'),
           type: 'success',
           alertLinkText: this.$t('news.view.label'),
-          alertLink: alertLink
+          alertLink: createdArticle.url
         });
       }).then(() => {
         this.draftSavingStatus = '';
@@ -343,18 +386,20 @@ export default {
       });
     },
     getArticleToBeUpdated() {
-      const updatedArticle = {
-        id: this.article.activityId && this.article.targetPageId || this.article.id,
+      return {
+        id: (this.article.activityId || this.scheduled) && this.article.targetPageId || this.article.id,
         targetPageId: this.article.targetPageId,
         title: this.article.title,
         body: this.replaceImagesURLs(this.$noteUtils.getContentToSave(this.editorBodyInputRef, this.oembedMinWidth)),
         published: this.article.published,
         activityPosted: this.article.activityPosted,
+        schedulePostDate: this.article.schedulePostDate,
+        publicationState: this.article.publicationState,
+        scheduleUnpublishDate: this.article.scheduleUnpublishDate,
         audience: this.article.audience,
         properties: this.article?.properties,
         lang: this.article?.lang
       };
-      return updatedArticle;
     },
     saveArticleDraft() {
       const properties = this.article?.properties;
@@ -368,7 +413,8 @@ export default {
         published: false,
         spaceId: this.spaceId,
         publicationState: '',
-        properties: properties
+        properties: properties,
+        draftPage: true
       };
       if (this.article.id) {
         if (this.article.title || this.article.body) {
@@ -378,8 +424,9 @@ export default {
               if (this.article.body !== updatedArticle.body) {
                 this.imagesURLs = this.extractImagesURLsDiffs(this.article.body, updatedArticle.body);
               }
-              this.article.properties = updatedArticle?.properties;
               this.article.draftPage = true;
+              this.article.id = updatedArticle.id;
+              this.article.properties = updatedArticle?.properties;
               document.dispatchEvent(new CustomEvent('update-processed-image-url', {detail: {
                 content: updatedArticle.body
               }}));
@@ -404,6 +451,7 @@ export default {
           this.draftSavingStatus = this.$t('news.composer.draft.savedDraftStatus');
           this.article.id = createdArticle.id;
           this.article.draftPage = true;
+          this.article.lang = createdArticle.lang;
           this.article.properties = createdArticle?.properties;
           if (!this.articleId) {
             this.articleId = createdArticle.id;
@@ -413,23 +461,18 @@ export default {
           }}));
           this.$emit('draftCreated');
           this.savingDraft = false;
+          if (this.autosaveProcessedFromEditorExtension) {
+            document.dispatchEvent(new CustomEvent('article-draft-auto-save-done', {
+              detail: {
+                draftId: this.article.id
+              }
+            }));
+          }
+          this.autosaveProcessedFromEditorExtension = false;
         });
       } else {
         this.draftSavingStatus = '';
       }
-    },
-    postArticle(schedulePostDate, postArticleMode, publish, isActivityPosted, selectedTargets, selectedAudience) {
-      if (typeof isActivityPosted === 'undefined') {
-        this.article.activityPosted = true;
-      } else {
-        this.article.activityPosted = isActivityPosted;
-      }
-      this.article.published = publish;
-      this.article.targets = selectedTargets;
-      if (selectedAudience !== null) {
-        this.article.audience = selectedAudience === this.$t('news.composer.stepper.audienceSection.allUsers') ? 'all' : 'space';
-      }
-      this.doPostArticle(schedulePostDate);
     },
     doPostArticle(schedulePostDate) {
       if (this.savingDraft) {
@@ -458,26 +501,38 @@ export default {
         activityPosted: this.article.activityPosted,
         audience: this.article.audience,
         draftPage: this.article.publicationState === 'draft',
+        scheduleUnpublishDate: this.article.scheduleUnpublishDate,
+        fromDraft: true,
         properties: this.article?.properties
       };
 
       if (schedulePostDate){
         article.publicationState ='staged';
         article.schedulePostDate = schedulePostDate;
+      }
+      if (article.scheduleUnpublishDate || schedulePostDate) {
         article.timeZoneId = new window.Intl.DateTimeFormat().resolvedOptions().timeZone;
       }
       if (article.publicationState ==='staged') {
         this.$newsServices.scheduleNews(article, this.articleType).then((scheduleArticle) => {
-          if (scheduleArticle) {
-            history.replaceState(null,'',scheduleArticle.spaceUrl);
-            window.location.href = scheduleArticle.url;
-          }
+          this.articleType = 'latest_draft';
+          this.fillArticle(scheduleArticle.id, false, null).then(() => {
+            this.updateUrl();
+            this.initDataPropertiesFromUrl();
+          });
           document.dispatchEvent(new CustomEvent('update-processed-image-url', {
             detail: {
               content: scheduleArticle.body
             }
           }));
-        });
+          this.displayAlert({
+            message: this.$t('news.schedule.success.message'),
+            type: 'success',
+            alertLinkText: this.$t('news.view.label'),
+            alertLink: scheduleArticle.url
+          });
+          this.enableClickOnce();
+        }).finally(() => this.draftSavingStatus = '');
       } else {
         this.$newsServices.saveNews(article).then((createdArticle) => {
           this.articleType = 'latest_draft';
@@ -494,6 +549,7 @@ export default {
             alertLinkText: this.$t('news.view.label'),
             alertLink: this.isSpaceMember ? `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/activity?id=${createdArticle.activityId}` : `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news-detail?newsId=${createdArticle.id}`
           });
+          this.enableClickOnce();
         }).catch(error => {
           this.displayAlert({type: 'error', message: this.$t('news.save.error.message', error.message)});
           this.enableClickOnce();
@@ -511,10 +567,13 @@ export default {
       params.append('newsId', this.article?.targetPageId ? this.article?.targetPageId : this.article?.id);
       if (this.article.activityId){
         params.append('activityId', this.article.activityId);
+      }
+      if (this.article?.activityId || this.scheduled) {
         params.append('type', 'latest_draft');
       } else {
         params.append('type', 'draft');
       }
+
       if (params.has('lang')) {
         params.delete('lang');
       }
@@ -524,20 +583,20 @@ export default {
       window.history.pushState('news', '', `${url.origin}${url.pathname}?${params.toString()}`);
 
     },
-    postArticleActions() {
+    postAndPublish(publicationSettings) {
+      this.article.activityPosted = publicationSettings?.post;
+      this.article.published = publicationSettings?.publish;
+      this.article.targets = publicationSettings?.selectedTargets;
+      this.article.audience = publicationSettings?.selectedAudience;
       if (this.editMode) {
         this.updateAndPostArticle();
         return;
       }
-      if (this.canScheduleArticle) {
-        this.scheduleMode = 'postScheduledNews';
-        this.$root.$emit('open-schedule-drawer', this.scheduleMode);
-        this.postKey++;
-      } else {
-        this.postingNews = true;
-        this.postArticle();
-        this.enableClickOnce();
-      }
+      this.postingNews = true;
+      const scheduleSettings = publicationSettings?.scheduleSettings;
+      const schedulePostDate = scheduleSettings?.postDate;
+      this.article.scheduleUnpublishDate = scheduleSettings?.unpublishDate;
+      this.doPostArticle(schedulePostDate);
     },
     updateArticleData(article) {
       if (this.initDone && this.currentArticleInitDone) {
@@ -610,8 +669,11 @@ export default {
           }
           this.loading = false;
         });
-        this.$newsServices.canScheduleNews(this.currentSpace.id).then(canScheduleArticle => {
+        this.$newsServices.canScheduleNews(this.currentSpace.id, this.article?.id).then(canScheduleArticle => {
           this.canScheduleArticle = canScheduleArticle;
+        });
+        this.$newsServices.canPublishNews(this.currentSpace.id).then(canPublishArticle => {
+          this.canPublishArticle = canPublishArticle;
         });
       });
     },
@@ -621,26 +683,30 @@ export default {
         if (article === 401) {
           this.unAuthorizedAccess = true;
         } else {
-          this.article.id = article?.id;
-          this.article.targetPageId = article?.targetPageId;
-          this.article.title = article.title;
-          this.article.content = this.$noteUtils.getContentToEdit(article.body);
-          this.article.body = article.body;
-          this.article.published = article.published;
-          this.article.spaceId = article.spaceId;
-          this.article.publicationState = article.publicationState;
-          this.article.draftPage =  article.publicationState === 'draft';
-          this.article.activityId = article.activityId;
-          this.article.updater = article.updater;
-          this.article.draftUpdaterDisplayName = article.draftUpdaterDisplayName;
-          this.article.draftUpdaterUserName = article.draftUpdaterUserName;
-          this.article.draftUpdateDate = article.draftUpdateDate;
-          this.article.activityPosted = article.activityPosted;
-          this.article.audience = article.audience;
-          this.article.url = article.url;
-          this.article.publicationState = article.publicationState;
-          this.article.properties = article.properties;
-          this.article.lang = article.lang;
+          this.article = structuredClone({
+            id: article?.id,
+            targetPageId: article?.targetPageId,
+            title: article.title,
+            content: this.$noteUtils.getContentToEdit(article.body),
+            body: article.body,
+            published: article.published,
+            spaceId: article.spaceId,
+            schedulePostDate: article.schedulePostDate,
+            scheduleUnpublishDate: article.scheduleUnpublishDate,
+            publicationState: article.publicationState,
+            draftPage: article.publicationState === 'draft',
+            latestVersionId: article.latestVersionId,
+            activityId: article.activityId,
+            updater: article.updater,
+            draftUpdaterDisplayName: article.draftUpdaterDisplayName,
+            draftUpdaterUserName: article.draftUpdaterUserName,
+            draftUpdateDate: article.draftUpdateDate,
+            activityPosted: article.activityPosted,
+            audience: article.audience,
+            url: article.url,
+            properties: article.properties,
+            lang: article.lang
+          });
           this.originalArticle = structuredClone(this.article);
           if (setData) {
             this.setEditorData(this.article?.content);
@@ -717,6 +783,18 @@ export default {
     },
     refreshTranslationExtensions() {
       this.editorExtensions = extensionRegistry.loadExtensions('contentEditor', 'translation-extension');
+    },
+    getAllowedTargets() {
+      this.$newsTargetingService.getAllowedTargets()
+        .then(targets => {
+          this.allowedTargets = targets.map(target => ({
+            name: target.name,
+            label: target?.properties?.label,
+            tooltipInfo: `${target?.properties?.label}: ${target?.properties?.description || ''}`,
+            description: target?.properties?.description,
+            restrictedAudience: target?.restrictedAudience,
+          }));
+        });
     },
     isEmptyDraft() {
       const isTitleEmpty = !this.article?.title;

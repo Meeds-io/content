@@ -34,19 +34,17 @@
           :show-delete-button="showDeleteButton"
           :show-publish-button="showPublishButton"
           :show-copy-link-button="showCopyLinkButton"
+          :show-refer-button="showReferButton"
+          :article-page-url="articlePage?.url"
           @delete-article="deleteConfirmDialog"
-          @edit-article="editLink" />
+          @edit-article="editLink"
+          @open-publication-drawer="openPublicationDrawer" />
         <exo-news-details-body
           :current-user="currentUser"
           :news="news"
           :translations="translations"
           :selected-translation="selectedTranslation" />
       </div>
-      <schedule-news-drawer
-        v-if="currentUser"
-        @post-article="postNews"
-        :news-id="newsId"
-        :news-type="processedNewsType" />
       <exo-confirm-dialog
         v-if="currentUser"
         ref="deleteConfirmDialog"
@@ -55,14 +53,30 @@
         :ok-label="$t('news.button.ok')"
         :cancel-label="$t('news.button.cancel')"
         @ok="deleteNews" />
-      <exo-news-edit-publishing-drawer
-        v-if="news && currentUser"
-        :news="news"
-        @refresh-news="getNewsById(newsId)" />
+      <note-publication-drawer
+        ref="publicationDrawer"
+        :is-publishing="isPublishing"
+        :params="{
+          spaceId: spaceId,
+          allowedTargets: allowedTargets,
+          canPublish: news?.canPublish,
+          canSchedule: news?.canSchedule
+        }"
+        :edit-mode="true"
+        @publish="publishArticle" />
+      <note-publication-target-drawer />
       <news-mobile-action-menu
         :news="news"
         @edit-article="editLink"
         @delete-article="deleteConfirmDialog" />
+      <note-treeview-drawer
+        :settings="{
+          saveButtonLabel: $t('content.article.refer.label'),
+          drawerTitle: $t('content.article.refer.to.note'),
+          showCurrentDestination: false,
+          spaceDisplayName: currentSpace?.displayName
+        }"
+        ref="noteTreeview" />
     </div>
   </v-app>
 </template>
@@ -74,7 +88,9 @@ export default {
     news: {
       type: Object,
       required: false,
-      default: function() { return new Object(); }
+      default: () => {
+        return {};
+      }
     },
     newsId: {
       type: String,
@@ -111,6 +127,10 @@ export default {
       required: false,
       default: false
     },
+    showReferButton: {
+      type: Boolean,
+      default: false
+    },
     translations: {
       type: Array,
       default: () => {
@@ -139,18 +159,25 @@ export default {
         hour: '2-digit',
         minute: '2-digit',
       },
-      iframelyOriginRegex: /^https?:\/\/if-cdn.com/
+      iframelyOriginRegex: /^https?:\/\/if-cdn.com/,
+      isPublishing: false,
+      allowedTargets: [],
+      articlePage: null
     };
   },
   computed: {
-    isMobile() {
-      return this.$vuetify.breakpoint.name === 'xs' || this.$vuetify.breakpoint.name === 'sm';
-    },
     processedNewsType() {
       return this.activityId && this.activityId !== '' ? this.$newsConstants.newsObjectType.ARTICLE : this.newsType;
+    },
+    scheduled() {
+      return !!this.news.schedulePostDate || this.staged;
+    },
+    staged() {
+      return this.news?.publicationState === 'staged';
     }
   },
   created() {
+    this.getAllowedTargets();
     if (!this.news || !this.news.spaceId) {
       this.getNewsById(this.newsId);
     } else {
@@ -161,6 +188,7 @@ export default {
       }
       this.$root.$emit('application-loaded');
     }
+    this.getArticlePage();
     window.addEventListener('message', (event) => {
       if (this.iframelyOriginRegex.exec(event.origin)) {
         const data = JSON.parse(event.data);
@@ -169,18 +197,64 @@ export default {
         }
       }
     });
-  },
-  mounted() {
-    this.markNewsAsRead(this.newsId);
+    this.$root.$on('open-edit-publishing-drawer', this.openPublicationDrawer);
+    this.$root.$on('refer-article-to-note', this.referArticle);
+    this.$root.$on('move-page', this.moveArticlePage);
+    this.bindTreeViewNavigationClickListener();
   },
   methods: {
-    markNewsAsRead(newsId) {
-      if (newsId) {
-        this.$newsServices.markNewsAsRead(newsId);
+    moveArticlePage(page, newParentPage) {
+      const previousParentPageId = page.parentPageId;
+      page.parentPageId = newParentPage.id;
+      this.news.referred = true;
+      this.$refs.noteTreeview.isLoading = true;
+      return this.$newsServices.updateNews(this.news, false, this.$newsConstants.newsObjectType.ARTICLE,
+        this.$newsConstants.newsUpdateType.PAGE_REFERENCE).then(() => {
+        return this.$newsServices.moveArticlePage(page, newParentPage).then(() => {
+          this.news.deReferPageId = previousParentPageId;
+          this.$refs.noteTreeview.isLoading = true;
+          this.$refs.noteTreeview.close();
+          this.displayMessage({
+            message: this.$t('content.article.referred.success'),
+            type: 'success',
+            linkText: this.$t('notes.view.label'),
+            alertLink: this.articlePage.url
+          });
+        });
+      }).catch(() => {
+        this.displayMessage({
+          message: this.$t('content.article.referred.error'),
+          type: 'error'});
+      });
+    },
+    referArticle() {
+      if (this.news.referred) {
+        return this.$newsServices.getArticlePage(this.news.deReferPageId).then((deReferPage) => {
+          this.articlePage.parentPageId = deReferPage.id;
+          return this.$newsServices.moveArticlePage(this.articlePage, deReferPage).then(() => {
+            this.news.referred = false;
+            return this.$newsServices.updateNews(this.news, false, this.$newsConstants.newsObjectType.ARTICLE,
+              this.$newsConstants.newsUpdateType.PAGE_REFERENCE).then(() => {
+              this.displayMessage({
+                message: this.$t('content.article.deReferred.success'),
+                type: 'success'});
+            });
+          });
+        });
+      } else {
+        this.$refs.noteTreeview.open(this.articlePage, 'movePage');
       }
     },
+    openPublicationDrawer() {
+      this.$refs?.publicationDrawer?.open(this.news);
+    },
+    getArticlePage() {
+      return this.$newsServices.getArticlePage(this.news?.id || this.newsId).then((page) => {
+        this.articlePage = page;
+      });
+    },
     getSpaceById(spaceId) {
-      this.$spaceService.getSpaceById(spaceId, 'identity')
+      return this.$spaceService.getSpaceById(spaceId, 'identity')
         .then((space) => {
           if (space && space.identity && space.identity.id) {
             this.currentSpace = space;
@@ -190,7 +264,7 @@ export default {
         });
     },
     editLink() {
-      const newsType = this.activityId && this.activityId !== '' ? this.$newsConstants.newsObjectType.LATEST_DRAFT : this.newsType;
+      const newsType = this.activityId || this.scheduled ? this.$newsConstants.newsObjectType.LATEST_DRAFT : this.newsType;
       let editUrl = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news/editor?spaceId=${this.spaceId}&newsId=${this.newsId}&activityId=${this.activityId}&spaceName=${this.currentSpace.prettyName}&type=${newsType}`;
       if (this.news.lang) {
         editUrl = `${editUrl}&lang=${this.news.lang}`;
@@ -222,46 +296,64 @@ export default {
         }
       }, redirectionTime);
     },
-
-    postNews(schedulePostDate, postArticleMode, publish, isActivityPosted, selectedTargets, selectedAudience) {
-      this.news.timeZoneId = USER_TIMEZONE_ID;
-      this.news.activityPosted = isActivityPosted;
-      this.news.published = publish;
-      this.news.targets = selectedTargets;
-      if (selectedAudience !== null) {
-        this.news.audience = selectedAudience === this.$t('news.composer.stepper.audienceSection.allUsers') ? 'all' : 'space';
-      }
-      if (postArticleMode === 'later') {
-        this.news.schedulePostDate = schedulePostDate;
-        this.$newsServices.scheduleNews(this.news, this.newsType).then((scheduleNews) => {
-          if (scheduleNews) {
-            window.location.href = scheduleNews.url;
-          }
+    getAllowedTargets() {
+      this.$newsTargetingService.getAllowedTargets()
+        .then(targets => {
+          this.allowedTargets = targets.map(target => ({
+            name: target.name,
+            label: target?.properties?.label,
+            tooltipInfo: `${target?.properties?.label}: ${target?.properties?.description || ''}`,
+            description: target?.properties?.description,
+            restrictedAudience: target?.restrictedAudience,
+          }));
         });
-      } else if (postArticleMode === 'immediate') {
+    },
+    publish(editScheduleAction, scheduleSettings) {
+      if (editScheduleAction === 'schedule') {
+        this.news.publicationState = scheduleSettings?.postDate && 'staged' || '';
+        return this.$newsServices.scheduleNews(this.news, this.$newsConstants.newsObjectType.ARTICLE);
+      } else if (editScheduleAction === 'publish_now') {
+        this.news.schedulePostDate = 0;
         this.news.publicationState = 'posted';
-        this.$newsServices.saveNews(this.news).then((createdNews) => {
-          let createdNewsActivity = null;
-          if (createdNews.activities) {
-            const createdNewsActivities = createdNews.activities.split(';')[0].split(':');
-            if (createdNewsActivities.length > 1) {
-              createdNewsActivity = createdNewsActivities[1];
-            }
-          }
-          if (createdNewsActivity) {
-            window.location.href = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/activity?id=${createdNewsActivity}`;
-          } else {
-            window.location.href = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}`;
-          }
-        });
+        return this.$newsServices.saveNews(this.news);
       } else {
+        this.news.publicationState = 'posted';
+        return this.$newsServices.updateNews(this.news, this.news.activityPosted,
+          this.$newsConstants.newsObjectType.ARTICLE, this.$newsConstants.newsUpdateType.POSTING_AND_PUBLISHING);
+      }
+    },
+    redirectToDrafts() {
+      window.location.href = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news?filter=drafts`;
+    },
+    publishArticle(publicationSettings) {
+      this.isPublishing = true;
+      this.news.activityPosted = publicationSettings?.post;
+      this.news.published = publicationSettings?.publish;
+      this.news.targets = publicationSettings?.selectedTargets;
+      this.news.audience = publicationSettings?.selectedAudience;
+      const scheduleSettings = publicationSettings?.scheduleSettings;
+      const editScheduleAction = scheduleSettings?.editScheduleAction;
+      this.news.timeZoneId = USER_TIMEZONE_ID;
+      this.news.schedulePostDate = scheduleSettings?.postDate;
+      this.news.scheduleUnpublishDate = scheduleSettings?.unpublishDate;
+      if (editScheduleAction === 'cancel_schedule') {
+        this.news.schedulePostDate = 0;
         this.news.publicationState = 'draft';
         this.$newsServices.saveNews(this.news).then((createdNews) => {
           this.news.id = createdNews.id;
           this.$emit('draftCreated');
-          if (createdNews) {
-            window.location.href = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news?filter=drafts`;
-          }
+          this.redirectToDrafts();
+        });
+      } else {
+        this.publish(editScheduleAction, scheduleSettings).then((article) => {
+          this.displayMessage({message: this.$t('notes.publication.settings.update.success'), type: 'success'});
+          history.replaceState({}, article.url);
+          this.news = article;
+        }).catch(() => {
+          this.displayMessage({message: this.$t('notes.publication.settings.update.error'), type: 'error'});
+        }).finally(() => {
+          this.isPublishing = false;
+          this.$refs?.publicationDrawer?.close();
         });
       }
     },
@@ -289,7 +381,24 @@ export default {
           const message = this.$t('news.details.deleteCanceled');
           this.$root.$emit('alert-message', message, 'success');
         });
-    }
+    },
+    displayMessage(message) {
+      document.dispatchEvent(new CustomEvent('alert-message-html', {detail: {
+        alertMessage: message?.message,
+        alertType: message?.type,
+        alertLinkText: message?.linkText,
+        alertLinkCallback: message?.linkCallback,
+        alertLink: message.alertLink
+      }}));
+    },
+    bindTreeViewNavigationClickListener() {
+      const self = this;
+      document.addEventListener('click', function (event) {
+        if (event.target.closest('.image-navigation')) {
+          window.location.href = self.articlePage.url;
+        }
+      });
+    },
   }
 };
 </script>

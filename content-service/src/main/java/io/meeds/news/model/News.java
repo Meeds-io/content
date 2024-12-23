@@ -103,8 +103,6 @@ public class News {
 
   private String                          activityId;
 
-  private List<String>                    attachmentsIds;
-
   private String                          spaceAvatarUrl;
 
   private boolean                         canEdit;
@@ -113,6 +111,8 @@ public class News {
 
   private boolean                         canPublish;
 
+  private boolean                         canSchedule;
+
   private List<String>                    sharedInSpacesList;
 
   private String                          url;
@@ -120,6 +120,8 @@ public class News {
   private boolean                         hiddenSpace;
 
   private String                          schedulePostDate;
+
+  private String                          scheduleUnpublishDate;
 
   private String                          timeZoneId;
 
@@ -137,5 +139,18 @@ public class News {
 
   private String                          illustrationURL;
 
+  private String                          latestVersionId;
+
   private NotePageProperties              properties;
+
+  private boolean                         fromDraft;
+
+  private boolean                         fromExternalPage;
+  
+  private boolean                         canRefer;
+  
+  private boolean                         isReferred;
+  
+  private long                            deReferPageId;
+
 }

@@ -87,6 +87,19 @@ const newsActivityTypeExtensionOptions = {
     return '';
   },
   getTooltip: (activity, isActivityDetail) => !isActivityDetail && activity && 'news.activity.clickToShowDetail',
+  getActivityViews: (activity) => {
+    if (activity?.news?.viewsCount > 0) {
+      const news = activity?.news;
+      const viewsCount = newsViews(news);
+      return {
+        tooltip: news?.viewsCount === 1 ? 'news.details.view' : 'news.details.views',
+        originalViewsCount: news.viewsCount,
+        viewsCount: viewsCount,
+      };
+    }
+    return null;
+  },
+  reactionEnabled: (activity) => !activity?.news?.properties?.hideReaction
 };
 
 export function initExtensions() {
@@ -117,4 +130,16 @@ export function initExtensions() {
       }
     });
   }
+}
+function newsViews(news) {
+  if (news?.viewsCount < 1000) {
+    return news?.viewsCount;
+  }
+  if (news?.viewsCount < 10000) {
+    return `${(news?.viewsCount / 1000).toFixed(1)}k`;
+  }
+  if (news?.viewsCount < 1000000) {
+    return `${parseInt(news?.viewsCount / 1000)}k`;
+  }
+  return '+999k';
 }

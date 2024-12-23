@@ -26,14 +26,21 @@
     offset-y
     bottom>
     <template #activator="{ on, attrs }">
-      <v-icon
-        size="22"
-        :class="langButtonColor"
-        class="remove-focus my-auto pa-0  pe-1"
+      <v-btn
+        v-on="on"
         v-bind="attrs"
-        v-on="on">
-        fa-language
-      </v-icon>
+        width="36"
+        min-width="36"
+        height="36"
+        class="pa-0 ms-3"
+        :class="langButtonColor"
+        :aria-label="langButtonLabel"
+        icon>
+        <v-icon
+          size="22">
+          fa-language
+        </v-icon>
+      </v-btn>
     </template>
     <v-list class="px-2" dense>
       <v-list-item
@@ -101,6 +108,9 @@ export default {
     langButtonColor(){
       return this.selectedTranslation.value ? 'primary--text':'';
     },
+    langButtonLabel() {
+      return this.$t('content.label.button.translations.options');
+    }
   },
   created() {
     this.refreshTranslationExtensions();

@@ -50,6 +50,7 @@
       :show-publish-button="showPublishButton"
       :show-resume-button="showResumeButton"
       :show-share-button="showShareButton"
+      :show-refer-button="showReferButton"
       @copy-link="copyLink"
       @edit-article="$emit('edit-article', news)"
       @delete-article="$emit('delete-article')" />
@@ -98,6 +99,10 @@ export default {
       type: Boolean,
       required: false,
       default: false
+    },
+    showReferButton: {
+      type: Boolean,
+      default: false
     }
   },
   data: () => ({
@@ -120,12 +125,18 @@ export default {
   computed: {
     isMobile() {
       return this.$vuetify.breakpoint.name === 'xs' || this.$vuetify.breakpoint.name === 'sm';
+    },
+    scheduled() {
+      return !!this.news.schedulePostDate || this.staged;
+    },
+    staged() {
+      return this.news?.publicationState === 'staged';
     }
   },
   methods: {
     copyLink() {
       let newsLink = window.location.href.split(eXo.env.portal.metaPortalName)[0];
-      if (this.news?.published && this.news.audience === 'all') {
+      if ((this.news?.published && this.news.audience === 'all') || this.scheduled) {
         newsLink = newsLink.concat(eXo.env.portal.metaPortalName).concat(`/news-detail?newsId=${this.news.id}&type=article`);
       } else {
         newsLink = newsLink.concat(eXo.env.portal.metaPortalName).concat(`/activity?id=${this.news.activityId}`);
@@ -150,8 +161,9 @@ export default {
           showEditButton: this.showEditButton,
           showResumeButton: this.showResumeButton,
           showDeleteButton: this.showDeleteButton,
-          showPublishButton: this.showCopyLinkButton,
+          showPublishButton: this.showPublishButton,
           showCopyLinkButton: this.showCopyLinkButton,
+          showReferButton: this.showReferButton,
           currentApp: this.currentApp
         });
       }

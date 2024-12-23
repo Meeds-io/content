@@ -33,6 +33,7 @@
         :show-publish-button="showPublishButton"
         :show-resume-button="showResumeButton"
         :show-share-button="showShareButton"
+        :show-refer-button="showReferButton"
         @copy-link="copyLink"
         @edit-article="$emit('edit-article', news)"
         @delete-article="$emit('delete-article', news)" />
@@ -51,8 +52,17 @@ export default {
       showDeleteButton: false,
       showPublishButton: false,
       currentApp: null,
-      showCopyLinkButton: false
+      showCopyLinkButton: false,
+      showReferButton: false
     };
+  },
+  computed: {
+    scheduled() {
+      return !!this.news.schedulePostDate || this.staged;
+    },
+    staged() {
+      return this.news?.publicationState === 'staged';
+    }
   },
   created() {
     this.$root.$on('open-news-mobile-action-menu', this.open);
@@ -65,8 +75,9 @@ export default {
       this.showEditButton = config.showEditButton;
       this.showResumeButton = config.showResumeButton;
       this.showDeleteButton = config.showDeleteButton;
-      this.showPublishButton = config.showCopyLinkButton;
+      this.showPublishButton = config.showPublishButton;
       this.showCopyLinkButton = config.showCopyLinkButton;
+      this.showReferButton = config.showReferButton;
       this.currentApp = config.currentApp;
       this.$refs.newsMobileActionMenu.open();
     },
@@ -77,7 +88,7 @@ export default {
       const portalName = eXo.env.portal.metaPortalName;
       const baseUrl = window.location.href.split(portalName)[0] + portalName;
 
-      const newsLink = this.news.published && this.news.audience === 'all'
+      const newsLink = (this.news.published && this.news.audience === 'all') || this.scheduled
         ? `${baseUrl}/news-detail?newsId=${this.news.id}&type=article`
         : `${baseUrl}/activity?id=${this.news.activityId}`;
 

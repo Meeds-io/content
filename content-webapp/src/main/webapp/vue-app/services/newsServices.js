@@ -31,8 +31,6 @@ export function getNewsById(id, editMode, type, lang) {
     } else if ( resp.status === 401) {
       return resp.status;
     }
-  }).catch((error) => {
-    return error;
   });
 }
 
@@ -219,13 +217,20 @@ export function canUserCreateNews(spaceId) {
   }).then((resp) => resp && resp.ok && resp.json());
 }
 
-export function canScheduleNews(spaceId) {
-  return fetch(`${newsConstants.CONTENT_API}/contents/canScheduleNews/${eXo.env.portal.spaceId || spaceId}`, {
+export function canScheduleNews(spaceId, articleId) {
+  return fetch(`${newsConstants.CONTENT_API}/contents/canScheduleNews/${eXo.env.portal.spaceId || spaceId}?articleId=${articleId}`, {
     headers: {
       'Content-Type': 'application/json'
     },
     method: 'GET'
-  }).then((resp) => resp && resp.ok && resp.json());
+  }).then((response) => {
+    if (!response?.ok) {
+      throw response;
+    }
+    return response.json();
+  }).catch(err => {
+    throw err;
+  });
 }
 
 export function deleteNews(newsId, newsObjectType, delay) {
@@ -301,4 +306,20 @@ export function getArticleLanguages(articleId, withDrafts) {
     }
     return resp.json();
   });
+}
+
+export function getArticlePage(pageId) {
+  return Vue.prototype.$notesService.getNoteById(pageId);
+}
+
+export function moveArticlePage(page, newParentPage) {
+  return Vue.prototype.$notesService.moveNotes(page, newParentPage);
+}
+
+export function getPageByTypeOwnerAndName(type, owner, name) {
+  return Vue.prototype.$notesService.getNote(type, owner, name);
+}
+
+export function updateArticlePage(page) {
+  return Vue.prototype.$notesService.updateNoteById(page);
 }

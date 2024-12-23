@@ -20,6 +20,7 @@
 package io.meeds.news.rest;
 
 import static io.meeds.news.utils.NewsUtils.NewsObjectType.ARTICLE;
+import static io.meeds.news.utils.NewsUtils.NewsObjectType.EXISTING_PAGE;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -230,8 +231,11 @@ public class NewsRest {
       news.setActivityPosted(updatedNews.isActivityPosted());
       news.setTargets(updatedNews.getTargets());
       news.setAudience(updatedNews.getAudience());
+      news.setSchedulePostDate(updatedNews.getSchedulePostDate());
+      news.setScheduleUnpublishDate(updatedNews.getScheduleUnpublishDate());
       news.setProperties(updatedNews.getProperties());
       news.setLang(updatedNews.getLang());
+      news.setReferred(updatedNews.isReferred());
       news = newsService.updateNews(news, currentIdentity.getUserId(), post, updatedNews.isPublished(), newsObjectType, newsUpdateType);
 
       return ResponseEntity.ok(news);
@@ -632,12 +636,13 @@ public class NewsRest {
     }
     org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
     try {
-      News news = newsService.getNewsById(scheduledNews.getId(), currentIdentity, false, newsObjectType);
-      if (news == null) {
-        return ResponseEntity.notFound().build();
+      if (!newsObjectType.equalsIgnoreCase(EXISTING_PAGE.name())) {
+        News news = newsService.getNewsById(scheduledNews.getId(), currentIdentity, false, newsObjectType);
+        if (news == null) {
+          return ResponseEntity.notFound().build();
+        }
       }
-      news = newsService.scheduleNews(scheduledNews, currentIdentity, newsObjectType);
-      return ResponseEntity.ok(news);
+      return ResponseEntity.ok(newsService.scheduleNews(scheduledNews, currentIdentity, newsObjectType));
     } catch (IllegalAccessException e) {
       LOG.warn("User '{}' is not autorized to schedule news", currentIdentity.getUserId(), e);
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
@@ -710,7 +715,9 @@ public class NewsRest {
       @ApiResponse(responseCode = "401", description = "User not authorized to schedule a news"),
       @ApiResponse(responseCode = "404", description = "Space not found"),
       @ApiResponse(responseCode = "500", description = "Internal server error") })
-  public ResponseEntity<Boolean> canScheduleNews(@PathVariable("spaceId") String spaceId) {
+  public ResponseEntity<Boolean> canScheduleNews(@PathVariable("spaceId") String spaceId,
+                                                 @Parameter(description = "target article id")
+                                                 @RequestParam("articleId") String articleId) {
     org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
     try {
       if (StringUtils.isBlank(spaceId)) {
@@ -720,8 +727,12 @@ public class NewsRest {
       if (space == null) {
         return ResponseEntity.notFound().build();
       }
+      News news = newsService.getNewsArticleById(articleId);
+      if (news == null) {
+        return ResponseEntity.notFound().build();
+      }
 
-      return ResponseEntity.ok(newsService.canScheduleNews(space, currentIdentity));
+      return ResponseEntity.ok(newsService.canScheduleNews(space, currentIdentity, news));
     } catch (Exception e) {
       LOG.error("Error when checking if the authenticated user can schedule a news", e);
       return ResponseEntity.internalServerError().build();
