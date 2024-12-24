@@ -393,7 +393,7 @@ export default {
         title: this.article.title,
         body: this.replaceImagesURLs(this.$noteUtils.getContentToSave(this.editorBodyInputRef, this.oembedMinWidth)),
         published: this.originalArticle.published,
-        activityPosted: this.originalArticle.activityPosted,
+        activityPosted: this.article.activityPosted,
         schedulePostDate: this.article.schedulePostDate,
         publicationState: this.article.publicationState,
         scheduleUnpublishDate: this.article.scheduleUnpublishDate,
