@@ -326,6 +326,7 @@ export default {
         this.article.targetPageId = createdArticle.targetPageId;
         this.article.properties = createdArticle.properties;
         this.article.draftPage = true;
+        this.article.published = createdArticle.published;
         this.article.targetPageId = createdArticle.targetPageId;
         this.article.publicationState = createdArticle.publicationState;
         this.article.schedulePostDate = createdArticle.schedulePostDate;
@@ -391,7 +392,7 @@ export default {
         targetPageId: this.article.targetPageId,
         title: this.article.title,
         body: this.replaceImagesURLs(this.$noteUtils.getContentToSave(this.editorBodyInputRef, this.oembedMinWidth)),
-        published: this.article.published,
+        published: this.originalArticle.published,
         activityPosted: this.article.activityPosted,
         schedulePostDate: this.article.schedulePostDate,
         publicationState: this.article.publicationState,
