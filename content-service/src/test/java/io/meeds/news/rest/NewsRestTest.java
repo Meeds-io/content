@@ -52,6 +52,7 @@ import java.util.Locale;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.RuntimeDelegate;
 
+import io.meeds.news.model.ArticleTarget;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
@@ -167,8 +168,8 @@ public class NewsRestTest {
     List<News> newsList = new LinkedList<>();
     News news = new News();
     news.setId("1");
-    List<String> targets = new LinkedList<>();
-    targets.add("sliderNews");
+    List<ArticleTarget> targets = new LinkedList<>();
+    targets.add(new ArticleTarget("sliderNews", new Date().getTime()));
     news.setTargets(targets);
     newsList.add(news);
     NewsFilter newsFilter = new NewsFilter();
