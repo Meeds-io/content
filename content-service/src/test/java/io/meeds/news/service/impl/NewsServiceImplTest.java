@@ -752,7 +752,7 @@ public class NewsServiceImplTest {
     when(newsTargetingService.getTargetsByNews(any(News.class))).thenReturn(null);
 
     DraftPage draftPage = mock(DraftPage.class);
-    ;
+
     when(draftPage.getId()).thenReturn("1");
 
     PageVersion pageVersion = mock(PageVersion.class);

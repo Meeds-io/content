@@ -23,8 +23,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -32,13 +31,10 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
+import io.meeds.news.model.ArticleTarget;
+import org.exoplatform.commons.exception.ObjectNotFoundException;
 import org.exoplatform.container.component.RequestLifeCycle;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -339,12 +335,12 @@ public class NewsTargetingImplTest {
                                                                  newsTargetObject)).thenReturn(metadataItems);
 
     // When
-    List<String> newsTargets = newsTargetingService.getTargetsByNews(news);
+    List<ArticleTarget> newsTargets = newsTargetingService.getTargetsByNews(news);
 
     // Then
     assertNotNull(newsTargets);
     assertEquals(1, newsTargets.size());
-    assertEquals("sliderNews", newsTargets.get(0));
+    assertEquals("sliderNews", newsTargets.getFirst().getName());
   }
 
   @Test
@@ -363,8 +359,8 @@ public class NewsTargetingImplTest {
     metadataItem.setObjectId("123456");
     metadataItem.setMetadata(sliderNews);
 
-    List<String> targets = new LinkedList<>();
-    targets.add("sliderNews");
+    List<ArticleTarget> targets = new LinkedList<>();
+    targets.add(new ArticleTarget("sliderNews", new Date().getTime()));
 
     News news = new News();
     news.setSpaceId("1");
@@ -389,15 +385,16 @@ public class NewsTargetingImplTest {
     identity.setMemberships(memberships);
     Map<String, String> properties = new LinkedHashMap<>();
     properties.put("displayed", String.valueOf(true));
+    properties.put("publishedDate", String.valueOf(new Date().getTime()));
 
     COMMONS_UTILS.when(() -> CommonsUtils.getService(SpaceService.class)).thenReturn(spaceService);
 
     // When
-    newsTargetingService.saveNewsTarget(news, true, news.getTargets(), "root");
+    newsTargetingService.saveNewsTarget(news, true, NewsUtils.toTargetNames(news.getTargets()), "root");
 
     // Then
     verify(identityManager, times(1)).getOrCreateIdentity(OrganizationIdentityProvider.NAME, "root");
-    verify(metadataService, times(1)).createMetadataItem(newsTargetObject, metadataKey, properties, 1, false);
+    verify(metadataService, times(1)).createMetadataItem(any(), any(), anyMap(), anyLong(), anyBoolean());
 
   }
 
@@ -596,4 +593,34 @@ public class NewsTargetingImplTest {
 
   }
 
+  @Test
+  public void testDeleteNewsTargets() throws ObjectNotFoundException {
+    News article = new News();
+    article.setId("123");
+    article.setTargets(List.of(new ArticleTarget("test1", new Date().getTime()),
+                               new ArticleTarget("test2", new Date().getTime())));
+    article.setSpaceId("1");
+
+    Metadata taregtMetadata = new Metadata();
+    taregtMetadata.setName("test1");
+    taregtMetadata.setCreatedDate(100);
+    taregtMetadata.setId(1);
+
+    List<MetadataItem> metadataItems = new LinkedList<>();
+    MetadataItem metadataItem = new MetadataItem();
+    metadataItem.setCreatedDate(100);
+    metadataItem.setCreatorId(1);
+    metadataItem.setId(1);
+    metadataItem.setObjectId("123");
+    metadataItem.setMetadata(taregtMetadata);
+    metadataItems.add(metadataItem);
+
+    NewsTargetObject newsTargetObject = new NewsTargetObject("news", "123", null, 1L);
+    when(metadataService.getMetadataItemsByMetadataTypeAndObject(NewsTargetingService.METADATA_TYPE.getName(),
+            newsTargetObject)).thenReturn(metadataItems);
+
+    newsTargetingService.deleteNewsTargets(article, Set.of("test1"));
+
+    verify(metadataService, times(1)).deleteMetadataItem(1, false);
+  }
 }

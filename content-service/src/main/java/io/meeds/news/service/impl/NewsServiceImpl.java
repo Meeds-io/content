@@ -30,8 +30,10 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.regex.Matcher;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import io.meeds.news.model.*;
 import io.meeds.news.plugin.ArticlePageAttachmentPlugin;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
@@ -79,11 +81,6 @@ import org.exoplatform.wiki.service.PageUpdateType;
 import org.exoplatform.wiki.service.WikiService;
 
 import io.meeds.news.filter.NewsFilter;
-import io.meeds.news.model.News;
-import io.meeds.news.model.NewsDraftObject;
-import io.meeds.news.model.NewsLatestDraftObject;
-import io.meeds.news.model.NewsPageObject;
-import io.meeds.news.model.NewsPageVersionObject;
 import io.meeds.news.notification.plugin.MentionInNewsNotificationPlugin;
 import io.meeds.news.notification.plugin.PostNewsNotificationPlugin;
 import io.meeds.news.notification.plugin.PublishNewsNotificationPlugin;
@@ -280,7 +277,7 @@ public class NewsServiceImpl implements NewsService {
     Identity updaterIdentity = NewsUtils.getUserIdentity(updater);
     String newsId = news.getTargetPageId() != null ? news.getTargetPageId() : news.getId();
     News originalNews = getNewsById(newsId, updaterIdentity, false, newsObjectType);
-    List<String> oldTargets = newsTargetingService.getTargetsByNews(news);
+    List<ArticleTarget> oldTargets = newsTargetingService.getTargetsByNews(news);
     boolean canPublish = NewsUtils.canPublishNews(news.getSpaceId(), updaterIdentity);
     Space space = spaceService.getSpaceById(news.getSpaceId());
     Set<String> previousMentions = NewsUtils.processMentions(originalNews.getOriginalBody(), space);
@@ -302,11 +299,9 @@ public class NewsServiceImpl implements NewsService {
         unpublishNews(newsId, updater);
       }
     }
-    boolean displayed = !(StringUtils.equals(news.getPublicationState(), STAGED));
     if (publish == news.isPublished() && news.isPublished() && canPublish) {
       if (news.getTargets() != null && (oldTargets == null || !oldTargets.equals(news.getTargets()))) {
-        newsTargetingService.deleteNewsTargets(news, updater);
-        newsTargetingService.saveNewsTarget(news, displayed, news.getTargets(), updater);
+        updateArticleTargets(news, oldTargets, updater);
       }
       if (news.getAudience() != null && news.getAudience().equals(NewsUtils.ALL_NEWS_AUDIENCE)
           && originalNews.getAudience() != null && originalNews.getAudience().equals(NewsUtils.SPACE_NEWS_AUDIENCE)) {
@@ -392,7 +387,6 @@ public class NewsServiceImpl implements NewsService {
   public void publishNews(News newsToPublish, String publisher) throws Exception {
     Identity publisherIdentity = NewsUtils.getUserIdentity(publisher);
     News news = getNewsArticleById(newsToPublish.getId());
-    boolean displayed = !(StringUtils.equals(news.getPublicationState(), STAGED));
 
     // update page metadata
     NewsPageObject newsPageObject = new NewsPageObject(NEWS_METADATA_PAGE_OBJECT_TYPE,
@@ -416,8 +410,7 @@ public class NewsServiceImpl implements NewsService {
       metadataService.updateMetadataItem(metadataItem, Long.parseLong(publisherId), false);
     }
     if (newsToPublish.getTargets() != null) {
-      newsTargetingService.deleteNewsTargets(news, publisher);
-      newsTargetingService.saveNewsTarget(news, displayed, newsToPublish.getTargets(), publisher);
+      updateArticleTargets(newsToPublish, news.getTargets(), publisher);
     }
     news.setAudience(newsToPublish.getAudience());
     NewsUtils.broadcastEvent(NewsUtils.PUBLISH_NEWS, news.getId(), news);
@@ -1160,6 +1153,23 @@ public class NewsServiceImpl implements NewsService {
   @Override
   public List<String> getArticleLanguages(String articleId, boolean withDrafts) throws WikiException {
     return noteService.getPageAvailableTranslationLanguages(Long.parseLong(articleId), withDrafts);
+  }
+
+  private void updateArticleTargets(News article, List<ArticleTarget> oldTargets, String updater) throws Exception {
+    Set<String> oldSet = new HashSet<>(NewsUtils.toTargetNames(oldTargets));
+    Set<String> newSet = new HashSet<>(NewsUtils.toTargetNames(article.getTargets()));
+
+    Set<String> deletedTargets = new HashSet<>(oldSet);
+    deletedTargets.removeAll(newSet);
+    if (!deletedTargets.isEmpty()) {
+      newsTargetingService.deleteNewsTargets(article, deletedTargets);
+    }
+    Set<String> newTargets = new HashSet<>(newSet);
+    newTargets.removeAll(oldSet);
+    if (!newTargets.isEmpty()) {
+      boolean displayed = !(StringUtils.equals(article.getPublicationState(), STAGED));
+      newsTargetingService.saveNewsTarget(article, displayed, List.copyOf(newTargets), updater);
+    }
   }
 
   private void deleteAllDrafts(Page articlePage, String articleCreator) {

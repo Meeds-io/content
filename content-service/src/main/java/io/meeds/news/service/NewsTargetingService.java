@@ -20,7 +20,9 @@
 package io.meeds.news.service;
 
 import java.util.List;
+import java.util.Set;
 
+import io.meeds.news.model.ArticleTarget;
 import org.exoplatform.social.core.identity.model.Identity;
 import org.exoplatform.social.metadata.model.Metadata;
 import org.exoplatform.social.metadata.model.MetadataItem;
@@ -66,7 +68,7 @@ public interface NewsTargetingService {
    * @param news {@link News} for which targets to be retrieved
    * @return {@link List} of {@link News} targets by {@link News} news object
    */
-  List<String> getTargetsByNews(News news);
+  List<ArticleTarget> getTargetsByNews(News news);
 
   /**
    * Gets the {@link List} of {@link News} target items by a given target name.
@@ -77,6 +79,14 @@ public interface NewsTargetingService {
    * @return {@link List} of {@link News} target items by a target name
    */
   List<MetadataItem> getNewsTargetItemsByTargetName(String targetName, long offset, long limit);
+
+  /**
+   * Delete list of associated article targets
+   *
+   * @param article target article
+   * @param targets list of associated targets
+   */
+  void deleteNewsTargets(News article, Set<String> targets);
 
   /**
    * Save a {@link List} of {@link News} targets of a given {@link News} id by

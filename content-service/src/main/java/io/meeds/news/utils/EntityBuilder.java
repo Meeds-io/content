@@ -19,12 +19,19 @@
  */
 package io.meeds.news.utils;
 
+import io.meeds.news.model.ArticleTarget;
+import org.apache.commons.collections4.CollectionUtils;
 import org.exoplatform.social.core.identity.model.Identity;
 import org.exoplatform.social.metadata.favorite.FavoriteService;
 import org.exoplatform.social.metadata.favorite.model.Favorite;
 
 import io.meeds.news.rest.NewsSearchResultEntity;
 import io.meeds.news.search.NewsESSearchResult;
+import org.exoplatform.social.metadata.model.Metadata;
+import org.exoplatform.social.metadata.model.MetadataItem;
+
+import java.util.List;
+import java.util.Map;
 
 public class EntityBuilder {
 
@@ -42,5 +49,22 @@ public class EntityBuilder {
     newsSearchResultEntity.setFavorite(favoriteService.isFavorite(favorite));
 
     return newsSearchResultEntity;
+  }
+  
+  public static ArticleTarget toArticleTarget(MetadataItem metadataItem) {
+    if (metadataItem == null) {
+      return null;
+    }
+    Metadata metadata = metadataItem.getMetadata();
+    Map<String, String> properties = metadataItem.getProperties();
+    String publishedDate = properties != null ? properties.getOrDefault(NewsUtils.PUBLISHED_DATE, "0") : "0";
+    return new ArticleTarget(metadata.getName(), Long.parseLong(publishedDate));
+  }
+  
+  public static List<ArticleTarget> toArticleTargets(List<MetadataItem> metadataItems) {
+    if (CollectionUtils.isEmpty(metadataItems)) {
+      return null;
+    }
+    return metadataItems.stream().map(EntityBuilder::toArticleTarget).toList();
   }
 }

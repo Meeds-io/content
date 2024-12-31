@@ -19,12 +19,12 @@
  */
 package io.meeds.news.service.impl;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
+import io.meeds.news.model.ArticleTarget;
+import io.meeds.news.utils.EntityBuilder;
 import org.apache.commons.lang3.StringUtils;
+import org.exoplatform.commons.exception.ObjectNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
@@ -128,15 +128,37 @@ public class NewsTargetingServiceImpl implements NewsTargetingService {
   }
 
   @Override
-  public List<String> getTargetsByNews(News news) {
+  public List<ArticleTarget> getTargetsByNews(News news) {
     NewsTargetObject newsTargetObject = new NewsTargetObject(NewsUtils.NEWS_METADATA_OBJECT_TYPE,
                                                              news.getId(),
                                                              null,
                                                              Long.parseLong(news.getSpaceId()));
     List<MetadataItem> newsTargets = metadataService.getMetadataItemsByMetadataTypeAndObject(METADATA_TYPE.getName(),
                                                                                              newsTargetObject);
-    return newsTargets.stream().map(MetadataItem::getMetadata).map(Metadata::getName).toList();
+    return EntityBuilder.toArticleTargets(newsTargets);
   }
+
+  @Override
+  public void deleteNewsTargets(News article, final Set<String> targets) {
+    final NewsTargetObject newsTargetObject = new NewsTargetObject(NewsUtils.NEWS_METADATA_OBJECT_TYPE,
+                                                                   article.getId(),
+                                                                   null,
+                                                                   Long.parseLong(article.getSpaceId()));
+
+    final List<MetadataItem> newsTargets = metadataService.getMetadataItemsByMetadataTypeAndObject(METADATA_TYPE.getName(),
+                                                                                                   newsTargetObject);
+    newsTargets.stream()
+               .filter(target -> targets.contains(target.getMetadata().getName()))
+               .forEach( target -> {
+                 try {
+                   metadataService.deleteMetadataItem(target.getId(), false);
+                 } catch (ObjectNotFoundException e) {
+                   LOG.error("Failed to delete news target. ID: " + target.getId() + ", " +
+                                "Name: " + target.getMetadata().getName(), e);
+                 }
+               });
+  }
+
 
   @Override
   public void saveNewsTarget(News news,
@@ -154,7 +176,8 @@ public class NewsTargetingServiceImpl implements NewsTargetingService {
     Identity currentSocIdentity = identityManager.getOrCreateIdentity(OrganizationIdentityProvider.NAME, currentUserId);
     Map<String, String> properties = new LinkedHashMap<>();
     properties.put(NewsUtils.DISPLAYED_STATUS, String.valueOf(displayed));
-    targets.stream().forEach(targetName -> {
+    properties.put(NewsUtils.PUBLISHED_DATE, String.valueOf(new Date().getTime()));
+    targets.forEach(targetName -> {
       try {
         MetadataKey metadataKey = new MetadataKey(NewsTargetingService.METADATA_TYPE.getName(), targetName, 0);
         metadataService.createMetadataItem(newsTargetObject,
