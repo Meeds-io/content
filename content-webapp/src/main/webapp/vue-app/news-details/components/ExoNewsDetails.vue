@@ -202,6 +202,16 @@ export default {
     this.$root.$on('move-page', this.moveArticlePage);
     this.bindTreeViewNavigationClickListener();
   },
+  mounted() {
+    const urlHash = window.location.hash;
+    if (urlHash) {
+      const elementId = urlHash.substring(1);
+      const targetElement = document.getElementById(elementId);
+      if (targetElement) {
+        targetElement.scrollIntoView({behavior: 'smooth'});
+      }
+    }
+  },
   methods: {
     moveArticlePage(page, newParentPage) {
       const previousParentPageId = page.parentPageId;
