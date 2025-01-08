@@ -67,6 +67,7 @@
                 <news-slider-view-item
                   :author="item.author"
                   :author-display-name="item.authorDisplayName"
+                  :properties="item.properties"
                   :space-display-name="item.spaceDisplayName"
                   :space-url="item.spaceUrl"
                   :space-avatar-url="item.spaceAvatarUrl"
