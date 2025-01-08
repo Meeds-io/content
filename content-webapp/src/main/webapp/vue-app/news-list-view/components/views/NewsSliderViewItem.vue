@@ -89,6 +89,10 @@ export default {
       type: String,
       default: ''
     },
+    properties: {
+      type: Object,
+      default: null
+    },
     spaceDisplayName: {
       type: String,
       default: ''
@@ -157,7 +161,7 @@ export default {
       return this.selectedOption && this.selectedOption.showArticleImage;
     },
     showArticleAuthor() {
-      return this.selectedOption && this.selectedOption.showArticleAuthor;
+      return this.selectedOption && this.selectedOption.showArticleAuthor && !this.properties.hideAuthor;
     },
     showArticleSpace() {
       return this.selectedOption && this.selectedOption.showArticleSpace;

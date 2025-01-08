@@ -107,7 +107,7 @@ export default {
       return this.item.publishDate && this.item.publishDate.time && new Date(this.item.publishDate.time);
     },
     showArticleAuthor() {
-      return this.selectedOption && this.selectedOption.showArticleAuthor;
+      return this.selectedOption && this.selectedOption.showArticleAuthor && this.item  && !this.item.properties.hideAuthor;
     },
     showArticleDate() {
       return this.selectedOption && this.selectedOption.showArticleDate;
