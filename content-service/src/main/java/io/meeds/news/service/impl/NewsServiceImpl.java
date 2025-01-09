@@ -1036,7 +1036,7 @@ public class NewsServiceImpl implements NewsService {
       if (newsArticlePage.getProperties() == null) {
         newsArticlePage.setProperties(new NotePageProperties(Long.parseLong(draftNewsId), null, null, false, false, true));
       }
-      newsArticlePage = noteService.createNote(wiki, newsArticlesRootNotePage.getName(), newsArticlePage, poster);
+      newsArticlePage = noteService.createNote(wiki, newsArticlesRootNotePage.getName(), newsArticlePage, poster, false);
       if (newsArticlePage != null) {
         PageVersion pageVersion = noteService.getPublishedVersionByPageIdAndLang(Long.parseLong(newsArticlePage.getId()), null);
         // set properties
@@ -1676,7 +1676,7 @@ public class NewsServiceImpl implements NewsService {
       newsArticlesRootNotePage.setContent("");
       // inherit syntax from wiki
       newsArticlesRootNotePage.setSyntax(wiki.getPreferences().getWikiPreferencesSyntax().getDefaultSyntax());
-      return noteService.createNote(wiki, null, newsArticlesRootNotePage);
+      return noteService.createNote(wiki, null, newsArticlesRootNotePage, false);
     }
     return null;
   }
@@ -1910,7 +1910,7 @@ public class NewsServiceImpl implements NewsService {
       }
       existingPage.setProperties(news.getProperties());
       existingPage.setAttachmentObjectType(ArticlePageAttachmentPlugin.OBJECT_TYPE);
-      existingPage = noteService.updateNote(existingPage, PageUpdateType.EDIT_PAGE_CONTENT_AND_TITLE, updater);
+      existingPage = noteService.updateNote(existingPage, PageUpdateType.EDIT_PAGE_CONTENT_AND_TITLE, updater, false);
       news.setUpdateDate(existingPage.getUpdatedDate());
       news.setUpdater(existingPage.getAuthor());
       news.setLang(existingPage.getLang());
@@ -2219,7 +2219,7 @@ public class NewsServiceImpl implements NewsService {
     Page existingPage = noteService.getNoteById(newsId);
     if (existingPage != null) {
       existingPage.setAttachmentObjectType(ArticlePageAttachmentPlugin.OBJECT_TYPE);
-      existingPage = noteService.updateNote(existingPage, PageUpdateType.EDIT_PAGE_CONTENT_AND_TITLE, versionCreator);
+      existingPage = noteService.updateNote(existingPage, PageUpdateType.EDIT_PAGE_CONTENT_AND_TITLE, versionCreator, false);
       news.setPublicationState(POSTED);
       // update the metadata item
       MetadataItem metadataItem =
