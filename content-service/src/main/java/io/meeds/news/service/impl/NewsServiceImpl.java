@@ -368,7 +368,7 @@ public class NewsServiceImpl implements NewsService {
         String newsActivities = news.getActivities();
         Stream.of(newsActivities.split(";")).map(activity -> activity.split(":")[1]).forEach(activityManager::deleteActivity);
       }
-      MetadataObject newsMetadataObject = new MetadataObject(NewsUtils.NEWS_METADATA_OBJECT_TYPE, newsId);
+      MetadataObject newsMetadataObject = new MetadataObject(NEWS_METADATA_PAGE_OBJECT_TYPE, newsId);
       metadataService.deleteMetadataItemsByObject(newsMetadataObject);
       indexingService.unindex(NewsIndexingServiceConnector.TYPE, String.valueOf(news.getId()));
       List<String> articleLanguages = getArticleLanguages(newsId, false);
