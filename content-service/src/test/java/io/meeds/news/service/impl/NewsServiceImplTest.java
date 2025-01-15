@@ -533,7 +533,7 @@ public class NewsServiceImplTest {
 
     Page createdPage = mock(Page.class);
     when(createdPage.getId()).thenReturn("1");
-    when(noteService.createNote(wiki, rootPage.getName(), newsArticlePage, identity)).thenReturn(createdPage);
+    when(noteService.createNote(wiki, rootPage.getName(), newsArticlePage, identity, false)).thenReturn(createdPage);
     PageVersion pageVersion = mock(PageVersion.class);
     when(noteService.getPublishedVersionByPageIdAndLang(1L, null)).thenReturn(pageVersion);
     when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(new org.exoplatform.social.core.identity.model.Identity("1"));
@@ -542,7 +542,7 @@ public class NewsServiceImplTest {
     newsService.createNews(newsArticle, identity);
 
     // Then
-    verify(noteService, times(1)).createNote(wiki, rootPage.getName(), newsArticlePage, identity);
+    verify(noteService, times(1)).createNote(wiki, rootPage.getName(), newsArticlePage, identity, false);
     verify(noteService, times(1)).getPublishedVersionByPageIdAndLang(1L, null);
     verify(metadataService, atLeast(1)).createMetadataItem(any(MetadataObject.class),
                                                          any(MetadataKey.class),
@@ -558,7 +558,7 @@ public class NewsServiceImplTest {
     when(noteService.getNoteById(anyString())).thenReturn(note);
     clearInvocations(noteService, metadataService);
     newsService.createNews(newsArticle, identity);
-    verify(noteService, times(0)).createNote(wiki, rootPage.getName(), newsArticlePage, identity);
+    verify(noteService, times(0)).createNote(wiki, rootPage.getName(), newsArticlePage, identity, false);
     verify(noteService, times(1)).getPublishedVersionByPageIdAndLang(1L, null);
     verify(metadataService, atLeast(1)).createMetadataItem(any(MetadataObject.class),
             any(MetadataKey.class),
@@ -785,13 +785,13 @@ public class NewsServiceImplTest {
     when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(identity1);
     when(identity1.getId()).thenReturn("1");
 
-    when(noteService.updateNote(any(Page.class), any(), any())).thenReturn(existingPage);
+    when(noteService.updateNote(any(Page.class), any(), any(), anyBoolean())).thenReturn(existingPage);
 
     // When
     newsService.updateNews(news, "john", false, false, ARTICLE.name().toLowerCase(), CONTENT_AND_TITLE.name());
 
     // Then
-    verify(noteService, times(1)).updateNote(any(Page.class), any(), any());
+    verify(noteService, times(1)).updateNote(any(Page.class), any(), any(), anyBoolean());
     verify(noteService, times(1)).createVersionOfNote(existingPage, identity.getUserId());
     verify(noteService, times(2)).getPublishedVersionByPageIdAndLang(1L, null);
   }
@@ -907,7 +907,7 @@ public class NewsServiceImplTest {
     when(identity1.getId()).thenReturn("1");
 
     newsService.scheduleNews(newsArticle, identity, DRAFT);
-    verify(noteService, times(1)).createNote(any(Wiki.class), anyString(), any(Page.class), any(Identity.class));
+    verify(noteService, times(1)).createNote(any(Wiki.class), anyString(), any(Page.class), any(Identity.class), anyBoolean());
   }
 
   @Test
@@ -1070,12 +1070,12 @@ public class NewsServiceImplTest {
     when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(identity1);
     when(identity1.getId()).thenReturn("1");
 
-    when(noteService.updateNote(any(Page.class), any(), any())).thenReturn(existingPage);
+    when(noteService.updateNote(any(Page.class), any(), any(), anyBoolean())).thenReturn(existingPage);
     // When
     newsService.updateNews(news, "john", false, false, ARTICLE.name().toLowerCase(), CONTENT_AND_TITLE.name());
 
     // Then
-    verify(noteService, times(1)).updateNote(any(Page.class), any(), any());
+    verify(noteService, times(1)).updateNote(any(Page.class), any(), any(), anyBoolean());
     verify(noteService, times(1)).createVersionOfNote(existingPage, identity.getUserId());
     verify(noteService, times(2)).getPublishedVersionByPageIdAndLang(1L, null);
     NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.ADD_ARTICLE_TRANSLATION), anyObject(), anyObject()), times(1));
