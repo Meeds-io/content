@@ -266,9 +266,7 @@ export function canPublishNews(spaceId) {
       'Content-Type': 'application/json'
     },
     method: 'GET'
-  }).then((resp) => resp.json()).then(resp => {
-    return resp;
-  });
+  }).then((resp) => resp && resp.ok && resp.json());
 }
 
 export function deleteArticleTranslation(newsId, lang) {
