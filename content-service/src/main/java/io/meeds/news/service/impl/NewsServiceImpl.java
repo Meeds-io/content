@@ -813,8 +813,7 @@ public class NewsServiceImpl implements NewsService {
    */
   @Override
   public boolean canScheduleNews(Space space, Identity currentIdentity, News article) {
-    boolean isArticleAuthor = article.getAuthor() != null && article.getAuthor().equals(currentIdentity.getUserId());
-    boolean spaceMemberCanSchedule = (article.isFromExternalPage() || isArticleAuthor)
+    boolean spaceMemberCanSchedule = (article.isFromExternalPage() || spaceService.canRedactOnSpace(space, currentIdentity))
         && spaceService.isMember(space, currentIdentity.getUserId());
     return spaceMemberCanSchedule || spaceService.isManager(space, currentIdentity.getUserId())
         || spaceService.isRedactor(space, currentIdentity.getUserId())

@@ -153,19 +153,19 @@ public class NewsUtils {
     }).filter(Objects::nonNull).collect(Collectors.toSet());
   }
 
-  public static List<Long> getMyFilteredSpacesIds(org.exoplatform.services.security.Identity userIdentity,
+  public static List<Long> getMyFilteredSpacesIds(org.exoplatform.services.security.Identity currentIdentity,
                                                   List<String> filteredSpacesIds) throws Exception {
     if (!CollectionUtils.isEmpty(filteredSpacesIds)) {
       return filteredSpacesIds.stream().map(Long::parseLong).toList();
     }
-    return getMySpaces(userIdentity).stream().map(space -> Long.valueOf(space.getId())).toList();
+    return getMySpaces(currentIdentity).stream().map(space -> Long.valueOf(space.getId())).toList();
   }
 
-  public static List<Long> getAllowedDraftArticleSpaceIds(org.exoplatform.services.security.Identity userIdentity,
+  public static List<Long> getAllowedDraftArticleSpaceIds(org.exoplatform.services.security.Identity currentIdentity,
                                                           List<String> filteredSpacesIds) throws Exception {
     SpaceService spaceService = CommonsUtils.getService(SpaceService.class);
-    return getMySpaces(userIdentity).stream().filter(space -> {
-      boolean allowed = spaceService.canRedactOnSpace(space, userIdentity) || canPublishNews(space.getId(), userIdentity);
+    return getMySpaces(currentIdentity).stream().filter(space -> {
+      boolean allowed = spaceService.canRedactOnSpace(space, currentIdentity) || canPublishNews(space.getId(), currentIdentity);
       if (!CollectionUtils.isEmpty(filteredSpacesIds)) {
         return allowed && filteredSpacesIds.contains(space.getId());
       }
@@ -177,8 +177,7 @@ public class NewsUtils {
                                                             List<String> filteredSpacesIds) throws Exception {
     SpaceService spaceService = CommonsUtils.getService(SpaceService.class);
     return getMySpaces(currentIdentity).stream().filter(space -> {
-      boolean allowed = (spaceService.isManager(space, currentIdentity.getUserId())
-          || spaceService.isRedactor(space, currentIdentity.getUserId()) || canPublishNews(space.getId(), currentIdentity));
+      boolean allowed = spaceService.canRedactOnSpace(space, currentIdentity) || canPublishNews(space.getId(), currentIdentity);
       if (!CollectionUtils.isEmpty(filteredSpacesIds)) {
         return allowed && filteredSpacesIds.contains(space.getId());
       }
