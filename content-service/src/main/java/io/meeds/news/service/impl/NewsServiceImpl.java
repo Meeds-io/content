@@ -71,6 +71,7 @@ import org.exoplatform.social.metadata.model.MetadataObject;
 import org.exoplatform.social.metadata.model.MetadataType;
 import org.exoplatform.social.notification.LinkProviderUtils;
 import org.exoplatform.wiki.WikiException;
+import org.exoplatform.wiki.jpa.search.WikiPageIndexingServiceConnector;
 import org.exoplatform.wiki.model.DraftPage;
 import org.exoplatform.wiki.model.Page;
 import org.exoplatform.wiki.model.PageVersion;
@@ -1278,6 +1279,7 @@ public class NewsServiceImpl implements NewsService {
     } else {
       properties.remove(PAGE_REFERRED);
       properties.remove(DE_REFER_PAGE_ID);
+      indexingService.unindex(WikiPageIndexingServiceConnector.TYPE, articlePage.getId());
     }
   }
 
