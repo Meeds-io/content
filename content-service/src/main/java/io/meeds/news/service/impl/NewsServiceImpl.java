@@ -816,8 +816,7 @@ public class NewsServiceImpl implements NewsService {
     boolean isArticleAuthor = article.getAuthor() != null && article.getAuthor().equals(currentIdentity.getUserId());
     boolean spaceMemberCanSchedule = (article.isFromExternalPage() || isArticleAuthor)
         && spaceService.isMember(space, currentIdentity.getUserId());
-    return spaceMemberCanSchedule || spaceService.isManager(space, currentIdentity.getUserId())
-        || spaceService.isRedactor(space, currentIdentity.getUserId())
+    return spaceMemberCanSchedule || spaceService.isRedactor(space, currentIdentity.getUserId())
         || NewsUtils.canPublishNews(space.getId(), currentIdentity);
   }
 
@@ -1546,7 +1545,7 @@ public class NewsServiceImpl implements NewsService {
     metadataFilter.setMetadataProperties(Map.of(NEWS_PUBLICATION_STATE, STAGED, NEWS_DELETED, "false"));
     metadataFilter.setCombinedMetadataProperties(Map.of(UNPUBLISH_SCHEDULED, "true", NEWS_DELETED, "false"));
     metadataFilter.setSortField(filter.getOrder());
-    metadataFilter.setMetadataSpaceIds(NewsUtils.getAllowedScheduledNewsSpacesIds(currentIdentity, filter.getSpaces()));
+    metadataFilter.setMetadataSpaceIds(NewsUtils.getMyFilteredSpacesIds(currentIdentity, filter.getSpaces()));
     return metadataService.getMetadataItemsByFilter(metadataFilter, filter.getOffset(), filter.getLimit())
                           .stream()
                           .map(article -> {
@@ -1557,10 +1556,16 @@ public class NewsServiceImpl implements NewsService {
                               return null;
                             }
                           })
-                          .filter(Objects::nonNull)
+                          .filter(article -> {
+                            if (article != null) {
+                              Space articleSpace = spaceService.getSpaceById(article.getSpaceId());
+                              return canScheduleNews(articleSpace, currentIdentity, article);
+                            }
+                            return false;
+                          })
                           .toList();
   }
-
+  
   private List<News> getMyPostedArticles(NewsFilter filter, Identity currentIdentity) throws Exception {
     MetadataFilter metadataFilter = new MetadataFilter();
     metadataFilter.setMetadataName(NEWS_METADATA_NAME);
