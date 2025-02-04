@@ -2034,7 +2034,11 @@ public class NewsServiceImpl implements NewsService {
                                                            articlePage.getId(),
                                                            null,
                                                            Long.parseLong(space.getId()));
-        MetadataItem metadataItem = metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY, newsPageObject).getFirst();
+        List<MetadataItem> metadataItems = metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY, newsPageObject);
+        MetadataItem metadataItem = null;
+        if (!metadataItems.isEmpty()) {
+          metadataItem = metadataItems.getFirst();
+        }
         buildArticleProperties(news, currentUsername, metadataItem);
         news.setDeleted(articlePage.isDeleted());
         news.setPublicationDate(articlePage.getCreatedDate());
@@ -2042,7 +2046,7 @@ public class NewsServiceImpl implements NewsService {
         processPageContent(pageVersion, news);
         news.setUpdaterFullName(pageVersion.getAuthorFullName());
         news.setLang(pageVersion.getLang());
-        news.setUpdateDate(new Date(metadataItem.getUpdatedDate()));
+        news.setUpdateDate(metadataItem != null ? new Date(metadataItem.getUpdatedDate()) : articlePage.getUpdatedDate());
         news.setProperties(pageVersion.getProperties());
         news.setUrl(NewsUtils.buildNewsArticleUrl(news, currentUsername));
         news.setLatestVersionId(pageVersion.getId());
