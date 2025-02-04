@@ -345,7 +345,7 @@ public class NewsServiceImplTest {
     draftPage.setAuthor("john");
     draftPage.setWikiOwner("/space/groupId");
 
-    Space space = mockSpace();
+    mockSpace();
 
     when(noteService.getDraftNoteById(anyString(), anyString())).thenReturn(draftPage);
     MetadataItem metadataItem = mock(MetadataItem.class);
@@ -597,9 +597,9 @@ public class NewsServiceImplTest {
     when(pageVersion.getUpdatedDate()).thenReturn(new Date());
     when(pageVersion.getAuthorFullName()).thenReturn("full name");
 
-    Space space = mockSpace();
-
-    Identity identity = mockIdentity();
+    mockSpace();
+    mockIdentity();
+    
     NEWS_UTILS.when(() -> NewsUtils.canPublishNews(anyString(), any(Identity.class))).thenReturn(false);
     NEWS_UTILS.when(() -> NewsUtils.processMentions(anyString(), any())).thenReturn(new HashSet<>());
 
@@ -672,9 +672,9 @@ public class NewsServiceImplTest {
     Map<String, String> properties = new HashMap<>();
     when(metadataItem.getProperties()).thenReturn(properties);
 
-    Space space = mockSpace();
-
-    Identity identity = mockIdentity();
+    mockSpace();
+    mockIdentity();
+    
     NEWS_UTILS.when(() -> NewsUtils.canPublishNews(anyString(), any(Identity.class))).thenReturn(false);
     NEWS_UTILS.when(() -> NewsUtils.processMentions(anyString(), any())).thenReturn(new HashSet<>());
     when(newsTargetingService.getTargetsByNews(any(News.class))).thenReturn(null);
@@ -744,7 +744,7 @@ public class NewsServiceImplTest {
     Map<String, String> properties = new HashMap<>();
     when(metadataItem.getProperties()).thenReturn(properties);
 
-    Space space = mockSpace();
+    mockSpace();
 
     Identity identity = mockIdentity();
     NEWS_UTILS.when(() -> NewsUtils.canPublishNews(anyString(), any(Identity.class))).thenReturn(false);
@@ -814,7 +814,7 @@ public class NewsServiceImplTest {
     Map<String, String> properties = new HashMap<>();
     properties.put(NEWS_ACTIVITIES, "1:1;");
     when(metadataItem.getProperties()).thenReturn(properties);
-    Space space = mockSpace();
+    mockSpace();
     Identity identity = mockIdentity();
     when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(new org.exoplatform.social.core.identity.model.Identity("1"));
     NEWS_UTILS.when(() -> NewsUtils.canPublishNews(anyString(), any(Identity.class))).thenReturn(false);
@@ -873,6 +873,7 @@ public class NewsServiceImplTest {
   public void testScheduleNews() throws Exception {
     Space space = mockSpace();
     Identity identity = mockIdentity();
+    when(spaceService.isMember(space, identity.getUserId())).thenReturn(true);
     when(spaceService.isManager(space, identity.getUserId())).thenReturn(true);
     MetadataItem metadataItem = mock(MetadataItem.class);
     List<MetadataItem> metadataItems = new ArrayList<>();
@@ -929,7 +930,7 @@ public class NewsServiceImplTest {
     when(metadataItem2.getProperties()).thenReturn(properties2);
 
     mockBuildArticle(metadataItems);
-
+    when(spaceService.isMember(any(Space.class), anyString())).thenReturn(true);
 
     List<News> newsList = newsService.getNews(newsFilter, johnIdentity);
     assertNotNull(newsList);
@@ -1027,7 +1028,7 @@ public class NewsServiceImplTest {
     when(metadataItem.getProperties()).thenReturn(properties);
     mockBuildArticle(metadataItems);
 
-    Space space = mockSpace();
+    mockSpace();
 
     Identity identity = mockIdentity();
     NEWS_UTILS.when(() -> NewsUtils.canPublishNews(anyString(), any(Identity.class))).thenReturn(false);
@@ -1078,7 +1079,7 @@ public class NewsServiceImplTest {
     verify(noteService, times(1)).updateNote(any(Page.class), any(), any(), anyBoolean());
     verify(noteService, times(1)).createVersionOfNote(existingPage, identity.getUserId());
     verify(noteService, times(2)).getPublishedVersionByPageIdAndLang(1L, null);
-    NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.ADD_ARTICLE_TRANSLATION), anyObject(), anyObject()), times(1));
+    NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.ADD_ARTICLE_TRANSLATION), any(), any()), times(1));
   }
 
   private void mockBuildArticle(List<MetadataItem> metadataItems) throws WikiException {
