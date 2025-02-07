@@ -392,7 +392,10 @@ export default {
           window.history.pushState('', 'News', this.removeQueryParam('search'));
         }
         return this.$nextTick();
-      }).catch(() => this.loadingNews = false)
+      }).catch(() => {
+        this.loadingNews = false;
+        this.newsList = [];
+      })
         .finally(() => {
           this.loadingNews = false;
           this.initialized = true;
