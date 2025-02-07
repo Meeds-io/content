@@ -495,8 +495,11 @@ public class NewsRest {
         if (text.indexOf("#") == 0) {
           String tagName = text.replace("#", "");
           List<TagName> tagNames = tagService.findTags(new TagFilter(tagName, 0), userIdentityId);
-          if (tagNames != null && !tagNames.isEmpty())
+          if (tagNames != null && !tagNames.isEmpty()) {
             newsFilter.setTagNames(tagNames.stream().map(e -> e.getName()).toList());
+          } else {
+            return ResponseEntity.ok(newsEntity);
+          }
         }
 
         Identity identity = identityManager.getOrCreateIdentity(OrganizationIdentityProvider.NAME, currentIdentity.getUserId());
