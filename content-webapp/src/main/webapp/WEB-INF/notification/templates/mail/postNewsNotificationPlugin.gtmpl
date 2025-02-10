@@ -60,7 +60,7 @@
                                                             notificationDescription =  _ctx.appRes("news.mailNotification.description",creator,CONTENT_TITLE,spaceName);
                                                             break;
                                                         case "MENTION IN NEWS":
-                                                            notificationDescription =  _ctx.appRes("news.notification.description.mention.in.news",CONTENT_TITLE);
+                                                            notificationDescription =  _ctx.appRes("news.mailNotification.description.mention.in.news",CONTENT_TITLE);
                                                             break;
                                                         case "PUBLISH NEWS":
                                                             notificationDescription =  _ctx.appRes("news.mailNotification.description.publish.news", CURRENT_USER, CONTENT_TITLE);
