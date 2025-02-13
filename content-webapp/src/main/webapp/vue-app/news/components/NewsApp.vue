@@ -283,7 +283,7 @@ export default {
       this.$refs.mobileActionMenu.close();
     },
     getEditUrl(news) {
-      let editUrl = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news/editor?newsId=${news.targetPageId || news.newsId}`;
+      let editUrl = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news-editor?newsId=${news.targetPageId || news.newsId}`;
       if (news.spaceId) {
         editUrl += `&spaceId=${news.spaceId}`;
       }
@@ -300,7 +300,7 @@ export default {
       return editUrl;
     },
     getDraftUrl(item) {
-      let draftUrl = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news/editor`;
+      let draftUrl = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news-editor`;
       draftUrl += `?newsId=${item.activityId && item.targetPageId || item.id}`;
       if (item.spaceId) {
         draftUrl += `&spaceId=${item.spaceId}`;
