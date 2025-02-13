@@ -70,6 +70,7 @@ import org.exoplatform.social.metadata.model.MetadataObject;
 import org.exoplatform.social.metadata.model.MetadataType;
 import org.exoplatform.social.notification.LinkProviderUtils;
 import org.exoplatform.wiki.WikiException;
+import org.exoplatform.wiki.jpa.search.WikiPageIndexingServiceConnector;
 import org.exoplatform.wiki.model.DraftPage;
 import org.exoplatform.wiki.model.Page;
 import org.exoplatform.wiki.model.PageVersion;
@@ -815,8 +816,7 @@ public class NewsServiceImpl implements NewsService {
     boolean isArticleAuthor = article.getAuthor() != null && article.getAuthor().equals(currentIdentity.getUserId());
     boolean spaceMemberCanSchedule = (article.isFromExternalPage() || isArticleAuthor)
         && spaceService.isMember(space, currentIdentity.getUserId());
-    return spaceMemberCanSchedule || spaceService.isManager(space, currentIdentity.getUserId())
-        || spaceService.isRedactor(space, currentIdentity.getUserId())
+    return spaceMemberCanSchedule || spaceService.isRedactor(space, currentIdentity.getUserId())
         || NewsUtils.canPublishNews(space.getId(), currentIdentity);
   }
 
@@ -1036,7 +1036,7 @@ public class NewsServiceImpl implements NewsService {
       if (newsArticlePage.getProperties() == null) {
         newsArticlePage.setProperties(new NotePageProperties(Long.parseLong(draftNewsId), null, null, false, false, true));
       }
-      newsArticlePage = noteService.createNote(wiki, newsArticlesRootNotePage.getName(), newsArticlePage, poster);
+      newsArticlePage = noteService.createNote(wiki, newsArticlesRootNotePage.getName(), newsArticlePage, poster, false);
       if (newsArticlePage != null) {
         PageVersion pageVersion = noteService.getPublishedVersionByPageIdAndLang(Long.parseLong(newsArticlePage.getId()), null);
         // set properties
@@ -1278,6 +1278,7 @@ public class NewsServiceImpl implements NewsService {
     } else {
       properties.remove(PAGE_REFERRED);
       properties.remove(DE_REFER_PAGE_ID);
+      indexingService.unindex(WikiPageIndexingServiceConnector.TYPE, articlePage.getId());
     }
   }
 
@@ -1544,7 +1545,7 @@ public class NewsServiceImpl implements NewsService {
     metadataFilter.setMetadataProperties(Map.of(NEWS_PUBLICATION_STATE, STAGED, NEWS_DELETED, "false"));
     metadataFilter.setCombinedMetadataProperties(Map.of(UNPUBLISH_SCHEDULED, "true", NEWS_DELETED, "false"));
     metadataFilter.setSortField(filter.getOrder());
-    metadataFilter.setMetadataSpaceIds(NewsUtils.getAllowedScheduledNewsSpacesIds(currentIdentity, filter.getSpaces()));
+    metadataFilter.setMetadataSpaceIds(NewsUtils.getMyFilteredSpacesIds(currentIdentity, filter.getSpaces()));
     return metadataService.getMetadataItemsByFilter(metadataFilter, filter.getOffset(), filter.getLimit())
                           .stream()
                           .map(article -> {
@@ -1555,10 +1556,16 @@ public class NewsServiceImpl implements NewsService {
                               return null;
                             }
                           })
-                          .filter(Objects::nonNull)
+                          .filter(article -> {
+                            if (article != null) {
+                              Space articleSpace = spaceService.getSpaceById(article.getSpaceId());
+                              return canScheduleNews(articleSpace, currentIdentity, article);
+                            }
+                            return false;
+                          })
                           .toList();
   }
-
+  
   private List<News> getMyPostedArticles(NewsFilter filter, Identity currentIdentity) throws Exception {
     MetadataFilter metadataFilter = new MetadataFilter();
     metadataFilter.setMetadataName(NEWS_METADATA_NAME);
@@ -1676,7 +1683,7 @@ public class NewsServiceImpl implements NewsService {
       newsArticlesRootNotePage.setContent("");
       // inherit syntax from wiki
       newsArticlesRootNotePage.setSyntax(wiki.getPreferences().getWikiPreferencesSyntax().getDefaultSyntax());
-      return noteService.createNote(wiki, null, newsArticlesRootNotePage);
+      return noteService.createNote(wiki, null, newsArticlesRootNotePage, false);
     }
     return null;
   }
@@ -1910,7 +1917,7 @@ public class NewsServiceImpl implements NewsService {
       }
       existingPage.setProperties(news.getProperties());
       existingPage.setAttachmentObjectType(ArticlePageAttachmentPlugin.OBJECT_TYPE);
-      existingPage = noteService.updateNote(existingPage, PageUpdateType.EDIT_PAGE_CONTENT_AND_TITLE, updater);
+      existingPage = noteService.updateNote(existingPage, PageUpdateType.EDIT_PAGE_CONTENT_AND_TITLE, updater, false);
       news.setUpdateDate(existingPage.getUpdatedDate());
       news.setUpdater(existingPage.getAuthor());
       news.setLang(existingPage.getLang());
@@ -2027,7 +2034,11 @@ public class NewsServiceImpl implements NewsService {
                                                            articlePage.getId(),
                                                            null,
                                                            Long.parseLong(space.getId()));
-        MetadataItem metadataItem = metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY, newsPageObject).getFirst();
+        List<MetadataItem> metadataItems = metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY, newsPageObject);
+        MetadataItem metadataItem = null;
+        if (!metadataItems.isEmpty()) {
+          metadataItem = metadataItems.getFirst();
+        }
         buildArticleProperties(news, currentUsername, metadataItem);
         news.setDeleted(articlePage.isDeleted());
         news.setPublicationDate(articlePage.getCreatedDate());
@@ -2035,7 +2046,7 @@ public class NewsServiceImpl implements NewsService {
         processPageContent(pageVersion, news);
         news.setUpdaterFullName(pageVersion.getAuthorFullName());
         news.setLang(pageVersion.getLang());
-        news.setUpdateDate(new Date(metadataItem.getUpdatedDate()));
+        news.setUpdateDate(metadataItem != null ? new Date(metadataItem.getUpdatedDate()) : articlePage.getUpdatedDate());
         news.setProperties(pageVersion.getProperties());
         news.setUrl(NewsUtils.buildNewsArticleUrl(news, currentUsername));
         news.setLatestVersionId(pageVersion.getId());
@@ -2219,7 +2230,7 @@ public class NewsServiceImpl implements NewsService {
     Page existingPage = noteService.getNoteById(newsId);
     if (existingPage != null) {
       existingPage.setAttachmentObjectType(ArticlePageAttachmentPlugin.OBJECT_TYPE);
-      existingPage = noteService.updateNote(existingPage, PageUpdateType.EDIT_PAGE_CONTENT_AND_TITLE, versionCreator);
+      existingPage = noteService.updateNote(existingPage, PageUpdateType.EDIT_PAGE_CONTENT_AND_TITLE, versionCreator, false);
       news.setPublicationState(POSTED);
       // update the metadata item
       MetadataItem metadataItem =

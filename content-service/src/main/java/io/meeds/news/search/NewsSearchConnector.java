@@ -206,7 +206,7 @@ public class NewsSearchConnector {
 
   private String buildTermQueryStatement(String term) {
     if (StringUtils.isBlank(term)) {
-      return term;
+      return "";
     }
     term = removeSpecialCharacters(term);
     return SEARCH_QUERY_TERM.replace("@term@", term);
