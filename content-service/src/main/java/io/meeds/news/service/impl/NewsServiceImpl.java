@@ -30,7 +30,6 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.regex.Matcher;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import io.meeds.news.model.*;
@@ -780,6 +779,7 @@ public class NewsServiceImpl implements NewsService {
         news.getProperties().setDraft(true);
       }
       news = createDraftArticleForNewPage(news, space.getGroupId(), articleCreator, System.currentTimeMillis());
+      broadcastUnScheduleArticleEvent(existingNews, news.getId());
       deleteArticle(existingNews, articleCreator);
       return buildDraftArticle(news.getId(), articleCreator);
     } else if (existingNews != null) {
@@ -2288,5 +2288,14 @@ public class NewsServiceImpl implements NewsService {
       updateContentPermissionEventListenerData.put(NEWS_AUDIENCE, article.getAudience());
     }
     NewsUtils.broadcastEvent(NewsUtils.UPDATE_CONTENT_PERMISSIONS, this, updateContentPermissionEventListenerData);
+  }
+  private void broadcastUnScheduleArticleEvent(News unscheduledArticle, String createdDraftId) {
+    String unscheduledPageVersionId = noteService.getPublishedVersionByPageIdAndLang(Long.parseLong(unscheduledArticle.getId()), unscheduledArticle.getLang()).getId();
+    if (unscheduledPageVersionId != null) {
+      Map<String, String> eventData = new HashMap();
+      eventData.put("draftPageId", createdDraftId);
+      eventData.put("unscheduledPageVersionId", unscheduledPageVersionId);
+      NewsUtils.broadcastEvent("note.draft.for.new.page.created", this, eventData);
+    }
   }
 }
