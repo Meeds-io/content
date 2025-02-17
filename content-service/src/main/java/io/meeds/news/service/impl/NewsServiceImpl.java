@@ -357,6 +357,9 @@ public class NewsServiceImpl implements NewsService {
       }
       NewsUtils.broadcastEvent(NewsUtils.UPDATE_NEWS, updater, news);
     }
+    if(newsUpdateType.equals(NewsUtils.NewsUpdateType.POSTING_AND_PUBLISHING.name())){
+      addNewArticleVersionWithLang(news, updaterIdentity, space);
+    }
     return news;
   }
 
@@ -1257,13 +1260,9 @@ public class NewsServiceImpl implements NewsService {
   }
 
   private void postProcessing(News news, String poster) throws Exception {
-    if (news.getAuthor() == null) {
-      news.setAuthor(poster);
-    }
-
+    news.setAuthor(poster);
     postNewsActivity(news);
     sendNotification(poster, news, NotificationConstants.NOTIFICATION_CONTEXT.POST_NEWS);
-
     if (news.isPublished()) {
       publishNews(news, poster);
     }
@@ -1737,7 +1736,7 @@ public class NewsServiceImpl implements NewsService {
     String activities = news.getActivities();
     String contentTitle = news.getTitle();
     String contentBody = news.getBody();
-    String lastSpaceIdActivityId = activities.split(";")[activities.split(";").length - 1];
+    String lastSpaceIdActivityId = StringUtils.deleteWhitespace(activities.split(";")[activities.split(";").length - 1]);
     String contentSpaceId = lastSpaceIdActivityId.split(":")[0];
     String contentActivityId = lastSpaceIdActivityId.split(":")[1];
     Space contentSpace = spaceService.getSpaceById(contentSpaceId);
@@ -1926,8 +1925,12 @@ public class NewsServiceImpl implements NewsService {
     activity.setTemplateParams(templateParams);
     activity.setMetadataObjectId(news.getId());
     activity.setMetadataObjectType(NewsUtils.NEWS_METADATA_OBJECT_TYPE);
-
     activityManager.saveActivityNoReturn(spaceIdentity, activity);
+    String newsId = news.getTargetPageId() != null ? news.getTargetPageId() : news.getId();
+    Page existingPage = noteService.getNoteById(newsId);
+    if (existingPage != null) {
+      noteService.createVersionOfNote(existingPage,news.getAuthor());
+    }
     updateNewsActivities(activity.getId(), news);
   }
 
@@ -2295,8 +2298,10 @@ public class NewsServiceImpl implements NewsService {
         deleteDraftArticle(draftPage.getId(), draftPage.getAuthor());
       }
       NewsUtils.broadcastEvent(NewsUtils.ADD_ARTICLE_TRANSLATION, versionCreator, news);
-      String newsTranslationId = news.getId().concat("-").concat(news.getLang());
-      indexingService.index(NewsIndexingServiceConnector.TYPE, newsTranslationId);
+      if (StringUtils.isNotEmpty(news.getLang())) {
+        String newsTranslationId = news.getId().concat("-").concat(news.getLang());
+        indexingService.index(NewsIndexingServiceConnector.TYPE, newsTranslationId);
+      }
       updateArticlePermissions(List.of(space), news);
       return news;
     }
