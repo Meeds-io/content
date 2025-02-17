@@ -1226,13 +1226,9 @@ public class NewsServiceImpl implements NewsService {
   }
 
   private void postProcessing(News news, String poster) throws Exception {
-    if (news.getAuthor() == null) {
-      news.setAuthor(poster);
-    }
-
+    news.setAuthor(poster);
     postNewsActivity(news);
     sendNotification(poster, news, NotificationConstants.NOTIFICATION_CONTEXT.POST_NEWS);
-
     if (news.isPublished()) {
       publishNews(news, poster);
     }
@@ -1918,8 +1914,12 @@ public class NewsServiceImpl implements NewsService {
     activity.setTemplateParams(templateParams);
     activity.setMetadataObjectId(news.getId());
     activity.setMetadataObjectType(NewsUtils.NEWS_METADATA_OBJECT_TYPE);
-
     activityManager.saveActivityNoReturn(spaceIdentity, activity);
+    String newsId = news.getTargetPageId() != null ? news.getTargetPageId() : news.getId();
+    Page existingPage = noteService.getNoteById(newsId);
+    if (existingPage != null) {
+      noteService.createVersionOfNote(existingPage,news.getAuthor());
+    }
     updateNewsActivities(activity.getId(), news);
   }
 
