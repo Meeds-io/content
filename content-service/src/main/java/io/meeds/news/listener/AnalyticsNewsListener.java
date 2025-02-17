@@ -92,7 +92,7 @@ public class AnalyticsNewsListener extends Listener<String, News> {
     News news = event.getData();
     String operation = mapEventNameToOperation(event.getEventName());
     long userId = 0;
-    Identity identity = getIdentityManager().getOrCreateIdentity(OrganizationIdentityProvider.NAME, event.getSource());
+    Identity identity = getIdentityManager().getOrCreateUserIdentity(event.getSource());
     if (identity != null) {
       userId = Long.parseLong(identity.getId());
     }
@@ -109,12 +109,6 @@ public class AnalyticsNewsListener extends Listener<String, News> {
     statisticData.addParameter("contentType", "News");
     statisticData.addParameter("contentUpdatedDate", news.getUpdateDate());
     statisticData.addParameter("contentCreationDate", news.getCreationDate());
-    statisticData.addParameter("contentPublication", news.isPublished() ? "Yes" : "No");
-    if (news.isPublished()
-        && (operation.equals(CREATE_CONTENT_OPERATION_NAME) || operation.equals(UPDATE_CONTENT_OPERATION_NAME))) {
-      statisticData.addParameter("contentPublicationAudience",
-                                 news.getAudience().equals(NewsUtils.ALL_NEWS_AUDIENCE) ? "All users" : "Only space members");
-    }
     Space space = getSpaceService().getSpaceById(news.getSpaceId());
     if (space != null) {
       addSpaceStatistics(statisticData, space);
@@ -123,24 +117,16 @@ public class AnalyticsNewsListener extends Listener<String, News> {
   }
 
   private String mapEventNameToOperation(String eventName) {
-    switch (eventName) {
-    case "exo.news.postArticle":
-      return CREATE_CONTENT_OPERATION_NAME;
-    case "exo.news.updateArticle":
-      return UPDATE_CONTENT_OPERATION_NAME;
-    case "exo.news.deleteArticle":
-      return DELETE_CONTENT_OPERATION_NAME;
-    case "exo.news.viewArticle":
-      return VIEW_CONTENT_OPERATION_NAME;
-    case "exo.news.shareArticle":
-      return SHARE_CONTENT_OPERATION_NAME;
-    case "exo.news.commentArticle":
-      return COMMENT_CONTENT_OPERATION_NAME;
-    case "exo.news.likeArticle":
-      return LIKE_CONTENT_OPERATION_NAME;
-    default:
-      throw new IllegalArgumentException("Unknown event: " + eventName);
-    }
+    return switch (eventName) {
+    case "exo.news.postArticle" -> CREATE_CONTENT_OPERATION_NAME;
+    case "exo.news.updateArticle" -> UPDATE_CONTENT_OPERATION_NAME;
+    case "exo.news.deleteArticle" -> DELETE_CONTENT_OPERATION_NAME;
+    case "exo.news.viewArticle" -> VIEW_CONTENT_OPERATION_NAME;
+    case "exo.news.shareArticle" -> SHARE_CONTENT_OPERATION_NAME;
+    case "exo.news.commentArticle" -> COMMENT_CONTENT_OPERATION_NAME;
+    case "exo.news.likeArticle" -> LIKE_CONTENT_OPERATION_NAME;
+    default -> throw new IllegalArgumentException("Unknown event: " + eventName);
+    };
   }
 
   public IdentityManager getIdentityManager() {
