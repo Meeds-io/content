@@ -69,7 +69,7 @@ public class ExternalArticlePageListener extends Listener<Object, Page> {
   @Override
   public void onEvent(Event<Object, Page> event) throws Exception {
     Page page = event.getData();
-    if (page != null) {
+    if (page != null && !page.getOwner().equals("__system")) {
       if (event.getEventName().equals(NOTE_UPDATED)) {
         News news = newsService.getNewsArticleById(page.getId());
         if (news != null && news.getActivityId() != null) {

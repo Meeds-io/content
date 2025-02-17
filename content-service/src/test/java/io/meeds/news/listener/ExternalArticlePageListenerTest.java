@@ -57,6 +57,7 @@ public class ExternalArticlePageListenerTest {
     note.setId("1");
     note.setWikiOwner("/spaces/space");
     note.setContent("tes");
+    note.setOwner("root");
     Identity identity = mock(Identity.class);
 
     Event<Object, Page> event = new Event<>("note.updated", "user", note);
