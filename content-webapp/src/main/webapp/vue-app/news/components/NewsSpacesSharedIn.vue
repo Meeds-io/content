@@ -81,7 +81,7 @@ export default {
       const spaceId = activity.split(':')[0];
       if (spaceId) {
         this.$newsServices.getSpaceById(spaceId).then(space => {
-          space.avatarUrl = space.avatarUrl ? space.avatarUrl : '/eXoSkin/skin/images/system/SpaceAvtDefault.png';
+          space.avatarUrl = space.avatarUrl ? space.avatarUrl : '/platform-ui/skin/images/avatar/DefaultSpaceAvatar.png';
           this.sharedActivities.push({
             spaceId: spaceId,
             spaceAvatar: space.avatarUrl,
@@ -113,7 +113,7 @@ export default {
           if (spaceId && news.sharedInSpacesList.includes(spaceId)) {
             this.$newsServices.getSpaceById(spaceId).then(sharedInSpace => {
               if (sharedInSpace) {
-                sharedInSpace.avatarUrl = sharedInSpace.avatarUrl ? sharedInSpace.avatarUrl : '/eXoSkin/skin/images/system/SpaceAvtDefault.png';
+                sharedInSpace.avatarUrl = sharedInSpace.avatarUrl ? sharedInSpace.avatarUrl : '/platform-ui/skin/images/avatar/DefaultSpaceAvatar.png';
                 this.sharedActivities.push({
                   spaceId: spaceId,
                   spaceAvatar: sharedInSpace.avatarUrl,
