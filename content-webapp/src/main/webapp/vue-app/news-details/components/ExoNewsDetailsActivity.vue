@@ -50,7 +50,8 @@ export default {
     languages: [],
     originalVersion: null,
     previousSelectedTranslation: null,
-    switchTranslation: false
+    switchTranslation: false,
+    initialized: false
   }),
   computed: {
     activityId() {
@@ -84,6 +85,13 @@ export default {
       return this.news?.canPublish || this.news?.canSchedule;
     },
   },
+  watch: {
+    selectedTranslation() {
+      if (this.initialized) {
+        this.markAsRead();
+      }
+    }
+  },
   created() {
     this.getAvailableLanguages();
     const url = new URL(window.location.href);
@@ -92,15 +100,11 @@ export default {
       this.selectedTranslation.value = params.get('lang');
     }
     this.originalVersion = { value: '', text: this.$root.$t('article.label.translation.originalVersion') };
-    if (this.newsId || this.sharedNewsId) {
-      this.markAsRead(this.newsId || this.sharedNewsId).then(() => {
-        this.retrieveNews();
-      }).catch(() => this.retrieveNews());
-    }
     this.$root.$on('change-article-translation', (lang) => {
       this.previousSelectedTranslation = this.selectedTranslation.value;
       this.changeTranslation(lang);
     });
+    this.markAsRead();
     this.$root.$on('update-content-selected-translation', (translation) => {
       this.updateSelectedTranslation(translation);
       this.previousSelectedTranslation = translation.value;
@@ -108,6 +112,7 @@ export default {
     window.addEventListener('popstate', () => {
       this.handleUrlUpdate();
     });
+    this.initialized = true;
   },
   methods: {
     handleUrlUpdate() {
@@ -214,8 +219,12 @@ export default {
     updateSelectedTranslation(translation) {
       this.selectedTranslation = translation;
     },
-    markAsRead(newsId) {
-      return this.$newsServices.markNewsAsRead(newsId);
+    markAsRead() {
+      if (this.newsId || this.sharedNewsId) {
+        return this.$newsServices.markNewsAsRead(this.newsId || this.sharedNewsId, this.selectedTranslation?.value).then(() => {
+          this.retrieveNews();
+        }).catch(() => this.retrieveNews());
+      }
     }
   },
 };

@@ -656,9 +656,9 @@ public class NewsServiceImpl implements NewsService {
                                                                                     new NewsPageObject(NEWS_METADATA_PAGE_OBJECT_TYPE,
                                                                                                        news.getId(),
                                                                                                        null,
-                                                                                                       Long.parseLong(news.getSpaceId())))
-                                               .get(0);
+                                                                                                       Long.parseLong(news.getSpaceId()))).getFirst();
       if (metadataItem != null) {
+        NewsUtils.broadcastEvent(NewsUtils.VIEW_NEWS, userId, news);
         Map<String, String> properties = metadataItem.getProperties();
         if (properties == null) {
           properties = new HashMap<>();
@@ -690,7 +690,6 @@ public class NewsServiceImpl implements NewsService {
       LOG.error("Failed to mark news article " + news.getId() + " as read for current user", exception);
       return;
     }
-    NewsUtils.broadcastEvent(NewsUtils.VIEW_NEWS, userId, news);
   }
 
   /**

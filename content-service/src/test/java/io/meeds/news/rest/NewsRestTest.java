@@ -1501,9 +1501,9 @@ public class NewsRestTest {
     ConversationState.setCurrent(new ConversationState(currentIdentity));
     News news = new News();
     news.setId("1");
-    when(newsService.getNewsById("1", currentIdentity, false, ARTICLE.name().toLowerCase())).thenReturn(news);
+    when(newsService.getNewsByIdAndLang("1", currentIdentity, false, ARTICLE.name().toLowerCase(), "en")).thenReturn(news);
     doNothing().when(newsService).markAsRead(news, JOHN);
-    Response response = newsRestController.markNewsAsRead( "1");
+    Response response = newsRestController.markNewsAsRead( "1", "en");
     verify(newsService, times(1)).markAsRead(news, JOHN);
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
   }
