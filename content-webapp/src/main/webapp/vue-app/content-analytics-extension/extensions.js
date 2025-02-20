@@ -31,7 +31,7 @@ extensionRegistry.registerExtension('AnalyticsSamples', 'SampleItem', {
   options: {
     rank: 90,
     vueComponent: Vue.options.components['content-creator-attribute'],
-    match: (fieldName) => ['contentCreator', 'contentAuthor'].includes(fieldName)
+    match: (fieldName) => ['contentCreator', 'contentAuthor', 'contentLastModifier'].includes(fieldName)
   },
 });
 
