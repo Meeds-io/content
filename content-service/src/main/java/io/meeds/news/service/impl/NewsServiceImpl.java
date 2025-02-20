@@ -160,7 +160,7 @@ public class NewsServiceImpl implements NewsService {
   public static final String       NEWS_METADATA_LATEST_DRAFT_OBJECT_TYPE = "newsLatestDraftPage";
 
   public static final String       EXTERNAL_PAGE                          = "externalPage";
-  
+
   public static final String       PAGE_REFERRED                          = "pageReferred";
 
   public static final String       DE_REFER_PAGE_ID                       = "deReferPageId";
@@ -335,6 +335,7 @@ public class NewsServiceImpl implements NewsService {
         updateNewsActivity(news, post, originalNews.isActivityPosted());
       }
       NewsUtils.broadcastEvent(NewsUtils.UPDATE_NEWS, updater, news);
+      NewsUtils.broadcastEvent(NewsUtils.UPDATE_PUBLISH_CONTENT, updater, new ContentPublishEvent(originalNews, news));
     }
     return news;
   }
@@ -742,6 +743,7 @@ public class NewsServiceImpl implements NewsService {
     if (!canScheduleNews(space, currentIdentity, news)) {
       throw new IllegalArgumentException("User " + currentIdentity.getUserId() + " is not authorized to schedule news");
     }
+    News originalArticle = null;
     if (newsObjectType.equalsIgnoreCase(NewsObjectType.DRAFT.name())) {
       // Create news article with the publication state STAGED without posting
       // or publishing it ( displayed false news target)
@@ -751,7 +753,8 @@ public class NewsServiceImpl implements NewsService {
     } else if (newsObjectType.equalsIgnoreCase(NewsObjectType.EXISTING_PAGE.name())) {
       news = createArticleFromExistingPage(news, currentIdentity.getUserId());
     } else if (newsObjectType.equalsIgnoreCase(ARTICLE.name())) {
-      updateArticle(news, currentIdentity, NewsUtils.NewsUpdateType.SCHEDULE.name().toLowerCase());
+      originalArticle = getNewsArticleById(news.getId());
+      news = updateArticle(news, currentIdentity, NewsUtils.NewsUpdateType.SCHEDULE.name().toLowerCase());
     }
     if (news != null) {
       if (NewsUtils.canPublishNews(space.getId(), currentIdentity)) {
@@ -764,6 +767,11 @@ public class NewsServiceImpl implements NewsService {
       // set the url and the space url to the scheduled news
       news.setUrl(NewsUtils.buildNewsArticleUrl(news, currentIdentity.getUserId()));
       news.setSpaceUrl(NewsUtils.buildSpaceUrl(news.getSpaceId()));
+      if (originalArticle != null && !originalArticle.getPublicationState().equalsIgnoreCase(STAGED)) {
+        NewsUtils.broadcastEvent(NewsUtils.UPDATE_PUBLISH_CONTENT,
+                                 currentIdentity.getUserId(),
+                                 new ContentPublishEvent(originalArticle, news));
+      }
       return news;
     }
     return null;
@@ -1047,7 +1055,7 @@ public class NewsServiceImpl implements NewsService {
         newsArticle.setProperties(newsArticlePage.getProperties());
         newsArticle.setLatestVersionId(pageVersion.getId());
         newsArticle.setIllustrationURL(NewsUtils.buildIllustrationUrl(newsArticlePage.getProperties(), newsArticle.getLang()));
-        
+
         buildNewArticleProperties(newsArticle, newsArticlePage, newsArticleCreator, space.getId(), pageVersion.getId(), false);
         // delete the draft
         deleteDraftArticle(draftNewsId, poster.getUserId());
@@ -1225,6 +1233,7 @@ public class NewsServiceImpl implements NewsService {
     // Broadcast events for gamification and analytics
     NewsUtils.broadcastEvent(NewsUtils.POST_NEWS_ARTICLE, news.getId(), news);
     NewsUtils.broadcastEvent(NewsUtils.POST_NEWS, news.getAuthor(), news);
+    NewsUtils.broadcastEvent(NewsUtils.CREATE_PUBLISH_CONTENT, poster, new ContentPublishEvent(null, news));
   }
 
   private void buildNewArticleProperties(News article,
@@ -1461,7 +1470,8 @@ public class NewsServiceImpl implements NewsService {
         if (properties.containsKey(SCHEDULE_POST_DATE) && StringUtils.isNotEmpty(properties.get(SCHEDULE_POST_DATE))) {
           draftArticle.setSchedulePostDate(properties.get(SCHEDULE_POST_DATE));
         }
-        if (properties.containsKey(UNPUBLISH_SCHEDULED_DATE) && StringUtils.isNotEmpty(properties.get(UNPUBLISH_SCHEDULED_DATE))) {
+        if (properties.containsKey(UNPUBLISH_SCHEDULED_DATE)
+            && StringUtils.isNotEmpty(properties.get(UNPUBLISH_SCHEDULED_DATE))) {
           draftArticle.setScheduleUnpublishDate(properties.get(UNPUBLISH_SCHEDULED_DATE));
         }
         if (properties.containsKey(PUBLISHED) && StringUtils.isNotEmpty(properties.get(PUBLISHED))) {
@@ -1566,7 +1576,7 @@ public class NewsServiceImpl implements NewsService {
                           })
                           .toList();
   }
-  
+
   private List<News> getMyPostedArticles(NewsFilter filter, Identity currentIdentity) throws Exception {
     MetadataFilter metadataFilter = new MetadataFilter();
     metadataFilter.setMetadataName(NEWS_METADATA_NAME);
@@ -2168,7 +2178,7 @@ public class NewsServiceImpl implements NewsService {
   }
 
   private String parseAndNormalizeScheduleDate(String date, String timeZoneId) {
-    if(StringUtils.isBlank(date) || date.equals("0")) {
+    if (StringUtils.isBlank(date) || date.equals("0")) {
       return null;
     }
     ZoneId userTimeZone = StringUtils.isBlank(timeZoneId) ? ZoneId.of("UTC") : ZoneId.of(timeZoneId);
@@ -2302,8 +2312,11 @@ public class NewsServiceImpl implements NewsService {
     }
     NewsUtils.broadcastEvent(NewsUtils.UPDATE_CONTENT_PERMISSIONS, this, updateContentPermissionEventListenerData);
   }
+
   private void broadcastUnScheduleArticleEvent(News unscheduledArticle, String createdDraftId) {
-    String unscheduledPageVersionId = noteService.getPublishedVersionByPageIdAndLang(Long.parseLong(unscheduledArticle.getId()), unscheduledArticle.getLang()).getId();
+    String unscheduledPageVersionId = noteService.getPublishedVersionByPageIdAndLang(Long.parseLong(unscheduledArticle.getId()),
+                                                                                     unscheduledArticle.getLang())
+                                                 .getId();
     if (unscheduledPageVersionId != null) {
       Map<String, String> eventData = new HashMap();
       eventData.put("draftPageId", createdDraftId);
