@@ -98,6 +98,11 @@ public class NewsUtils {
 
   public static final String PUBLISHED_DATE                  = "publishedDate";
 
+  public static final String CREATE_PUBLISH_CONTENT          = "createPublishContent";
+
+  public static final String UPDATE_PUBLISH_CONTENT          = "updatePublishContent";
+
+
   private static SpaceService       spaceService;
 
   public enum NewsObjectType {
