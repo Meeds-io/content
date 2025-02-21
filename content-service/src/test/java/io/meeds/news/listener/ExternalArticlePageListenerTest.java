@@ -8,6 +8,9 @@ import org.exoplatform.services.security.Identity;
 import org.exoplatform.services.security.IdentityRegistry;
 import org.exoplatform.social.core.storage.api.ActivityStorage;
 import org.exoplatform.social.core.storage.cache.CachedActivityStorage;
+import org.exoplatform.social.metadata.MetadataService;
+import org.exoplatform.social.metadata.model.MetadataItem;
+import org.exoplatform.social.metadata.model.MetadataObject;
 import org.exoplatform.wiki.model.Page;
 import org.junit.Before;
 import org.junit.Test;
@@ -16,6 +19,8 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.when;
@@ -34,6 +39,9 @@ public class ExternalArticlePageListenerTest {
 
   @Mock
   private ActivityStorage             activityStorage;
+  
+  @Mock
+  private MetadataService             metadataService;
 
   @Mock
   private CachedActivityStorage       cachedActivityStorage;
@@ -42,7 +50,10 @@ public class ExternalArticlePageListenerTest {
 
   @Before
   public void setUp() throws Exception {
-    this.externalArticlePageListener = new ExternalArticlePageListener(listenerService, newsService, activityStorage);
+    this.externalArticlePageListener = new ExternalArticlePageListener(listenerService,
+                                                                       newsService,
+                                                                       activityStorage,
+                                                                       metadataService);
     Field field = this.externalArticlePageListener.getClass().getDeclaredField("cachedActivityStorage");
     field.setAccessible(true);
     field.set(externalArticlePageListener, cachedActivityStorage);
@@ -65,6 +76,9 @@ public class ExternalArticlePageListenerTest {
     externalArticlePageListener.onEvent(event);
     verify(cachedActivityStorage, times(1)).clearActivityCached("1");
 
+    List<MetadataItem> items = new ArrayList<>();
+    items.add(new MetadataItem());
+    when(metadataService.getMetadataItemsByObject(any(MetadataObject.class))).thenReturn(items);
     event = new Event<>("note.deleted", identity, note);
     externalArticlePageListener.onEvent(event);
     verify(newsService, times(1)).deleteNews("1", identity, "article");
