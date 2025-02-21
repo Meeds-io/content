@@ -311,7 +311,7 @@ export default {
       if (item.spaceUrl) {
         draftUrl += `&spaceName=${item.spaceUrl.substring(item.spaceUrl.lastIndexOf('/') + 1)}`;
       }
-      draftUrl += `&type=${item.activityId && 'latest_draft' || 'draft'}`;
+      draftUrl += `&type=${(item.activityId || item.schedulePostDate) && 'latest_draft' || 'draft'}`;
       return draftUrl;
     },
     getNewsText(newsSummary, newsBody) {
