@@ -104,7 +104,7 @@ public class AnalyticsNewsListener extends Listener<String, News> {
     statisticData.setUserId(userId);
     statisticData.addParameter("contentId", news.getId());
     statisticData.addParameter("contentTitle", news.getTitle());
-    if (operation.equals(VIEW_CONTENT_OPERATION_NAME)) {
+    if (operation.equals(VIEW_CONTENT_OPERATION_NAME) || operation.equals(UPDATE_CONTENT_OPERATION_NAME)) {
       statisticData.addParameter("contentLanguage", news.getLang());
     }
     statisticData.addParameter("contentCreator", news.getAuthor());
