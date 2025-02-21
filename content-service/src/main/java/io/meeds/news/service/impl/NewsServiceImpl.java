@@ -1310,6 +1310,7 @@ public class NewsServiceImpl implements NewsService {
       draftArticle.setId(draftArticlePage.getId());
       draftArticle.setTitle(draftArticlePage.getTitle());
       draftArticle.setAuthor(draftArticlePage.getAuthor());
+      draftArticle.setOwner(draftArticlePage.getOwner());
       draftArticle.setCreationDate(draftArticlePage.getCreatedDate());
       draftArticle.setUpdateDate(draftArticlePage.getUpdatedDate());
       draftArticle.setDraftUpdateDate(draftArticlePage.getUpdatedDate());
@@ -1632,13 +1633,17 @@ public class NewsServiceImpl implements NewsService {
       LOG.warn("Can't find user with id {} when checking access on news with id {}", authenticatedUser, news.getId());
       return false;
     }
-    boolean isSpaceMemberCanEdit = isArticleAuthor(news, authenticatedUser) && spaceService.isMember(spaceId, authenticatedUser);
+    boolean isSpaceMemberCanEdit = spaceService.isMember(spaceId, authenticatedUser) && (news.isFromExternalPage() || isArticleOwner(news, authenticatedUser));
     return  isSpaceMemberCanEdit || NewsUtils.canPublishNews(news.getSpaceId(), authenticatedUserIdentity)
         || (spaceService.isManager(space, authenticatedUser)
             || spaceService.isSuperManager(space, authenticatedUser)
             || spaceService.isRedactor(space, authenticatedUser));
   }
-
+  
+  private boolean isArticleOwner(News article, String userName) {
+    return StringUtils.isNotEmpty(article.getOwner()) && article.getOwner().equals(userName);
+  }
+  
   private boolean isArticleAuthor(News article, String userName) {
     return StringUtils.isNotEmpty(article.getAuthor()) && article.getAuthor().equals(userName);
   }
@@ -2009,6 +2014,7 @@ public class NewsServiceImpl implements NewsService {
         news.setId(articlePage.getId());
         news.setCreationDate(articlePage.getCreatedDate());
         news.setAuthor(pageVersion.getAuthor());
+        news.setOwner(articlePage.getOwner());
         news.setUpdater(pageVersion.getAuthor());
         news.setSpaceId(space.getId());
         news.setSpaceAvatarUrl(space.getAvatarUrl());
