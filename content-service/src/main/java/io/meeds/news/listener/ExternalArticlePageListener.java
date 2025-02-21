@@ -29,9 +29,14 @@ import org.exoplatform.services.listener.ListenerService;
 import org.exoplatform.services.security.Identity;
 import org.exoplatform.social.core.storage.api.ActivityStorage;
 import org.exoplatform.social.core.storage.cache.CachedActivityStorage;
+import org.exoplatform.social.metadata.MetadataService;
+import org.exoplatform.social.metadata.model.MetadataItem;
+import org.exoplatform.social.metadata.model.MetadataObject;
 import org.exoplatform.wiki.model.Page;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 @Component
 public class ExternalArticlePageListener extends Listener<Object, Page> {
@@ -42,18 +47,26 @@ public class ExternalArticlePageListener extends Listener<Object, Page> {
 
   private CachedActivityStorage cachedActivityStorage;
 
+  private final MetadataService       metadataService;
+
   private static final String   NOTE_DELETED    = "note.deleted";
 
   private static final String   NOTE_UPDATED    = "note.updated";
 
   private static final String   ARTICLE         = "article";
 
+  private static final String   NEWS_PAGE       = "newsPage";
+
   private static final String[] LISTENER_EVENTS = { NOTE_DELETED, NOTE_UPDATED };
 
   @Autowired
-  public ExternalArticlePageListener(ListenerService listenerService, NewsService newsService, ActivityStorage activityStorage) {
+  public ExternalArticlePageListener(ListenerService listenerService,
+                                     NewsService newsService,
+                                     ActivityStorage activityStorage,
+                                     MetadataService metadataService) {
     this.listenerService = listenerService;
     this.newsService = newsService;
+    this.metadataService = metadataService;
     if (activityStorage instanceof CachedActivityStorage) {
       this.cachedActivityStorage = (CachedActivityStorage) activityStorage;
     }
@@ -75,9 +88,13 @@ public class ExternalArticlePageListener extends Listener<Object, Page> {
         if (news != null && news.getActivityId() != null) {
           cachedActivityStorage.clearActivityCached(news.getActivityId());
         }
-      } else if (event.getEventName().equals(NOTE_DELETED) && newsService.getNewsArticleById(page.getId()) != null) {
-        Identity identity = (Identity) event.getSource();
-        newsService.deleteNews(page.getId(), identity, ARTICLE);
+      } else {
+        MetadataObject newsMetadataObject = new MetadataObject(NEWS_PAGE, page.getId());
+        List<MetadataItem> articleProperties = metadataService.getMetadataItemsByObject(newsMetadataObject);
+        if (event.getEventName().equals(NOTE_DELETED) && !articleProperties.isEmpty()) {
+          Identity identity = (Identity) event.getSource();
+          newsService.deleteNews(page.getId(), identity, ARTICLE);
+        }
       }
     }
   }
