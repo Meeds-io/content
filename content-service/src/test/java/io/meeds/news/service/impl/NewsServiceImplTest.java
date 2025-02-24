@@ -823,7 +823,7 @@ public class NewsServiceImplTest {
     PageVersion pageVersion = mock(PageVersion.class);
     when(noteService.getPublishedVersionByPageIdAndLang(1L, null)).thenReturn(pageVersion);
 
-    when(existingPage.getAuthor()).thenReturn("john");
+    when(existingPage.getOwner()).thenReturn("john");
     when(pageVersion.getAuthor()).thenReturn("john");
     when(pageVersion.getUpdatedDate()).thenReturn(new Date());
     when(pageVersion.getAuthorFullName()).thenReturn("full name");
@@ -893,7 +893,7 @@ public class NewsServiceImplTest {
             NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME)).thenReturn(rootPage);
 
     News newsArticle = new News();
-    newsArticle.setAuthor("john");
+    newsArticle.setOwner("john");
     newsArticle.setTitle("news article");
     newsArticle.setBody("news body");
     newsArticle.setPublicationState("staged");
@@ -1088,7 +1088,7 @@ public class NewsServiceImplTest {
     page.setContent("article body");
     page.setTitle("article");
     page.setId("1");
-    page.setAuthor("john");
+    page.setOwner("john");
     page.setWikiOwner("/space/groupId");
     page.setName("article name");
     page.setWikiType("group");
