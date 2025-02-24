@@ -50,6 +50,8 @@ public class News {
   private String                          originalBody;
 
   private String                          author;
+  
+  private String                          owner;
 
   private String                          authorDisplayName;
 

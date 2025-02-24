@@ -813,8 +813,7 @@ public class NewsServiceImpl implements NewsService {
    */
   @Override
   public boolean canScheduleNews(Space space, Identity currentIdentity, News article) {
-    boolean isArticleAuthor = article.getAuthor() != null && article.getAuthor().equals(currentIdentity.getUserId());
-    boolean spaceMemberCanSchedule = (article.isFromExternalPage() || isArticleAuthor)
+    boolean spaceMemberCanSchedule = (article.isFromExternalPage() || isArticleOwner(article, currentIdentity.getUserId()))
         && spaceService.isMember(space, currentIdentity.getUserId());
     return spaceMemberCanSchedule || spaceService.isRedactor(space, currentIdentity.getUserId())
         || NewsUtils.canPublishNews(space.getId(), currentIdentity);
@@ -954,6 +953,7 @@ public class NewsServiceImpl implements NewsService {
       draftArticle.setProperties(draftArticlePage.getProperties());
       draftArticle.setIllustrationURL(NewsUtils.buildIllustrationUrl(draftArticle.getProperties(), draftArticlePage.getLang()));
       draftArticle.setId(draftArticlePage.getId());
+      draftArticle.setOwner(draftArticlePage.getOwner());
       draftArticle.setCreationDate(draftArticlePage.getCreatedDate());
       draftArticle.setUpdateDate(draftArticlePage.getUpdatedDate());
       draftArticle.setBody(draftArticlePage.getContent());
@@ -1314,6 +1314,7 @@ public class NewsServiceImpl implements NewsService {
       draftArticle.setId(draftArticlePage.getId());
       draftArticle.setTitle(draftArticlePage.getTitle());
       draftArticle.setAuthor(draftArticlePage.getAuthor());
+      draftArticle.setOwner(draftArticlePage.getOwner());
       draftArticle.setCreationDate(draftArticlePage.getCreatedDate());
       draftArticle.setUpdateDate(draftArticlePage.getUpdatedDate());
       draftArticle.setDraftUpdateDate(draftArticlePage.getUpdatedDate());
@@ -1636,23 +1637,23 @@ public class NewsServiceImpl implements NewsService {
       LOG.warn("Can't find user with id {} when checking access on news with id {}", authenticatedUser, news.getId());
       return false;
     }
-    boolean isSpaceMemberCanEdit = isArticleAuthor(news, authenticatedUser) && spaceService.isMember(spaceId, authenticatedUser);
+    boolean isSpaceMemberCanEdit = spaceService.isMember(spaceId, authenticatedUser) && (news.isFromExternalPage() || isArticleOwner(news, authenticatedUser));
     return  isSpaceMemberCanEdit || NewsUtils.canPublishNews(news.getSpaceId(), authenticatedUserIdentity)
         || (spaceService.isManager(space, authenticatedUser)
             || spaceService.isSuperManager(space, authenticatedUser)
             || spaceService.isRedactor(space, authenticatedUser));
   }
-
-  private boolean isArticleAuthor(News article, String userName) {
-    return StringUtils.isNotEmpty(article.getAuthor()) && article.getAuthor().equals(userName);
-  }
   
+  private boolean isArticleOwner(News article, String userName) {
+    return StringUtils.isNotEmpty(article.getOwner()) && article.getOwner().equals(userName);
+  }
+
   private boolean canDeleteNews(Identity currentIdentity, News news) {
     Space space = news.getSpaceId() == null ? null : spaceService.getSpaceById(news.getSpaceId());
     if (space == null) {
       return false;
     }
-    boolean isMemberCanDelete = isArticleAuthor(news, currentIdentity.getUserId())
+    boolean isMemberCanDelete = isArticleOwner(news, currentIdentity.getUserId())
         && spaceService.isMember(space.getId(), currentIdentity.getUserId());
     return isMemberCanDelete || NewsUtils.canPublishNews(news.getSpaceId(), currentIdentity)
         || (spaceService.isManager(space, currentIdentity.getUserId())
@@ -2009,6 +2010,7 @@ public class NewsServiceImpl implements NewsService {
         news.setId(articlePage.getId());
         news.setCreationDate(articlePage.getCreatedDate());
         news.setAuthor(pageVersion.getAuthor());
+        news.setOwner(articlePage.getOwner());
         news.setUpdater(pageVersion.getAuthor());
         news.setSpaceId(space.getId());
         news.setSpaceAvatarUrl(space.getAvatarUrl());
