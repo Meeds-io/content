@@ -1710,7 +1710,7 @@ public class NewsServiceImpl implements NewsService {
     String activities = news.getActivities();
     String contentTitle = news.getTitle();
     String contentBody = news.getBody();
-    String lastSpaceIdActivityId = activities.split(";")[activities.split(";").length - 1];
+    String lastSpaceIdActivityId = StringUtils.deleteWhitespace(activities.split(";")[activities.split(";").length - 1]);
     String contentSpaceId = lastSpaceIdActivityId.split(":")[0];
     String contentActivityId = lastSpaceIdActivityId.split(":")[1];
     Space contentSpace = spaceService.getSpaceById(contentSpaceId);
