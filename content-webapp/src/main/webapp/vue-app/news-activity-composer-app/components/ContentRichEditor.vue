@@ -425,6 +425,7 @@ export default {
               if (this.article.body !== updatedArticle.body) {
                 this.imagesURLs = this.extractImagesURLsDiffs(this.article.body, updatedArticle.body);
               }
+              this.article.owner = updatedArticle.owner;
               this.article.draftPage = true;
               this.article.id = updatedArticle.id;
               this.article.properties = updatedArticle?.properties;
@@ -451,6 +452,7 @@ export default {
         this.$newsServices.saveNews(article).then((createdArticle) => {
           this.draftSavingStatus = this.$t('news.composer.draft.savedDraftStatus');
           this.article.id = createdArticle.id;
+          this.article.owner = createdArticle.owner;
           this.article.draftPage = true;
           this.article.lang = createdArticle.lang;
           this.article.properties = createdArticle?.properties;
@@ -493,6 +495,7 @@ export default {
         title: this.article.title,
         body: this.replaceImagesURLs(this.$noteUtils.getContentToSave(this.editorBodyInputRef, this.oembedMinWidth)),
         author: this.currentUser,
+        owner: this.article.owner,
         published: this.article.published,
         targets: this.article.targets,
         spaceId: this.spaceId,
