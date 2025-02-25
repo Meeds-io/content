@@ -221,7 +221,7 @@ export default {
     },
     markAsRead() {
       if (this.newsId || this.sharedNewsId) {
-        return this.$newsServices.markNewsAsRead(this.newsId || this.sharedNewsId, this.selectedTranslation?.value).then(() => {
+        return this.$newsServices.markNewsAsRead(this.newsId || this.sharedNewsId, this.selectedTranslation?.value || '').then(() => {
           this.retrieveNews();
         }).catch(() => this.retrieveNews());
       }

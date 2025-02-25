@@ -20,11 +20,14 @@
 import ContentPublishTargetAttribute from './componnets/ContentPublishTargetAttribute.vue';
 import ContentCreatorAttribute from './componnets/ContentCreatorAttribute.vue';
 import ContentScheduleDateAttribute from './componnets/ContentScheduleDateAttribute.vue';
+import ContentIdSampleAttribute from './componnets/ContentIdSampleAttribute.vue';
+
 
 const components = {
   'content-publish-targets-attribute': ContentPublishTargetAttribute,
   'content-creator-attribute': ContentCreatorAttribute,
-  'content-schedule-date-attribute': ContentScheduleDateAttribute
+  'content-schedule-date-attribute': ContentScheduleDateAttribute,
+  'content-id-sample-attribute': ContentIdSampleAttribute
 };
 
 for (const key in components) {

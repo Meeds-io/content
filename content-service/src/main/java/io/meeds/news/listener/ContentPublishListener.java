@@ -89,7 +89,9 @@ public class ContentPublishListener extends Listener<String, ContentPublishEvent
     long userId = Long.parseLong(identityManager.getOrCreateUserIdentity(userName).getId());
     News originalArticle = event.getData().getOriginalArticle();
     News updatedArticle = event.getData().getUpdatedArticle();
-    if (event.getEventName().equals(CREATE_PUBLISH_CONTENT) || isValidPublish(originalArticle, updatedArticle)) {
+    if ((event.getEventName().equals(CREATE_PUBLISH_CONTENT)
+        && (updatedArticle.isActivityPosted() || updatedArticle.isPublished()))
+        || isValidPublish(originalArticle, updatedArticle)) {
       addPublishContentStatistics(userId, updatedArticle);
     }
   }

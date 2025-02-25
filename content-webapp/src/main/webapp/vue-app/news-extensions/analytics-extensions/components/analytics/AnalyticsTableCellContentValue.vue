@@ -46,6 +46,7 @@ export default {
   data: () => ({
     loading: true,
     content: null,
+    lang: eXo.env.portal.language
   }),
   computed: {
     contentTitle() {
@@ -58,7 +59,7 @@ export default {
   created() {
     if (this.value) {
       this.loading = true;
-      this.$newsServices.getNewsById(this.value).then(content => {
+      this.$newsServices.getNewsById(this.value, false, 'article', this.lang).then(content => {
         this.content = content;
         this.$forceUpdate();
       })

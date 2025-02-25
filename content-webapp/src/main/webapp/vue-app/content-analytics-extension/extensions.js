@@ -49,3 +49,28 @@ extensionRegistry.registerExtension('AnalyticsChart', 'FieldValueName', {
   match: (fieldName) => fieldName === 'contentPublishingTargets',
   getLabel: (fieldName, fieldValue) =>  fieldValue
 });
+
+extensionRegistry.registerExtension('AnalyticsSamples', 'SampleItem', {
+  type: 'contentId',
+  options: {
+    rank: 110,
+    vueComponent: Vue.options.components['content-id-sample-attribute'],
+    match: fieldName => fieldName === 'contentId',
+  }
+});
+
+extensionRegistry.registerExtension('AnalyticsChart', 'FieldValueName', {
+  type: 'contentIdChart',
+  match: (fieldName) => fieldName === 'contentId',
+  getLabel: async (fieldName, fieldValue) => {
+    try {
+      const article = await fetch(`/content/rest/contents/${fieldValue}?editMode=false&type=article&lang=${eXo.env.portal.language}`, {
+        method: 'GET',
+        credentials: 'include',
+      }).then(resp => resp?.json?.());
+      return article.title || fieldValue;
+    } catch (e) {
+      return `${fieldName}=${fieldValue}`;
+    }
+  },
+});
