@@ -44,6 +44,7 @@ import org.exoplatform.commons.notification.template.TemplateUtils;
 import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.commons.utils.HTMLEntityEncoder;
 import org.exoplatform.commons.utils.PropertyManager;
+import org.exoplatform.commons.utils.TimeConvertUtils;
 import org.exoplatform.container.PortalContainer;
 import org.exoplatform.container.xml.InitParams;
 import org.exoplatform.services.log.ExoLogger;
@@ -55,7 +56,6 @@ import org.exoplatform.social.core.manager.IdentityManager;
 import org.exoplatform.social.core.space.model.Space;
 import org.exoplatform.social.core.space.spi.SpaceService;
 import org.exoplatform.social.notification.LinkProviderUtils;
-import org.exoplatform.webui.utils.TimeConvertUtils;
 
 import io.meeds.news.notification.plugin.MentionInNewsNotificationPlugin;
 import io.meeds.news.notification.plugin.PostNewsNotificationPlugin;

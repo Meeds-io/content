@@ -51,6 +51,7 @@ import org.exoplatform.commons.notification.template.TemplateUtils;
 import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.commons.utils.HTMLEntityEncoder;
 import org.exoplatform.commons.utils.PropertyManager;
+import org.exoplatform.commons.utils.TimeConvertUtils;
 import org.exoplatform.container.xml.InitParams;
 import org.exoplatform.container.xml.ValueParam;
 import org.exoplatform.social.core.identity.model.Identity;
@@ -59,7 +60,6 @@ import org.exoplatform.social.core.identity.provider.OrganizationIdentityProvide
 import org.exoplatform.social.core.manager.IdentityManager;
 import org.exoplatform.social.core.space.spi.SpaceService;
 import org.exoplatform.social.notification.LinkProviderUtils;
-import org.exoplatform.webui.utils.TimeConvertUtils;
 
 import io.meeds.news.notification.plugin.PostNewsNotificationPlugin;
 import io.meeds.news.notification.provider.MailTemplateProvider.TemplateBuilder;
