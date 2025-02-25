@@ -27,18 +27,9 @@ export function initExtensions() {
       // Used Vue component to display cell value
       vueComponent: Vue.options.components['analytics-table-cell-content-value'],
       // Method complete signature : match: (fieldName, aggregationType, fieldDataType, item) => { ... }
-      match: (fieldName, aggregationType) => fieldName === 'contentId.keyword' && aggregationType === 'TERMS',
-    },
-  });
-
-  extensionRegistry.registerExtension('AnalyticsSamples', 'SampleItem', {
-    type: 'news',
-    options: {
-      // Rank of executing 'match' method
-      rank: 30,
-      // Used Vue component to display cell value
-      vueComponent: Vue.options.components['analytics-sample-item-content'],
-      match: fieldName => fieldName === 'contentId',
+      match: (fieldName, aggregationType) => {
+        return fieldName === 'contentId' && aggregationType === 'TERMS';
+      },
     },
   });
 }

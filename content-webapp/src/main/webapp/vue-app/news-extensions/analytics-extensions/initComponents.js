@@ -18,11 +18,9 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 import AnalyticsTableCellContentValue from './components/analytics/AnalyticsTableCellContentValue.vue';
-import AnalyticsSampleItemContent from './components/analytics/AnalyticsSampleItemContent.vue';
 
 const components = {
-  'analytics-table-cell-content-value': AnalyticsTableCellContentValue,
-  'analytics-sample-item-content': AnalyticsSampleItemContent,
+  'analytics-table-cell-content-value': AnalyticsTableCellContentValue
 };
 
 for (const key in components) {

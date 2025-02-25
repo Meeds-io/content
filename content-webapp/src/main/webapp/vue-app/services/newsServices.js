@@ -57,7 +57,7 @@ export function getNewsSpaces(newsId) {
 }
 
 export function markNewsAsRead(newsId, lang){
-  return fetch(`${newsConstants.CONTENT_API}/contents/markAsRead/${newsId}/${lang}`, {
+  return fetch(`${newsConstants.CONTENT_API}/contents/markAsRead/${newsId}?lang=${lang}`, {
     credentials: 'include',
     method: 'POST',
   }).then((resp) => {

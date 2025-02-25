@@ -403,7 +403,7 @@ public class NewsRest {
     }
   }
 
-  @PostMapping(path = "markAsRead/{id}/{lang}", produces = MediaType.APPLICATION_JSON_VALUE)
+  @PostMapping(path = "markAsRead/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
   @Secured("users")
   @Operation(summary = "mark a news article as read", method = "POST", description = "This marks a news article as read by the user who accessed its details.")
   @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "Request fulfilled"),
@@ -412,7 +412,7 @@ public class NewsRest {
       @ApiResponse(responseCode = "500", description = "Internal server error") })
 
   public Response markNewsAsRead(@Parameter(description = "News id") @PathVariable("id") String id,
-                                 @Parameter(description = "News target lang") @PathVariable("lang") String lang) {
+                                 @Parameter(description = "News target lang") @RequestParam("lang") String lang) {
     String authenticatedUser = ConversationState.getCurrent().getIdentity().getUserId();
     try {
       if (StringUtils.isBlank(id)) {
