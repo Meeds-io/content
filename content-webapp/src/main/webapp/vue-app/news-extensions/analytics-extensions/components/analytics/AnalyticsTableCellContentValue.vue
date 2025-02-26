@@ -54,16 +54,19 @@ export default {
     },
     contentUrl() {
       return this.content?.url;
-    },
+    }
   },
   created() {
     if (this.value) {
       this.loading = true;
       this.$newsServices.getNewsById(this.value, false, 'article', this.lang).then(content => {
         this.content = content;
-        this.$forceUpdate();
-      })
-        .finally(() => this.loading = false);
+        if (!this.content) {
+          this.$newsServices.getArticlePage(this.value).then(page => {
+            this.content = page;
+          });
+        }
+      }).finally(() => this.loading = false);
     }
   },
 };
