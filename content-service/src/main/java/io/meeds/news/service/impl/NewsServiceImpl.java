@@ -2046,10 +2046,12 @@ public class NewsServiceImpl implements NewsService {
                                                            null,
                                                            Long.parseLong(space.getId()));
         List<MetadataItem> metadataItems = metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY, newsPageObject);
-        MetadataItem metadataItem = null;
-        if (!metadataItems.isEmpty()) {
-          metadataItem = metadataItems.getFirst();
+
+        if (metadataItems.isEmpty()) {
+          return null;
         }
+
+        MetadataItem metadataItem = metadataItems.getFirst();
         buildArticleProperties(news, currentUsername, metadataItem);
         news.setDeleted(articlePage.isDeleted());
         news.setPublicationDate(articlePage.getCreatedDate());

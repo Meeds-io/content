@@ -32,10 +32,7 @@ export default {
   }),
   computed: {
     contentTitle() {
-      return this.content?.title;
-    },
-    contentUrl() {
-      return this.content?.url;
+      return this.content?.title || this.$t('analytics.deletedContent');
     },
   },
   created() {
@@ -43,9 +40,12 @@ export default {
       this.loading = true;
       this.$newsServices.getNewsById(this.attrValue, false, 'article', this.lang).then(content => {
         this.content = content;
-        this.$forceUpdate();
-      })
-        .finally(() => this.loading = false);
+        if (!this.content) {
+          this.$newsServices.getArticlePage(this.attrValue).then(page => {
+            this.content = page;
+          });
+        }
+      }).finally(() => this.loading = false);
     }
   },
 };
