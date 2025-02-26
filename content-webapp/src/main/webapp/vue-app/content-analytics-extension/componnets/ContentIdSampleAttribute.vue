@@ -12,9 +12,18 @@
   along with this program. If not, see <http://www.gnu.org/licenses/>.
 -->
 <template>
-  <span>
-    {{ contentTitle }} ({{ attrValue }})
-  </span>
+  <div class="text--secondary">
+    <a
+      v-if="contentTitle"
+      :title="contentTitle"
+      :href="contentUrl"
+      class="text-truncate"
+      rel="nofollow"
+      target="_blank">
+      {{ contentTitle }}
+    </a>
+    ({{ attrValue }})
+  </div>
 </template>
 
 <script>
@@ -43,9 +52,12 @@ export default {
       this.loading = true;
       this.$newsServices.getNewsById(this.attrValue, false, 'article', this.lang).then(content => {
         this.content = content;
-        this.$forceUpdate();
-      })
-        .finally(() => this.loading = false);
+        if (!this.content) {
+          this.$newsServices.getArticlePage(this.attrValue).then(page => {
+            this.content = page;
+          });
+        }
+      }).finally(() => this.loading = false);
     }
   },
 };
