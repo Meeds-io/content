@@ -20,13 +20,7 @@
 package io.meeds.news.listener;
 
 import static io.meeds.analytics.utils.AnalyticsUtils.addSpaceStatistics;
-import static io.meeds.news.utils.NewsUtils.COMMENT_NEWS;
-import static io.meeds.news.utils.NewsUtils.DELETE_NEWS;
-import static io.meeds.news.utils.NewsUtils.LIKE_NEWS;
-import static io.meeds.news.utils.NewsUtils.POST_NEWS;
-import static io.meeds.news.utils.NewsUtils.SHARE_NEWS;
-import static io.meeds.news.utils.NewsUtils.UPDATE_NEWS;
-import static io.meeds.news.utils.NewsUtils.VIEW_NEWS;
+import static io.meeds.news.utils.NewsUtils.*;
 
 import jakarta.annotation.PostConstruct;
 
@@ -69,7 +63,8 @@ public class AnalyticsNewsListener extends Listener<String, News> {
 
   private static final String   COMMENT_CONTENT_OPERATION_NAME = "commentContent";
 
-  private static final String[] LISTENER_EVENTS                = { POST_NEWS, UPDATE_NEWS, DELETE_NEWS, VIEW_NEWS, SHARE_NEWS, COMMENT_NEWS, LIKE_NEWS };
+  private static final String[] LISTENER_EVENTS                = { POST_NEWS, UPDATE_NEWS, DELETE_NEWS, VIEW_NEWS, SHARE_NEWS,
+      COMMENT_NEWS, LIKE_NEWS, ADD_ARTICLE_TRANSLATION, REMOVE_ARTICLE_TRANSLATION };
 
   @Autowired
   private IdentityManager       identityManager;
@@ -104,7 +99,8 @@ public class AnalyticsNewsListener extends Listener<String, News> {
     statisticData.setUserId(userId);
     statisticData.addParameter("contentId", news.getId());
     statisticData.addParameter("contentTitle", news.getTitle());
-    if (operation.equals(VIEW_CONTENT_OPERATION_NAME) || operation.equals(UPDATE_CONTENT_OPERATION_NAME)) {
+    if (operation.equals(VIEW_CONTENT_OPERATION_NAME) || operation.equals(UPDATE_CONTENT_OPERATION_NAME)
+        || operation.equals(DELETE_CONTENT_OPERATION_NAME)) {
       statisticData.addParameter("contentLanguage", news.getLang() != null ? news.getLang() : "originalVersion");
     }
     statisticData.addParameter("contentCreator", news.getAuthor());
@@ -122,8 +118,8 @@ public class AnalyticsNewsListener extends Listener<String, News> {
   private String mapEventNameToOperation(String eventName) {
     return switch (eventName) {
     case "exo.news.postArticle" -> CREATE_CONTENT_OPERATION_NAME;
-    case "exo.news.updateArticle" -> UPDATE_CONTENT_OPERATION_NAME;
-    case "exo.news.deleteArticle" -> DELETE_CONTENT_OPERATION_NAME;
+    case "exo.news.updateArticle", NewsUtils.ADD_ARTICLE_TRANSLATION -> UPDATE_CONTENT_OPERATION_NAME;
+    case "exo.news.deleteArticle", NewsUtils.REMOVE_ARTICLE_TRANSLATION -> DELETE_CONTENT_OPERATION_NAME;
     case "exo.news.viewArticle" -> VIEW_CONTENT_OPERATION_NAME;
     case "exo.news.shareArticle" -> SHARE_CONTENT_OPERATION_NAME;
     case "exo.news.commentArticle" -> COMMENT_CONTENT_OPERATION_NAME;
