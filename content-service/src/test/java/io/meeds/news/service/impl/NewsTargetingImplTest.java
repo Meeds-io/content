@@ -83,6 +83,8 @@ public class NewsTargetingImplTest {
 
   private static final MockedStatic<RestUtils>           REST_UTILS            = mockStatic(RestUtils.class);
 
+  private static final MockedStatic<NewsUtils>           NEWS_UTILS            = mockStatic(NewsUtils.class);
+
   @Mock
   MetadataService                                        metadataService;
 
@@ -120,15 +122,14 @@ public class NewsTargetingImplTest {
     EXO_CONTAINER_CONTEXT.close();
     COMMONS_UTILS.close();
     REST_UTILS.close();
+    NEWS_UTILS.close();
   }
 
   @Test
   public void testGetAllTargets() throws Exception {
     // Given
     EXO_CONTAINER_CONTEXT.when(() -> ExoContainerContext.getService(IdentityRegistry.class)).thenReturn(identityRegistry);
-    org.exoplatform.services.security.Identity identity = mock(org.exoplatform.services.security.Identity.class);
     REST_UTILS.when(() -> RestUtils.getCurrentUser()).thenReturn("root");
-    when(identityRegistry.getIdentity("root")).thenReturn(identity);
     MetadataType metadataType = new MetadataType(4, "newsTarget");
     List<Metadata> newsTargets = new LinkedList<>();
     Metadata sliderNews = new Metadata();
@@ -233,80 +234,78 @@ public class NewsTargetingImplTest {
     assertNotNull(allowedTargets);
     assertEquals(0, allowedTargets.size());
 
-    try (MockedStatic<NewsUtils> newsUtils = mockStatic(NewsUtils.class)) {
-      // Given
-      newsUtils.when(() -> NewsUtils.canPublishNews(space.getId(), identity)).thenReturn(true);
+    // Given
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(space.getId(), identity)).thenReturn(true);
 
-      // When
-      allowedTargets = newsTargetingService.getAllowedTargets(identity);
+    // When
+    allowedTargets = newsTargetingService.getAllowedTargets(identity);
 
-      // Then
-      assertNotNull(allowedTargets);
-      assertEquals(1, allowedTargets.size());
-      assertEquals("latestNews", allowedTargets.get(0).getName());
-      assertFalse(allowedTargets.get(0).isRestrictedAudience());
+    // Then
+    assertNotNull(allowedTargets);
+    assertEquals(1, allowedTargets.size());
+    assertEquals("latestNews", allowedTargets.get(0).getName());
+    assertFalse(allowedTargets.get(0).isRestrictedAudience());
 
-      // Given
-      Metadata testNews = new Metadata();
-      testNews.setName("testNews");
-      testNews.setCreatedDate(200);
-      HashMap<String, String> testNewsProperties = new HashMap<>();
-      testNewsProperties.put("label", "test news");
-      testNewsProperties.put(NewsUtils.TARGET_PERMISSIONS, "/platform/administrators");
-      testNews.setProperties(testNewsProperties);
-      testNews.setId(3);
-      newsTargets.add(testNews);
+    // Given
+    Metadata testNews = new Metadata();
+    testNews.setName("testNews");
+    testNews.setCreatedDate(200);
+    HashMap<String, String> testNewsProperties = new HashMap<>();
+    testNewsProperties.put("label", "test news");
+    testNewsProperties.put(NewsUtils.TARGET_PERMISSIONS, "/platform/administrators");
+    testNews.setProperties(testNewsProperties);
+    testNews.setId(3);
+    newsTargets.add(testNews);
 
-      when(organizationService.getGroupHandler()).thenReturn(groupHandler);
-      Group group = new GroupImpl();
-      group.setId("/platform/administrators");
-      group.setGroupName("Administrators");
+    when(organizationService.getGroupHandler()).thenReturn(groupHandler);
+    Group group = new GroupImpl();
+    group.setId("/platform/administrators");
+    group.setGroupName("Administrators");
 
-      when(groupHandler.findGroupById("/platform/administrators")).thenReturn(group);
-      when(identity.isMemberOf("/platform/administrators", "publisher")).thenReturn(false);
+    when(groupHandler.findGroupById("/platform/administrators")).thenReturn(group);
+    when(identity.isMemberOf("/platform/administrators", "publisher")).thenReturn(false);
 
-      // when
-      allowedTargets = newsTargetingService.getAllowedTargets(identity);
+    // when
+    allowedTargets = newsTargetingService.getAllowedTargets(identity);
 
-      // Then
-      assertNotNull(allowedTargets);
-      assertEquals(1, allowedTargets.size());
-      assertEquals("latestNews", allowedTargets.get(0).getName());
+    // Then
+    assertNotNull(allowedTargets);
+    assertEquals(1, allowedTargets.size());
+    assertEquals("latestNews", allowedTargets.get(0).getName());
 
-      // Given
-      when(identity.isMemberOf("/platform/administrators", "publisher")).thenReturn(true);
+    // Given
+    when(identity.isMemberOf("/platform/administrators", "publisher")).thenReturn(true);
 
-      // when
-      allowedTargets = newsTargetingService.getAllowedTargets(identity);
+    // when
+    allowedTargets = newsTargetingService.getAllowedTargets(identity);
 
-      // Then
-      assertNotNull(allowedTargets);
-      assertEquals(2, allowedTargets.size());
-      assertEquals("latestNews", allowedTargets.get(0).getName());
-      assertEquals("testNews", allowedTargets.get(1).getName());
-      assertFalse(allowedTargets.get(0).isRestrictedAudience());
+    // Then
+    assertNotNull(allowedTargets);
+    assertEquals(2, allowedTargets.size());
+    assertEquals("latestNews", allowedTargets.get(0).getName());
+    assertEquals("testNews", allowedTargets.get(1).getName());
+    assertFalse(allowedTargets.get(0).isRestrictedAudience());
 
-      // Given
-      when(spaceService.getSpaceById("1")).thenReturn(null);
+    // Given
+    when(spaceService.getSpaceById("1")).thenReturn(null);
 
-      // when
-      allowedTargets = newsTargetingService.getAllowedTargets(identity);
+    // when
+    allowedTargets = newsTargetingService.getAllowedTargets(identity);
 
-      // Then
-      assertNotNull(allowedTargets);
-      assertEquals(1, allowedTargets.size());
-      assertEquals("testNews", allowedTargets.get(0).getName());
+    // Then
+    assertNotNull(allowedTargets);
+    assertEquals(1, allowedTargets.size());
+    assertEquals("testNews", allowedTargets.get(0).getName());
 
-      // Given
-      when(groupHandler.findGroupById("/platform/administrators")).thenReturn(null);
+    // Given
+    when(groupHandler.findGroupById("/platform/administrators")).thenReturn(null);
 
-      // when
-      allowedTargets = newsTargetingService.getAllowedTargets(identity);
+    // when
+    allowedTargets = newsTargetingService.getAllowedTargets(identity);
 
-      // Then
-      assertNotNull(allowedTargets);
-      assertEquals(0, allowedTargets.size());
-    }
+    // Then
+    assertNotNull(allowedTargets);
+    assertEquals(0, allowedTargets.size());
   }
 
   @Test
@@ -347,50 +346,21 @@ public class NewsTargetingImplTest {
   public void testSaveNewsTargets() throws Exception {
     // Given
     org.exoplatform.services.security.Identity identity = new org.exoplatform.services.security.Identity("root");
-    Metadata sliderNews = new Metadata();
-    sliderNews.setName("sliderNews");
-    sliderNews.setCreatedDate(100);
-    sliderNews.setId(1);
-
-    MetadataItem metadataItem = new MetadataItem();
-    metadataItem.setCreatedDate(100);
-    metadataItem.setCreatorId(1);
-    metadataItem.setId(1);
-    metadataItem.setObjectId("123456");
-    metadataItem.setMetadata(sliderNews);
-
-    List<ArticleTarget> targets = new LinkedList<>();
-    targets.add(new ArticleTarget("sliderNews", new Date().getTime()));
-
     News news = new News();
     news.setSpaceId("1");
     news.setTitle("Test news");
     news.setAuthor("user1");
-    news.setTargets(targets);
     news.setId("123456");
+    List<String> targets = Arrays.asList("sliderNews");
 
-    NewsTargetObject newsTargetObject = new NewsTargetObject("news", "123456", null, 1L);
-    MetadataKey metadataKey = new MetadataKey(NewsTargetingService.METADATA_TYPE.getName(), "sliderNews", 0);
+    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity(anyString())).thenReturn(identity);
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(anyString(), any(org.exoplatform.services.security.Identity.class)))
+              .thenReturn(true);
     Identity userIdentity = new Identity("1");
     when(identityManager.getOrCreateIdentity(OrganizationIdentityProvider.NAME, "root")).thenReturn(userIdentity);
-    Authenticator authenticator = mock(Authenticator.class);
-    EXO_CONTAINER_CONTEXT.when(() -> ExoContainerContext.getService(IdentityRegistry.class)).thenReturn(identityRegistry);
-    EXO_CONTAINER_CONTEXT.when(() -> ExoContainerContext.getCurrentContainer()).thenReturn(container);
-    when(spaceService.getSpaceById("1")).thenReturn(space);
-    EXO_CONTAINER_CONTEXT.when(() -> ExoContainerContext.getService(Authenticator.class)).thenReturn(authenticator);
-    when(authenticator.createIdentity("root")).thenReturn(identity);
-    List<MembershipEntry> memberships = new LinkedList<>();
-    MembershipEntry membershipEntry = new MembershipEntry("/platform/web-contributors", "publisher");
-    memberships.add(membershipEntry);
-    identity.setMemberships(memberships);
-    Map<String, String> properties = new LinkedHashMap<>();
-    properties.put("displayed", String.valueOf(true));
-    properties.put("publishedDate", String.valueOf(new Date().getTime()));
-
-    COMMONS_UTILS.when(() -> CommonsUtils.getService(SpaceService.class)).thenReturn(spaceService);
 
     // When
-    newsTargetingService.saveNewsTarget(news, true, NewsUtils.toTargetNames(news.getTargets()), "root");
+    newsTargetingService.saveNewsTarget(news, true, targets, "root");
 
     // Then
     verify(identityManager, times(1)).getOrCreateIdentity(OrganizationIdentityProvider.NAME, "root");
@@ -439,7 +409,6 @@ public class NewsTargetingImplTest {
 
     EXO_CONTAINER_CONTEXT.when(() -> ExoContainerContext.getService(IdentityRegistry.class)).thenReturn(identityRegistry);
     org.exoplatform.services.security.Identity identity = mock(org.exoplatform.services.security.Identity.class);
-    when(identity.isMemberOf("/platform/web-contributors", "manager")).thenReturn(true);
 
     List<Metadata> newsTargets = new LinkedList<>();
     Metadata sliderNews = new Metadata();
@@ -457,6 +426,7 @@ public class NewsTargetingImplTest {
     targets.add(newsTargetingEntity);
 
     when(metadataService.getMetadataByKey(any())).thenReturn(sliderNews);
+    NEWS_UTILS.when(() -> NewsUtils.canManageNewsPublishTargets(any(org.exoplatform.services.security.Identity.class))).thenReturn(true);
     newsTargetingService.deleteTargetByName(targets.get(0).getName(), identity);
 
     // When
@@ -475,7 +445,6 @@ public class NewsTargetingImplTest {
     userIdentity.setId("1");
     when(identityManager.getOrCreateIdentity(anyString(), anyString())).thenReturn(userIdentity);
 
-    List<Metadata> newsTargets = new LinkedList<>();
     Metadata sliderNews = new Metadata();
     MetadataType metadataType = new MetadataType(4, "newsTarget");
     sliderNews.setType(metadataType);
@@ -485,12 +454,12 @@ public class NewsTargetingImplTest {
     sliderNewsProperties.put("label", "slider news");
     sliderNews.setProperties(sliderNewsProperties);
     sliderNews.setId(0);
-    newsTargets.add(sliderNews);
 
     NewsTargetingEntity newsTargetingEntity = new NewsTargetingEntity();
     newsTargetingEntity.setName(sliderNews.getName());
     newsTargetingEntity.setProperties(sliderNews.getProperties());
     when(metadataService.createMetadata(sliderNews, 1)).thenReturn(sliderNews);
+    NEWS_UTILS.when(() -> NewsUtils.canManageNewsPublishTargets(any(org.exoplatform.services.security.Identity.class))).thenReturn(true);
 
     Metadata createdMetadata = newsTargetingService.createNewsTarget(newsTargetingEntity, currentIdentity);
 
@@ -517,6 +486,7 @@ public class NewsTargetingImplTest {
 
     EXO_CONTAINER_CONTEXT.when(() -> ExoContainerContext.getService(IdentityRegistry.class)).thenReturn(identityRegistry);
     org.exoplatform.services.security.Identity identity1 = mock(org.exoplatform.services.security.Identity.class);
+    NEWS_UTILS.when(() -> NewsUtils.canManageNewsPublishTargets(any(org.exoplatform.services.security.Identity.class))).thenReturn(false);
     try {
       newsTargetingService.createNewsTarget(newsTargetingEntity, identity1);
       fail();
@@ -555,6 +525,7 @@ public class NewsTargetingImplTest {
     newsTargetingEntity.setProperties(sliderNews.getProperties());
     when(metadataService.createMetadata(sliderNews, 1)).thenReturn(sliderNews);
 
+    NEWS_UTILS.when(() -> NewsUtils.canManageNewsPublishTargets(any(org.exoplatform.services.security.Identity.class))).thenReturn(true);
     Metadata createdMetadata = newsTargetingService.createNewsTarget(newsTargetingEntity, currentIdentity);
 
     String originalTargetName = "sliderNews";
@@ -617,7 +588,7 @@ public class NewsTargetingImplTest {
 
     NewsTargetObject newsTargetObject = new NewsTargetObject("news", "123", null, 1L);
     when(metadataService.getMetadataItemsByMetadataTypeAndObject(NewsTargetingService.METADATA_TYPE.getName(),
-            newsTargetObject)).thenReturn(metadataItems);
+                                                                 newsTargetObject)).thenReturn(metadataItems);
 
     newsTargetingService.deleteNewsTargets(article, Set.of("test1"));
 
