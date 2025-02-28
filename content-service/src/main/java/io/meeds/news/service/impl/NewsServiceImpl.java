@@ -938,7 +938,7 @@ public class NewsServiceImpl implements NewsService {
 
   @Override
   public void deleteVersionsByArticleIdAndLang(String id, String lang) throws Exception {
-    News article = getNewsArticleById(id);
+    News article = getNewsArticleByIdAndLang(id, lang);
     noteService.deleteVersionsByNoteIdAndLang(Long.parseLong(id), lang);
     NewsUtils.broadcastEvent(NewsUtils.REMOVE_ARTICLE_TRANSLATION, article.getAuthor(), article);
     String newsTranslationId = id.concat("-").concat(lang);
@@ -2305,7 +2305,7 @@ public class NewsServiceImpl implements NewsService {
       if (draftPage != null) {
         deleteDraftArticle(draftPage.getId(), draftPage.getAuthor());
       }
-      NewsUtils.broadcastEvent(NewsUtils.ADD_ARTICLE_TRANSLATION, versionCreator, news);
+      NewsUtils.broadcastEvent(NewsUtils.ADD_ARTICLE_TRANSLATION, versionCreator.getUserId(), news);
       String newsTranslationId = news.getId().concat("-").concat(news.getLang());
       indexingService.index(NewsIndexingServiceConnector.TYPE, newsTranslationId);
       updateArticlePermissions(List.of(space), news);
