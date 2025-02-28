@@ -152,7 +152,7 @@ public class NewsUtils {
       return identity == null ? null : identity.getId();
     }).filter(Objects::nonNull).collect(Collectors.toSet());
   }
-
+  
   public static List<Long> getMyFilteredSpacesIds(org.exoplatform.services.security.Identity userIdentity,
                                                   List<String> filteredSpacesIds) throws Exception {
     if (!CollectionUtils.isEmpty(filteredSpacesIds)) {
@@ -160,18 +160,14 @@ public class NewsUtils {
     }
     return getMySpaces(userIdentity).stream().map(space -> Long.valueOf(space.getId())).toList();
   }
-
+  
   public static boolean canPublishNews(String spaceId, org.exoplatform.services.security.Identity currentIdentity) {
     if (!StringUtils.isBlank(spaceId)) {
       SpaceService spaceService = CommonsUtils.getService(SpaceService.class);
       Space space = spaceService.getSpaceById(spaceId);
-      return currentIdentity != null && space != null
-          && (currentIdentity.isMemberOf(PLATFORM_WEB_CONTRIBUTORS_GROUP, PUBLISHER_MEMBERSHIP_NAME)
-              || spaceService.isPublisher(space, currentIdentity.getUserId())
-              || spaceService.isManager(space, currentIdentity.getUserId())
-              || spaceService.isSuperManager(space, currentIdentity.getUserId()));
+      return currentIdentity != null && space != null && spaceService.canPublishOnSpace(space, currentIdentity.getUserId());
     }
-    return currentIdentity != null && currentIdentity.isMemberOf(PLATFORM_WEB_CONTRIBUTORS_GROUP, PUBLISHER_MEMBERSHIP_NAME);
+    return false;
   }
 
   public static boolean canManageNewsPublishTargets(org.exoplatform.services.security.Identity currentIdentity) {
@@ -259,8 +255,8 @@ public class NewsUtils {
     return illustrationUrl.toString();
   }
 
-  public static boolean canReferToNote(String spaceId, News article, org.exoplatform.services.security.Identity currentIdentity) {
-    Space space = getSpaceService().getSpaceById(spaceId);
+  public static boolean canReferToNote(News article, org.exoplatform.services.security.Identity currentIdentity) {
+    Space space = getSpaceService().getSpaceById(article.getSpaceId());
     if (space == null || currentIdentity == null) {
       return false;
     }

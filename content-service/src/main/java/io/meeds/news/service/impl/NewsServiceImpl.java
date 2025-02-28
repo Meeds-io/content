@@ -23,6 +23,7 @@ import static io.meeds.news.utils.NewsUtils.NewsObjectType.ARTICLE;
 import static io.meeds.news.utils.NewsUtils.NewsObjectType.LATEST_DRAFT;
 import static io.meeds.news.utils.NewsUtils.NewsUpdateType.CONTENT_AND_TITLE;
 import static io.meeds.news.utils.NewsUtils.NewsUpdateType.PAGE_REFERENCE;
+import static io.meeds.news.utils.NewsUtils.NewsUpdateType.POSTING_AND_PUBLISHING;
 
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -270,8 +271,7 @@ public class NewsServiceImpl implements NewsService {
    */
   @Override
   public boolean canCreateNews(Space space, Identity currentIdentity) throws Exception {
-    return space != null
-        && (NewsUtils.canPublishNews(space.getId(), currentIdentity) || spaceService.canRedactOnSpace(space, currentIdentity));
+    return space != null && (spaceService.canRedactOnSpace(space, currentIdentity));
   }
 
   /**
@@ -285,11 +285,14 @@ public class NewsServiceImpl implements NewsService {
                          String newsObjectType,
                          String newsUpdateType) throws Exception {
 
-    if (!PAGE_REFERENCE.name().equalsIgnoreCase(newsUpdateType) && !canEditNews(news, updater)) {
+    if (CONTENT_AND_TITLE.name().equalsIgnoreCase(newsUpdateType) && !canEditNews(news, updater)) {
       throw new IllegalAccessException("User " + updater + " is not authorized to update news");
     }
     Identity updaterIdentity = NewsUtils.getUserIdentity(updater);
-    if (PAGE_REFERENCE.name().equalsIgnoreCase(newsUpdateType) && !NewsUtils.canReferToNote(news.getSpaceId(), news, updaterIdentity)) {
+    if (POSTING_AND_PUBLISHING.name().equalsIgnoreCase(newsUpdateType) && (!canEditNews(news, updater) && !NewsUtils.canPublishNews(news.getSpaceId(), updaterIdentity))) {
+      throw new IllegalAccessException("User " + updater + " is not authorized to update news");
+    }
+    if (PAGE_REFERENCE.name().equalsIgnoreCase(newsUpdateType) && !NewsUtils.canReferToNote(news, updaterIdentity)) {
       throw new IllegalAccessException("User " + updater + " is not authorized to refer or derefer news");
     }
     
@@ -525,11 +528,8 @@ public class NewsServiceImpl implements NewsService {
       news.setCanEdit(canEditNews(news, currentIdentity.getUserId()));
       news.setCanDelete(canEditNews(news, currentIdentity.getUserId()));
       news.setCanPublish(NewsUtils.canPublishNews(news.getSpaceId(), currentIdentity));
-      news.setCanRefer(NewsUtils.canReferToNote(news.getSpaceId(), news, currentIdentity));
-      Space space = spaceService.getSpaceById(news.getSpaceId());
-      if (space != null) {
-        news.setCanSchedule(canEditNews(news, currentIdentity.getUserId()));
-      }
+      news.setCanRefer(NewsUtils.canReferToNote(news, currentIdentity));
+      news.setCanSchedule(canScheduleNews(news.getSpaceId(), currentIdentity, news));
       news.setTargets(newsTargetingService.getTargetsByNews(news));
       ExoSocialActivity activity = null;
       try {
@@ -592,11 +592,8 @@ public class NewsServiceImpl implements NewsService {
       news.setCanEdit(canEditNews(news, currentIdentity.getUserId()));
       news.setCanDelete(canEditNews(news, currentIdentity.getUserId()));
       news.setCanPublish(NewsUtils.canPublishNews(news.getSpaceId(), currentIdentity));
-      news.setCanRefer(NewsUtils.canReferToNote(news.getSpaceId(), news, currentIdentity));
-      Space space = spaceService.getSpaceById(news.getSpaceId());
-      if (space != null) {
-        news.setCanSchedule(canEditNews(news, currentIdentity.getUserId()));
-      }
+      news.setCanRefer(NewsUtils.canReferToNote(news, currentIdentity));
+      news.setCanSchedule(canScheduleNews(news.getSpaceId(), currentIdentity, news));
     });
     return newsList;
   }
@@ -756,8 +753,7 @@ public class NewsServiceImpl implements NewsService {
    */
   @Override
   public News scheduleNews(News news, Identity currentIdentity, String newsObjectType) throws Exception {
-    Space space = news.getSpaceId() == null ? null : spaceService.getSpaceById(news.getSpaceId());
-    if (!canEditNews(news, currentIdentity.getUserId())) {
+    if (!canScheduleNews(news.getSpaceId(), currentIdentity, news)) {
       throw new IllegalArgumentException("User " + currentIdentity.getUserId() + " is not authorized to schedule news");
     }
     if (newsObjectType.equalsIgnoreCase(NewsObjectType.DRAFT.name())) {
@@ -772,7 +768,7 @@ public class NewsServiceImpl implements NewsService {
       updateArticle(news, currentIdentity, NewsUtils.NewsUpdateType.SCHEDULE.name().toLowerCase());
     }
     if (news != null) {
-      if (NewsUtils.canPublishNews(space.getId(), currentIdentity)) {
+      if (NewsUtils.canPublishNews(news.getSpaceId(), currentIdentity)) {
         if (news.isPublished()) {
           publishNews(news, currentIdentity.getUserId());
         } else {
@@ -850,7 +846,7 @@ public class NewsServiceImpl implements NewsService {
         return false;
       }
       if (StringUtils.equals(news.getPublicationState(), STAGED)
-          && !canEditNews(news, authenticatedUser)) {
+          && !canScheduleNews(spaceId, NewsUtils.getUserIdentity(authenticatedUser), news)) {
         return false;
       }
     } catch (Exception e) {
@@ -858,6 +854,15 @@ public class NewsServiceImpl implements NewsService {
       return false;
     }
     return true;
+  }
+  
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public boolean canScheduleNews(String spaceId, Identity currentIdentity, News article) {
+    return canEditNews(article, currentIdentity.getUserId())
+        || NewsUtils.canPublishNews(spaceId, currentIdentity);
   }
 
   /**
@@ -1179,8 +1184,7 @@ public class NewsServiceImpl implements NewsService {
     }
   }
   
-  @Override
-  public boolean canEditNews(News news, String authenticatedUser) {
+  private boolean canEditNews(News news, String authenticatedUser) {
     String spaceId = news.getSpaceId();
     Space space = spaceId == null ? null : spaceService.getSpaceById(spaceId);
     if (space == null) {
@@ -1193,7 +1197,7 @@ public class NewsServiceImpl implements NewsService {
     }
     return (spaceService.canRedactOnSpace(space, authenticatedUserIdentity)
         && (news.isReferred() || news.isFromExternalPage() || isArticleOwner(news, authenticatedUser)))
-        || NewsUtils.canPublishNews(news.getSpaceId(), authenticatedUserIdentity)
+        || spaceService.isManager(space, authenticatedUser) || spaceService.isSuperManager(space, authenticatedUser)
         || spaceService.isRedactor(space, authenticatedUser);
   }
 
@@ -1581,7 +1585,7 @@ public class NewsServiceImpl implements NewsService {
                           })
                           .filter(article -> {
                             if (article != null) {
-                              return canEditNews(article, currentIdentity.getUserId());
+                              return canScheduleNews(article.getSpaceId(), currentIdentity, article);
                             }
                             return false;
                           })
