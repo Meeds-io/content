@@ -283,14 +283,14 @@ public interface NewsService {
   List<NewsESSearchResult> search(Identity currentIdentity, NewsFilter filter);
 
   /**
-   * Checks if the user can schedule publishinga News
+   * Checks if the user can schedule publishing a News
    *
-   * @param space target space
-   * @param currentIdentity current user identity
+   * @param spaceId target space id
+   * @param currentIdentityId current user identity id
    * @param article target article
    * @return boolean : true if the user can schedule publishing a News
    */
-  boolean canScheduleNews(Space space, org.exoplatform.services.security.Identity currentIdentity, News article);
+  boolean canScheduleNews(String spaceId, org.exoplatform.services.security.Identity currentIdentityId, News article);
 
   /**
    * Checks if the user can view the News
