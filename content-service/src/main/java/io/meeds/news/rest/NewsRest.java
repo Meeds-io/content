@@ -735,7 +735,7 @@ public class NewsRest {
         return ResponseEntity.notFound().build();
       }
 
-      return ResponseEntity.ok(newsService.canScheduleNews(space, currentIdentity, news));
+      return ResponseEntity.ok(newsService.canScheduleNews(spaceId, currentIdentity, news));
     } catch (Exception e) {
       LOG.error("Error when checking if the authenticated user can schedule a news", e);
       return ResponseEntity.internalServerError().build();
