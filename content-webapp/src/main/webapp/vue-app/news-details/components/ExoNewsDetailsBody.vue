@@ -109,7 +109,7 @@
               <div
                 :class="{'mt-n2': !hiddenSpace}"
                 class="text-sub-title align-center d-flex">
-                <span v-if="isArticleEdited" class="ms-2">{{$t('article.edited.by.label')}}</span>
+                <span v-if="isArticleEdited" class="text-caption ms-2">{{$t('article.edited.by.label')}}</span>
                 <exo-user-avatar
                   :profile-id="articleUpdater"
                   extra-class="ms-2"
