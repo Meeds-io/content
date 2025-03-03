@@ -103,11 +103,15 @@ public class ContentPublishListener extends Listener<String, ContentPublishEvent
     statisticData.setSubModule("contents");
     statisticData.setOperation("publishContent");
     statisticData.setUserId(userId);
+    statisticData.addParameter("contentId", news.getId());
     statisticData.addParameter("contentTitle", news.getTitle());
     statisticData.addParameter("contentType", "News");
     statisticData.addParameter("contentCreator", news.getAuthor());
-    statisticData.addParameter("contentPublishingTargets", toTargetNames(news));
-    statisticData.addParameter("contentFeedPublishing", news.isActivityPosted() ? "YES" : "NO");
+    List<String> targets = toTargetNames(news);
+    if (!targets.isEmpty()) {
+      statisticData.addParameter("contentPublishingTargets", toTargetNames(news));
+    }
+    statisticData.addParameter("contentFeedPublishing", news.isActivityPosted() ? "YES" : null);
     String scheduleDates = toScheduleDates(news);
     if (StringUtils.isNotBlank(scheduleDates)) {
       statisticData.addParameter("contentScheduling", scheduleDates);
