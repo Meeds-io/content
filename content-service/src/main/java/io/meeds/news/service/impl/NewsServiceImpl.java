@@ -1451,7 +1451,7 @@ public class NewsServiceImpl implements NewsService {
         article.setViewsCount(Long.parseLong(properties.get(NEWS_VIEWS)));
       }
       if (properties.containsKey(NEWS_ACTIVITY_POSTED)) {
-        article.setActivityPosted(Boolean.parseBoolean(properties.get(NEWS_ACTIVITY_POSTED)));
+        article.setActivityPosted(Boolean.parseBoolean(properties.get(NEWS_ACTIVITY_POSTED)) && !activityManager.getActivity(article.getActivityId()).isHidden());
       } else {
         article.setActivityPosted(false);
       }
