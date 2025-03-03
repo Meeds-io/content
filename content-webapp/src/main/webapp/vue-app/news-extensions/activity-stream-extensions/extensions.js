@@ -57,6 +57,8 @@ const newsActivityTypeExtensionOptions = {
   },
   canEdit: () => false,
   canShare: () => true,
+  canDelete: () => false,
+  canHide: () => true,
   hideOnDelete: true,
   supportsThumbnail: true,
   summaryLinesToDisplay: 2,
