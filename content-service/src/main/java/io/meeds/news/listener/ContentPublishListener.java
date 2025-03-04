@@ -118,7 +118,7 @@ public class ContentPublishListener extends Listener<String, ContentPublishEvent
     }
     statisticData.addParameter("contentHideAuthor", news.getProperties().isHideAuthor() ? "YES" : "NO");
     statisticData.addParameter("contentHideReaction", news.getProperties().isHideReaction() ? "YES" : "NO");
-
+    statisticData.addParameter("contentUpdatedDate", news.getUpdateDate());
     processSpaceStatistics(statisticData, news);
 
     AnalyticsUtils.addStatisticData(statisticData);
