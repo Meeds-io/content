@@ -52,6 +52,12 @@
                                 <value>{
                                     "pageSize":20,
                                     "title":"",
+                                    "sort": [
+                                    {
+                                    "field": "contentUpdatedDate",
+                                    "sortDirection": "desc"
+                                    }
+                                    ],
                                     "mainColumn":{
                                     "title":"analytics.title",
                                     "valueAggregation":{
