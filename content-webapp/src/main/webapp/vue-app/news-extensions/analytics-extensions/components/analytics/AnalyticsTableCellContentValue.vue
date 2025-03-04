@@ -24,11 +24,10 @@
     size="24"
     color="primary"
     indeterminate />
-  <div v-else-if="content"><a :href="contentUrl">{{ contentTitle }}</a></div>
+  <div v-else-if="!isDeleted"><a :href="contentUrl">{{ contentTitle }}</a></div>
   <div v-else class="d-flex">
-    <i :title="$t('analytics.errorRetrievingDataForValue', {0: value})" class="uiIconColorError my-auto"></i>
     <span class="text-no-wrap text-sub-title my-auto ml-1">
-      {{ $t('analytics.deletedContent') }}
+      {{ contentTitle }} ({{ $t('analytics.deleted') }})
     </span>
   </div>
 </template>
@@ -54,6 +53,9 @@ export default {
     },
     contentUrl() {
       return this.content?.url;
+    },
+    isDeleted() {
+      return this.content?.deleted;
     }
   },
   created() {
@@ -62,12 +64,29 @@ export default {
       this.$newsServices.getNewsById(this.value, false, 'article', this.lang).then(content => {
         this.content = content;
         if (!this.content) {
-          this.$newsServices.getArticlePage(this.value).then(page => {
+          this.getArticlePage(this.value).then(page => {
             this.content = page;
           });
         }
       }).finally(() => this.loading = false);
     }
   },
+  methods: {
+    async getArticlePage(id) {
+      try {
+        const resp = await fetch(`/portal/rest/notes/note/${id}?includeDeleted=true`, {
+          method: 'GET',
+          credentials: 'include',
+        });
+        if (!resp.ok) {
+          return ;
+        }
+        return await resp.json();
+      } catch (error) {
+        console.error('Error fetching article:', error);
+        throw error;
+      }
+    }
+  }
 };
 </script>
