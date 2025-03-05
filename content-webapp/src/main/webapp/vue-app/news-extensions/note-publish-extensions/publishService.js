@@ -17,7 +17,7 @@ export function canPublish(spaceId) {
 }
 
 export function canSchedule(spaceId, articleId) {
-  return newsService.canScheduleNews(spaceId, articleId);
+  return newsService.canScheduleNews(spaceId, articleId, true);
 }
 
 export async function getSavedNotePublicationSettings(id, lang) {

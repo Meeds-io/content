@@ -64,7 +64,7 @@ function updateSavedPublicationSettings(noteId) {
 
 function extractNoteIdFromUrl() {
   const url = window.location.href;
-  const regex = /\/notes\/(\d+)$/;
+  const regex = /\/notes\/(\d+)(?:\?|$)/;
   const match = regex.exec(url);
   return match?.[1];
 }

@@ -87,12 +87,16 @@ public class ActivityNewsProcessor extends BaseActivityProcessorPlugin {
         }
         news = newsService.getNewsArticleById(activity.getTemplateParams().get("newsId"));
 
-        RealtimeListAccess<ExoSocialActivity> listAccess = activityManager.getCommentsWithListAccess(activity, true);
-        news.setCommentsCount(listAccess.getSize());
-        news.setLikesCount(activity.getLikeIdentityIds() == null ? 0 : activity.getLikeIdentityIds().length);
+        if (news != null) {
+          RealtimeListAccess<ExoSocialActivity> listAccess = activityManager.getCommentsWithListAccess(activity, true);
+          news.setCommentsCount(listAccess.getSize());
+          news.setLikesCount(activity.getLikeIdentityIds() == null ? 0 : activity.getLikeIdentityIds().length);
 
-        activity.setMetadataObjectId(news.getId());
-        activity.setMetadataObjectType(NewsUtils.NEWS_METADATA_OBJECT_TYPE);
+          activity.setMetadataObjectId(news.getId());
+          activity.setMetadataObjectType(NewsUtils.NEWS_METADATA_OBJECT_TYPE);
+        } else {
+          return;
+        }
       } catch (Exception e) {
         LOG.warn("Error retrieving news with id {}", activity.getTemplateParams().get("newsId"), e);
       }
