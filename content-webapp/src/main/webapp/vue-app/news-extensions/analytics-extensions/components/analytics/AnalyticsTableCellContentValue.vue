@@ -25,8 +25,8 @@
     color="primary"
     indeterminate />
   <div v-else-if="!isDeleted"><a :href="contentUrl">{{ contentTitle }}</a></div>
-  <div v-else class="d-flex">
-    <span class="text-no-wrap text-sub-title my-auto ml-1">
+  <div v-else>
+    <span class="text-no-wrap text-sub-title my-auto">
       {{ contentTitle }} ({{ $t('analytics.deleted') }})
     </span>
   </div>
