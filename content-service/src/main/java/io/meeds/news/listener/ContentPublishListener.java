@@ -118,7 +118,8 @@ public class ContentPublishListener extends Listener<String, ContentPublishEvent
     }
     statisticData.addParameter("contentHideAuthor", news.getProperties().isHideAuthor() ? "YES" : "NO");
     statisticData.addParameter("contentHideReaction", news.getProperties().isHideReaction() ? "YES" : "NO");
-    statisticData.addParameter("contentUpdatedDate", news.getUpdateDate());
+    statisticData.addParameter("contentUpdatedDate",
+                               news.getUpdateDate() != null ? news.getUpdateDate() : news.getCreationDate());
     processSpaceStatistics(statisticData, news);
 
     AnalyticsUtils.addStatisticData(statisticData);
@@ -139,8 +140,8 @@ public class ContentPublishListener extends Listener<String, ContentPublishEvent
   }
 
   private boolean isValidPublish(News originalArticle, News updatedArticle) {
-    return !originalArticle.isPublished() && updatedArticle.isPublished()
-        || !originalArticle.isActivityPosted() && updatedArticle.isActivityPosted()
+    return originalArticle.isPublished() != updatedArticle.isPublished()
+        || originalArticle.isActivityPosted() != updatedArticle.isActivityPosted()
         || targetListUpdated(originalArticle.getTargets(), updatedArticle.getTargets())
         || !toScheduleDates(originalArticle).equals(toScheduleDates(updatedArticle))
         || isHideAuthorUpdated(originalArticle, updatedArticle) || isHideReactionUpdated(originalArticle, updatedArticle);

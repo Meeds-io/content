@@ -40,7 +40,7 @@ extensionRegistry.registerExtension('AnalyticsSamples', 'SampleItem', {
   options: {
     rank: 100,
     vueComponent: Vue.options.components['content-schedule-date-attribute'],
-    match: (fieldName) => fieldName === 'contentScheduling'
+    match: (fieldName) => ['contentScheduling', 'contentUpdatedDate'].includes(fieldName)
   },
 });
 
