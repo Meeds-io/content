@@ -83,7 +83,7 @@ export default {
         this.news = null;
       }
       return this.$newsServices.getNewsById(id, false, 'article', lang).then((resp) => {
-        if (resp !== null && resp !== UNAUTHORIZED_CODE) {
+        if (!!resp && resp !== UNAUTHORIZED_CODE) {
           this.news = resp;
           this.showEditButton = this.news.canEdit;
           this.showPublishButton = this.news.canPublish || this.news?.canSchedule;

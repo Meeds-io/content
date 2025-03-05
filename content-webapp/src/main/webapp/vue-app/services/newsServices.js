@@ -217,8 +217,8 @@ export function canUserCreateNews(spaceId) {
   }).then((resp) => resp && resp.ok && resp.json());
 }
 
-export function canScheduleNews(spaceId, articleId) {
-  return fetch(`${newsConstants.CONTENT_API}/contents/canScheduleNews/${eXo.env.portal.spaceId || spaceId}?articleId=${articleId}`, {
+export function canScheduleNews(spaceId, articleId, fromExternalPge) {
+  return fetch(`${newsConstants.CONTENT_API}/contents/canScheduleNews/${eXo.env.portal.spaceId || spaceId}?articleId=${articleId}&fromExternalPage=${fromExternalPge || false} `, {
     headers: {
       'Content-Type': 'application/json'
     },
