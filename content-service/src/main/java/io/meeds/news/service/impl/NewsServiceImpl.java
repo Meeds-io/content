@@ -556,7 +556,9 @@ public class NewsServiceImpl implements NewsService {
     News news = null;
     try {
       news = buildArticle(newsId, lang, true);
-      news.setTargets(newsTargetingService.getTargetsByNews(news));
+      if (news != null) {
+        news.setTargets(newsTargetingService.getTargetsByNews(news));
+      }
     } catch (Exception exception) {
       LOG.error("An error occurred while retrieving news with id {}", newsId, exception);
     }
@@ -863,6 +865,19 @@ public class NewsServiceImpl implements NewsService {
   public boolean canScheduleNews(String spaceId, Identity currentIdentity, News article) {
     return canEditNews(article, currentIdentity.getUserId())
         || NewsUtils.canPublishNews(spaceId, currentIdentity);
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public boolean canScheduleExternalPageAsNews(String articleId, Identity currentIdentity) {
+    try {
+     Page pageToBeScheduled = noteService.getNoteById(articleId, currentIdentity);
+     return pageToBeScheduled != null && pageToBeScheduled.isCanManage();
+    } catch (Exception exception) {
+      return false;
+    }
   }
 
   /**
@@ -1451,7 +1466,11 @@ public class NewsServiceImpl implements NewsService {
         article.setViewsCount(Long.parseLong(properties.get(NEWS_VIEWS)));
       }
       if (properties.containsKey(NEWS_ACTIVITY_POSTED)) {
-        article.setActivityPosted(Boolean.parseBoolean(properties.get(NEWS_ACTIVITY_POSTED)) && !activityManager.getActivity(article.getActivityId()).isHidden());
+        ExoSocialActivity articleActivity = null;
+        if (article.getActivityId() != null) {
+          articleActivity = activityManager.getActivity(article.getActivityId());
+        }
+        article.setActivityPosted(Boolean.parseBoolean(properties.get(NEWS_ACTIVITY_POSTED)) && articleActivity != null && !articleActivity.isHidden());
       } else {
         article.setActivityPosted(false);
       }
@@ -2015,9 +2034,9 @@ public class NewsServiceImpl implements NewsService {
         News news = new News();
         news.setId(articlePage.getId());
         news.setCreationDate(articlePage.getCreatedDate());
-        news.setAuthor(pageVersion.getAuthor());
+        news.setAuthor(pageVersion != null ? pageVersion.getAuthor() : articlePage.getAuthor());
+        news.setUpdater(pageVersion != null ? pageVersion.getAuthor() : articlePage.getAuthor());
         news.setOwner(articlePage.getOwner());
-        news.setUpdater(pageVersion.getAuthor());
         news.setSpaceId(space.getId());
         news.setSpaceAvatarUrl(space.getAvatarUrl());
         news.setSpaceDisplayName(space.getDisplayName());
@@ -2043,10 +2062,10 @@ public class NewsServiceImpl implements NewsService {
                                                            null,
                                                            Long.parseLong(space.getId()));
         List<MetadataItem> metadataItems = metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY, newsPageObject);
-        MetadataItem metadataItem = null;
-        if (!metadataItems.isEmpty()) {
-          metadataItem = metadataItems.getFirst();
+        if (metadataItems.isEmpty()) {
+          return null;
         }
+        MetadataItem metadataItem = metadataItems.getFirst();
         buildArticleProperties(news, currentUsername, metadataItem);
         news.setDeleted(articlePage.isDeleted());
         news.setPublicationDate(articlePage.getCreatedDate());

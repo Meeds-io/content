@@ -720,7 +720,9 @@ public class NewsRest {
       @ApiResponse(responseCode = "500", description = "Internal server error") })
   public ResponseEntity<Boolean> canScheduleNews(@PathVariable("spaceId") String spaceId,
                                                  @Parameter(description = "target article id")
-                                                 @RequestParam("articleId") String articleId) {
+                                                 @RequestParam("articleId") String articleId,
+                                                 @Parameter(description = "is external page to be scheduled")
+                                                 @RequestParam("fromExternalPage") boolean fromExternalPage) {
     org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
     try {
       if (StringUtils.isBlank(spaceId)) {
@@ -731,11 +733,11 @@ public class NewsRest {
         return ResponseEntity.notFound().build();
       }
       News news = newsService.getNewsArticleById(articleId);
-      if (news == null) {
+      if (news == null && !fromExternalPage) {
         return ResponseEntity.notFound().build();
       }
 
-      return ResponseEntity.ok(newsService.canScheduleNews(spaceId, currentIdentity, news));
+      return ResponseEntity.ok(fromExternalPage ? newsService.canScheduleExternalPageAsNews(articleId, currentIdentity) : newsService.canScheduleNews(spaceId, currentIdentity, news));
     } catch (Exception e) {
       LOG.error("Error when checking if the authenticated user can schedule a news", e);
       return ResponseEntity.internalServerError().build();
