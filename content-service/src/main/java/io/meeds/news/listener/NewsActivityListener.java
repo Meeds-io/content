@@ -19,6 +19,7 @@
  */
 package io.meeds.news.listener;
 
+import io.meeds.news.model.NewsPageObject;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
 import org.exoplatform.services.security.ConversationState;
@@ -34,11 +35,20 @@ import org.exoplatform.social.core.space.spi.SpaceService;
 import io.meeds.news.model.News;
 import io.meeds.news.service.NewsService;
 import io.meeds.news.utils.NewsUtils;
+import org.exoplatform.social.metadata.MetadataService;
+import org.exoplatform.social.metadata.model.MetadataItem;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static io.meeds.news.service.impl.NewsServiceImpl.NEWS_ACTIVITY_POSTED;
+import static io.meeds.news.service.impl.NewsServiceImpl.NEWS_METADATA_KEY;
+import static io.meeds.news.service.impl.NewsServiceImpl.NEWS_METADATA_PAGE_OBJECT_TYPE;
 import static io.meeds.news.utils.NewsUtils.NewsObjectType.ARTICLE;
 
 /**
@@ -53,6 +63,8 @@ public class NewsActivityListener extends ActivityListenerPlugin {
 
   private static final String NEWS_ID = "newsId";
 
+  private static final String NEWS_ACTIVITY_TYPE = "news";
+
   @Autowired
   private ActivityManager     activityManager;
 
@@ -64,6 +76,9 @@ public class NewsActivityListener extends ActivityListenerPlugin {
 
   @Autowired
   private NewsService         newsService;
+
+  @Autowired
+  private MetadataService     metadataService;
 
   @PostConstruct
   public void init() {
@@ -122,6 +137,15 @@ public class NewsActivityListener extends ActivityListenerPlugin {
     }
   }
 
+  @Override
+  public void hideActivity(ActivityLifeCycleEvent event) {
+    ExoSocialActivity activity = event.getActivity();
+    if (activity != null && activity.getType().equals(NEWS_ACTIVITY_TYPE) && activity.getTemplateParams() != null
+        && activity.getTemplateParams().containsKey(NEWS_ID)) {
+      updateNewsPageMetadataObjectItem(activity);
+    }
+  }
+
   private Identity getIdentity(ExoSocialActivity sharedActivity) {
     String posterIdentityId = sharedActivity.getPosterId();
     return identityManager.getIdentity(posterIdentityId);
@@ -130,6 +154,32 @@ public class NewsActivityListener extends ActivityListenerPlugin {
   private Space getSpace(ExoSocialActivity sharedActivity) {
     String spacePrettyName = sharedActivity.getActivityStream().getPrettyId();
     return spaceService.getSpaceByPrettyName(spacePrettyName);
+  }
+
+  private String getCurrentIdentityId() {
+    org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
+    return identityManager.getOrCreateUserIdentity(currentIdentity.getUserId()).getId();
+  }
+
+  private void updateNewsPageMetadataObjectItem(ExoSocialActivity activity) {
+    String newsId = activity.getTemplateParams().get(NEWS_ID);
+    String spaceId = activity.getSpaceId();
+    String currentIdentityId = getCurrentIdentityId();
+    NewsPageObject newsPageObject = new NewsPageObject(NEWS_METADATA_PAGE_OBJECT_TYPE, newsId, null, Long.parseLong(spaceId));
+    MetadataItem metadataItem = metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY, newsPageObject)
+                                               .stream()
+                                               .findFirst()
+                                               .orElse(null);
+    if (metadataItem != null) {
+      Map<String, String> properties = metadataItem.getProperties();
+      // update the property only when it is present and has a wrong value
+      // hide from the activity stream case
+      if (properties.containsKey(NEWS_ACTIVITY_POSTED) && properties.get(NEWS_ACTIVITY_POSTED) != null && Boolean.parseBoolean(properties.get(NEWS_ACTIVITY_POSTED))) {
+        properties.put(NEWS_ACTIVITY_POSTED, String.valueOf(false));
+        metadataItem.setProperties(properties);
+        metadataService.updateMetadataItem(metadataItem, Long.parseLong(currentIdentityId), false);
+      }
+    }
   }
 
 }
