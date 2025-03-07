@@ -20,6 +20,10 @@
 package io.meeds.news.listener;
 
 import static io.meeds.news.utils.NewsUtils.NewsObjectType.ARTICLE;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.mock;
@@ -29,8 +33,15 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import org.exoplatform.social.metadata.MetadataService;
+import org.exoplatform.social.metadata.model.MetadataItem;
+import org.exoplatform.social.metadata.model.MetadataKey;
+import org.exoplatform.social.metadata.model.MetadataObject;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -66,6 +77,9 @@ public class NewsActivityListenerTest {
 
   @Mock
   private NewsService     newsService;
+
+  @Mock
+  private MetadataService metadataService;
 
   @InjectMocks
   NewsActivityListener    newsActivityListener;
@@ -210,4 +224,33 @@ public class NewsActivityListenerTest {
     verify(newsService, times(1)).getNewsById(newsId, currentIdentity, false, ARTICLE.name().toLowerCase());
     verify(newsService, times(1)).shareNews(eq(news), nullable(Space.class), nullable(Identity.class), nullable(String.class));
   }
+
+  @Test
+  public void testHideActivity_ShouldUpdateMetadata() {
+    ExoSocialActivity activity = mock(ExoSocialActivity.class);
+    ActivityLifeCycleEvent event = mock(ActivityLifeCycleEvent.class);
+    when(event.getActivity()).thenReturn(activity);
+    when(activity.getType()).thenReturn("news");
+    when(activity.getTemplateParams()).thenReturn(Map.of("newsId", "123"));
+    when(activity.getSpaceId()).thenReturn("1");
+
+    org.exoplatform.services.security.Identity currentIdentity = new org.exoplatform.services.security.Identity("john");
+    ConversationState.setCurrent(new ConversationState(currentIdentity));
+    when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(new Identity("1"));
+
+    MetadataItem metadataItem = mock(MetadataItem.class);
+    Map<String, String> metadataItemProperties = new HashMap<>();
+    metadataItemProperties.put("activityPosted", "true");
+    when(metadataItem.getProperties()).thenReturn(metadataItemProperties);
+    List<MetadataItem> metadataItems = new ArrayList<>();
+    metadataItems.add(metadataItem);
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+                                                             any(MetadataObject.class))).thenReturn(metadataItems);
+
+    newsActivityListener.hideActivity(event);
+
+    verify(metadataService, times(1)).updateMetadataItem(any(MetadataItem.class), anyLong(), anyBoolean());
+
+  }
+
 }
