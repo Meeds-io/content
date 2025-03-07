@@ -23,6 +23,8 @@ import io.meeds.common.ContainerTransactional;
 import io.meeds.news.model.News;
 import io.meeds.news.service.NewsService;
 import org.apache.commons.collections4.MapUtils;
+import org.exoplatform.social.core.activity.model.ExoSocialActivity;
+import org.exoplatform.social.core.manager.ActivityManager;
 import org.exoplatform.social.metadata.MetadataService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,6 +50,9 @@ public class PostScheduledNewsArticleJob {
 
   @Autowired
   private MetadataService     metadataService;
+
+  @Autowired
+  private ActivityManager     activityManager;
 
 
   @Scheduled(cron = "${meeds.content.postScheduledNewsArticle.job.cron:15 */2 * * * ?}")
@@ -115,7 +120,7 @@ public class PostScheduledNewsArticleJob {
                    .forEach(article -> {
                      if (article != null) {
                        try {
-                         newsService.unpublishNews(article.getId(), article.getAuthor());
+                         unpublishArticle(article);
                          LOG.info("Unpublish schedule executed articleId: {}, articleTitle: {}",
                                   article.getId(),
                                   article.getTitle());
@@ -140,5 +145,14 @@ public class PostScheduledNewsArticleJob {
 
     Calendar now = Calendar.getInstance();
     return schedulePostDate.before(now) || now.equals(schedulePostDate);
+  }
+  private void unpublishArticle(News article) throws Exception {
+    newsService.unpublishNews(article.getId(), article.getAuthor(), true);
+    if (article.isActivityPosted() && article.getActivityId() != null) {
+      ExoSocialActivity activity = activityManager.getActivity(article.getActivityId());
+      if (activity != null) {
+        activityManager.hideActivity(activity.getId());
+      }
+    }
   }
 }
