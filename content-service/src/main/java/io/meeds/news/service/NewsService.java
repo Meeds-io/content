@@ -115,7 +115,7 @@ public interface NewsService {
    * @param publisher the publisher of the News
    * @throws Exception when an error occurs
    */
-  void unpublishNews(String newsId, String publisher) throws Exception;
+  void unpublishNews(String newsId, String publisher, boolean unpublishScheduled) throws Exception;
 
   /**
    * Retrieves a news identified by its technical identifier
