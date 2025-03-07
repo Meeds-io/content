@@ -1440,11 +1440,7 @@ public class NewsServiceImpl implements NewsService {
         article.setViewsCount(Long.parseLong(properties.get(NEWS_VIEWS)));
       }
       if (properties.containsKey(NEWS_ACTIVITY_POSTED)) {
-        ExoSocialActivity articleActivity = null;
-        if (article.getActivityId() != null) {
-          articleActivity = activityManager.getActivity(article.getActivityId());
-        }
-        article.setActivityPosted(Boolean.parseBoolean(properties.get(NEWS_ACTIVITY_POSTED)) && articleActivity != null && !articleActivity.isHidden());
+        article.setActivityPosted(Boolean.parseBoolean(properties.get(NEWS_ACTIVITY_POSTED)));
       } else {
         article.setActivityPosted(false);
       }
