@@ -357,6 +357,9 @@ public class NewsServiceImpl implements NewsService {
       }
       NewsUtils.broadcastEvent(NewsUtils.UPDATE_NEWS, updater, news);
     }
+    if(newsUpdateType.equals(NewsUtils.NewsUpdateType.POSTING_AND_PUBLISHING.name())){
+      addNewArticleVersionWithLang(news, updaterIdentity, space);
+    }
     return news;
   }
 
