@@ -296,7 +296,7 @@ public class NewsServiceImpl implements NewsService {
       if (news.isPublished()) {
         publishNews(news, updater);
       } else {
-        unpublishNews(newsId, updater);
+        unpublishNews(newsId, updater, false);
       }
     }
     if (publish == news.isPublished() && news.isPublished() && canPublish) {
@@ -429,7 +429,7 @@ public class NewsServiceImpl implements NewsService {
    * {@inheritDoc}
    */
   @Override
-  public void unpublishNews(String newsId, String publisher) throws Exception {
+  public void unpublishNews(String newsId, String publisher, boolean unpublishScheduled) throws Exception {
     News news = getNewsArticleById(newsId);
     Space space = spaceService.getSpaceById(news.getSpaceId());
     newsTargetingService.deleteNewsTargets(news, publisher);
@@ -447,9 +447,11 @@ public class NewsServiceImpl implements NewsService {
       Map<String, String> properties = newsMetadataItem.getProperties();
       if (properties != null) {
         properties.put(PUBLISHED, String.valueOf(false));
-        properties.put(UNPUBLISH_SCHEDULED, "false");
-        properties.remove(UNPUBLISH_SCHEDULED_DATE);
         properties.remove(NEWS_AUDIENCE);
+        if (unpublishScheduled) {
+          properties.put(UNPUBLISH_SCHEDULED, "false");
+          properties.remove(UNPUBLISH_SCHEDULED_DATE);
+        }
       }
       newsMetadataItem.setProperties(properties);
       Date updatedDate = Calendar.getInstance().getTime();
@@ -760,7 +762,7 @@ public class NewsServiceImpl implements NewsService {
         if (news.isPublished()) {
           publishNews(news, currentIdentity.getUserId());
         } else {
-          unpublishNews(news.getId(), currentIdentity.getUserId());
+          unpublishNews(news.getId(), currentIdentity.getUserId(), false);
         }
       }
       // set the url and the space url to the scheduled news
