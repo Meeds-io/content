@@ -51,7 +51,6 @@ export default {
     originalVersion: null,
     previousSelectedTranslation: null,
     switchTranslation: false,
-    initialized: false
   }),
   computed: {
     activityId() {
@@ -85,13 +84,6 @@ export default {
       return this.news?.canPublish || this.news?.canSchedule;
     },
   },
-  watch: {
-    selectedTranslation() {
-      if (this.initialized) {
-        this.markAsRead();
-      }
-    }
-  },
   created() {
     this.getAvailableLanguages();
     const url = new URL(window.location.href);
@@ -112,7 +104,6 @@ export default {
     window.addEventListener('popstate', () => {
       this.handleUrlUpdate();
     });
-    this.initialized = true;
   },
   methods: {
     handleUrlUpdate() {
@@ -205,6 +196,7 @@ export default {
       this.selectedTranslation = translation;
       this.getArticleVersionWithLang(this.news.id, this.selectedTranslation.value);
       this.$forceUpdate();
+      this.markAsRead();
     },
     fetchTranslation(articleId) {
       this.$newsServices.getArticleLanguages(articleId, false).then((resp) => {

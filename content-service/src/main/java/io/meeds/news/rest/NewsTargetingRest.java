@@ -51,6 +51,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -274,6 +275,26 @@ public class NewsTargetingRest {
     } catch (Exception e) {
       LOG.error("Error when updating the news target with name " + newsTargetingEntity.getName(), e);
       return Response.serverError().entity(e.getMessage()).build();
+    }
+  }
+
+  @GetMapping(path = "{targetName}", produces = MediaType.APPLICATION_JSON)
+  @Secured("users")
+  @Operation(summary = "Get article target by its name", method = "GET", description = "Get article target by its name")
+  @ApiResponses(value = { @ApiResponse(responseCode = "404", description = "Object not found"),
+      @ApiResponse(responseCode = "500", description = "Internal server error") })
+  public ResponseEntity<NewsTargetingEntity> getTargetByName(@PathVariable("targetName") String targetName) {
+    if (StringUtils.isBlank(targetName)) {
+      return ResponseEntity.badRequest().build();
+    }
+    try {
+      NewsTargetingEntity newsTargetingEntity = newsTargetingService.getTargetByName(targetName);
+      if (newsTargetingEntity == null) {
+        return ResponseEntity.notFound().build();
+      }
+      return ResponseEntity.ok(newsTargetingEntity);
+    } catch (Exception e) {
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
     }
   }
 }

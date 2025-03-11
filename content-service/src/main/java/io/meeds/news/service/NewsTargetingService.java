@@ -173,4 +173,12 @@ public interface NewsTargetingService {
                              org.exoplatform.services.security.Identity currentIdentity) throws IllegalAccessException,
                                                                                          IllegalStateException,
                                                                                          IllegalArgumentException;
+
+  /**
+   * Get target by its name
+   * 
+   * @param targetName target name
+   * @return {@link NewsTargetingEntity}
+   */
+  NewsTargetingEntity getTargetByName(String targetName);
 }

@@ -47,7 +47,22 @@ extensionRegistry.registerExtension('AnalyticsSamples', 'SampleItem', {
 extensionRegistry.registerExtension('AnalyticsChart', 'FieldValueName', {
   type: 'contentPublishingTargets',
   match: (fieldName) => fieldName === 'contentPublishingTargets',
-  getLabel: (fieldName, fieldValue) =>  fieldValue
+  getLabel: async (fieldName, fieldValue) => {
+    try {
+      const resp = await fetch(`/content/rest/targeting/${fieldValue}`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+      if (!resp.ok) {
+        return fieldValue;
+      }
+      const target = await resp.json();
+      return target?.properties?.label;
+    } catch (error) {
+      console.error('Error fetching target info:', error);
+      throw error;
+    }
+  }
 });
 
 extensionRegistry.registerExtension('AnalyticsSamples', 'SampleItem', {
