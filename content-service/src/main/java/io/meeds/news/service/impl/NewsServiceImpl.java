@@ -42,6 +42,7 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.stream.Stream;
 
+import io.meeds.news.model.*;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -89,12 +90,6 @@ import org.exoplatform.wiki.service.WikiService;
 import org.exoplatform.wiki.service.plugin.WikiDraftPageAttachmentPlugin;
 
 import io.meeds.news.filter.NewsFilter;
-import io.meeds.news.model.ArticleTarget;
-import io.meeds.news.model.News;
-import io.meeds.news.model.NewsDraftObject;
-import io.meeds.news.model.NewsLatestDraftObject;
-import io.meeds.news.model.NewsPageObject;
-import io.meeds.news.model.NewsPageVersionObject;
 import io.meeds.news.notification.plugin.MentionInNewsNotificationPlugin;
 import io.meeds.news.notification.plugin.PostNewsNotificationPlugin;
 import io.meeds.news.notification.plugin.PublishNewsNotificationPlugin;

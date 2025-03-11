@@ -18,34 +18,48 @@
 -->
 
 <template>
-  <span>
-    <content-target-item-attribute
-      v-for="target in values"
-      :key="target"
-      :target-name="target" />
-  </span>
+  <v-chip class="ms-1 mb-1">
+    {{ targetLabel }}
+  </v-chip>
 </template>
 
 <script>
 export default {
+  data() {
+    return {
+      targetInfo: null
+    };
+  },
   props: {
-    attrValue: {
+    targetName: {
       type: String,
       default: null
     }
   },
   computed: {
-    values() {
-      return this.parseTargetsValue(this.attrValue);
+    targetLabel() {
+      return this.targetInfo?.properties?.label;
     }
   },
+  created() {
+    this.getTargetInfo().then(data => {
+      this.targetInfo = data;
+    });
+  },
   methods: {
-    parseTargetsValue(value) {
+    async getTargetInfo() {
       try {
-        const parsedValue = JSON.parse(value);
-        return Array.isArray(parsedValue) ? parsedValue : [parsedValue];
-      } catch {
-        return [value];
+        const resp = await fetch(`/content/rest/targeting/${this.targetName}`, {
+          method: 'GET',
+          credentials: 'include',
+        });
+        if (!resp.ok) {
+          return;
+        }
+        return await resp.json();
+      } catch (error) {
+        console.error('Error fetching article:', error);
+        throw error;
       }
     }
   }
