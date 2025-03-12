@@ -85,6 +85,7 @@ public class AnalyticsNewsListener extends Listener<String, News> {
   @Override
   public void onEvent(Event<String, News> event) throws Exception {
     News news = event.getData();
+    String updater = event.getSource();
     String operation = mapEventNameToOperation(event.getEventName());
     long userId = 0;
     Identity identity = getIdentityManager().getOrCreateUserIdentity(event.getSource());
@@ -103,8 +104,8 @@ public class AnalyticsNewsListener extends Listener<String, News> {
         || operation.equals(DELETE_CONTENT_OPERATION_NAME)) {
       statisticData.addParameter("contentLanguage", news.getLang() != null ? news.getLang() : "originalVersion");
     }
-    statisticData.addParameter("contentCreator", news.getAuthor());
-    statisticData.addParameter("contentLastModifier", news.getUpdater());
+    statisticData.addParameter("contentCreator", news.getOwner());
+    statisticData.addParameter("contentLastModifier", updater);
     statisticData.addParameter("contentType", "News");
     statisticData.addParameter("contentUpdatedDate", news.getUpdateDate());
     statisticData.addParameter("contentCreationDate", news.getCreationDate());
