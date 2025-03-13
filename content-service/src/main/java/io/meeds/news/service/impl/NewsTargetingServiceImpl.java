@@ -286,6 +286,13 @@ public class NewsTargetingServiceImpl implements NewsTargetingService {
     return metadataService.updateMetadata(storedMetadata, userIdentityId);
   }
 
+  @Override
+  public NewsTargetingEntity getTargetByName(String targetName) {
+    MetadataKey targetMetadataKey = new MetadataKey(METADATA_TYPE.getName(), targetName, 0);
+    Metadata targetMetadata = metadataService.getMetadataByKey(targetMetadataKey);
+    return toEntity(targetMetadata);
+  }
+  
   private NewsTargetingEntity toEntity(Metadata metadata) {
     NewsTargetingEntity newsTargetingEntity = new NewsTargetingEntity();
     newsTargetingEntity.setName(metadata.getName());

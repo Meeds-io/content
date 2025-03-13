@@ -411,15 +411,15 @@ public class NewsRest {
       @ApiResponse(responseCode = "404", description = "News not found"),
       @ApiResponse(responseCode = "500", description = "Internal server error") })
 
-  public Response markNewsAsRead(@PathVariable("id")
-                                 String id) {
+  public Response markNewsAsRead(@Parameter(description = "News id") @PathVariable("id") String id,
+                                 @Parameter(description = "News target lang") @RequestParam("lang") String lang) {
     String authenticatedUser = ConversationState.getCurrent().getIdentity().getUserId();
     try {
       if (StringUtils.isBlank(id)) {
         return Response.status(Response.Status.BAD_REQUEST).build();
       }
       org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
-      News news = newsService.getNewsById(id, currentIdentity, false, ARTICLE.name().toLowerCase());
+      News news = newsService.getNewsByIdAndLang(id, currentIdentity, false, ARTICLE.name().toLowerCase(), lang);
       if (news == null) {
         return Response.status(Response.Status.NOT_FOUND).build();
       }

@@ -1,7 +1,7 @@
-/**
+/*
  * This file is part of the Meeds project (https://meeds.io/).
  *
- * Copyright (C) 2020 - 2024 Meeds Association contact@meeds.io
+ * Copyright (C) 2025 Meeds Association contact@meeds.io
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -17,19 +17,18 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
- 
-export function initExtensions() {
-  extensionRegistry.registerExtension('AnalyticsTable', 'CellValue', {
-    type: 'news',
-    options: {
-      // Rank of executing 'match' method
-      rank: 60,
-      // Used Vue component to display cell value
-      vueComponent: Vue.options.components['analytics-table-cell-content-value'],
-      // Method complete signature : match: (fieldName, aggregationType, fieldDataType, item) => { ... }
-      match: (fieldName, aggregationType) => {
-        return fieldName === 'contentId' && aggregationType === 'TERMS';
-      },
-    },
-  });
+package io.meeds.news.model;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class ContentPublishEvent {
+
+  private News   originalArticle;
+
+  private News   updatedArticle;
 }

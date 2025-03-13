@@ -594,4 +594,28 @@ public class NewsTargetingImplTest {
 
     verify(metadataService, times(1)).deleteMetadataItem(1, false);
   }
+
+  @Test
+  public void testGetTargetByName() {
+    // Given
+    String targetName = "testTarget";
+    MetadataKey targetMetadataKey = new MetadataKey(NewsTargetingService.METADATA_TYPE.getName(), targetName, 0);
+
+    Metadata testTarget = new Metadata();
+    testTarget.setName(targetName);
+    testTarget.setCreatedDate(100);
+    testTarget.setId(1);
+
+    Map<String, String> properties = new HashMap<>();
+    properties.put("label", "label test");
+    testTarget.setProperties(properties);
+
+    when(metadataService.getMetadataByKey(targetMetadataKey)).thenReturn(testTarget);
+
+    NewsTargetingEntity result = newsTargetingService.getTargetByName(targetName);
+
+    assertNotNull(result);
+    assertEquals(targetName, result.getName());
+    assertNotNull(result.getProperties());
+  }
 }
