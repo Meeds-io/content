@@ -39,6 +39,7 @@
         v-if="canManageNewsList"
         :saved-header-translations="headerTranslations"
         :language="language"
+        :can-manage-news-list="canManageNewsList"
         :application-id="applicationId" />
       <news-publish-targets-management-drawer v-if="canManageNewsPublishTargets" />
     </v-app>
