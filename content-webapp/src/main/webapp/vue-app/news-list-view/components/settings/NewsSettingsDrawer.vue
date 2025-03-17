@@ -227,6 +227,10 @@ export default {
       type: Object,
       default: null
     },
+    canManageNewsList: {
+      type: Boolean,
+      default: false
+    }
   },
   computed: {
     backgroundColor(){
