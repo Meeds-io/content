@@ -20,7 +20,7 @@
 -->
 <template>
   <v-hover v-slot="{ hover }">
-    <v-app v-show="!hideEmptyNewsTemplateForNonPublisher" class="news-list-view-app position-relative">
+    <v-app v-show="!hideEmptyNewsTemplate" class="news-list-view-app position-relative">
       <v-card
         :class="newsListViewClass"
         class="application-body application-layout-style overflow-hidden"
@@ -36,9 +36,10 @@
         </v-card-text>
       </v-card>
       <news-settings-drawer
-        v-if="canPublishNews"
+        v-if="canManageNewsList"
         :saved-header-translations="headerTranslations"
         :language="language"
+        :can-manage-news-list="canManageNewsList"
         :application-id="applicationId" />
       <news-publish-targets-management-drawer v-if="canManageNewsPublishTargets" />
     </v-app>
@@ -116,7 +117,7 @@ export default {
   data: () => ({
     extensionApp: 'NewsList',
     extensionType: 'views',
-    newsList: [null],
+    newsList: [],
     viewExtensions: {},
     loading: false,
     hasMore: false,
@@ -146,7 +147,7 @@ export default {
         const sortedViewExtensions = Object.values(this.viewExtensions).sort();
         return sortedViewExtensions[0];
       }
-      return null;
+      return Object.values(this.viewExtensions).sort()[0];
     },
     selectedViewComponent() {
       return this.selectedViewExtension && {
@@ -189,11 +190,12 @@ export default {
           showArticleReactions: this.showArticleReactions,
           showArticleImage: this.showArticleImage,
           seeAllUrl: this.seeAllUrl,
-        }
+        },
+        canManageNewsList: this.canManageNewsList
       };
     },
-    hideEmptyNewsTemplateForNonPublisher() {
-      return this.selectedViewExtension?.id === 'NewsEmptyTemplate' && !this.canPublishNews;
+    hideEmptyNewsTemplate() {
+      return this.selectedViewExtension?.id === 'NewsEmptyTemplate' && !this.canPublishNews && !this.canManageNewsPublishTargets;
     },
     newsListViewClass() {
       let newsListViewClass = 'list-view-card';
@@ -207,6 +209,9 @@ export default {
       }
       return newsListViewClass;
     },
+    canManageNewsList() {
+      return this.canPublishNews || this.canManageNewsPublishTargets;
+    }
   },
   watch: {
     viewExtensions() {
@@ -230,7 +235,9 @@ export default {
     this.showHeader = this.$root.showHeader;
     this.newsTarget = this.$root.newsTarget;
     this.limit = this.$root.limit;
-    this.retrieveNewsList().finally(() => this.$root.$applicationLoaded());
+    if (this.newsTarget) {
+      this.retrieveNewsList().finally(() => this.$root.$applicationLoaded());
+    }
     document.addEventListener(`component-${this.extensionApp}-${this.extensionType}-updated`, this.refreshViewExtensions);
     this.refreshViewExtensions();
   },

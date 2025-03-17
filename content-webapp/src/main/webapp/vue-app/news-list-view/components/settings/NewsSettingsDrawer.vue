@@ -228,6 +228,10 @@ export default {
       type: Object,
       default: null
     },
+    canManageNewsList: {
+      type: Boolean,
+      default: false
+    }
   },
   computed: {
     backgroundColor(){
@@ -306,9 +310,7 @@ export default {
       this.newsTargets.push(newTarget);
       this.newsTarget = newTarget.name;
     });
-    this.$newsServices.canPublishNews().then(canPublishNews => {
-      this.saveSettingsURL = canPublishNews ? this.$root.saveSettingsURL : null;
-    });
+    this.saveSettingsURL = this.canManageNewsList && this.$root.saveSettingsURL || null;
   },
   methods: {
     open() {
