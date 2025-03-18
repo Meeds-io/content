@@ -21,7 +21,7 @@
 <template>
   <v-hover v-slot="{ hover }">
     <v-app
-      v-show="canManageNewsList"
+      v-show="$root.canManageNewsList || $root.canPublishNews"
       class="newsEmptyTemplate border-box-sizing"
       flat>
       <v-main>

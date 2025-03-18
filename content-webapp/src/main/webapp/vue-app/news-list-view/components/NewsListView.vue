@@ -39,9 +39,8 @@
         v-if="canManageNewsList"
         :saved-header-translations="headerTranslations"
         :language="language"
-        :can-manage-news-list="canManageNewsList"
         :application-id="applicationId" />
-      <news-publish-targets-management-drawer v-if="canManageNewsPublishTargets" />
+      <news-publish-targets-management-drawer v-if="canManageNewsTarget" />
     </v-app>
   </v-hover>
 </template>
@@ -122,8 +121,6 @@ export default {
     loading: false,
     hasMore: false,
     offset: 0,
-    canPublishNews: false,
-    canManageNewsPublishTargets: eXo.env.portal.canManageNewsPublishTargets,
     language: eXo?.env?.portal?.language,
   }),
   computed: {
@@ -191,11 +188,10 @@ export default {
           showArticleImage: this.showArticleImage,
           seeAllUrl: this.seeAllUrl,
         },
-        canManageNewsList: this.canManageNewsList
       };
     },
     hideEmptyNewsTemplate() {
-      return this.selectedViewExtension?.id === 'NewsEmptyTemplate' && !this.canPublishNews && !this.canManageNewsPublishTargets;
+      return this.selectedViewExtension?.id === 'NewsEmptyTemplate' && !this.canManageNewsList;
     },
     newsListViewClass() {
       let newsListViewClass = 'list-view-card';
@@ -210,7 +206,10 @@ export default {
       return newsListViewClass;
     },
     canManageNewsList() {
-      return this.canPublishNews || this.canManageNewsPublishTargets;
+      return this.$root.canManageNewsList || this.$root.canPublishNews;
+    },
+    canManageNewsTarget() {
+      return this.$root.canManageNewsTarget || false;
     }
   },
   watch: {
@@ -219,9 +218,6 @@ export default {
     },
   },
   created() {
-    this.$newsServices.canPublishNews().then(canPublishNews => {
-      this.canPublishNews = canPublishNews;
-    });
     this.$root.$on('saved-news-settings', (newsTarget, selectedOptions) => {
       this.seeAllUrl = selectedOptions.seeAllUrl;
       this.showSeeAll = selectedOptions.showSeeAll;
