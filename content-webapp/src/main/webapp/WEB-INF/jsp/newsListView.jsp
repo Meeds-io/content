@@ -3,8 +3,9 @@
 <%@ page import="io.meeds.news.utils.NewsUtils" %>
 <%@ page import="org.exoplatform.web.PortalHttpServletResponseWrapper" %>
 <%@ page import="org.exoplatform.portal.application.PortalRequestContext" %>
-<%@ page import="org.exoplatform.commons.api.settings.ExoFeatureService" %>
 <%@ page import="org.exoplatform.commons.utils.CommonsUtils" %>
+<%@ page import="org.exoplatform.portal.config.UserACL" %>
+<%@ page import="org.exoplatform.portal.config.model.Page" %>
 <%@ taglib uri="http://java.sun.com/portlet_2_0" prefix="portlet" %>
 
 <portlet:defineObjects />
@@ -61,10 +62,12 @@
     String newsListUrl = "/content/rest/contents/byTarget/" + newsTarget + "?offset=0&limit=" + limit + "&returnSize=true";
     responseWrapper.addHeader("Link", "<" + newsListUrl + ">; rel=prefetch; as=fetch; crossorigin=use-credentials", false);
     boolean canManageNewsPublishTargets = NewsUtils.canManageNewsPublishTargets(currentIdentity);
+    UserACL userACL = CommonsUtils.getService(UserACL.class);
+    Page currentPage = rcontext.getPage();
+    boolean hasEditPermission = currentIdentity != null && userACL.hasEditPermission(currentPage, currentIdentity);
   %>
   <div class="news-list-view-app" id="<%= appId %>">
     <script type="text/javascript">
-      eXo.env.portal.canManageNewsPublishTargets = <%=canManageNewsPublishTargets%>;
       require(['PORTLET/content/NewsListView'], app => app.init({
         applicationId: '<%=applicationId%>',
         appId: '<%=appId%>',
@@ -82,7 +85,9 @@
         showArticleSpace: <%= showArticleSpace == null ? null : "'" + showArticleSpace + "'" %>,
         showArticleReactions: <%= showArticleReactions == null ? null : "'" + showArticleReactions + "'" %>,
         showArticleDate: <%= showArticleDate == null ? null : "'" + showArticleDate + "'" %>,
-        seeAllUrl: <%= seeAllUrl == null ? null : "'" + seeAllUrl + "'" %>
+        seeAllUrl: <%= seeAllUrl == null ? null : "'" + seeAllUrl + "'" %>,
+        canManageNewsList: <%= hasEditPermission %>,
+        canManageNewsPublishTargets: <%=canManageNewsPublishTargets%>,
       }));
     </script>
   </div>
