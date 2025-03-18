@@ -109,7 +109,7 @@
               </template>
             </v-select>
           </div>
-          <div v-if="canManageNewsPublishTargets" class="d-flex flex-row clickable text-decoration-underline">
+          <div v-if="$root.canManageNewsTarget" class="d-flex flex-row clickable text-decoration-underline">
             <a @click="createNewTarget"> {{ $t('news.list.settings.drawer.createNewTarget') }} </a>
           </div>
           <div v-if="newsTargets.length === 0" class="d-flex flex-row grey--text">
@@ -211,7 +211,6 @@ export default {
     seeAllUrl: '',
     isValidSeeAllUrl: false,
     saveSettingsURL: '',
-    canManageNewsPublishTargets: eXo.env.portal.canManageNewsPublishTargets,
     translationObjectType: 'newsListView',
     headerTitleFieldName: 'headerNameInput',
   }),
@@ -228,10 +227,6 @@ export default {
       type: Object,
       default: null
     },
-    canManageNewsList: {
-      type: Boolean,
-      default: false
-    }
   },
   computed: {
     backgroundColor(){
@@ -310,7 +305,7 @@ export default {
       this.newsTargets.push(newTarget);
       this.newsTarget = newTarget.name;
     });
-    this.saveSettingsURL = this.canManageNewsList && this.$root.saveSettingsURL || null;
+    this.saveSettingsURL = (this.$root.canManageNewsList || this.$root.canPublishNews) && this.$root.saveSettingsURL || null;
   },
   methods: {
     open() {

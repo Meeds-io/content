@@ -221,7 +221,6 @@ export default {
   created() {
     this.$root.$on('selected-target', (selectedTarget) => {
       this.selectedTarget = selectedTarget;
-      console.log(this.selectedTarget);
       this.originalTargetName = selectedTarget.targetName;
       this.targetLabel = selectedTarget.targetLabel;
       this.targetDescription = selectedTarget.targetDescription;

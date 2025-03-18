@@ -63,6 +63,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("targeting")
@@ -209,11 +210,11 @@ public class NewsTargetingRest {
       @ApiResponse(responseCode = "403", description = "Forbidden operation"),
       @ApiResponse(responseCode = "409", description = "Conflict operation"),
           @ApiResponse(responseCode = "500", description = "Internal server error")})
-  public Response createNewsTarget(@RequestBody NewsTargetingEntity newsTargetingEntity) {
+  public ResponseEntity<Metadata> createNewsTarget(@RequestBody NewsTargetingEntity newsTargetingEntity) {
     if (newsTargetingEntity.getProperties() == null
             || newsTargetingEntity.getProperties().get(NewsUtils.TARGET_PERMISSIONS) == null
             || newsTargetingEntity.getProperties().get(NewsUtils.TARGET_PERMISSIONS).isEmpty()) {
-      return Response.status(Response.Status.FORBIDDEN).build();
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN);
     }
     org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
     try {
@@ -223,20 +224,20 @@ public class NewsTargetingRest {
       targetName.append(System.currentTimeMillis());
       newsTargetingEntity.setName(targetName.toString());
       Metadata addedNewsTarget = newsTargetingService.createNewsTarget(newsTargetingEntity, currentIdentity);
-      return Response.ok(addedNewsTarget).build();
+      return ResponseEntity.ok(addedNewsTarget);
     } catch (IllegalAccessException e) {
       LOG.warn("User '{}' is not authorized to create a news target with name " + newsTargetingEntity.getName(),
                currentIdentity.getUserId(),
                e);
-      return Response.status(Response.Status.UNAUTHORIZED).entity(e.getMessage()).build();
+      throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, e.getMessage());
     } catch (IllegalArgumentException e) {
       LOG.warn("User '{}' can't create a news target with the same name " + newsTargetingEntity.getName(),
                currentIdentity.getUserId(),
                e);
-      return Response.status(Response.Status.CONFLICT).entity(e.getMessage()).build();
+      throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
     } catch (Exception e) {
       LOG.error("Error when creating a news target with name " + newsTargetingEntity.getName(), e);
-      return Response.serverError().entity(e.getMessage()).build();
+      throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
     }
   }
 
