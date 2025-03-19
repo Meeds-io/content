@@ -19,7 +19,7 @@
   <parent>
     <artifactId>addons-parent-pom</artifactId>
     <groupId>io.meeds.addons</groupId>
-    <version>19-M01</version>
+    <version>19-M02</version>
   </parent>
   <groupId>io.meeds.content</groupId>
   <artifactId>content</artifactId>
