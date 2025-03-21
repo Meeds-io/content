@@ -21,7 +21,7 @@
 <template>
   <v-hover v-slot="{ hover }">
     <v-app
-      v-show="$root.canManageNewsList || $root.canPublishNews"
+      v-show="$root.canManageNewsList"
       class="newsEmptyTemplate border-box-sizing"
       flat>
       <v-main>
@@ -60,12 +60,6 @@
 
 <script>
 export default {
-  props: {
-    canManageNewsList: {
-      type: Boolean,
-      default: false
-    }
-  },
   computed: {
     isNewsSettingDefined() {
       return this.$root.viewTemplate && this.$root.newsTarget;

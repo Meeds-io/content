@@ -28,7 +28,7 @@
     </div>
     <div :class="[showHeader && headerTitle ? 'd-flex flex-column me-2 mt-1' : 'd-flex flex-column me-2']">
       <v-icon
-        v-if="canPublishNews && showSettingsIcon"
+        v-if="$root.canManageNewsList && showSettingsIcon"
         :class="classButtonOpenSettings"
         :aria-label="$t('news.latest.openSettings')"
         size="24"
@@ -75,7 +75,6 @@ export default {
     seeAllUrl: '',
     showHeader: false,
     showSeeAll: false,
-    canPublishNews: false,
     language: eXo?.env?.portal?.language,
   }),
   computed: {
@@ -83,16 +82,13 @@ export default {
       return this.$root.headerTitle || '';
     },
     showSettingsContainer(){
-      return this.showHeader || this.showSeeAll || this.canPublishNews ;
+      return this.showHeader || this.showSeeAll || this.$root.canManageNewsList ;
     },
     showSettingsIcon() {
       return this.isHovering && !this.hideOpenSettingButton;
     }
   },
   created() {
-    this.$newsServices.canPublishNews().then(canPublishNews => {
-      this.canPublishNews = canPublishNews;
-    });
     this.$root.$on('saved-news-settings', (newsTarget, selectedOptions) => {
       this.seeAllUrl = selectedOptions.seeAllUrl;
       this.showSeeAll = selectedOptions.showSeeAll;

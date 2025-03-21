@@ -76,7 +76,7 @@ export function init(params) {
   const showArticleReactions = params.showArticleReactions === '' ? true : params.showArticleReactions === 'true';
   const showArticleDate  = params.showArticleDate === '' ? true : params.showArticleDate === 'true';
   const seeAllUrl = params.seeAllUrl;
-  const canManageNewsList = params.canManageNewsList;
+  const canEditNewsList = params.canEdit;
   const canManageNewsTarget = params.canManageNewsPublishTargets;
 
   exoi18n.loadLanguageAsync(lang, url).then(i18n => {
@@ -101,7 +101,8 @@ export function init(params) {
         showArticleDate,
         seeAllUrl,
         defaultLanguage: eXo?.env?.portal?.defaultLanguage,
-        canManageNewsList,
+        canEditNewsList,
+        canManageNewsList: false,
         canManageNewsTarget,
         canPublishNews: false
       },
@@ -114,6 +115,7 @@ export function init(params) {
         this.$newsServices.canPublishNews().then(canPublishNews => {
           this.canPublishNews = canPublishNews;
         });
+        this.canManageNewsList = this.canEditNewsList || this.canPublishNews;
       },
       template: `<news-list-view
                   id="${appId}"
