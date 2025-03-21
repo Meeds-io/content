@@ -71,7 +71,7 @@
           <v-icon>chevron_right</v-icon>
         </v-btn>
         <v-btn
-          v-if="canPublishNews && hover"
+          v-if="$root.canManageNewsList && hover"
           :aria-label="$t('news.latest.openSettings')"
           icon
           @click="openDrawer">
@@ -112,7 +112,6 @@ export default {
         month: 'long',
         day: 'numeric',
       },
-      canPublishNews: false,
     };
   },
   computed: {
@@ -136,11 +135,6 @@ export default {
     showArticleDate() {
       return this.selectedOption.showArticleDate;
     },
-  },
-  created() {
-    this.$newsServices.canPublishNews().then(canPublishNews => {
-      this.canPublishNews = canPublishNews;
-    });
   },
   methods: {
     disabledContainerNewsAlertView(element,index){

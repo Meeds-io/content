@@ -86,7 +86,7 @@
         showArticleReactions: <%= showArticleReactions == null ? null : "'" + showArticleReactions + "'" %>,
         showArticleDate: <%= showArticleDate == null ? null : "'" + showArticleDate + "'" %>,
         seeAllUrl: <%= seeAllUrl == null ? null : "'" + seeAllUrl + "'" %>,
-        canManageNewsList: <%= hasEditPermission %>,
+        canEdit: <%= hasEditPermission %>,
         canManageNewsPublishTargets: <%=canManageNewsPublishTargets%>,
       }));
     </script>
