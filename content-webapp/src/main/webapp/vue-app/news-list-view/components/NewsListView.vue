@@ -20,7 +20,7 @@
 -->
 <template>
   <v-hover v-slot="{ hover }">
-    <v-app v-show="!hideEmptyNewsTemplateForNonPublisher" class="news-list-view-app position-relative">
+    <v-app v-show="!hideEmptyNewsTemplate" class="news-list-view-app position-relative">
       <v-card
         :class="newsListViewClass"
         class="application-body application-layout-style overflow-hidden"
@@ -36,11 +36,11 @@
         </v-card-text>
       </v-card>
       <news-settings-drawer
-        v-if="canPublishNews"
+        v-if="canManageNewsList"
         :saved-header-translations="headerTranslations"
         :language="language"
         :application-id="applicationId" />
-      <news-publish-targets-management-drawer v-if="canManageNewsPublishTargets" />
+      <news-publish-targets-management-drawer v-if="canManageNewsTarget" />
     </v-app>
   </v-hover>
 </template>
@@ -116,13 +116,11 @@ export default {
   data: () => ({
     extensionApp: 'NewsList',
     extensionType: 'views',
-    newsList: [null],
+    newsList: [],
     viewExtensions: {},
     loading: false,
     hasMore: false,
     offset: 0,
-    canPublishNews: false,
-    canManageNewsPublishTargets: eXo.env.portal.canManageNewsPublishTargets,
     language: eXo?.env?.portal?.language,
   }),
   computed: {
@@ -146,7 +144,7 @@ export default {
         const sortedViewExtensions = Object.values(this.viewExtensions).sort();
         return sortedViewExtensions[0];
       }
-      return null;
+      return Object.values(this.viewExtensions).sort()[0];
     },
     selectedViewComponent() {
       return this.selectedViewExtension && {
@@ -189,11 +187,11 @@ export default {
           showArticleReactions: this.showArticleReactions,
           showArticleImage: this.showArticleImage,
           seeAllUrl: this.seeAllUrl,
-        }
+        },
       };
     },
-    hideEmptyNewsTemplateForNonPublisher() {
-      return this.selectedViewExtension?.id === 'NewsEmptyTemplate' && !this.canPublishNews;
+    hideEmptyNewsTemplate() {
+      return this.selectedViewExtension?.id === 'NewsEmptyTemplate' && !this.canManageNewsList;
     },
     newsListViewClass() {
       let newsListViewClass = 'list-view-card';
@@ -207,6 +205,12 @@ export default {
       }
       return newsListViewClass;
     },
+    canManageNewsList() {
+      return this.$root.canManageNewsList || this.$root.canPublishNews;
+    },
+    canManageNewsTarget() {
+      return this.$root.canManageNewsTarget || false;
+    }
   },
   watch: {
     viewExtensions() {
@@ -214,9 +218,6 @@ export default {
     },
   },
   created() {
-    this.$newsServices.canPublishNews().then(canPublishNews => {
-      this.canPublishNews = canPublishNews;
-    });
     this.$root.$on('saved-news-settings', (newsTarget, selectedOptions) => {
       this.seeAllUrl = selectedOptions.seeAllUrl;
       this.showSeeAll = selectedOptions.showSeeAll;
@@ -230,7 +231,9 @@ export default {
     this.showHeader = this.$root.showHeader;
     this.newsTarget = this.$root.newsTarget;
     this.limit = this.$root.limit;
-    this.retrieveNewsList().finally(() => this.$root.$applicationLoaded());
+    if (this.newsTarget) {
+      this.retrieveNewsList().finally(() => this.$root.$applicationLoaded());
+    }
     document.addEventListener(`component-${this.extensionApp}-${this.extensionType}-updated`, this.refreshViewExtensions);
     this.refreshViewExtensions();
   },
