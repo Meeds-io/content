@@ -84,11 +84,7 @@ public class NewsUtils {
 
   public static final String ALL_NEWS_AUDIENCE               = "all";
 
-  public static final String PUBLISHER_MEMBERSHIP_NAME       = "publisher";
-
-  public static final String MANAGER_MEMBERSHIP_NAME         = "manager";
-
-  public static final String PLATFORM_WEB_CONTRIBUTORS_GROUP = "/platform/web-contributors";
+  public static final String PLATFORM_ADMINISTRATORS_GROUP = "/platform/administrators";
 
   public static final String ADD_ARTICLE_TRANSLATION         = "content.add.article.translation";
 
@@ -176,7 +172,7 @@ public class NewsUtils {
   }
 
   public static boolean canManageNewsPublishTargets(org.exoplatform.services.security.Identity currentIdentity) {
-    return currentIdentity != null && currentIdentity.isMemberOf(PLATFORM_WEB_CONTRIBUTORS_GROUP, MANAGER_MEMBERSHIP_NAME);
+    return currentIdentity != null && currentIdentity.isMemberOf(PLATFORM_ADMINISTRATORS_GROUP);
   }
 
   public static org.exoplatform.services.security.Identity getUserIdentity(String username) {

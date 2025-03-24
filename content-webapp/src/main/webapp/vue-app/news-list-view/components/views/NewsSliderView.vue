@@ -45,7 +45,7 @@
                 :class="$vuetify.rtl && 'l-0' || 'r-0'"
                 class="flex flex-row position-absolute">
                 <v-btn
-                  v-if="canPublishNews && hover"
+                  v-if="$root.canManageNewsList && hover"
                   :aria-label="$t('news.latest.openSettings')"
                   icon
                   @click="openDrawer"
@@ -57,7 +57,7 @@
                 v-if="showArticleTitle"
                 :href="articleUrl(item)"
                 class="flex flex-row flex-grow-1 align-center justify-center headLinesTruncate"
-                :class="extraClass.concat(canPublishNews ? 'mt-12' : '')">
+                :class="extraClass.concat($root.canManageNewsList ? 'mt-12' : '')">
                 <span class="text-h4 font-weight-medium white--text text-truncate-2">
                   {{ item.title }}
                 </span>
@@ -105,17 +105,12 @@ export default {
       }
     },
   },
-  data () {
-    return {
-      canPublishNews: false,
-    };
-  },
   computed: {
     news(){
       return this.newsList && this.newsList.filter(news => !!news);
     },
     extraClass() {
-      return this.$vuetify.breakpoint.width > 550 ? (!this.canPublishNews && 'mt-7' || '') : '' ;
+      return this.$vuetify.breakpoint.width > 550 ? (!this.$root.canManageNewsList && 'mt-7' || '') : '' ;
     },
     articleUrl() {
       return (item) => {
@@ -131,11 +126,6 @@ export default {
     showArticleSummary() {
       return this.selectedOption.showArticleSummary;
     },
-  },
-  created() {
-    this.$newsServices.canPublishNews().then(canPublishNews => {
-      this.canPublishNews = canPublishNews;
-    });
   },
   methods: {
     openDrawer() {
