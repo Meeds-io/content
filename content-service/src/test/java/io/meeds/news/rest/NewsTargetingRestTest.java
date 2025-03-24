@@ -20,6 +20,7 @@
 package io.meeds.news.rest;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.lenient;
 
 import static org.mockito.Mockito.when;
@@ -51,6 +52,7 @@ import io.meeds.news.service.NewsTargetingService;
 import io.meeds.news.utils.NewsUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.server.ResponseStatusException;
 
 @RunWith(MockitoJUnitRunner.class)
 public class NewsTargetingRestTest {
@@ -154,18 +156,16 @@ public class NewsTargetingRestTest {
     lenient().when(newsTargetingService.createNewsTarget(newsTargetingEntity, currentIdentity)).thenReturn(sliderNews);
 
     // When
-    Response response = newsTargetingRestController.createNewsTarget(newsTargetingEntity);
+    ResponseEntity response = newsTargetingRestController.createNewsTarget(newsTargetingEntity);
 
     // Then
-    assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+    assertEquals(HttpStatus.OK, response.getStatusCode());
 
     when(newsTargetingRestController.createNewsTarget(newsTargetingEntity)).thenThrow(RuntimeException.class);
 
     // When
-    response = newsTargetingRestController.createNewsTarget(newsTargetingEntity);
+    assertThrows(ResponseStatusException.class, () -> newsTargetingRestController.createNewsTarget(newsTargetingEntity));
 
-    // Then
-    assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
 
   }
 

@@ -21,7 +21,7 @@
 <template>
   <v-hover v-slot="{ hover }">
     <v-app
-      v-show="canPublishNews"
+      v-show="$root.canManageNewsList"
       class="newsEmptyTemplate border-box-sizing"
       flat>
       <v-main>
@@ -60,20 +60,10 @@
 
 <script>
 export default {
-  data () {
-    return {
-      canPublishNews: false,
-    };
-  },
   computed: {
     isNewsSettingDefined() {
       return this.$root.viewTemplate && this.$root.newsTarget;
     }
-  },
-  created() {
-    this.$newsServices.canPublishNews().then(canPublishNews => {
-      this.canPublishNews = canPublishNews;
-    });
   },
   methods: {
     openDrawer() {

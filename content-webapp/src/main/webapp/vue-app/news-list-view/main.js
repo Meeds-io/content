@@ -76,6 +76,8 @@ export function init(params) {
   const showArticleReactions = params.showArticleReactions === '' ? true : params.showArticleReactions === 'true';
   const showArticleDate  = params.showArticleDate === '' ? true : params.showArticleDate === 'true';
   const seeAllUrl = params.seeAllUrl;
+  const canEditNewsList = params.canEdit;
+  const canManageNewsTarget = params.canManageNewsPublishTargets;
 
   exoi18n.loadLanguageAsync(lang, url).then(i18n => {
     // init Vue app when locale resources are ready
@@ -98,7 +100,11 @@ export function init(params) {
         showArticleReactions,
         showArticleDate,
         seeAllUrl,
-        defaultLanguage: eXo?.env?.portal?.defaultLanguage
+        defaultLanguage: eXo?.env?.portal?.defaultLanguage,
+        canEditNewsList,
+        canManageNewsList: false,
+        canManageNewsTarget,
+        canPublishNews: false
       },
       created() {
         Vue.prototype.$translationService.getTranslations('newsListView', applicationId, 'headerNameInput').then(translations => {
@@ -106,6 +112,10 @@ export function init(params) {
           this.headerTitle = translations?.[lang] || translations?.[this.defaultLanguage]
                                                   || params.headerTitle;
         });
+        this.$newsServices.canPublishNews().then(canPublishNews => {
+          this.canPublishNews = canPublishNews;
+        });
+        this.canManageNewsList = this.canEditNewsList || this.canPublishNews;
       },
       template: `<news-list-view
                   id="${appId}"

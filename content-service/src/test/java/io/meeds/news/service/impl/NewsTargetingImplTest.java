@@ -98,9 +98,6 @@ public class NewsTargetingImplTest {
   SpaceService                                           spaceService;
 
   @Mock
-  Space                                                  space;
-
-  @Mock
   ExoContainer                                           container;
 
   @Mock
@@ -126,7 +123,7 @@ public class NewsTargetingImplTest {
   }
 
   @Test
-  public void testGetAllTargets() throws Exception {
+  public void testGetAllTargets() {
     // Given
     EXO_CONTAINER_CONTEXT.when(() -> ExoContainerContext.getService(IdentityRegistry.class)).thenReturn(identityRegistry);
     REST_UTILS.when(() -> RestUtils.getCurrentUser()).thenReturn("root");
@@ -437,7 +434,7 @@ public class NewsTargetingImplTest {
   public void testCreateTarget() throws IllegalAccessException {
     // Given
     org.exoplatform.services.security.Identity currentIdentity = new org.exoplatform.services.security.Identity("root");
-    MembershipEntry membershipentry = new MembershipEntry("/platform/web-contributors", "manager");
+    MembershipEntry membershipentry = new MembershipEntry("/platform/administrators", "manager");
     List<MembershipEntry> memberships = new ArrayList<MembershipEntry>();
     memberships.add(membershipentry);
     currentIdentity.setMemberships(memberships);
@@ -499,7 +496,7 @@ public class NewsTargetingImplTest {
   public void testUpdateTarget() throws IllegalAccessException {
     // Given
     org.exoplatform.services.security.Identity currentIdentity = new org.exoplatform.services.security.Identity("root");
-    MembershipEntry membershipentry = new MembershipEntry("/platform/web-contributors", "manager");
+    MembershipEntry membershipentry = new MembershipEntry("/platform/administrators", "manager");
     List<MembershipEntry> memberships = new ArrayList<MembershipEntry>();
     memberships.add(membershipentry);
     currentIdentity.setMemberships(memberships);
