@@ -78,8 +78,8 @@
         </div>
         <p
           v-if="newsSummary"
+          v-sanitized-html="newsSummary"
           class="article-summary text-break text-sub-title mt-4 mb-0">
-          {{ newsSummary }}
         </p>
         <div class="mt-4">
           <div
