@@ -114,8 +114,8 @@ export function init(params) {
         });
         this.$newsServices.canPublishNews().then(canPublishNews => {
           this.canPublishNews = canPublishNews;
+          this.canManageNewsList = this.canEditNewsList || this.canPublishNews;
         });
-        this.canManageNewsList = this.canEditNewsList || this.canPublishNews;
       },
       template: `<news-list-view
                   id="${appId}"
