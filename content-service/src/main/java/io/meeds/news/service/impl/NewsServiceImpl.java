@@ -1190,19 +1190,13 @@ public class NewsServiceImpl implements NewsService {
   }
 
   private void updateArticleTargets(News article, List<ArticleTarget> oldTargets, String updater) throws Exception {
-    Set<String> oldSet = new HashSet<>(NewsUtils.toTargetNames(oldTargets));
-    Set<String> newSet = new HashSet<>(NewsUtils.toTargetNames(article.getTargets()));
-
-    Set<String> deletedTargets = new HashSet<>(oldSet);
-    deletedTargets.removeAll(newSet);
-    if (!deletedTargets.isEmpty()) {
-      newsTargetingService.deleteNewsTargets(article, deletedTargets);
+    Set<String> oldTargetNames = new HashSet<>(NewsUtils.toTargetNames(oldTargets));
+    Set<String> newTargetNames = new HashSet<>(NewsUtils.toTargetNames(article.getTargets()));
+    if (!oldTargetNames.isEmpty()) {
+      newsTargetingService.deleteNewsTargets(article, oldTargetNames);
     }
-    Set<String> newTargets = new HashSet<>(newSet);
-    newTargets.removeAll(oldSet);
-    if (!newTargets.isEmpty()) {
-      boolean displayed = !(StringUtils.equals(article.getPublicationState(), STAGED));
-      newsTargetingService.saveNewsTarget(article, displayed, List.copyOf(newTargets), updater);
+    if (!newTargetNames.isEmpty()) {
+      newsTargetingService.saveNewsTarget(article, !(StringUtils.equals(article.getPublicationState(), STAGED)), List.copyOf(newTargetNames), updater);
     }
   }
   
@@ -2254,10 +2248,8 @@ public class NewsServiceImpl implements NewsService {
       metadataItem.setUpdatedDate(updateDate.getTime());
       metadataService.updateMetadataItem(metadataItem, Long.parseLong(poster), false);
       news.setSchedulePostDate(null);
+      news.setPublicationState(POSTED);
       return news;
-    }
-    if (!news.isPublished()) {
-      newsTargetingService.deleteNewsTargets(news);
     }
     return null;
   }
