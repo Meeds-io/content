@@ -71,7 +71,8 @@ public class PostScheduledNewsArticleJob {
                      try {
                        if (scheduledArticleMetadataItem.getProperties() != null && !scheduledArticleMetadataItem.getProperties().isEmpty()) {
                          String articleScheduleDate = scheduledArticleMetadataItem.getProperties().getOrDefault(SCHEDULE_POST_DATE, null);
-                         if (articleScheduleDate != null) {
+                         boolean articleDeleted = Boolean.parseBoolean(scheduledArticleMetadataItem.getProperties().getOrDefault(NEWS_DELETED, null));
+                         if (articleScheduleDate != null && !articleDeleted) {
 
                            if (isScheduleDatePassed(articleScheduleDate)) {
                              // return only the metadata items with a schedule date property equals or prior to
