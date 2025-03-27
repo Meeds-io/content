@@ -121,7 +121,7 @@ export default {
       return this.illustrationURL() || '/content/images/news.png';
     },
     displayDate() {
-      return this.item.publishDate && this.item.publishDate.time && new Date(this.item.publishDate.time);
+      return this.item.publishDate && new Date(this.item.publishDate);
     },
     isHiddenSpace() {
       return this.item && !this.item.spaceMember && this.item.hiddenSpace;
