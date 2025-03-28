@@ -46,7 +46,7 @@
               <div class="alerts-article">
                 <span v-if="showArticleDate" class="alerts-article-date">
                   <date-format
-                    :value="new Date(item.publishDate.time)"
+                    :value="new Date(item?.publishDate)"
                     :format="dateFormat" />
                 </span>
                 <span v-if="showArticleDate && showArticleTitle" class="alerts-article-seperator">|</span>
