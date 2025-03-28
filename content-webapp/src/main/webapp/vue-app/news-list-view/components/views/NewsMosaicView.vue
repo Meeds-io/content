@@ -44,7 +44,7 @@
             <div class="titleArea">
               <div v-if="showArticleDate" class="articleDate">
                 <date-format
-                  :value="new Date(item.publishDate.time)"
+                  :value="new Date(item?.publishDate)"
                   :format="dateFormat" />
               </div>
               <div
