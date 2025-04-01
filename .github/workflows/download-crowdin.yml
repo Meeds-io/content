@@ -10,7 +10,7 @@ jobs:
     name: CI Build
     uses: exoplatform/swf-scripts/.github/workflows/download-crowdin-exoplatform.yml@master
     with:
-      CROWDIN_ALLOW_MAINTENANCE_DOWNLOAD: ${{ vars.CROWDIN_ALLOW_MAINTENANCE_DOWNLOAD }}
+      CROWDIN_MAINTENANCE_EXO_VERSION: ${{ vars.CROWDIN_MAINTENANCE_EXO_VERSION }}
       YML_CROWDIN_LANGUAGES_ARG: ${{vars.YML_CROWDIN_LANGUAGES_ARG}}
       CROWDIN_LANGUAGES_ARG: ${{vars.CROWDIN_LANGUAGES_ARG}}
     secrets:
