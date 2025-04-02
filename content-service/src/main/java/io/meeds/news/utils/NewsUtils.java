@@ -256,18 +256,6 @@ public class NewsUtils {
     return illustrationUrl.toString();
   }
 
-  public static boolean canReferToNote(News article, org.exoplatform.services.security.Identity currentIdentity) {
-    Space space = getSpaceService().getSpaceById(article.getSpaceId());
-    if (space == null || currentIdentity == null) {
-      return false;
-    }
-    if (article.isFromExternalPage()) {
-      return false;
-    }
-    return getSpaceService().canRedactOnSpace(space, currentIdentity)
-        || getSpaceService().canPublishOnSpace(space, currentIdentity.getUserId());
-  }
-
   public static List<String> toTargetNames(List<ArticleTarget> articleTargets) {
     if (articleTargets == null || articleTargets.isEmpty()) {
       return new ArrayList<>();
