@@ -287,7 +287,7 @@ public class NewsServiceImpl implements NewsService {
     if (POSTING_AND_PUBLISHING.name().equalsIgnoreCase(newsUpdateType) && (!canEditNews(news, updater) && !NewsUtils.canPublishNews(news.getSpaceId(), updaterIdentity))) {
       throw new IllegalAccessException("User " + updater + " is not authorized to update news");
     }
-    if (PAGE_REFERENCE.name().equalsIgnoreCase(newsUpdateType) && !NewsUtils.canReferToNote(news, updaterIdentity)) {
+    if (PAGE_REFERENCE.name().equalsIgnoreCase(newsUpdateType) && !canReferToNote(news, updaterIdentity)) {
       throw new IllegalAccessException("User " + updater + " is not authorized to refer or derefer news");
     }
     
@@ -529,7 +529,7 @@ public class NewsServiceImpl implements NewsService {
       news.setCanEdit(canEditNews(news, currentIdentity.getUserId()));
       news.setCanDelete(canEditNews(news, currentIdentity.getUserId()));
       news.setCanPublish(NewsUtils.canPublishNews(news.getSpaceId(), currentIdentity));
-      news.setCanRefer(NewsUtils.canReferToNote(news, currentIdentity));
+      news.setCanRefer(canReferToNote(news, currentIdentity));
       news.setCanSchedule(canScheduleNews(news.getSpaceId(), currentIdentity, news));
       news.setTargets(newsTargetingService.getTargetsByNews(news));
       ExoSocialActivity activity = null;
@@ -595,7 +595,7 @@ public class NewsServiceImpl implements NewsService {
       news.setCanEdit(canEditNews(news, currentIdentity.getUserId()));
       news.setCanDelete(canEditNews(news, currentIdentity.getUserId()));
       news.setCanPublish(NewsUtils.canPublishNews(news.getSpaceId(), currentIdentity));
-      news.setCanRefer(NewsUtils.canReferToNote(news, currentIdentity));
+      news.setCanRefer(canReferToNote(news, currentIdentity));
       news.setCanSchedule(canScheduleNews(news.getSpaceId(), currentIdentity, news));
     });
     return newsList;
@@ -1215,6 +1215,18 @@ public class NewsServiceImpl implements NewsService {
         && (news.isReferred() || news.isFromExternalPage() || isArticleOwner(news, authenticatedUser)))
         || spaceService.isManager(space, authenticatedUser) || spaceService.isSuperManager(space, authenticatedUser)
         || spaceService.isRedactor(space, authenticatedUser);
+  }
+
+  private boolean canReferToNote(News article, org.exoplatform.services.security.Identity currentIdentity) {
+    Space space = spaceService.getSpaceById(article.getSpaceId());
+    if (space == null || currentIdentity == null) {
+      return false;
+    }
+    if (article.isFromExternalPage()) {
+      return false;
+    }
+    return canEditNews(article, currentIdentity.getUserId())
+            || spaceService.canPublishOnSpace(space, currentIdentity.getUserId());
   }
 
   private void deleteAllDrafts(Page articlePage, String articleCreator) {
