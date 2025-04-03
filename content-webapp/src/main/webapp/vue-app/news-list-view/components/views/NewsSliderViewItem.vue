@@ -152,7 +152,7 @@ export default {
   }),
   computed: {
     displayDate() {
-      return this.publishDate && this.publishDate.time && new Date(this.publishDate.time);
+      return this.publishDate && new Date(this.publishDate);
     },
     isHiddenSpace() {
       return !this.spaceMember && this.hiddenSpace;
