@@ -24,11 +24,11 @@
       class="card-border-radius"
       id="critical-alerts-slider"
       v-show="!emptyTemplate">
-      <div class="alerts-header">
-        <div class="alerts-icon">
-          <v-icon>warning</v-icon>
+      <div class="alerts-header white--text z-index-one fill-height align-center d-flex text-header">
+        <div class="px-3">
+          <v-icon color="white">warning</v-icon>
         </div>
-        <span class="d-none d-md-block" v-if="showHeader">{{ headerTitle }}</span>
+        <span class="d-none d-md-block ms-n1 pe-4 font-weight-bold text-uppercase" v-if="showHeader">{{ headerTitle }}</span>
       </div>
 
       <div class="alerts-viewer ps-5 flex-grow-1">
@@ -43,14 +43,14 @@
             v-for="(item,i) in news"
             :key="i">
             <a :href="articleUrl(item)" class="article-link flex-grow-1">
-              <div class="alerts-article">
-                <span v-if="showArticleDate" class="alerts-article-date">
+              <div class="alerts-article d-flex text-body white--text">
+                <span v-if="showArticleDate" class="text-no-wrap text-capitalize">
                   <date-format
                     :value="new Date(item?.publishDate)"
                     :format="dateFormat" />
                 </span>
-                <span v-if="showArticleDate && showArticleTitle" class="alerts-article-seperator">|</span>
-                <span v-if="showArticleTitle" class="alerts-article-title">{{ item.title }}</span>
+                <span v-if="showArticleDate && showArticleTitle" class="mx-2">|</span>
+                <span v-if="showArticleTitle" class="text-truncate text-no-wrap overflow-hidden">{{ item.title }}</span>
               </div>
             </a>
           </v-carousel-item>
