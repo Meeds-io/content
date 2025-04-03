@@ -23,7 +23,7 @@
     <v-app v-show="!hideEmptyNewsTemplate" class="news-list-view-app position-relative">
       <v-card
         :class="newsListViewClass"
-        class="application-body application-layout-style overflow-hidden"
+        class="application-body application-layout-style"
         height="100%"
         flat>
         <v-card-text class="pa-0">
@@ -202,6 +202,11 @@ export default {
       }
       if (backgroundTransparent) {
         newsListViewClass = `${newsListViewClass} background-transparent`;
+      }
+      if (this.viewTemplate !== 'NewsList') {
+        newsListViewClass = `${newsListViewClass} overflow-hidden`;
+      } else {
+        newsListViewClass = `${newsListViewClass} specific-scrollbar`;
       }
       return newsListViewClass;
     },
