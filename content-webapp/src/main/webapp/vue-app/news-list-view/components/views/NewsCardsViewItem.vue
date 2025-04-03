@@ -64,7 +64,7 @@
             </div>
                 
           </div>
-          <div v-if="showArticleSummary" class="d-flex text-color mt-4 text-subtitle"> {{ item?.properties?.summary }} </div>
+          <div v-if="showArticleSummary" class="d-flex mt-4 text-subtitle"> {{ item?.properties?.summary }} </div>
           <div class="mt-2 align-self-center text-subtitle font-weight-bold primary--text">{{ $t('news.cards.readMore') }}</div>
         </a>
       </div>
