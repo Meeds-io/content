@@ -205,6 +205,8 @@ export default {
       }
       if (this.viewTemplate !== 'NewsList') {
         newsListViewClass = `${newsListViewClass} overflow-hidden`;
+      } else {
+        newsListViewClass = `${newsListViewClass} specific-scrollbar`;
       }
       return newsListViewClass;
     },
