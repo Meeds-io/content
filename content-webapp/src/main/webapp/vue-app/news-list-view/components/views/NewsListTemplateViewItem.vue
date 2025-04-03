@@ -40,15 +40,14 @@
         class="text-subtitle">
         {{ item?.properties?.summary }}
       </span>
-      <div class="d-flex text-subtitle">
-        <span v-if="showArticleAuthor" class="article-preTitle">{{ item.authorDisplayName }}</span>
+      <div class="d-flex align-center text-subtitle mb-1">
+        <span v-if="showArticleAuthor">{{ item.authorDisplayName }}</span>
         <v-icon
           v-if="showArticleSpace && showArticleAuthor"
-          class="mx-1"
           small>
           mdi-chevron-right
         </v-icon>
-        <span v-if="showArticleSpace" class="article-preTitle">{{ item.spaceDisplayName }}</span>
+        <span v-if="showArticleSpace">{{ item.spaceDisplayName }}</span>
       </div>
       <div class="text-no-wrap text-truncate d-flex text-subtitle">
         <span class="article-date me-2">
