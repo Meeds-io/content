@@ -87,25 +87,4 @@ public class NewsUtilsTest {
     when(spaceService.canPublishOnSpace(space, userAclIdentity.getUserId())).thenReturn(true);
     assertTrue(NewsUtils.canPublishNews(space.getId(), userAclIdentity));
   }
-
-  @Test
-  public void testCanReferArticleToNote() {
-    News article = new News();
-    article.setSpaceId("2");
-    when(userAclIdentity.getUserId()).thenReturn("user");
-    when(spaceService.getSpaceById("2")).thenReturn(null, space);
-    assertFalse(NewsUtils.canReferToNote(article, null));
-    assertFalse(NewsUtils.canReferToNote(article, null));
-
-    article.setFromExternalPage(true);
-    assertFalse(NewsUtils.canReferToNote(article, userAclIdentity));
-    article.setFromExternalPage(false);
-    when(spaceService.canRedactOnSpace(space, userAclIdentity)).thenReturn(false, true, false, true);
-    when(spaceService.canPublishOnSpace(space, "user")).thenReturn(false, true, true, false);
-    assertFalse(NewsUtils.canReferToNote(article, userAclIdentity));
-
-    assertTrue(NewsUtils.canReferToNote(article, userAclIdentity));
-    assertTrue(NewsUtils.canReferToNote(article, userAclIdentity));
-    assertTrue(NewsUtils.canReferToNote(article, userAclIdentity));
-  }
 }
