@@ -31,16 +31,16 @@
         class="card-border-radius">
     </div>
     <div class="articleInfos">
-      <div class="articleSpace" v-if="!isHiddenSpace && showArticleSpace">
+      <div class="articleSpace text-subtitle" v-if="!isHiddenSpace && showArticleSpace">
         <img
           class="spaceImage"
           :src="item.spaceAvatarUrl"
           :alt="$t('news.space.icon.alt',{ 0:item.spaceDisplayName })">
         <span class="spaceName">{{ item.spaceDisplayName }}</span>
       </div>
-      <span v-if="showArticleTitle" class="articleTitle text-color text-body-1">{{ item.title }}</span>
+      <span v-if="showArticleTitle" class="articleTitle text-color text-body">{{ item.title }}</span>
       <div class="articlePostTitle">
-        <div class="reactions">
+        <div class="reactions text-subtitle">
           <v-icon
             v-if="showArticleDate"
             class="reactionIconStyle me-1"

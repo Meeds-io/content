@@ -23,7 +23,7 @@
     <div class="d-flex latestNewsTitleContainer flex-column flex-grow-1 my-1 text-truncate">
       <span
         v-if="showHeader"
-        class="news-text-header text-truncate"
+        class="widget-text-header text-truncate"
         :title="headerTitle">{{ headerTitle }}</span>
     </div>
     <div :class="[showHeader && headerTitle ? 'd-flex flex-column me-2 mt-1' : 'd-flex flex-column me-2']">
