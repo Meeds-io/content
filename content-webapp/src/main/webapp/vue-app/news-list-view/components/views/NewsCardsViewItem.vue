@@ -45,46 +45,45 @@
               class="space-icon"
               :src="item.spaceAvatarUrl"
               :alt="$t('news.space.icon.alt',{ 0:item.spaceDisplayName })">
-            <div class="space-name">{{ item.spaceDisplayName }}</div>
+            <div class="space-name text-subtitle">{{ item.spaceDisplayName }}</div>
           </div>
         </a>
         <a
           class="articleLink"
           target="_self"
           :href="articleUrl">
-          <div v-if="showArticleTitle" class="article-title">{{ item.title }}</div>
-          <div class="article-author-date">
+          <div v-if="showArticleTitle" class="article-title text-body">{{ item.title }}</div>
+          <div class="d-flex text-no-wrap text-truncate text-subtitle">
             <div v-if="showArticleAuthor" class="author-name">{{ item.authorDisplayName }}</div>
                 
             <span v-if="showArticleAuthor && showArticleDate">,&nbsp;</span>
-            <div v-if="showArticleDate" class="date">
+            <div v-if="showArticleDate">
               <date-format
                 :value="displayDate"
                 :format="dateFormat" />
             </div>
                 
           </div>
-          <div v-if="showArticleSummary" class="article-summary"> {{ item?.properties?.summary }} </div>
-          <div class="read-more">{{ $t('news.cards.readMore') }}</div>
+          <div v-if="showArticleSummary" class="d-flex text-color mt-4 text-subtitle"> {{ item?.properties?.summary }} </div>
+          <div class="mt-2 align-self-center text-subtitle font-weight-bold primary--text">{{ $t('news.cards.readMore') }}</div>
         </a>
       </div>
-      <div v-if="showArticleReactions" class="bottom-row">
-        <div class="article-counters">
+      <div v-if="showArticleReactions" class="bottom-row border-top-color pa-2 width-full b-0 position-absolute white-background text-subtitle">
+        <div class="d-flex text-truncate text-no-wrap">
           <a
-            class="reactionsLink"
+            class="width-fit-content"
             target="_self"
             :href="activityReactionsLink">
-            <div class="reactions">
+            <div class="d-flex text-truncate text-subtitle">
               <v-icon
-                class="counters-icons"
                 size="14">mdi-thumb-up</v-icon>
-              <div class="likes-count">{{ item.likesCount }}</div>
+              <div class="likes-count ms-1">{{ item.likesCount }}</div>
               <v-icon
                 class="counters-icons mt-1 ml-2"
                 size="14">
                 mdi-comment
               </v-icon>
-              <div class="comments-count">{{ item.commentsCount }}</div>
+              <div class="comments-count ms-1">{{ item.commentsCount }}</div>
             </div>
           </a>
           <a
@@ -95,7 +94,7 @@
               <v-icon
                 class="counters-icons"
                 size="16">mdi-eye</v-icon>
-              <div class="views-count">{{ item.viewsCount }}</div>
+              <div class="views-count ms-1">{{ item.viewsCount }}</div>
             </div>
           </a>
         </div>

@@ -47,12 +47,6 @@
       }
       .latestNewsTitleContainer {
         position: relative;
-
-        .news-text-header {
-          font-size: 18px!important;
-          color: var(--allPagesGreyColorLighten1,#707070)!important;
-          font-weight: normal!important
-        }
       }
     }
 
@@ -127,7 +121,6 @@
                 -webkit-line-clamp: 1;
                 -webkit-box-orient: vertical;
                 overflow: hidden;
-                font-size: 1.7rem !important;
                 line-height: 3rem;
                 padding-bottom: 0px;
                 margin: 0px 30px;
@@ -1105,27 +1098,7 @@ p.caption-title:after {
   background-color: @primaryColorDefault;
 
   .alerts-header {
-    display: -webkit-box;
-    display: -ms-flexbox;
-    display: flex;
-    -webkit-box-align: center;
-    -ms-flex-align: center;
-    align-items: center;
-    height: 100%;
     background-color: @alertHeadingColor;
-    z-index: 1;
-    span {
-      margin-left: -4px;
-      padding-right: 15px;
-      font-weight: bold;
-      text-transform: uppercase;
-    }
-    .alerts-icon {
-      padding: 0 12px 0 13px;
-      i {
-        color: white;
-      }
-    }
   }
 
   .alerts-viewer {
@@ -1138,26 +1111,6 @@ p.caption-title:after {
       color: white;
       text-decoration: none;
       padding-right: 90px;
-      .alerts-article {
-        display: -webkit-box;
-        display: -ms-flexbox;
-        display: flex;
-        .alerts-article-date {
-          white-space: nowrap;
-          color: white;
-          letter-spacing: 0;
-          text-transform: capitalize;
-        }
-        .alerts-article-seperator {
-          margin: 0 6px 0 7px;
-        }
-        .alerts-article-title {
-          letter-spacing: 0.1px;
-          overflow: hidden;
-          white-space: nowrap;
-          text-overflow: ellipsis;
-        }
-      }
     }
   }
 
@@ -1203,10 +1156,6 @@ p.caption-title:after {
         -webkit-transform: translateY(0);
         -ms-transform: translateY(0);
         transform: translateY(0);
-      }
-      .article-summary {
-        color: @textColor;
-        margin-top: 8px;
       }
     }
   }
@@ -1309,17 +1258,6 @@ p.caption-title:after {
       color: @primaryColor;
     }
   }
-  .article-author-date {
-    font-size: 12px;
-    color: @greyColorLighten1;
-    display: -webkit-box;
-    display: -ms-flexbox;
-    display: flex;
-    overflow: hidden;
-    -o-text-overflow: ellipsis;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
   .author-name {
     overflow: hidden;
     -o-text-overflow: ellipsis;
@@ -1329,39 +1267,8 @@ p.caption-title:after {
   .date {
     color: @greyColorLighten1;
   }
-  .article-summary {
-    font-size: 13px;
-    line-height: 17px;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 6;
-    overflow: hidden;
-    margin-top: 20px;
-  }
-  .read-more {
-    font-size: 12px;
-    color: @primaryColor;
-    font-weight: bold;
-    -ms-flex-item-align: center;
-    -ms-grid-row-align: center;
-    align-self: center;
-    margin-top: 8px;
-    z-index: 2;
-    &::after {
-      content: " →";
-      font-size: 11px;
-    }
-    &:hover {
-      color: @greyColorLighten1;
-    }
-  }
   .bottom-row {
     background: white;
-    position: absolute;
-    bottom: 0;
-    width: 100%;
-    border-top: 1px solid @tableBackgroundAccent;
-    padding: 10px 12px 8px 12px;
   }
   .article-counters {
     font-size: 12px;
@@ -1376,18 +1283,6 @@ p.caption-title:after {
     display: flex;
     float: left;
     color: @greyColorLighten1;
-  }
-  .reactionsLink {
-    position: absolute;
-    display: block;
-    padding: 6px 10px 3px 9px;
-    left: 1px;
-    top: 5px;
-    border-radius: 25px;
-    z-index: 2;
-    &:hover {
-      background-color: rgba(87, 141, 201, 0.09);
-    }
   }
   .likes-count {
     float: right;
@@ -1482,8 +1377,6 @@ p.caption-title:after {
   }
   .article-preTitle {
     display: block;
-    font-size: 12px;
-    line-height: 12px;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
@@ -1491,7 +1384,6 @@ p.caption-title:after {
   }
   .article-title {
     width: 100%;
-    font-size: @textFontSize;
     color:  @textColor;
     transition: 0.3s;
     line-height: 20px;
@@ -1499,12 +1391,6 @@ p.caption-title:after {
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 1;
-  }
-  .article-postTitle {
-    display: flex;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
   }
   .reactions {
     display: flex;
