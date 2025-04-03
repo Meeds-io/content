@@ -28,7 +28,7 @@
         <div class="px-3">
           <v-icon color="white">warning</v-icon>
         </div>
-        <span class="d-none d-md-block ms-n1 pe-4 font-weight-bold text-uppercase" v-if="showHeader">{{ headerTitle }}</span>
+        <span class="d-none d-md-block ms-n1 pe-4 font-weight-bold" v-if="showHeader">{{ headerTitle }}</span>
       </div>
 
       <div class="alerts-viewer ps-5 flex-grow-1">
