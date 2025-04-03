@@ -36,8 +36,11 @@
         class="text-body">{{ item.title }}</span>
       <span
         v-if="showArticleSummary"
-        :class="extraClass">{{ item?.properties?.summary }}</span>
-      <div class="d-flex">
+        :class="extraClass"
+        class="text-subtitle">
+        {{ item?.properties?.summary }}
+      </span>
+      <div class="d-flex text-subtitle">
         <span v-if="showArticleAuthor" class="article-preTitle">{{ item.authorDisplayName }}</span>
         <v-icon
           v-if="showArticleSpace && showArticleAuthor"
@@ -47,7 +50,7 @@
         </v-icon>
         <span v-if="showArticleSpace" class="article-preTitle">{{ item.spaceDisplayName }}</span>
       </div>
-      <div class="article-postTitle">
+      <div class="text-no-wrap text-truncate d-flex text-subtitle">
         <span class="article-date me-2">
           <div v-if="showArticleDate" class="flex-column">
             <date-format
@@ -56,15 +59,15 @@
           </div>
         </span>
         <div v-if="showArticleReactions" class="reactions">
-          <v-icon class="reactions-icon-style me-1" size="12">
+          <v-icon class="me-1" size="12">
             mdi-thumb-up
           </v-icon>
           <div class="likes-count me-2">{{ item.likesCount }}</div>
-          <v-icon class="reactions-icon-style me-1" size="12">
+          <v-icon class="me-1" size="12">
             mdi-comment
           </v-icon>
           <div class="comments-count me-2">{{ item.commentsCount }}</div>
-          <v-icon class="reactions-icon-style me-1" size="12">
+          <v-icon class="me-1" size="12">
             mdi-eye
           </v-icon>
           <div class="viewCount">{{ item.viewsCount }}</div>           
