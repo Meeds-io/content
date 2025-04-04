@@ -29,6 +29,8 @@ import io.meeds.notes.model.NotePageProperties;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 
+import org.exoplatform.commons.api.settings.data.Context;
+import org.exoplatform.commons.api.settings.data.Scope;
 import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.commons.utils.ListAccess;
 import org.exoplatform.container.ExoContainerContext;
@@ -96,7 +98,15 @@ public class NewsUtils {
 
   public static final String CREATE_PUBLISH_CONTENT          = "createPublishContent";
 
-  public static final String UPDATE_PUBLISH_CONTENT          = "updatePublishContent";
+  public static final String  UPDATE_PUBLISH_CONTENT        = "updatePublishContent";
+
+  public static final String  NEWS_LIST_VIEW_SCOPE_NAME     = "NEWS_LIST_VIEW_SCOPE";
+
+  public static final String  NEWS_LIST_VIEW_CONTEXT_NAME   = "NEWS_LIST_VIEW_CONTEXT";
+
+  public static final Context NEWS_LIST_VIEW_CONTEXT        = Context.GLOBAL.id(NEWS_LIST_VIEW_CONTEXT_NAME);
+
+  public static final Scope   NEWS_LIST_VIEW_SCOPE          = Scope.APPLICATION.id(NEWS_LIST_VIEW_SCOPE_NAME);
 
 
   private static SpaceService       spaceService;

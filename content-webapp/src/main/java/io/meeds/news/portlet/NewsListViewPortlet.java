@@ -31,15 +31,21 @@ import javax.portlet.PortletPreferences;
 import javax.portlet.RenderRequest;
 import javax.portlet.RenderResponse;
 
+import io.meeds.news.utils.NewsUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import io.meeds.social.portlet.CMSPortlet;
+import org.exoplatform.commons.api.settings.SettingService;
+import org.exoplatform.commons.api.settings.SettingValue;
+import org.exoplatform.container.ExoContainerContext;
 
 public class NewsListViewPortlet extends CMSPortlet {
 
   private static final String OBJECT_TYPE    = "newsListViewPortlet";
 
   private static final String APPLICATION_ID = "applicationId";
+
+  private SettingService settingService;
 
   @Override
   public void init(PortletConfig config) throws PortletException {
@@ -64,8 +70,10 @@ public class NewsListViewPortlet extends CMSPortlet {
 
   @Override
   public void doView(RenderRequest request, RenderResponse response) throws PortletException, IOException {
-    request.setAttribute(APPLICATION_ID, getOrCreateApplicationId(request.getPreferences()));
     super.doView(request, response);
+    String applicationId = getOrCreateApplicationId(request.getPreferences());
+    request.setAttribute(APPLICATION_ID, applicationId);
+    initNewsListHeaderTranslationSettings(request);
   }
 
   private String getOrCreateApplicationId(PortletPreferences preferences) {
@@ -76,5 +84,27 @@ public class NewsListViewPortlet extends CMSPortlet {
       savePreference(APPLICATION_ID, applicationId);
     }
     return applicationId;
+  }
+
+  private void initNewsListHeaderTranslationSettings(RenderRequest request) {
+    String applicationId = request.getAttribute(APPLICATION_ID).toString();
+    String settingName = request.getAttribute("settingName").toString();
+    SettingValue<?> storedSettingNameValue = getSettingService().get(NewsUtils.NEWS_LIST_VIEW_CONTEXT,
+                                                                     NewsUtils.NEWS_LIST_VIEW_SCOPE,
+                                                                     applicationId);
+    String storedSettingName = storedSettingNameValue != null ? storedSettingNameValue.getValue().toString() : null;
+    if (storedSettingName == null || !storedSettingName.equals(settingName)) {
+      getSettingService().set(NewsUtils.NEWS_LIST_VIEW_CONTEXT,
+                              NewsUtils.NEWS_LIST_VIEW_SCOPE,
+                              applicationId,
+                              SettingValue.create(settingName));
+    }
+  }
+
+  private SettingService getSettingService() {
+    if (settingService == null) {
+      settingService = ExoContainerContext.getService(SettingService.class);
+    }
+    return settingService;
   }
 }
