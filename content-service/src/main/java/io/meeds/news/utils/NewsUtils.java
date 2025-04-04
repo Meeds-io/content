@@ -29,6 +29,8 @@ import io.meeds.notes.model.NotePageProperties;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 
+import org.exoplatform.commons.api.settings.data.Context;
+import org.exoplatform.commons.api.settings.data.Scope;
 import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.commons.utils.ListAccess;
 import org.exoplatform.container.ExoContainerContext;
@@ -50,56 +52,63 @@ import org.exoplatform.wiki.model.DraftPage;
 
 public class NewsUtils {
 
-  private static final Log   LOG                             = ExoLogger.getLogger(NewsUtils.class);
+  private static final Log    LOG                           = ExoLogger.getLogger(NewsUtils.class);
 
-  public static final String POST_NEWS                       = "exo.news.postArticle";
+  public static final String  POST_NEWS                     = "exo.news.postArticle";
 
-  public static final String POST_NEWS_ARTICLE               = "exo.news.gamification.postArticle";
+  public static final String  POST_NEWS_ARTICLE             = "exo.news.gamification.postArticle";
 
-  public static final String PUBLISH_NEWS                    = "exo.news.gamification.PublishArticle";
+  public static final String  PUBLISH_NEWS                  = "exo.news.gamification.PublishArticle";
 
-  public static final String VIEW_NEWS                       = "exo.news.viewArticle";
+  public static final String  VIEW_NEWS                     = "exo.news.viewArticle";
 
-  public static final String SHARE_NEWS                      = "exo.news.shareArticle";
+  public static final String  SHARE_NEWS                    = "exo.news.shareArticle";
 
-  public static final String COMMENT_NEWS                    = "exo.news.commentArticle";
+  public static final String  COMMENT_NEWS                  = "exo.news.commentArticle";
 
-  public static final String LIKE_NEWS                       = "exo.news.likeArticle";
+  public static final String  LIKE_NEWS                     = "exo.news.likeArticle";
 
-  public static final String DELETE_NEWS                     = "exo.news.deleteArticle";
+  public static final String  DELETE_NEWS                   = "exo.news.deleteArticle";
 
-  public static final String UPDATE_NEWS                     = "exo.news.updateArticle";
+  public static final String  UPDATE_NEWS                   = "exo.news.updateArticle";
 
-  public static final String SCHEDULE_NEWS                   = "exo.news.scheduleArticle";
+  public static final String  SCHEDULE_NEWS                 = "exo.news.scheduleArticle";
 
-  public static final String UNSCHEDULE_NEWS                 = "exo.news.unscheduleArticle";
+  public static final String  UNSCHEDULE_NEWS               = "exo.news.unscheduleArticle";
 
-  public static final String NEWS_METADATA_OBJECT_TYPE       = "news";
+  public static final String  NEWS_METADATA_OBJECT_TYPE     = "news";
 
-  public static final String DISPLAYED_STATUS                = "displayed";
+  public static final String  DISPLAYED_STATUS              = "displayed";
 
-  public static final String TARGET_PERMISSIONS              = "permissions";
+  public static final String  TARGET_PERMISSIONS            = "permissions";
 
-  public static final String SPACE_NEWS_AUDIENCE             = "space";
+  public static final String  SPACE_NEWS_AUDIENCE           = "space";
 
-  public static final String ALL_NEWS_AUDIENCE               = "all";
+  public static final String  ALL_NEWS_AUDIENCE             = "all";
 
-  public static final String PLATFORM_ADMINISTRATORS_GROUP = "/platform/administrators";
+  public static final String  PLATFORM_ADMINISTRATORS_GROUP = "/platform/administrators";
 
-  public static final String ADD_ARTICLE_TRANSLATION         = "content.add.article.translation";
+  public static final String  ADD_ARTICLE_TRANSLATION       = "content.add.article.translation";
 
-  public static final String REMOVE_ARTICLE_TRANSLATION      = "content.remove.article.translation";
+  public static final String  REMOVE_ARTICLE_TRANSLATION    = "content.remove.article.translation";
 
-  public static final String UPDATE_CONTENT_PERMISSIONS      = "content.update.permissions";
+  public static final String  UPDATE_CONTENT_PERMISSIONS    = "content.update.permissions";
 
-  public static final String PUBLISHED_DATE                  = "publishedDate";
+  public static final String  PUBLISHED_DATE                = "publishedDate";
 
-  public static final String CREATE_PUBLISH_CONTENT          = "createPublishContent";
+  public static final String  CREATE_PUBLISH_CONTENT        = "createPublishContent";
 
-  public static final String UPDATE_PUBLISH_CONTENT          = "updatePublishContent";
+  public static final String  UPDATE_PUBLISH_CONTENT        = "updatePublishContent";
 
+  public static final String  NEWS_LIST_VIEW_SCOPE_NAME     = "NEWS_LIST_VIEW_SCOPE";
 
-  private static SpaceService       spaceService;
+  public static final String  NEWS_LIST_VIEW_CONTEXT_NAME   = "NEWS_LIST_VIEW_CONTEXT";
+
+  public static final Context NEWS_LIST_VIEW_CONTEXT        = Context.GLOBAL.id(NEWS_LIST_VIEW_CONTEXT_NAME);
+
+  public static final Scope   NEWS_LIST_VIEW_SCOPE          = Scope.APPLICATION.id(NEWS_LIST_VIEW_SCOPE_NAME);
+
+  private static SpaceService spaceService;
 
   public enum NewsObjectType {
     DRAFT, LATEST_DRAFT, ARTICLE, EXISTING_PAGE
