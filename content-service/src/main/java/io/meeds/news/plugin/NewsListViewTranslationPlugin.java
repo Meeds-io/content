@@ -19,11 +19,16 @@
  */
 package io.meeds.news.plugin;
 
+import io.meeds.news.service.NewsService;
+import io.meeds.news.utils.NewsUtils;
+import io.meeds.social.cms.service.CMSService;
 import io.meeds.social.translation.plugin.TranslationPlugin;
 import io.meeds.social.translation.service.TranslationService;
 import jakarta.annotation.PostConstruct;
 import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
+import org.exoplatform.commons.api.settings.SettingService;
+import org.exoplatform.commons.api.settings.SettingValue;
 import org.exoplatform.commons.exception.ObjectNotFoundException;
 import org.exoplatform.container.ExoContainerContext;
 import org.exoplatform.services.organization.OrganizationService;
@@ -34,16 +39,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.Objects;
 
 @Component
 public class NewsListViewTranslationPlugin extends TranslationPlugin {
 
   public static final String        NEWS_LIST_VIEW_OBJECT_TYPE      = "newsListView";
-
-  private static final String       PUBLISHER_MEMBERSHIP_NAME       = "publisher";
-
-  private static final String       PLATFORM_WEB_CONTRIBUTORS_GROUP = "/platform/web-contributors";
+  
 
   @Setter
   private IdentityRegistry    identityRegistry;
@@ -53,6 +54,15 @@ public class NewsListViewTranslationPlugin extends TranslationPlugin {
 
   @Autowired
   private TranslationService  translationService;
+
+  @Autowired
+  private CMSService          cmsService;
+
+  @Autowired
+  private SettingService      settingService;
+
+  @Autowired
+  private NewsService         newsService;
 
   @PostConstruct
   public void init() {
@@ -78,8 +88,12 @@ public class NewsListViewTranslationPlugin extends TranslationPlugin {
   @Override
   public boolean hasEditPermission(long objectId, String username) {
     try {
+      SettingValue<?> settingNameValue = settingService.get(NewsUtils.NEWS_LIST_VIEW_CONTEXT,
+                                                            NewsUtils.NEWS_LIST_VIEW_SCOPE,
+                                                            String.valueOf(objectId));
+      String settingName = settingNameValue != null ? settingNameValue.getValue().toString() : null;
       return getIdentity(username) != null
-          && Objects.requireNonNull(getIdentity(username)).isMemberOf(PLATFORM_WEB_CONTRIBUTORS_GROUP, PUBLISHER_MEMBERSHIP_NAME);
+          && (cmsService.hasEditPermission(getIdentity(username), "newsListViewPortlet", settingName));
     } catch (Exception e) {
       return false;
     }
