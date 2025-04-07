@@ -76,7 +76,7 @@ export default {
   data: () => ({
     spaces: [],
     selectionType: 'all',
-    selectAll: true,
+    selectAll: false,
     loading: false,
     query: null,
     limit: 20,
@@ -137,7 +137,7 @@ export default {
       if (!this.spaces || !this.spaces.length) {
         this.retrieveSpaces();
       }
-      this.selectAll = !this.value || !this.value.length;
+      this.selectAll = this.spaceIds.length === this.selectedSpaces.length;
       window.setTimeout(() => this.$refs.queryInput.$el.querySelector('input').focus(), 200);
     },
     loadMore() {
@@ -190,7 +190,7 @@ export default {
         } else {
           this.spaces = [];
         }
-        if (this.value === false) {
+        if (!this.value || !this.selectAll) {
           this.uncheckAll();
         } else if (!this.value || !this.value.length) {
           this.selectedSpaces = this.spaces.slice();
