@@ -355,15 +355,17 @@ export default {
           this.redirectToDrafts();
         });
       } else {
+        const successMessage = this.$t('notes.publication.settings.update.success');
+        const errorMessage = this.$t('notes.publication.settings.update.error');
+        document.dispatchEvent(new Event('closeDisplayedDrawer'));
         this.publish(editScheduleAction, scheduleSettings).then((article) => {
-          this.displayMessage({message: this?.$t?.('notes.publication.settings.update.success'), type: 'success'});
+          this.displayMessage({message: successMessage, type: 'success'});
           history.replaceState({}, article.url);
           this.news = article;
         }).catch(() => {
-          this.displayMessage({message: this?.$t?.('notes.publication.settings.update.error'), type: 'error'});
+          this.displayMessage({message: errorMessage, type: 'error'});
         }).finally(() => {
           this.isPublishing = false;
-          this.$refs?.publicationDrawer?.close();
         });
       }
     },
