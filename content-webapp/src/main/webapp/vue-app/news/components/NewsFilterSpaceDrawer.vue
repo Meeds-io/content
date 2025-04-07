@@ -71,7 +71,7 @@ export default {
     open() {
       this.$refs.newsSpacesFilters.open();
       this.$nextTick().then(() => {
-        this.$refs.filterSpaceList.reset();
+        this.$refs.filterSpaceList?.reset();
       });
     },
   },
