@@ -220,7 +220,7 @@ export default {
       handler: function () {
         this.fetchNews(false);
         if (this.spacesFilter === false) {
-          this.spacesFilter = ['-1'];
+          this.spacesFilter = [];
         }
         if (this.spacesFilter.length > 0) {
           window.history.pushState('', 'News', this.setQueryParam('spaces', this.spacesFilter.toString().replace(/,/g, '_')));
