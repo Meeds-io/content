@@ -157,14 +157,22 @@ public class NewsActivityListener extends ActivityListenerPlugin {
   }
 
   private String getCurrentIdentityId() {
-    org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
-    return identityManager.getOrCreateUserIdentity(currentIdentity.getUserId()).getId();
+    ConversationState conversationState = ConversationState.getCurrent();
+    org.exoplatform.services.security.Identity currentIdentity = null;
+    if (conversationState != null) {
+      currentIdentity = conversationState.getIdentity();
+    }
+    if (currentIdentity != null) {
+      return identityManager.getOrCreateUserIdentity(currentIdentity.getUserId()).getId();
+    }
+    return null;
   }
 
   private void updateNewsPageMetadataObjectItem(ExoSocialActivity activity) {
     String newsId = activity.getTemplateParams().get(NEWS_ID);
     String spaceId = activity.getSpaceId();
     String currentIdentityId = getCurrentIdentityId();
+    long updater = currentIdentityId != null ? Long.parseLong(currentIdentityId) : Long.parseLong(activity.getPosterId());
     NewsPageObject newsPageObject = new NewsPageObject(NEWS_METADATA_PAGE_OBJECT_TYPE, newsId, null, Long.parseLong(spaceId));
     MetadataItem metadataItem = metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY, newsPageObject)
                                                .stream()
@@ -177,7 +185,7 @@ public class NewsActivityListener extends ActivityListenerPlugin {
       if (properties.containsKey(NEWS_ACTIVITY_POSTED) && properties.get(NEWS_ACTIVITY_POSTED) != null && Boolean.parseBoolean(properties.get(NEWS_ACTIVITY_POSTED))) {
         properties.put(NEWS_ACTIVITY_POSTED, String.valueOf(false));
         metadataItem.setProperties(properties);
-        metadataService.updateMetadataItem(metadataItem, Long.parseLong(currentIdentityId), false);
+        metadataService.updateMetadataItem(metadataItem, updater, false);
       }
     }
   }
