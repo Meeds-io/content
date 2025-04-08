@@ -3,15 +3,18 @@
         {
             "name": "News",
             "imagePath": "war:/../images/news.png",
+            "overrideMode": "merge",
             "override": false,
             "enabled": true,
             "application": {
                 "title": "News",
-                "description": "News application",
+                "description": "Access news posted from your communities",
                 "url": "./news",
                 "active": true,
                 "mandatory": false,
                 "mobile": true,
+                "default": true,
+                "pwa": false,
                 "permissions": [
                     "*:/platform/users",
                     "*:/platform/externals"
