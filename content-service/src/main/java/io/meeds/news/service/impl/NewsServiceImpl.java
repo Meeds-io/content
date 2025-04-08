@@ -452,7 +452,11 @@ public class NewsServiceImpl implements NewsService {
   public void unpublishNews(String newsId, String publisher, boolean unpublishScheduled) throws Exception {
     News news = getNewsArticleById(newsId);
     Space space = spaceService.getSpaceById(news.getSpaceId());
-    newsTargetingService.deleteNewsTargets(news, publisher);
+    if (unpublishScheduled) {
+      newsTargetingService.deleteNewsTargets(news);
+    } else {
+      newsTargetingService.deleteNewsTargets(news, publisher);
+    }
 
     NewsPageObject newsPageObject = new NewsPageObject(NEWS_METADATA_PAGE_OBJECT_TYPE,
                                                        news.getId(),
