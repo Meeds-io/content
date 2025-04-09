@@ -370,18 +370,6 @@ public class NewsServiceImpl implements NewsService {
     }
     if (NewsObjectType.DRAFT.name().toLowerCase().equals(newsObjectType)) {
       deleteDraftArticle(newsId, currentIdentity.getUserId());
-    } else if (LATEST_DRAFT.name().toLowerCase().equals(newsObjectType)) {
-      Page newsArticlePage = noteService.getNoteById(newsId);
-      if (newsArticlePage != null) {
-        DraftPage draft = noteService.getLatestDraftPageByUserAndTargetPageAndLang(Long.parseLong(newsArticlePage.getId()),
-                                                                                   currentIdentity.getUserId(),
-                                                                                   null);
-        if (draft != null) {
-          // check if the latest draft has the same illustration
-          // with the news article to do not remove it.
-          deleteDraftArticle(draft.getId(), currentIdentity.getUserId());
-        }
-      }
     } else {
       deleteArticle(news, currentIdentity.getUserId());
       if (news.getActivities() != null) {
@@ -1671,7 +1659,6 @@ public class NewsServiceImpl implements NewsService {
                             try {
                               News draft = buildDraftArticle(draftArticle.getObjectId(), currentIdentity.getUserId());
                               if (draft != null && draftArticle.getParentObjectId() != null) {
-                                draft.setId(draftArticle.getParentObjectId());
                                 News parentArticle = buildArticle(draftArticle.getParentObjectId(), draft.getLang(), true);
                                 draft.setReferred(parentArticle.isReferred());
                                 draft.setFromExternalPage(parentArticle.isFromExternalPage());
