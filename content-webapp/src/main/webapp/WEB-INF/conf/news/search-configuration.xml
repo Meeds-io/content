@@ -51,9 +51,6 @@
             <field name="i18nBundle">
               <string>locale.portlet.news.News</string>
             </field>
-            <field name="cssModule">
-              <string>news/NewsSearchCard</string>
-            </field>
             <field name="uiComponent">
               <string>news-search-card</string>
             </field>
