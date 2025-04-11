@@ -406,11 +406,7 @@ export default {
       const redirectionTime = 8100;
       let newsObjectType;
       if (this.newsFilter === 'drafts') {
-        if (news.activityId) {
-          newsObjectType = 'latest_draft';
-        } else {
-          newsObjectType = 'draft';
-        }
+        newsObjectType = 'draft';
       } else  {
         newsObjectType = 'article';
       }
