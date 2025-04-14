@@ -612,6 +612,7 @@ export default {
       this.editor = editor;
       this.setEditorData(this.article?.content);
       this.currentArticleInitDone = true;
+      this.attachRemoveMentionClickHandler();
     },
     initEditor() {
       this.$refs.editor.initCKEditor();
@@ -643,42 +644,98 @@ export default {
       });
       return imagesURLs;
     },
-    getArticle() {
+    async getArticle() {
       this.loading = true;
-      this.$newsServices.getSpaceById(this.spaceId).then(space => {
-        this.currentSpace = space;
-        this.spaceDisplayName = space.displayName;
-        this.isSpaceMember = space.isMember;
-        this.spaceUrl = this.currentSpace?.prettyName;
-        this.$newsServices.canUserCreateNews(this.currentSpace.id).then(canCreateArticle => {
-          this.canCreateArticle = canCreateArticle || this.articleId;
-          if (this.canCreateArticle) {
-            if (this.articleId) {
-              this.fillArticle(this.articleId, true, this.selectedLanguage).then(() => {
-                this.updateUrl();
-                if (!this.article.lang) {
-                  this.selectedLanguage = '';
-                }
-              });
-            } else {
-              const message = localStorage.getItem('exo-activity-composer-message');
-              if (message) {
-                this.article.content = message;
-                this.setEditorData(this.article?.content);
-                localStorage.removeItem('exo-activity-composer-message');
-              }
-              this.initDone = true;
+      const space = await this.$newsServices.getSpaceById(this.spaceId);
+      this.currentSpace = space;
+      this.spaceDisplayName = space.displayName;
+      this.isSpaceMember = space.isMember;
+      this.spaceUrl = this.currentSpace?.prettyName;
+      const canCreateArticle = await  this.$newsServices.canUserCreateNews(this.currentSpace.id);
+      this.canCreateArticle = canCreateArticle || this.articleId;
+      if (this.canCreateArticle) {
+        if (this.articleId) {
+          await this.fillArticle(this.articleId, true, this.selectedLanguage).then(() => {
+            this.updateUrl();
+            if (!this.article.lang) {
+              this.selectedLanguage = '';
             }
+          });
+        } else {
+          let message = localStorage.getItem('exo-activity-composer-message');
+          if (message) {
+            const mentionedRoles = message.match(/@([A-Za-z0-9_'.+-]+:[0-9]+)/g)?.map(a => a.replace('@', '')) || null;
+            message = this.replaceSuggestedRoles(message, mentionedRoles);
+            const mentionedUsers = message.match(/@([A-Za-z0-9_'.+-]+)/g)?.map(a => a.replace('@', '')) || null;
+            message = await this.replaceSuggestedUsers(message, mentionedUsers);
+            message = message.replace(/<span([^>]*class="[^"]*atwho-inserted[^"]*"[^>]*)>/g, '<span$1 contenteditable="false">'
+            );
+            this.article.content = message;
+            localStorage.removeItem('exo-activity-composer-message');
           }
-          this.loading = false;
-        });
-        this.$newsServices.canScheduleNews(this.currentSpace.id, this.article?.id).then(canScheduleArticle => {
-          this.canScheduleArticle = canScheduleArticle;
-        });
-        this.$newsServices.canPublishNews(this.currentSpace.id).then(canPublishArticle => {
-          this.canPublishArticle = canPublishArticle;
-        });
+          this.initDone = true;
+        }
+      }
+      this.canPublishArticle = await this.$newsServices.canPublishNews(this.currentSpace.id);
+      if (this.article.id) {
+        this.canScheduleArticle = await this.$newsServices.canScheduleNews(this.currentSpace.id, this.article.id);
+      }
+      this.loading = false;
+    },
+    async replaceSuggestedUsers(message, mentionedUsers) {
+      if (!mentionedUsers) {
+        return message;
+      }
+      const userProfiles = (await Promise.all(
+        mentionedUsers.map(username =>
+          this.$identityService.getIdentityByProviderIdAndRemoteId('organization', username)
+            .then(identity => identity?.profile || null)
+            .catch(() => null)
+        )
+      )).filter(Boolean);
+      userProfiles.forEach(profile => {
+        const pattern = `@${profile.username}`;
+        message = this.replaceSuggestedUser(message, profile, pattern);
       });
+      return message;
+    },
+    replaceSuggestedUser(message, profile, pattern) {
+      return message.replace(new RegExp(pattern, 'g'), ExtendedDomPurify.purify(`
+                      <span class="atwho-inserted" data-atwho-at-query="@${profile.username}" data-atwho-at-value="${profile.username}">
+                        <span class="exo-mention">&nbsp;${profile.fullname}${profile.isExternal === 'true' ? ` (${  this.$t('UsersManagement.type.external')  })` : ''}<a href="#" class="remove" ><i class="uiIconClose uiIconLightGray"></i></a></span>
+                      </span>
+                    `));
+    },
+    replaceSuggestedRoles(message, mentionedRoles) {
+      if (!mentionedRoles) {
+        return message;
+      }
+      mentionedRoles.forEach(role => {
+        const pattern = `@${role}`;
+        const roleWithoutIdentityId = role.substring(0, role.indexOf(':')) ;
+        let icon;
+        if (roleWithoutIdentityId === 'member') {
+          icon = 'fa-users';
+        } else if (roleWithoutIdentityId === 'manager') {
+          icon = 'fa-user-cog';
+        } else if (roleWithoutIdentityId === 'redactor') {
+          icon = 'fa-user-edit';
+        } else if (roleWithoutIdentityId === 'publisher') {
+          icon = 'fa-paper-plane';
+        }
+        message =  this.replaceSuggestedRole(message, role, icon, pattern);
+      });
+      return message;
+    },
+    replaceSuggestedRole(message, role, icon, pattern) {
+      const text = this.$t(`${role.substring(0, role.indexOf(':'))}s`);
+      return message.replace(new RegExp(pattern, 'g'), ExtendedDomPurify.purify(`
+                      <span class="atwho-inserted" data-atwho-at-query="@" data-atwho-at-value="${role}">
+                        <span class="exo-mention">
+                        <i aria-hidden="true" class="v-icon fa ${icon}" style="font-size: 14px;"></i> ${text}<a class="remove" href="#"><i class="uiIconClose uiIconLightGray"></i></a>
+                        </span>
+                      </span>
+                    `));
     },
     fillArticle(articleId, setData, lang) {
       this.initDone = false;
@@ -807,6 +864,21 @@ export default {
       const isFeaturedImageEmpty = !this.article.properties || !this.article?.properties?.featuredImage || this.article?.properties?.featuredImage.id === null || this.article?.properties?.featuredImage?.id <= 0 ;
       return isTitleEmpty && isContentEmpty && isSummaryEmpty && isFeaturedImageEmpty;
     },
+    attachRemoveMentionClickHandler() {
+      const container = this.editor.document?.$;
+      container.querySelectorAll('.atwho-inserted').forEach((el) => {
+        const removeBtn = el.querySelector('.remove');
+        if (removeBtn) {
+          removeBtn.addEventListener('click', function (event) {
+            event.preventDefault();
+            const parent = this.closest('[data-atwho-at-query]');
+            if (parent) {
+              parent.remove();
+            }
+          });
+        }
+      });
+    }
   },
 };
 </script>
