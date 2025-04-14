@@ -312,6 +312,9 @@ export default {
         draftUrl += `&spaceName=${item.spaceUrl.substring(item.spaceUrl.lastIndexOf('/') + 1)}`;
       }
       draftUrl += `&type=${(item.activityId || item.schedulePostDate) && 'latest_draft' || 'draft'}`;
+      if (item.lang) {
+        draftUrl += `&lang=${item.lang}`;
+      }
       return draftUrl;
     },
     getNewsText(newsSummary, newsBody) {
@@ -358,6 +361,8 @@ export default {
           spaceAvatarUrl: item.spaceAvatarUrl,
           hiddenSpace: item.hiddenSpace,
           spaceId: item.spaceId,
+          lang: item.lang,
+          targetPageId: item.targetPageId,
           target: this.newsFilter === 'drafts' ? '_blank' : '_self',
           type: this.newsFilter === 'drafts' ? 'draft' : 'article'
         });
