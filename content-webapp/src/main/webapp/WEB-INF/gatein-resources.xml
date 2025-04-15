@@ -130,6 +130,9 @@
       <depends>
         <module>filedrop</module>
       </depends>
+      <depends>
+        <module>ExtendedDomPurify</module>
+      </depends>
     </module>
   </portlet>
 
