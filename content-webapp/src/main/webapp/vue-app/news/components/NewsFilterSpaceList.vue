@@ -35,18 +35,9 @@
           v-model="query"
           class="mb-0 mt-1" />
       </v-list-item-content>
-      <v-list-item-action class="ms-2">
-        <select
-          v-model="selectionType"
-          class="width-auto my-auto subtitle-1 ignore-vuetify-classes">
-          <option value="all">{{ $t('news.app.filter.drawer.all') }}</option>
-          <option value="selected">{{ $t('news.app.filter.drawer.selected') }}</option>
-          <option value="nonSelected">{{ $t('news.app.filter.drawer.nonSelected') }}</option>
-        </select>
-      </v-list-item-action>
     </v-list-item>
     <news-filter-space-item
-      v-for="space in filteredSpaces"
+      v-for="space in spaces"
       :key="space.id"
       :space="space"
       :space-ids="spaceIds"
@@ -75,7 +66,6 @@ export default {
   },
   data: () => ({
     spaces: [],
-    selectionType: 'all',
     selectAll: false,
     loading: false,
     query: null,
@@ -84,14 +74,6 @@ export default {
     totalSize: 0,
   }),
   computed: {
-    filteredSpaces() {
-      if (this.selectionType === 'selected') {
-        return this.selectedSpaces;
-      } else if (this.selectionType === 'nonSelected') {
-        return this.unselectedSpaces;
-      }
-      return this.spaces;
-    },
     partiallySelected() {
       return this.value && this.value.length && (this.hasMore || this.spaceIds.length !== this.value.length);
     },
@@ -109,9 +91,6 @@ export default {
         return this.spaces;
       }
       return this.spaces && this.spaces.filter(space => this.value.indexOf(Number(space.id)) >= 0) || [];
-    },
-    unselectedSpaces() {
-      return this.spaces && this.spaces.filter(space => !this.selectedSpaces || !this.selectedSpaces.find(s => s.id === space.id)) || [];
     },
   },
   watch: {
