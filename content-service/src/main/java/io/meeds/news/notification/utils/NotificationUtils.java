@@ -47,8 +47,7 @@ public class NotificationUtils {
     } else {
       activityLink = getNotificationActivityLinkForNotSpaceMembers(space);
     }
-    String baseUrl = PropertyManager.getProperty("gatein.email.domain.url");
-    return baseUrl == null ? activityLink : baseUrl.concat(activityLink);
+    return activityLink;
   }
 
   public static String getNotificationActivityLinkForNotSpaceMembers(Space space) {
