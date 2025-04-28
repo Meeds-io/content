@@ -160,4 +160,50 @@
     </security-role-ref>
   </portlet>
 
+  <portlet>
+    <portlet-name>Image</portlet-name>
+    <portlet-class>io.meeds.social.portlet.ImagePortlet</portlet-class>
+    <init-param>
+      <name>portlet-view-dispatched-file-path</name>
+      <value>/WEB-INF/jsp/image.jsp</value>
+    </init-param>
+    <init-param>
+      <name>layout-content-editable</name>
+      <value>true</value>
+    </init-param>
+    <init-param>
+      <name>layout-css-class</name>
+      <value>overflow-hidden</value>
+    </init-param>
+    <supports>
+      <mime-type>text/html</mime-type>
+    </supports>
+    <supported-locale>en</supported-locale>
+    <resource-bundle>locale.portlet.Image</resource-bundle>
+    <portlet-info>
+      <title>Image</title>
+    </portlet-info>
+  </portlet>
+
+  <portlet>
+    <portlet-name>Links</portlet-name>
+    <portlet-class>io.meeds.social.portlet.LinkPortlet</portlet-class>
+    <init-param>
+      <name>portlet-view-dispatched-file-path</name>
+      <value>/WEB-INF/jsp/links.jsp</value>
+    </init-param>
+    <init-param>
+      <name>layout-content-editable</name>
+      <value>true</value>
+    </init-param>
+    <supports>
+      <mime-type>text/html</mime-type>
+    </supports>
+    <supported-locale>en</supported-locale>
+    <resource-bundle>locale.portlet.Links</resource-bundle>
+    <portlet-info>
+      <title>Useful Links</title>
+    </portlet-info>
+  </portlet>
+
 </portlet-app>
