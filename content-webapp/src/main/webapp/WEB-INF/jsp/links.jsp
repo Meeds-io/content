@@ -10,7 +10,7 @@
     class="v-application transparent v-application--is-ltr theme--light" flat=""
     id="<%=id%>">
     <script type="text/javascript">
-      require(['PORTLET/social/Links'], app => app.init('<%=id%>', '<%=name%>', <%=canEdit%>));
+      require(['PORTLET/content/Links'], app => app.init('<%=id%>', '<%=name%>', <%=canEdit%>));
     </script>
   </div>
 </div>

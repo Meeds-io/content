@@ -42,7 +42,7 @@
     class="v-application transparent v-application--is-ltr theme--light" flat=""
     id="<%=id%>">
     <script type="text/javascript">
-      require(['PORTLET/social/Image'], app => app.init('<%=id%>', '<%=name%>', <%=canEdit%>, [<%=StringUtils.join(files.stream().map(ObjectAttachmentDetail::toString).toList(), ",")%>]));
+      require(['PORTLET/content/Image'], app => app.init('<%=id%>', '<%=name%>', <%=canEdit%>, [<%=StringUtils.join(files.stream().map(ObjectAttachmentDetail::toString).toList(), ",")%>]));
     </script>
   </div>
 </div>

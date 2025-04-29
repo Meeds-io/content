@@ -92,7 +92,7 @@
   </portlet-skin>
 
   <portlet-skin>
-    <application-name>social</application-name>
+    <application-name>content</application-name>
     <portlet-name>Image</portlet-name>
     <skin-name>Enterprise</skin-name>
     <css-priority>1</css-priority>

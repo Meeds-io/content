@@ -18,6 +18,9 @@
  */
 package io.meeds.content.plugin;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
 
 import java.util.Arrays;
@@ -25,35 +28,27 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
+import org.junit.Before;
+import org.junit.Test;
+
 import org.exoplatform.commons.exception.ObjectNotFoundException;
-import org.exoplatform.component.test.AbstractKernelTest;
-import org.exoplatform.component.test.ConfigurationUnit;
-import org.exoplatform.component.test.ConfiguredBy;
-import org.exoplatform.component.test.ContainerScope;
 import org.exoplatform.portal.config.UserACL;
 import org.exoplatform.portal.config.model.PortalConfig;
 import org.exoplatform.portal.mop.page.PageContext;
 import org.exoplatform.portal.mop.page.PageKey;
 import org.exoplatform.portal.mop.page.PageState;
 import org.exoplatform.portal.mop.service.LayoutService;
-import org.exoplatform.services.cache.CacheService;
 import org.exoplatform.services.security.IdentityRegistry;
 import org.exoplatform.services.security.MembershipEntry;
 
-import io.meeds.content.dao.LinkDAO;
-import io.meeds.content.dao.LinkSettingDAO;
+import io.meeds.content.AbstractSpringConfigurationTest;
 import io.meeds.content.model.Link;
 import io.meeds.content.model.LinkSetting;
-import io.meeds.content.service.LinkService;
-import io.meeds.content.storage.cache.CachedLinkStorage;
+import io.meeds.kernel.test.AbstractSpringTest;
 import io.meeds.social.translation.model.TranslationField;
 import io.meeds.social.translation.service.TranslationService;
 
-@ConfiguredBy({ @ConfigurationUnit(scope = ContainerScope.ROOT, path = "conf/configuration.xml"),
-  @ConfigurationUnit(scope = ContainerScope.ROOT, path = "conf/exo.social.component.core-local-root-configuration.xml"),
-  @ConfigurationUnit(scope = ContainerScope.PORTAL, path = "conf/portal/configuration.xml"),
-  @ConfigurationUnit(scope = ContainerScope.PORTAL, path = "conf/exo.social.component.core-local-configuration.xml"), })
-public class LinkTranslationPluginTest extends AbstractKernelTest { // NOSONAR
+public class LinkTranslationPluginTest extends AbstractSpringConfigurationTest { // NOSONAR
 
   private static final String FIELD_NAME           = "name";
 
@@ -67,33 +62,23 @@ public class LinkTranslationPluginTest extends AbstractKernelTest { // NOSONAR
 
   private LayoutService       layoutService;
 
-  private LinkService         linkService;
-
   private TranslationService  translationService;
 
   private IdentityRegistry    identityRegistry;
 
-  @Override
-  protected void setUp() throws Exception {
+  public LinkTranslationPluginTest() {
+    AbstractSpringTest.setTestClass(this.getClass());
+  }
+
+  @Before
+  public void setUp() {
     super.setUp();
-    linkService = getContainer().getComponentInstanceOfType(LinkService.class);
     layoutService = getContainer().getComponentInstanceOfType(LayoutService.class);
     identityRegistry = getContainer().getComponentInstanceOfType(IdentityRegistry.class);
     translationService = getContainer().getComponentInstanceOfType(TranslationService.class);
-    begin();
   }
 
-  @Override
-  protected void tearDown() throws Exception {
-    restartTransaction();
-    getContainer().getComponentInstanceOfType(LinkDAO.class).deleteAll();
-    restartTransaction();
-    getContainer().getComponentInstanceOfType(LinkSettingDAO.class).deleteAll();
-    getContainer().getComponentInstanceOfType(CacheService.class).getCacheInstance(CachedLinkStorage.CACHE_NAME).clearCache();
-    end();
-    super.tearDown();
-  }
-
+  @Test
   public void testLinkSettingHeaderTranslation() throws ObjectNotFoundException, IllegalAccessException {
     String pageId = createPage("testLinkSettingHeaderTranslation1", UserACL.EVERYONE, ADMINISTRATORS_GROUP);
     linkService.initLinkSetting(LINK_SETTING_NAME, pageId, 0l);

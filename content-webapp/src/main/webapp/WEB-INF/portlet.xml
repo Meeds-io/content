@@ -104,7 +104,7 @@
     <description>Allows to display published articles on pages. The news list view portlet must be configured by choosing a target and a template.</description>
     <portlet-name>NewsListView</portlet-name>
     <display-name>News List View</display-name>
-    <portlet-class>io.meeds.news.portlet.NewsListViewPortlet</portlet-class>
+    <portlet-class>io.meeds.content.portlet.NewsListViewPortlet</portlet-class>
     <init-param>
       <name>portlet-view-dispatched-file-path</name>
       <value>/WEB-INF/jsp/newsListView.jsp</value>

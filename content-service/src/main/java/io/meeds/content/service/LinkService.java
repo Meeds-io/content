@@ -68,52 +68,52 @@ import lombok.SneakyThrows;
 @Service
 public class LinkService {
 
-  public static final String  LINKS_CREATED_EVENT            = "links.created";
+  public static final String    LINKS_CREATED_EVENT            = "links.created";
 
-  public static final String  LINKS_UPDATED_EVENT            = "links.updated";
+  public static final String    LINKS_UPDATED_EVENT            = "links.updated";
 
-  public static final String  NO_ASSOCIATED_PAGE_TO_LINK     = "Link setting with name '%s' doesn't have an associated page";
+  public static final String    NO_ASSOCIATED_PAGE_TO_LINK     = "Link setting with name '%s' doesn't have an associated page";
 
-  public static final String  PAGE_NOT_ACCESSIBLE_FOR_USER   = "Page %s isn't accessible for user %s";
+  public static final String    PAGE_NOT_ACCESSIBLE_FOR_USER   = "Page %s isn't accessible for user %s";
 
-  public static final String  PAGE_NOT_EDITABLE_BY_USER      = "Page %s isn't modifiable by user %s";
+  public static final String    PAGE_NOT_EDITABLE_BY_USER      = "Page %s isn't modifiable by user %s";
 
-  public static final String  LINK_SETTING_PAGE_IS_MANDATORY = "link setting page is mandatory";
+  public static final String    LINK_SETTING_PAGE_IS_MANDATORY = "link setting page is mandatory";
 
-  public static final String  LINK_SETTING_NAME_IS_MANDATORY = "link setting name is mandatory";
+  public static final String    LINK_SETTING_NAME_IS_MANDATORY = "link setting name is mandatory";
 
-  public static final String  ERROR_READING_ICON             = "Error while reading link icon fir setting '%s' with id '%s'";
+  public static final String    ERROR_READING_ICON             = "Error while reading link icon fir setting '%s' with id '%s'";
 
-  private static final String FILE_API_NAMESPACE             = "links";
+  public static final String    FILE_API_NAMESPACE             = "links";
 
-  public static final String  LINK_SETTINGS_HEADER_FIELD     = "header";
+  public static final String    LINK_SETTINGS_HEADER_FIELD     = "header";
 
-  public static final String  LINK_NAME_FIELD                = "name";
+  public static final String    LINK_NAME_FIELD                = "name";
 
-  public static final String  LINK_DESCRIPTION_FIELD         = "description";
+  public static final String    LINK_DESCRIPTION_FIELD         = "description";
 
-  private static final Log    LOG                            = ExoLogger.getLogger(LinkService.class);
-
-  @Autowired
-  private ListenerService     listenerService;
+  private static final Log      LOG                            = ExoLogger.getLogger(LinkService.class);
 
   @Autowired
-  private FileService         fileService;
+  protected ListenerService     listenerService;
 
   @Autowired
-  private UploadService       uploadService;
+  protected FileService         fileService;
 
   @Autowired
-  private TranslationService  translationService;
+  protected UploadService       uploadService;
 
   @Autowired
-  private LocaleConfigService localeConfigService;
+  protected TranslationService  translationService;
 
   @Autowired
-  private CMSService          cmsService;
+  protected LocaleConfigService localeConfigService;
 
   @Autowired
-  private LinkStorage         linkStorage;
+  protected CMSService          cmsService;
+
+  @Autowired
+  protected LinkStorage         linkStorage;
 
   /**
    * @param linkSettingName {@link LinkSetting} unique name

@@ -43,21 +43,21 @@ import jakarta.annotation.PostConstruct;
 @Component
 public class LinkSettingTranslationPlugin extends TranslationPlugin {
 
-  public static final String  LINK_SETTINGS_OBJECT_TYPE = "link-settings";
+  public static final String    LINK_SETTINGS_OBJECT_TYPE = "link-settings";
 
-  private static final Log    LOG                       = ExoLogger.getLogger(LinkSettingTranslationPlugin.class);
-
-  @Autowired
-  private LinkService         linkService;
+  private static final Log      LOG                       = ExoLogger.getLogger(LinkSettingTranslationPlugin.class);
 
   @Autowired
-  private IdentityRegistry    identityRegistry;
+  protected LinkService         linkService;
 
   @Autowired
-  private OrganizationService organizationService;
+  protected IdentityRegistry    identityRegistry;
 
   @Autowired
-  private TranslationService  translationService;
+  protected OrganizationService organizationService;
+
+  @Autowired
+  protected TranslationService  translationService;
 
   @PostConstruct
   public void init() {

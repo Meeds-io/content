@@ -23,14 +23,16 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.when;
 
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.junit4.SpringRunner;
 
 import org.exoplatform.commons.exception.ObjectNotFoundException;
+import org.exoplatform.social.attachment.AttachmentService;
 import org.exoplatform.social.core.identity.model.Identity;
 import org.exoplatform.social.core.manager.IdentityManager;
 import org.exoplatform.social.core.space.model.Space;
@@ -39,26 +41,28 @@ import org.exoplatform.social.core.space.spi.SpaceService;
 import io.meeds.social.cms.model.CMSSetting;
 import io.meeds.social.cms.service.CMSService;
 
-@RunWith(MockitoJUnitRunner.class)
+@SpringBootTest(classes = {
+  ImageAttachmentPlugin.class,
+})
+@RunWith(SpringRunner.class)
 public class ImageAttachmentPluginTest {
 
   private static final String   CMS_SETTING_NAME = "cmsSettingName";
 
-  private ImageAttachmentPlugin imageAttachmentPlugin;
-
-  @Mock
+  @MockBean
   private CMSService            cmsService;
 
-  @Mock
+  @MockBean
   private IdentityManager       identityManager;
 
-  @Mock
+  @MockBean
   private SpaceService          spaceService;
 
-  @Before
-  public void setUp() {
-    imageAttachmentPlugin = new ImageAttachmentPlugin();
-  }
+  @MockBean
+  private AttachmentService     attachmentService;
+
+  @Autowired
+  private ImageAttachmentPlugin imageAttachmentPlugin;
 
   @Test
   public void testHasAccessPermission() throws ObjectNotFoundException {

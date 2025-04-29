@@ -74,7 +74,7 @@ public class LinkEntityBuilder {
     if (link.getIconFileId() == 0) {
       return null;
     } else {
-      return RestUtils.getBaseRestUrl() + "/social/links/" + linkSetting.getName() + "/" + link.getId() + "/icon?v=" +
+      return "/content/rest/links/" + linkSetting.getName() + "/" + link.getId() + "/icon?v=" +
           Objects.hash(linkSetting.getLastModified());
     }
   }

@@ -18,185 +18,177 @@
  */
 package io.meeds.content.rest;
 
+import static io.meeds.social.util.JsonUtils.toJsonString;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mockStatic;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.io.File;
-import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.ws.rs.core.MultivaluedMap;
-
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.mockito.MockedStatic;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureWebMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.context.WebApplicationContext;
 
-import org.exoplatform.container.ExoContainerContext;
-import org.exoplatform.portal.config.UserACL;
-import org.exoplatform.portal.config.model.PortalConfig;
-import org.exoplatform.portal.mop.page.PageContext;
-import org.exoplatform.portal.mop.page.PageKey;
-import org.exoplatform.portal.mop.page.PageState;
-import org.exoplatform.portal.mop.service.LayoutService;
-import org.exoplatform.services.cache.CacheService;
-import org.exoplatform.services.rest.impl.ContainerResponse;
-import org.exoplatform.services.rest.impl.MultivaluedMapImpl;
-import org.exoplatform.services.security.ConversationState;
-import org.exoplatform.services.security.IdentityRegistry;
-import org.exoplatform.services.security.MembershipEntry;
-import org.exoplatform.social.core.mock.MockUploadService;
 import org.exoplatform.social.rest.api.RestUtils;
-import org.exoplatform.social.service.test.AbstractResourceTest;
-import org.exoplatform.upload.UploadService;
 
 import io.meeds.content.constant.LinkAlignType;
 import io.meeds.content.constant.LinkDisplayType;
-import io.meeds.content.dao.LinkDAO;
-import io.meeds.content.dao.LinkSettingDAO;
 import io.meeds.content.model.LinkSetting;
-import io.meeds.content.rest.LinkRest;
 import io.meeds.content.rest.model.LinkRestEntity;
 import io.meeds.content.rest.model.LinkSettingRestEntity;
 import io.meeds.content.service.LinkService;
-import io.meeds.content.storage.cache.CachedLinkStorage;
+import io.meeds.social.util.JsonUtils;
+import io.meeds.spring.web.security.PortalAuthenticationManager;
+import io.meeds.spring.web.security.WebSecurityConfiguration;
 
-public class LinkRestTest extends AbstractResourceTest { // NOSONAR
+import jakarta.servlet.Filter;
+import lombok.SneakyThrows;
 
-  private static final String            BASE_URL             = "/social/links";             // NOSONAR
+@SpringBootTest(classes = { LinkRest.class, PortalAuthenticationManager.class, })
+@ContextConfiguration(classes = { WebSecurityConfiguration.class })
+@AutoConfigureWebMvc
+@AutoConfigureMockMvc(addFilters = false)
+@RunWith(SpringRunner.class)
+public class LinkRestTest { // NOSONAR
 
-  private static MockedStatic<RestUtils> REST_UTILS;                                         // NOSONAR
+  private static final String            REST_PATH         = "/links";         // NOSONAR
 
-  private static final String            USERS_GROUP          = "*:/platform/users";
+  private static MockedStatic<RestUtils> REST_UTILS;                           // NOSONAR
 
-  private static final String            ADMINISTRATORS_GROUP = "*:/platform/administrators";
+  private static final String            SIMPLE_USER       = "simple";
 
-  private static final String            USERNAME             = "testuser";
+  private static final String            TEST_PASSWORD     = "testPassword";
 
-  private static final String            LINK_SETTING_NAME    = "linkSettingName";
+  private static final String            LINK_SETTING_NAME = "linkSettingName";
 
-  private static final String            MIME_TYPE            = "image/png";
+  private static final String            UPLOAD_ID         = "1234";
 
-  private static final String            FILE_NAME            = "cover.png";
+  @Autowired
+  private SecurityFilterChain            filterChain;
 
-  private static final String            UPLOAD_ID            = "1234";
+  @Autowired
+  private WebApplicationContext          context;
 
-  private LayoutService                  layoutService;
-
+  @MockBean
   private LinkService                    linkService;
 
-  private IdentityRegistry               identityRegistry;
+  private MockMvc                        mockMvc;
 
-  private MockUploadService              uploadService;
-
-  @Override
-  protected void setUp() throws Exception {
-    super.setUp();
-    linkService = getContainer().getComponentInstanceOfType(LinkService.class);
-    layoutService = getContainer().getComponentInstanceOfType(LayoutService.class);
-    identityRegistry = getContainer().getComponentInstanceOfType(IdentityRegistry.class);
-    uploadService = (MockUploadService) getContainer().getComponentInstanceOfType(UploadService.class);
-    registry(new LinkRest(linkService));
-
-    ExoContainerContext.setCurrentContainer(getContainer());
-    restartTransaction();
-    begin();
+  @Before
+  public void setUp() {
+    mockMvc = MockMvcBuilders.webAppContextSetup(context)
+                             .addFilters(filterChain.getFilters().toArray(new Filter[0]))
+                             .build();
     REST_UTILS = mockStatic(RestUtils.class); // NOSONAR
   }
 
-  @Override
-  protected void tearDown() throws Exception {
-    restartTransaction();
-    getContainer().getComponentInstanceOfType(LinkDAO.class).deleteAll();
-    restartTransaction();
-    getContainer().getComponentInstanceOfType(LinkSettingDAO.class).deleteAll();
-    getContainer().getComponentInstanceOfType(CacheService.class).getCacheInstance(CachedLinkStorage.CACHE_NAME).clearCache();
-    restartTransaction();
-    removeResource(LinkRest.class);
-    end();
-    super.tearDown();
+  @After
+  public void tearDown() {
     REST_UTILS.close(); // NOSONAR
   }
 
   @Test
+  @SneakyThrows
   public void testSaveLink() {
     LinkSetting linkSetting = initLinkSetting(LINK_SETTING_NAME, "testSaveLink", true);
     assertNotNull(linkSetting);
 
-    ContainerResponse response = saveLink();
-    assertEquals(403, response.getStatus());
+    ResultActions response = saveLink(false, false);
+    response.andExpect(status().isForbidden());
 
-    registerInternalUser(USERNAME);
-    response = saveLink();
-    assertEquals(401, response.getStatus());
+    response = saveLink(true, false);
+    response.andExpect(status().isUnauthorized());
 
-    registerAdministratorUser(USERNAME);
-    response = saveLink();
-    assertEquals(200, response.getStatus());
+    response = saveLink(false, true);
+    response.andExpect(status().isOk());
   }
 
   @Test
-  public void testGetLinkResponseCode() throws InterruptedException {
+  @SneakyThrows
+  public void testGetLinkResponseCode() {
     String pageName = "testGetLink";
     LinkSetting linkSetting = initLinkSetting(LINK_SETTING_NAME, pageName, true);
     assertNotNull(linkSetting);
 
-    registerAdministratorUser(USERNAME);
-    ContainerResponse response = saveLink();
-    assertEquals(200, response.getStatus());
+    ResultActions response = saveLink(false, true);
+    response.andExpect(status().isOk());
 
-    registerAnonymousUser();
-    response = getLink();
-    assertEquals(200, response.getStatus());
+    response = getLink(false, false);
+    response.andExpect(status().isOk());
 
     linkSetting = initLinkSetting(LINK_SETTING_NAME, pageName, false);
-    response = getLink();
-    assertEquals(401, response.getStatus());
+    response = getLink(false, false);
+    response.andExpect(status().isUnauthorized());
 
-    registerInternalUser(USERNAME);
-    response = getLink();
-    assertEquals(200, response.getStatus());
+    response = getLink(true, false);
+    response.andExpect(status().isOk());
 
     String eTagValue = getETagValue(response);
-    response = getLinkWithETag(eTagValue);
-    assertEquals(304, response.getStatus());
+    response = getLinkWithETag(eTagValue, true, false);
+    response.andExpect(status().isNotModified());
 
-    Thread.sleep(2); // NOSONAR wait for 10 milliseconds to have a different
-                     // modification timestamp after saving the link setting
-    registerAdministratorUser(USERNAME);
-    response = saveLink();
-    assertEquals(200, response.getStatus());
+    response = saveLink(true, true);
+    response.andExpect(status().isOk());
 
     LinkSetting modifiedLinkSetting = initLinkSetting(LINK_SETTING_NAME, pageName, true);
     assertTrue(modifiedLinkSetting.getLastModified() > linkSetting.getLastModified());
 
-    registerInternalUser(USERNAME);
-    response = getLinkWithETag(eTagValue);
-    assertEquals(200, response.getStatus());
+    response = getLinkWithETag(eTagValue, true, false);
+    response.andExpect(status().isOk());
 
-    registerAnonymousUser();
-    response = getLink();
-    assertEquals(200, response.getStatus());
+    response = getLink(false, false);
+    response.andExpect(status().isOk());
   }
 
   @Test
-  public void testGetLinkResponseEntity() throws Exception {
+  @SneakyThrows
+  public void testGetLinkResponseEntity() {
     String pageName = "testGetLinkResponseEntity";
     LinkSetting linkSetting = initLinkSetting(LINK_SETTING_NAME, pageName, true);
     assertNotNull(linkSetting);
 
-    registerAdministratorUser(USERNAME);
-    ContainerResponse response = saveLink();
-    assertEquals(200, response.getStatus());
+    ResultActions response = saveLink(true, true);
+    response.andExpect(status().isOk());
 
-    registerAnonymousUser();
-    response = getLink();
-    assertEquals(200, response.getStatus());
-    LinkSettingRestEntity linkSettingRestEntity = (LinkSettingRestEntity) response.getEntity();
+    response = getLink(true, false);
+    response.andExpect(status().isOk());
+
+    LinkSettingRestEntity linkSettingRestEntity = getLinkSetting(response);
     assertTrue(linkSettingRestEntity.getId() > 0);
     assertEquals(LINK_SETTING_NAME, linkSettingRestEntity.getName());
+
     LinkSettingRestEntity newLinkSettingRestEntity = newLinkSettingRestEntity();
     assertEquals(newLinkSettingRestEntity.getName(), linkSettingRestEntity.getName());
     assertEquals(newLinkSettingRestEntity.getHeader(), linkSettingRestEntity.getHeader());
@@ -235,9 +227,10 @@ public class LinkRestTest extends AbstractResourceTest { // NOSONAR
     assertEquals(newLink2.getUrl(), savedLink2.getUrl());
     assertEquals(newLink2.isSameTab(), savedLink2.isSameTab());
 
-    response = getLinkWithLang("fr");
-    assertEquals(200, response.getStatus());
-    linkSettingRestEntity = (LinkSettingRestEntity) response.getEntity();
+    response = getLinkWithLang("fr", true, false);
+    response.andExpect(status().isOk());
+
+    linkSettingRestEntity = getLinkSetting(response);
     assertEquals(Collections.singletonMap("fr", newLinkSettingRestEntity.getHeader().get("fr")),
                  linkSettingRestEntity.getHeader());
     links = linkSettingRestEntity.getLinks();
@@ -252,19 +245,19 @@ public class LinkRestTest extends AbstractResourceTest { // NOSONAR
   }
 
   @Test
+  @SneakyThrows
   public void testGetLinkIconStream() {
     String pageName = "testGetLinkResponseEntity";
     LinkSetting linkSetting = initLinkSetting(LINK_SETTING_NAME, pageName, true);
     assertNotNull(linkSetting);
 
-    registerAdministratorUser(USERNAME);
-    ContainerResponse response = saveLink();
-    assertEquals(200, response.getStatus());
+    ResultActions response = saveLink(true, true);
+    response.andExpect(status().isOk());
 
-    registerAnonymousUser();
-    response = getLink();
-    assertEquals(200, response.getStatus());
-    LinkSettingRestEntity linkSettingRestEntity = (LinkSettingRestEntity) response.getEntity();
+    response = getLink(false, false);
+    response.andExpect(status().isOk());
+
+    LinkSettingRestEntity linkSettingRestEntity = getLinkSetting(response);
     List<LinkRestEntity> links = linkSettingRestEntity.getLinks();
     assertNotNull(links);
     assertEquals(2, links.size());
@@ -272,91 +265,95 @@ public class LinkRestTest extends AbstractResourceTest { // NOSONAR
     assertNotNull(link);
     assertNotNull(link.getIconUrl());
 
-    response = getByUrl(link.getIconUrl());
-    assertEquals(200, response.getStatus());
-    InputStream inputStream = (InputStream) response.getEntity();
-    assertNotNull(inputStream);
+    response = getByUrl(link.getIconUrl(), true, true);
+    response.andExpect(status().isOk());
+
+    byte[] bytes = response.andReturn().getResponse().getContentAsByteArray();
+    assertNotNull(bytes);
 
     String eTagValue = getETagValue(response);
-    response = getByUrlWithETag(link.getIconUrl(), eTagValue);
-    assertEquals(304, response.getStatus());
+    response = getByUrlWithETag(link.getIconUrl(), eTagValue, true, true);
+    response.andExpect(status().isNotModified());
 
-    registerAdministratorUser(USERNAME);
-    response = saveLink();
-    assertEquals(200, response.getStatus());
-    linkSettingRestEntity = (LinkSettingRestEntity) response.getEntity();
+    response = saveLink(true, true);
+    response.andExpect(status().isOk());
+
+    linkSettingRestEntity = getLinkSetting(response);
     link = linkSettingRestEntity.getLinks().get(1);
 
-    registerAnonymousUser();
-    response = getByUrlWithETag(link.getIconUrl(), eTagValue);
-    assertEquals(200, response.getStatus());
+    response = getByUrlWithETag(link.getIconUrl(), eTagValue, false, false);
+    response.andExpect(status().isOk());
   }
 
   private String getUrl() {
-    return BASE_URL + "/" + LINK_SETTING_NAME;
+    return REST_PATH + "/" + LINK_SETTING_NAME;
   }
 
-  private ContainerResponse getLink() {
-    try {
-      return getResponse("GET", getUrl(), null);
-    } catch (Exception e) {
-      throw new IllegalStateException(e);
+  @SneakyThrows
+  private ResultActions saveLink(boolean user, boolean admin) {
+    LinkSettingRestEntity linkSettingEntity = newLinkSettingRestEntity();
+    MockHttpServletRequestBuilder responseBuilder = put(getUrl()).content(toJsonString(linkSettingEntity))
+                                                                 .contentType(MediaType.APPLICATION_JSON);
+    if (admin) {
+      responseBuilder.with(testAdminUser());
     }
-  }
-
-  private ContainerResponse getByUrl(String url) {
-    try {
-      return getResponse("GET", url, null);
-    } catch (Exception e) {
-      throw new IllegalStateException(e);
+    if (user) {
+      responseBuilder.with(testSimpleUser());
     }
+    return mockMvc.perform(responseBuilder);
   }
 
-  private ContainerResponse getLinkWithETag(String eTagValue) {
-    try {
-      MultivaluedMap<String, String> h = new MultivaluedMapImpl();
-      h.putSingle("If-None-Match", eTagValue);
-      return service("GET", getUrl(), "", h, new byte[0]);
-    } catch (Exception e) {
-      throw new IllegalStateException(e);
+  private ResultActions getLink(boolean user, boolean admin) {
+    return getByUrl(getUrl(), user, admin);
+  }
+
+  private ResultActions getLinkWithLang(String lang, boolean user, boolean admin) {
+    return getByUrl(getUrl() + "?lang=" + lang, user, admin);
+  }
+
+  @SneakyThrows
+  private ResultActions getByUrl(String url, boolean user, boolean admin) {
+    MockHttpServletRequestBuilder responseBuilder = get(url);
+    if (admin) {
+      responseBuilder.with(testAdminUser());
     }
-  }
-
-  private ContainerResponse getByUrlWithETag(String url, String eTagValue) {
-    try {
-      MultivaluedMap<String, String> h = new MultivaluedMapImpl();
-      h.putSingle("If-None-Match", eTagValue);
-      return service("GET", url, "", h, new byte[0]);
-    } catch (Exception e) {
-      throw new IllegalStateException(e);
+    if (user) {
+      responseBuilder.with(testSimpleUser());
     }
+    return mockMvc.perform(responseBuilder);
   }
 
-  private ContainerResponse getLinkWithLang(String lang) {
-    try {
-      return getResponse("GET", getUrl() + "?lang=" + lang, null);
-    } catch (Exception e) {
-      throw new IllegalStateException(e);
+  private ResultActions getLinkWithETag(String eTagValue, boolean user, boolean admin) {
+    return getByUrlWithETag(getUrl(), eTagValue, user, admin);
+  }
+
+  @SneakyThrows
+  private ResultActions getByUrlWithETag(String url, String eTagValue, boolean user, boolean admin) {
+    MockHttpServletRequestBuilder responseBuilder = get(url).header("If-None-Match", eTagValue);
+    if (admin) {
+      responseBuilder.with(testAdminUser());
     }
-  }
-
-  private String getETagValue(ContainerResponse responseWithEtag) {
-    List<Object> eTag = responseWithEtag.getHttpHeaders().get("Etag");
-    assertNotNull(eTag);
-    assertEquals(1, eTag.size());
-    return eTag.get(0).toString();
-  }
-
-  private ContainerResponse saveLink() {
-    try {
-      LinkSettingRestEntity linkSettingEntity = newLinkSettingRestEntity();
-      return getResponse("PUT", getUrl(), toJsonString(linkSettingEntity));
-    } catch (Exception e) {
-      throw new IllegalStateException(e);
+    if (user) {
+      responseBuilder.with(testSimpleUser());
     }
+    return mockMvc.perform(responseBuilder);
   }
 
-  private LinkSettingRestEntity newLinkSettingRestEntity() throws Exception {
+  private String getETagValue(ResultActions response) {
+    return response.andReturn().getResponse().getHeader("eTag");
+  }
+
+  @SneakyThrows
+  private LinkSettingRestEntity getLinkSetting(ResultActions response) {
+    return getContent(response, LinkSettingRestEntity.class);
+  }
+
+  @SneakyThrows
+  private <T> T getContent(ResultActions response, Class<T> type) {
+    return JsonUtils.fromJsonString(response.andReturn().getResponse().getContentAsString(), type);
+  }
+
+  private LinkSettingRestEntity newLinkSettingRestEntity() {
     Map<String, String> linkNames = new HashMap<>();
     linkNames.put("en", "Name-en");
     linkNames.put("fr", "Name-fr");
@@ -366,7 +363,6 @@ public class LinkRestTest extends AbstractResourceTest { // NOSONAR
 
     List<LinkRestEntity> links = new ArrayList<>();
     links.add(new LinkRestEntity(0, linkNames, linkDescriptions, "url1", "icon1", true, 2, null, 0, UPLOAD_ID));
-    uploadResource();
     links.add(new LinkRestEntity(0, linkNames, linkDescriptions, "url2", "icon2", false, 1, null, 0, null));
 
     Map<String, String> linkHeaders = new HashMap<>();
@@ -387,73 +383,40 @@ public class LinkRestTest extends AbstractResourceTest { // NOSONAR
                                      links);
   }
 
+  @SneakyThrows
   private LinkSetting initLinkSetting(String linkSettingName, String pageName, boolean anonymous) {
-    String pageId = createPage(pageName, anonymous ? UserACL.EVERYONE : USERS_GROUP, ADMINISTRATORS_GROUP);
-    return linkService.initLinkSetting(linkSettingName, pageId, 0l);
-  }
-
-  private String createPage(String pageName, String accessPermission, String editPermission) {
-    String siteType = "portal";
-    String siteName = "test";
-    if (layoutService.getPortalConfig(siteName) == null) {
-      PortalConfig portal = new PortalConfig();
-      portal.setType(siteType);
-      portal.setName(siteName);
-      portal.setLocale("en");
-      portal.setLabel("Test");
-      portal.setDescription("Test");
-      portal.setAccessPermissions(new String[] { UserACL.EVERYONE });
-      layoutService.create(portal);
+    LinkSetting linkSetting = new LinkSetting(2l,
+                                              linkSettingName,
+                                              pageName,
+                                              0l,
+                                              null,
+                                              LinkDisplayType.CARD,
+                                              LinkAlignType.CENTER,
+                                              LinkAlignType.CENTER,
+                                              false,
+                                              0,
+                                              false,
+                                              false,
+                                              false,
+                                              null,
+                                              System.currentTimeMillis());
+    if (!anonymous) {
+      lenient().when(linkService.getLinkSetting(eq(linkSettingName),
+                                                anyString(),
+                                                argThat(identity -> identity == null || identity.getGroups().isEmpty())))
+               .thenThrow(IllegalAccessException.class);
     }
-
-    PageKey pageKey = new PageKey(siteType, siteName, pageName);
-    PageState pageState = new PageState(pageName,
-                                        null,
-                                        false,
-                                        null,
-                                        Collections.singletonList(accessPermission),
-                                        editPermission);
-    layoutService.save(new PageContext(pageKey, pageState));
-    return pageKey.format();
+    return linkSetting;
   }
 
-  private void uploadResource() throws Exception {
-    File tempFile = File.createTempFile("image", "temp");
-    uploadService.createUploadResource(UPLOAD_ID, tempFile.getPath(), FILE_NAME, MIME_TYPE);
+  private RequestPostProcessor testSimpleUser() {
+    return user(SIMPLE_USER).password(TEST_PASSWORD)
+                            .authorities(new SimpleGrantedAuthority("users"));
   }
 
-  private void registerAnonymousUser() {
-    resetRestUtils();
-  }
-
-  private org.exoplatform.services.security.Identity registerAdministratorUser(String user) {
-    org.exoplatform.services.security.Identity identity =
-                                                        new org.exoplatform.services.security.Identity(user,
-                                                                                                       Arrays.asList(MembershipEntry.parse(ADMINISTRATORS_GROUP),
-                                                                                                                     MembershipEntry.parse(USERS_GROUP)));
-    identityRegistry.register(identity);
-    ConversationState.setCurrent(new ConversationState(identity));
-    resetRestUtils();
-    REST_UTILS.when(RestUtils::getCurrentUser).thenReturn(USERNAME);
-    REST_UTILS.when(RestUtils::getCurrentUserAclIdentity).thenReturn(identity);
-    return identity;
-  }
-
-  private org.exoplatform.services.security.Identity registerInternalUser(String username) {
-    org.exoplatform.services.security.Identity identity =
-                                                        new org.exoplatform.services.security.Identity(username,
-                                                                                                       Arrays.asList(MembershipEntry.parse(USERS_GROUP)));
-    identityRegistry.register(identity);
-    ConversationState.setCurrent(new ConversationState(identity));
-    resetRestUtils();
-    REST_UTILS.when(RestUtils::getCurrentUser).thenReturn(USERNAME);
-    REST_UTILS.when(RestUtils::getCurrentUserAclIdentity).thenReturn(identity);
-    return identity;
-  }
-
-  private void resetRestUtils() {
-    REST_UTILS.reset();
-    REST_UTILS.when(RestUtils::getBaseRestUrl).thenReturn("");
+  private RequestPostProcessor testAdminUser() {
+    return user(SIMPLE_USER).password(TEST_PASSWORD)
+                            .authorities(new SimpleGrantedAuthority("administrators"), new SimpleGrantedAuthority("users"));
   }
 
 }

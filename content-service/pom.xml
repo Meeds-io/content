@@ -83,8 +83,8 @@
         <groupId>io.openapitools.swagger</groupId>
         <artifactId>swagger-maven-plugin</artifactId>
         <configuration>
-          <applicationClass>io.meeds.news.rest.NewsRest</applicationClass>
-          <applicationClass>io.meeds.news.rest.NewsTargetingRest</applicationClass>
+          <applicationClass>io.meeds.content.rest.NewsRest</applicationClass>
+          <applicationClass>io.meeds.content.rest.NewsTargetingRest</applicationClass>
           <swaggerConfig>
             <info>
               <title>${rest.api.doc.title}</title>

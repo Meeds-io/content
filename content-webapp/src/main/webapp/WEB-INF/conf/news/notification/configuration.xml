@@ -58,7 +58,7 @@
     <component-plugin>
       <name>notification.plugins</name>
       <set-method>addPlugin</set-method>
-      <type>io.meeds.news.notification.plugin.PostNewsNotificationPlugin</type>
+      <type>io.meeds.content.notification.plugin.PostNewsNotificationPlugin</type>
       <description>Initial information for plugin PostNewsNotificationPlugin</description>
       <init-params>
         <object-param>
@@ -97,7 +97,7 @@
     <component-plugin>
       <name>notification.plugins</name>
       <set-method>addPlugin</set-method>
-      <type>io.meeds.news.notification.plugin.MentionInNewsNotificationPlugin</type>
+      <type>io.meeds.content.notification.plugin.MentionInNewsNotificationPlugin</type>
       <description>Initial information for plugin MentionInNewsNotificationPlugin</description>
       <init-params>
         <object-param>
@@ -139,7 +139,7 @@
     <component-plugin>
       <name>notification.plugins</name>
       <set-method>addPlugin</set-method>
-      <type>io.meeds.news.notification.plugin.PublishNewsNotificationPlugin</type>
+      <type>io.meeds.content.notification.plugin.PublishNewsNotificationPlugin</type>
       <description>Initial information for plugin PublishNewsNotificationPlugin</description>
       <init-params>
         <object-param>
@@ -185,7 +185,7 @@
     <component-plugin>
       <name>NewsSpaceWebNotificationPlugin</name>
       <set-method>addPlugin</set-method>
-      <type>io.meeds.news.notification.plugin.NewsSpaceWebNotificationPlugin</type>
+      <type>io.meeds.content.notification.plugin.NewsSpaceWebNotificationPlugin</type>
       <init-params>
         <values-param>
           <name>notification.plugin.ids</name>
@@ -200,7 +200,7 @@
     <component-plugin>
       <name>web.channel.content</name>
       <set-method>registerTemplateProvider</set-method>
-      <type>io.meeds.news.notification.provider.MailTemplateProvider</type>
+      <type>io.meeds.content.notification.provider.MailTemplateProvider</type>
       <init-params>
         <value-param>
           <name>channel-id</name>
@@ -211,7 +211,7 @@
     <component-plugin profiles="push-notifications">
       <name>web.channel.content</name>
       <set-method>registerTemplateProvider</set-method>
-      <type>io.meeds.news.notification.provider.PushTemplateProvider</type>
+      <type>io.meeds.content.notification.provider.PushTemplateProvider</type>
       <init-params>
         <value-param>
           <name>channel-id</name>
@@ -222,7 +222,7 @@
     <component-plugin>
       <name>web.channel.content</name>
       <set-method>registerTemplateProvider</set-method>
-      <type>io.meeds.news.notification.provider.PushTemplateProvider</type>
+      <type>io.meeds.content.notification.provider.PushTemplateProvider</type>
       <init-params>
         <value-param>
           <name>channel-id</name>

@@ -18,8 +18,13 @@
  */
 package io.meeds.content.service;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.InputStream;
@@ -28,41 +33,36 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import org.junit.Before;
+import org.junit.Test;
+
 import org.exoplatform.commons.exception.ObjectNotFoundException;
 import org.exoplatform.commons.file.model.FileInfo;
 import org.exoplatform.commons.file.model.FileItem;
 import org.exoplatform.commons.file.services.FileService;
-import org.exoplatform.component.test.AbstractKernelTest;
-import org.exoplatform.component.test.ConfigurationUnit;
-import org.exoplatform.component.test.ConfiguredBy;
-import org.exoplatform.component.test.ContainerScope;
 import org.exoplatform.portal.config.UserACL;
 import org.exoplatform.portal.config.model.PortalConfig;
 import org.exoplatform.portal.mop.page.PageContext;
 import org.exoplatform.portal.mop.page.PageKey;
 import org.exoplatform.portal.mop.page.PageState;
 import org.exoplatform.portal.mop.service.LayoutService;
-import org.exoplatform.services.cache.CacheService;
 import org.exoplatform.services.resources.LocaleConfigService;
 import org.exoplatform.services.security.IdentityRegistry;
 import org.exoplatform.services.security.MembershipEntry;
 import org.exoplatform.social.core.mock.MockUploadService;
 import org.exoplatform.upload.UploadService;
 
+import io.meeds.content.AbstractSpringConfigurationTest;
 import io.meeds.content.constant.LinkAlignType;
 import io.meeds.content.constant.LinkDisplayType;
-import io.meeds.content.dao.LinkDAO;
-import io.meeds.content.dao.LinkSettingDAO;
 import io.meeds.content.model.Link;
 import io.meeds.content.model.LinkSetting;
 import io.meeds.content.model.LinkWithIconAttachment;
-import io.meeds.content.storage.cache.CachedLinkStorage;
+import io.meeds.kernel.test.AbstractSpringTest;
 
-@ConfiguredBy({ @ConfigurationUnit(scope = ContainerScope.ROOT, path = "conf/configuration.xml"),
-  @ConfigurationUnit(scope = ContainerScope.ROOT, path = "conf/exo.social.component.core-local-root-configuration.xml"),
-  @ConfigurationUnit(scope = ContainerScope.PORTAL, path = "conf/portal/configuration.xml"),
-  @ConfigurationUnit(scope = ContainerScope.PORTAL, path = "conf/exo.social.component.core-local-configuration.xml"), })
-public class LinkServiceTest extends AbstractKernelTest { // NOSONAR
+import lombok.SneakyThrows;
+
+public class LinkServiceTest extends AbstractSpringConfigurationTest { // NOSONAR
 
   private static final String SEE_MORE_NAME        = "SeeMore";
 
@@ -86,8 +86,6 @@ public class LinkServiceTest extends AbstractKernelTest { // NOSONAR
 
   private LayoutService       layoutService;
 
-  private LinkService         linkService;
-
   private IdentityRegistry    identityRegistry;
 
   private MockUploadService   uploadService;
@@ -96,29 +94,22 @@ public class LinkServiceTest extends AbstractKernelTest { // NOSONAR
 
   private LocaleConfigService localeConfigService;
 
+  public LinkServiceTest() {
+    AbstractSpringTest.setTestClass(this.getClass());
+  }
+
+  @Before
   @Override
-  protected void setUp() throws Exception {
+  public void setUp() {
     super.setUp();
-    linkService = getContainer().getComponentInstanceOfType(LinkService.class);
     layoutService = getContainer().getComponentInstanceOfType(LayoutService.class);
     identityRegistry = getContainer().getComponentInstanceOfType(IdentityRegistry.class);
     uploadService = (MockUploadService) getContainer().getComponentInstanceOfType(UploadService.class);
     fileService = getContainer().getComponentInstanceOfType(FileService.class);
     localeConfigService = getContainer().getComponentInstanceOfType(LocaleConfigService.class);
-    begin();
   }
 
-  @Override
-  protected void tearDown() throws Exception {
-    restartTransaction();
-    getContainer().getComponentInstanceOfType(LinkDAO.class).deleteAll();
-    restartTransaction();
-    getContainer().getComponentInstanceOfType(LinkSettingDAO.class).deleteAll();
-    getContainer().getComponentInstanceOfType(CacheService.class).getCacheInstance(CachedLinkStorage.CACHE_NAME).clearCache();
-    end();
-    super.tearDown();
-  }
-
+  @Test
   public void testInitLinkSetting() {
     String pageReference = createPage("testInitLinkSetting", UserACL.EVERYONE, ADMINISTRATORS_GROUP);
 
@@ -133,7 +124,9 @@ public class LinkServiceTest extends AbstractKernelTest { // NOSONAR
     assertEquals(SPACE_ID, linkSetting.getSpaceId());
   }
 
-  public void testSaveLinkSettingPermissions() throws IllegalAccessException, InterruptedException, ObjectNotFoundException {
+  @Test
+  @SneakyThrows
+  public void testSaveLinkSettingPermissions() {
     LinkSetting linkSetting = initLinkSetting(LINK_SETTING_NAME, "testSaveLinkSettingPermissions1");
     assertNotNull(linkSetting);
 
@@ -192,7 +185,9 @@ public class LinkServiceTest extends AbstractKernelTest { // NOSONAR
     assertEquals(linkSetting, updatedLinkSetting);
   }
 
-  public void testSaveLinks() throws Exception {
+  @Test
+  @SneakyThrows
+  public void testSaveLinks() {
     LinkSetting linkSetting = initLinkSetting(LINK_SETTING_NAME, "testSaveLinkSettingPermissions");
     assertNotNull(linkSetting);
 
@@ -292,7 +287,9 @@ public class LinkServiceTest extends AbstractKernelTest { // NOSONAR
     assertTrue(file == null || file.getFileInfo().isDeleted());
   }
 
-  public void testGetLinkIconStream() throws Exception {
+  @Test
+  @SneakyThrows
+  public void testGetLinkIconStream() {
     assertNull(linkService.getLinkIconStream(LINK_SETTING_NAME, 2325l));
 
     LinkSetting linkSetting = initLinkSetting(LINK_SETTING_NAME, "testGetLinkIconStream1");
@@ -336,7 +333,9 @@ public class LinkServiceTest extends AbstractKernelTest { // NOSONAR
     assertEquals(fileInfo.getSize(), inputStream.available());
   }
 
-  public void testGetLinkSettingPermissions() throws IllegalAccessException {
+  @Test
+  @SneakyThrows
+  public void testGetLinkSettingPermissions() {
     assertNull(linkService.getLinkSetting(LINK_SETTING_NAME, null, null));
 
     String pageReference = createPage("testGetLinkSettingPermissions1", UserACL.EVERYONE, ADMINISTRATORS_GROUP);
@@ -352,6 +351,8 @@ public class LinkServiceTest extends AbstractKernelTest { // NOSONAR
     assertNotNull(linkService.getLinkSetting(LINK_SETTING_NAME, null, registerInternalUser(USERNAME)));
   }
 
+  @Test
+  @SneakyThrows
   public void testHasAccessPermission() {
     assertFalse(linkService.hasAccessPermission(LINK_SETTING_NAME, null));
 
@@ -375,6 +376,8 @@ public class LinkServiceTest extends AbstractKernelTest { // NOSONAR
     assertTrue(linkService.hasAccessPermission(LINK_SETTING_NAME, registerAdministratorUser(USERNAME)));
   }
 
+  @Test
+  @SneakyThrows
   public void testHasEditPermission() {
     assertFalse(linkService.hasEditPermission(LINK_SETTING_NAME, null));
 
@@ -386,6 +389,8 @@ public class LinkServiceTest extends AbstractKernelTest { // NOSONAR
     assertTrue(linkService.hasEditPermission(LINK_SETTING_NAME, registerAdministratorUser(USERNAME)));
   }
 
+  @Test
+  @SneakyThrows
   public void testLinkHasEditPermission() {
     List<Link> links = linkService.getLinks(LINK_SETTING_NAME);
     assertNotNull(links);
@@ -399,7 +404,9 @@ public class LinkServiceTest extends AbstractKernelTest { // NOSONAR
     assertTrue(linkService.hasEditPermission(LINK_SETTING_NAME, registerAdministratorUser(USERNAME)));
   }
 
-  public void testGetLinkTranslations() throws ObjectNotFoundException, IllegalAccessException {
+  @Test
+  @SneakyThrows
+  public void testGetLinkTranslations() {
     LinkSetting linkSetting = initLinkSetting(LINK_SETTING_NAME, "testSaveLinkSettingPermissions");
     assertNotNull(linkSetting);
 

@@ -71,7 +71,7 @@
     <component-plugin>
       <name>NewsIndexingServiceConnector</name>
       <set-method>addConnector</set-method>
-      <type>io.meeds.news.search.NewsIndexingServiceConnector</type>
+      <type>io.meeds.content.search.NewsIndexingServiceConnector</type>
       <description>News ElasticSearch Indexing Connector</description>
       <init-params>
         <value-param>

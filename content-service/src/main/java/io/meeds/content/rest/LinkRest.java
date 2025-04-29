@@ -20,18 +20,25 @@ package io.meeds.content.rest;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Date;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.ResponseEntity.BodyBuilder;
+import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.server.ResponseStatusException;
 
 import org.exoplatform.commons.exception.ObjectNotFoundException;
-import org.exoplatform.services.log.ExoLogger;
-import org.exoplatform.services.log.Log;
 import org.exoplatform.social.rest.api.RestUtils;
 
 import io.meeds.content.model.Link;
@@ -51,122 +58,105 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @Tag(name = "/content/rest/links", description = "Managing links for Links Application")
 public class LinkRest {
 
-  private static final CacheControl CACHE_CONTROL          = new CacheControl();
-
-  private static final CacheControl IMG_CACHE_CONTROL      = new CacheControl();
-
-  private static final int          CACHE_IN_SECONDS       = 365 * 86400;
-
-  private static final long         CACHE_IN_MILLI_SECONDS = CACHE_IN_SECONDS * 1000l;
-
-  private static final Log          LOG                    = ExoLogger.getLogger(LinkRest.class);
-
-  static {
-    CACHE_CONTROL.setNoCache(true);
-    IMG_CACHE_CONTROL.setMaxAge(CACHE_IN_SECONDS);
-  }
-
   @Autowired
   private LinkService linkService;
 
-  @GetMapping(path = "{name}", produces = MediaType.APPLICATION_JSON)
+  @GetMapping(path = "{name}", produces = MediaType.APPLICATION_JSON_VALUE)
   @Operation(summary = "Retrieves a link application settings with associated links", description = "Retrieves a link application settings with associated links", method = "GET")
   @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "Request fulfilled"),
     @ApiResponse(responseCode = "304", description = "Not modified"),
     @ApiResponse(responseCode = "401", description = "Unauthorized"),
     @ApiResponse(responseCode = "404", description = "Resource not found"), })
-  public Response getLinkSetting(
-                                 @Context
-                                 Request request,
-                                 @Parameter(description = "Link name", required = true)
-                                 @PathVariable("name")
-                                 String name,
-                                 @Parameter(description = "User language", required = false)
-                                 @QueryParam("lang")
-                                 String lang) {
+  public ResponseEntity<LinkSettingRestEntity> getLinkSetting(
+                                                              WebRequest request,
+                                                              @Parameter(description = "Link name", required = true)
+                                                              @PathVariable("name")
+                                                              String name,
+                                                              @Parameter(description = "User language", required = false)
+                                                              @RequestParam("lang")
+                                                              String lang) {
     try {
       LinkSetting linkSetting = linkService.getLinkSetting(name, lang, RestUtils.getCurrentUserAclIdentity());
       if (linkSetting == null) {
-        return Response.status(Status.NOT_FOUND).build();
+        return ResponseEntity.notFound().build();
       }
-      EntityTag eTag = new EntityTag(String.valueOf(linkSetting.hashCode()));
-      Response.ResponseBuilder builder = request.evaluatePreconditions(eTag);
-      if (builder == null) {
-        builder = Response.ok(getLinkSettingEntity(linkSetting, lang));
+      LinkSettingRestEntity linkSettingEntity = getLinkSettingEntity(linkSetting, lang);
+      String eTag = String.valueOf(linkSettingEntity.hashCode());
+      if (request.checkNotModified(eTag)) {
+        return ResponseEntity.status(HttpStatus.NOT_MODIFIED).build();
+      } else {
+        return ResponseEntity.ok()
+                             .eTag(eTag)
+                             .body(linkSettingEntity);
       }
-      builder.lastModified(new Date(linkSetting.getLastModified()));
-      builder.tag(eTag);
-      builder.cacheControl(CACHE_CONTROL);
-      return builder.build();
     } catch (IllegalAccessException e) {
-      LOG.warn("Error accessing setting {} for user {}", name, RestUtils.getCurrentUser(), e);
-      return Response.status(Status.UNAUTHORIZED).build();
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
   }
 
-  @PUT
-  @Path("{name}")
-  @RolesAllowed("users")
-  @Produces(MediaType.APPLICATION_JSON)
+  @PutMapping(path = "{name}", produces = MediaType.APPLICATION_JSON_VALUE)
+  @Secured("users")
   @Operation(summary = "Saves a link application settings with associated links", description = "Saves a link application settings with associated links", method = "GET")
-  @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "Request fulfilled"),
-    @ApiResponse(responseCode = "401", description = "Unauthorized"), })
-  public Response saveLinkSetting(LinkSettingRestEntity linkSettingEntity) {
+  @ApiResponses(value = {
+    @ApiResponse(responseCode = "200", description = "Request fulfilled"),
+    @ApiResponse(responseCode = "401", description = "Unauthorized"),
+  })
+  public LinkSettingRestEntity saveLinkSetting(
+                                               WebRequest request,
+                                               @Parameter(description = "Link name", required = true)
+                                               @PathVariable("name")
+                                               String name,
+                                               LinkSettingRestEntity linkSettingEntity) {
     try {
       LinkSetting linkSetting = LinkEntityBuilder.toLinkSetting(linkSettingEntity);
       List<Link> linksToSave = LinkEntityBuilder.toLinks(linkSettingEntity);
       linkSetting = linkService.saveLinkSetting(linkSetting, linksToSave, RestUtils.getCurrentUserAclIdentity());
-      return Response.ok(getLinkSettingEntity(linkSetting, null)).build();
+      return getLinkSettingEntity(linkSetting, null);
     } catch (IllegalAccessException e) {
-      LOG.warn("Error saving setting '{}' by user '{}'", linkSettingEntity, RestUtils.getCurrentUser(), e);
-      return Response.status(Status.UNAUTHORIZED).build();
+      throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, e.getMessage());
     } catch (ObjectNotFoundException e) {
-      return Response.status(Status.NOT_FOUND).build();
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
     }
   }
 
-  @GetMapping(path = "{name}/{id}/icon")
+  @GetMapping(path = "{name}/{id}/icon", produces = MediaType.IMAGE_PNG_VALUE)
   @Operation(summary = "Gets a link icon specified by setting name and link id", method = "GET", description = "Gets a link icon specified by setting name and link id")
   @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "Request fulfilled"),
     @ApiResponse(responseCode = "304", description = "Not modified"),
     @ApiResponse(responseCode = "401", description = "Unauthorized"),
     @ApiResponse(responseCode = "404", description = "Resource not found"), })
-  public Response getLinkIcon(
-                              @Context
-                              Request request,
-                              @Parameter(description = "Link setting name", required = true)
-                              @PathVariable("name")
-                              String name,
-                              @Parameter(description = "Link id", required = true)
-                              @PathVariable("id")
-                              long id) {
+  public ResponseEntity<InputStreamResource> getLinkIcon(
+                                                         WebRequest request,
+                                                         @Parameter(description = "Link name", required = true)
+                                                         @PathVariable("name")
+                                                         String name,
+                                                         @Parameter(description = "Link id", required = true)
+                                                         @PathVariable("id")
+                                                         long id) {
     try {
       LinkSetting linkSetting = linkService.getLinkSetting(name, null, RestUtils.getCurrentUserAclIdentity());
       if (linkSetting == null) {
-        return Response.status(Status.NOT_FOUND).build();
+        throw new ResponseStatusException(HttpStatus.NOT_FOUND);
       }
-
-      EntityTag eTag = new EntityTag(String.valueOf(linkSetting.getLastModified()));
-      Response.ResponseBuilder builder = request.evaluatePreconditions(eTag);
-      if (builder == null) {
+      String eTag = String.valueOf(linkSetting.hashCode());
+      if (request.checkNotModified(eTag)) {
+        return ResponseEntity.status(HttpStatus.NOT_MODIFIED).build();
+      } else {
         InputStream stream = linkService.getLinkIconStream(linkSetting.getName(), id);
         if (stream == null) {
-          return Response.status(Status.NOT_FOUND).build();
+          return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         } else {
-          builder = Response.ok(stream, "image/png");
-          builder.lastModified(new Date(linkSetting.getLastModified()));
-          builder.tag(eTag);
-          builder.cacheControl(IMG_CACHE_CONTROL);
-          builder.expires(new Date(System.currentTimeMillis() + CACHE_IN_MILLI_SECONDS));
+          BodyBuilder builder = ResponseEntity.ok();
+          return builder.contentType(MediaType.IMAGE_PNG)
+                        .lastModified(linkSetting.getLastModified())
+                        .eTag(eTag)
+                        .body(new InputStreamResource(stream));
         }
       }
-      return builder.build();
     } catch (IllegalAccessException e) {
-      LOG.warn("Error getting icon for link '{}/{}' by user '{}'", name, id, RestUtils.getCurrentUser(), e);
-      return Response.status(Status.UNAUTHORIZED).build();
+      throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, e.getMessage());
     } catch (IOException e) {
-      LOG.warn("Error getting icon for link '{}/{}' by user '{}'", name, id, RestUtils.getCurrentUser(), e);
-      return Response.status(Status.INTERNAL_SERVER_ERROR).build();
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
     }
   }
 
