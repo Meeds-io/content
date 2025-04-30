@@ -1,2 +1,2 @@
-io.meeds.content.entity.LinkEntity
-io.meeds.content.entity.LinkSettingEntity
+io.meeds.content.link.entity.LinkEntity
+io.meeds.content.link.entity.LinkSettingEntity

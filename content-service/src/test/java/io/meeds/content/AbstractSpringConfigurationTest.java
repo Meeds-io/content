@@ -23,23 +23,33 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureWebMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.PropertySource;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.context.WebApplicationContext;
 
 import org.exoplatform.component.test.ConfigurationUnit;
 import org.exoplatform.component.test.ConfiguredBy;
 import org.exoplatform.component.test.ContainerScope;
 import org.exoplatform.services.cache.CacheService;
 
-import io.meeds.content.dao.LinkDAO;
-import io.meeds.content.dao.LinkSettingDAO;
-import io.meeds.content.service.LinkService;
-import io.meeds.content.storage.cache.CachedLinkStorage;
+import io.meeds.content.link.dao.LinkDAO;
+import io.meeds.content.link.dao.LinkSettingDAO;
+import io.meeds.content.link.service.LinkService;
+import io.meeds.content.link.storage.cache.CachedLinkStorage;
 import io.meeds.kernel.test.AbstractSpringTest;
 import io.meeds.spring.AvailableIntegration;
+import io.meeds.spring.web.security.WebSecurityConfiguration;
 
-@SpringBootApplication(scanBasePackages = {
+@SpringBootTest
+@ComponentScan({
   "io.meeds.content",
   AvailableIntegration.KERNEL_TEST_MODULE,
   AvailableIntegration.JPA_MODULE,
@@ -55,17 +65,33 @@ import io.meeds.spring.AvailableIntegration;
   @ConfigurationUnit(scope = ContainerScope.PORTAL, path = "conf/portal/configuration.xml"),
   @ConfigurationUnit(scope = ContainerScope.PORTAL, path = "conf/exo.social.component.core-local-configuration.xml"),
 })
+@EnableAutoConfiguration
+@ContextConfiguration(classes = { WebSecurityConfiguration.class })
+@AutoConfigureWebMvc
+@AutoConfigureMockMvc(addFilters = false)
 @RunWith(SpringRunner.class)
 public abstract class AbstractSpringConfigurationTest extends AbstractSpringTest {
 
   @Autowired
-  protected LinkService    linkService;
+  public LinkService           linkService;
 
   @Autowired
-  protected LinkDAO        linkDAO;
+  public LinkDAO               linkDAO;
 
   @Autowired
-  protected LinkSettingDAO linkSettingDAO;
+  public LinkSettingDAO        linkSettingDAO;
+
+  @Autowired
+  public SecurityFilterChain   filterChain;
+
+  @Autowired
+  public WebApplicationContext context;
+
+  public MockMvc               mockMvc;
+
+  protected AbstractSpringConfigurationTest() {
+    AbstractSpringTest.setTestClass(AbstractSpringConfigurationTest.class);
+  }
 
   @Before
   public void setUp() {

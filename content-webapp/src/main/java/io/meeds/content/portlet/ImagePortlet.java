@@ -18,7 +18,7 @@
  */
 package io.meeds.content.portlet;
 
-import static io.meeds.content.plugin.ImageAttachmentPlugin.OBJECT_TYPE;
+import static io.meeds.content.image.plugin.ImageAttachmentPlugin.OBJECT_TYPE;
 
 import java.io.File;
 import java.io.FileOutputStream;

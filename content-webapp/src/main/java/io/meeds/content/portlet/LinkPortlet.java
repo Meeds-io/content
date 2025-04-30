@@ -25,8 +25,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.exoplatform.container.ExoContainerContext;
 import org.exoplatform.services.security.Identity;
 
-import io.meeds.content.model.LinkData;
-import io.meeds.content.service.LinkService;
+import io.meeds.content.link.model.LinkData;
+import io.meeds.content.link.service.LinkService;
 import io.meeds.social.portlet.CMSPortlet;
 import io.meeds.social.util.JsonUtils;
 

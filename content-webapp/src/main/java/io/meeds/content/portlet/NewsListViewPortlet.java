@@ -33,11 +33,12 @@ import javax.portlet.RenderResponse;
 
 import org.apache.commons.lang3.StringUtils;
 
-import io.meeds.content.utils.NewsUtils;
-import io.meeds.social.portlet.CMSPortlet;
 import org.exoplatform.commons.api.settings.SettingService;
 import org.exoplatform.commons.api.settings.SettingValue;
 import org.exoplatform.container.ExoContainerContext;
+
+import io.meeds.content.news.utils.NewsUtils;
+import io.meeds.social.portlet.CMSPortlet;
 
 public class NewsListViewPortlet extends CMSPortlet {
 

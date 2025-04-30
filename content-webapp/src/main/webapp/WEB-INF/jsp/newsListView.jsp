@@ -1,6 +1,6 @@
 <%@page import="org.exoplatform.services.security.ConversationState"%>
 <%@page import="org.exoplatform.services.security.Identity"%>
-<%@ page import="io.meeds.content.utils.NewsUtils" %>
+<%@ page import="io.meeds.content.news.utils.NewsUtils" %>
 <%@ page import="org.exoplatform.web.PortalHttpServletResponseWrapper" %>
 <%@ page import="org.exoplatform.portal.application.PortalRequestContext" %>
 <%@ page import="org.exoplatform.commons.utils.CommonsUtils" %>
