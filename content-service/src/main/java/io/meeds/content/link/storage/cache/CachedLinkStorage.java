@@ -52,9 +52,9 @@ public class CachedLinkStorage extends LinkStorage {
       @Override
       public LinkSetting retrieve(Object context, Serializable key) throws Exception {
         return switch (key) {
-          case String name -> CachedLinkStorage.super.getLinkSetting(name);
-          case Long id -> CachedLinkStorage.super.getLinkSetting(id);
-          default -> null;
+        case String name -> CachedLinkStorage.super.getLinkSetting(name);
+        case Long id -> CachedLinkStorage.super.getLinkSetting(id);
+        default -> null;
         };
       }
     };

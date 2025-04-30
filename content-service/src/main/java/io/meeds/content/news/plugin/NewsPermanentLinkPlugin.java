@@ -19,7 +19,7 @@
 package io.meeds.content.news.plugin;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
 import org.exoplatform.commons.exception.ObjectNotFoundException;
 import org.exoplatform.portal.config.UserPortalConfigService;
@@ -29,11 +29,14 @@ import io.meeds.content.news.model.News;
 import io.meeds.content.news.service.NewsService;
 import io.meeds.portal.permlink.model.PermanentLinkObject;
 import io.meeds.portal.permlink.plugin.PermanentLinkPlugin;
+import io.meeds.portal.permlink.service.PermanentLinkService;
+
+import jakarta.annotation.PostConstruct;
 
 /**
  * A plugin to generate a permanent link for a given news identified by its id
  */
-@Service
+@Component
 public class NewsPermanentLinkPlugin implements PermanentLinkPlugin {
 
   public static final String      OBJECT_TYPE = "news";
@@ -45,6 +48,9 @@ public class NewsPermanentLinkPlugin implements PermanentLinkPlugin {
 
   @Autowired
   private NewsService             newsService;
+
+  @Autowired
+  private PermanentLinkService    permanentLinkService;
 
   @Override
   public String getObjectType() {
@@ -61,6 +67,11 @@ public class NewsPermanentLinkPlugin implements PermanentLinkPlugin {
     String newsId = object.getObjectId();
     News news = newsService.getNewsArticleById(newsId);
     return String.format(URL_FORMAT, portalConfigService.getMetaPortal(), news.getActivityId());
+  }
+
+  @PostConstruct
+  public void init() {
+    permanentLinkService.addPlugin(this);
   }
 
 }
