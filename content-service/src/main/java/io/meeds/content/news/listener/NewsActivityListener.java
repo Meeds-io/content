@@ -1,0 +1,192 @@
+/**
+ * This file is part of the Meeds project (https://meeds.io/).
+ *
+ * Copyright (C) 2020 - 2024 Meeds Association contact@meeds.io
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ */
+package io.meeds.content.news.listener;
+
+import static io.meeds.content.news.service.NewsService.NEWS_ACTIVITY_POSTED;
+import static io.meeds.content.news.service.NewsService.NEWS_METADATA_KEY;
+import static io.meeds.content.news.service.NewsService.NEWS_METADATA_PAGE_OBJECT_TYPE;
+import static io.meeds.content.news.utils.NewsUtils.NewsObjectType.ARTICLE;
+
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import org.exoplatform.services.log.ExoLogger;
+import org.exoplatform.services.log.Log;
+import org.exoplatform.services.security.ConversationState;
+import org.exoplatform.social.core.activity.ActivityLifeCycleEvent;
+import org.exoplatform.social.core.activity.ActivityListenerPlugin;
+import org.exoplatform.social.core.activity.model.ExoSocialActivity;
+import org.exoplatform.social.core.identity.model.Identity;
+import org.exoplatform.social.core.manager.ActivityManager;
+import org.exoplatform.social.core.manager.IdentityManager;
+import org.exoplatform.social.core.space.model.Space;
+import org.exoplatform.social.core.space.spi.SpaceService;
+import org.exoplatform.social.metadata.MetadataService;
+import org.exoplatform.social.metadata.model.MetadataItem;
+
+import io.meeds.content.news.model.News;
+import io.meeds.content.news.model.NewsPageObject;
+import io.meeds.content.news.service.NewsService;
+import io.meeds.content.news.utils.NewsUtils;
+
+import jakarta.annotation.PostConstruct;
+
+/**
+ * A triggered listener class about activity lifecyles. This class is used to
+ * propagate sharing activity in News elements to let targeted space members to
+ * access News
+ */
+@Component
+public class NewsActivityListener extends ActivityListenerPlugin {
+
+  private static final Log    LOG     = ExoLogger.getLogger(NewsActivityListener.class);
+
+  private static final String NEWS_ID = "newsId";
+
+  private static final String NEWS_ACTIVITY_TYPE = "news";
+
+  @Autowired
+  private ActivityManager     activityManager;
+
+  @Autowired
+  private IdentityManager     identityManager;
+
+  @Autowired
+  private SpaceService        spaceService;
+
+  @Autowired
+  private NewsService         newsService;
+
+  @Autowired
+  private MetadataService     metadataService;
+
+  @PostConstruct
+  public void init() {
+    activityManager.addActivityEventListener(this);
+  }
+  @Override
+  public void shareActivity(ActivityLifeCycleEvent event) {
+    ExoSocialActivity sharedActivity = event.getActivity();
+    if (sharedActivity != null && sharedActivity.getTemplateParams() != null
+        && sharedActivity.getTemplateParams().containsKey("originalActivityId")) {
+      String originalActivityId = sharedActivity.getTemplateParams().get("originalActivityId");
+      ExoSocialActivity originalActivity = activityManager.getActivity(originalActivityId);
+      if (originalActivity != null && originalActivity.getTemplateParams() != null
+          && originalActivity.getTemplateParams().containsKey(NEWS_ID)) {
+        String newsId = originalActivity.getTemplateParams().get(NEWS_ID);
+        org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
+        try {
+          News news = newsService.getNewsById(newsId, currentIdentity, false, ARTICLE.name().toLowerCase());
+          if (news != null && !news.isDeleted()) {
+            Identity posterIdentity = getIdentity(sharedActivity);
+            Space space = getSpace(sharedActivity);
+            newsService.shareNews(news, space, posterIdentity, sharedActivity.getId());
+          }
+        } catch (Exception e) {
+          LOG.error("Error while sharing news {} to activity {}", newsId, sharedActivity.getId(), e);
+        }
+      }
+    }
+  }
+
+  @Override
+  public void likeActivity(ActivityLifeCycleEvent event) {
+    ExoSocialActivity activity = activityManager.getActivity(event.getActivity().getId());
+    if (activity != null && activity.getTemplateParams() != null && activity.getTemplateParams().containsKey(NEWS_ID)) {
+      org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
+      try {
+        News news = newsService.getNewsByActivityId(activity.getId(), currentIdentity);
+        NewsUtils.broadcastEvent(NewsUtils.LIKE_NEWS, currentIdentity.getUserId(), news);
+      } catch (Exception e) {
+        LOG.error("Error broadcast like news event", e);
+      }
+    }
+  }
+
+  @Override
+  public void saveComment(ActivityLifeCycleEvent event) {
+    ExoSocialActivity activity = activityManager.getActivity(event.getActivity().getParentId());
+    if (activity != null && activity.getTemplateParams() != null && activity.getTemplateParams().containsKey(NEWS_ID)) {
+      org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
+      try {
+        News news = newsService.getNewsByActivityId(activity.getId(), currentIdentity);
+        NewsUtils.broadcastEvent(NewsUtils.COMMENT_NEWS, currentIdentity.getUserId(), news);
+      } catch (Exception e) {
+        LOG.error("Error broadcast comment news event", e);
+      }
+    }
+  }
+
+  @Override
+  public void hideActivity(ActivityLifeCycleEvent event) {
+    ExoSocialActivity activity = event.getActivity();
+    if (activity != null && activity.getType().equals(NEWS_ACTIVITY_TYPE) && activity.getTemplateParams() != null
+        && activity.getTemplateParams().containsKey(NEWS_ID)) {
+      updateNewsPageMetadataObjectItem(activity);
+    }
+  }
+
+  private Identity getIdentity(ExoSocialActivity sharedActivity) {
+    String posterIdentityId = sharedActivity.getPosterId();
+    return identityManager.getIdentity(posterIdentityId);
+  }
+
+  private Space getSpace(ExoSocialActivity sharedActivity) {
+    String spacePrettyName = sharedActivity.getActivityStream().getPrettyId();
+    return spaceService.getSpaceByPrettyName(spacePrettyName);
+  }
+
+  private String getCurrentIdentityId() {
+    ConversationState conversationState = ConversationState.getCurrent();
+    org.exoplatform.services.security.Identity currentIdentity = null;
+    if (conversationState != null) {
+      currentIdentity = conversationState.getIdentity();
+    }
+    if (currentIdentity != null) {
+      return identityManager.getOrCreateUserIdentity(currentIdentity.getUserId()).getId();
+    }
+    return null;
+  }
+
+  private void updateNewsPageMetadataObjectItem(ExoSocialActivity activity) {
+    String newsId = activity.getTemplateParams().get(NEWS_ID);
+    String spaceId = activity.getSpaceId();
+    String currentIdentityId = getCurrentIdentityId();
+    long updater = currentIdentityId != null ? Long.parseLong(currentIdentityId) : Long.parseLong(activity.getPosterId());
+    NewsPageObject newsPageObject = new NewsPageObject(NEWS_METADATA_PAGE_OBJECT_TYPE, newsId, null, Long.parseLong(spaceId));
+    MetadataItem metadataItem = metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY, newsPageObject)
+                                               .stream()
+                                               .findFirst()
+                                               .orElse(null);
+    if (metadataItem != null) {
+      Map<String, String> properties = metadataItem.getProperties();
+      // update the property only when it is present and has a wrong value
+      // hide from the activity stream case
+      if (properties.containsKey(NEWS_ACTIVITY_POSTED) && properties.get(NEWS_ACTIVITY_POSTED) != null && Boolean.parseBoolean(properties.get(NEWS_ACTIVITY_POSTED))) {
+        properties.put(NEWS_ACTIVITY_POSTED, String.valueOf(false));
+        metadataItem.setProperties(properties);
+        metadataService.updateMetadataItem(metadataItem, updater, false);
+      }
+    }
+  }
+
+}
