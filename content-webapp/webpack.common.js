@@ -22,7 +22,9 @@ let config = {
     engagementCenterExtensions: './src/main/webapp/vue-app/engagementCenterExtensions/extensions.js',
     contentTranslationMenu: './src/main/webapp/vue-app/newsTranslationMenu/main.js',
     notePublishExtensions: './src/main/webapp/vue-app/news-extensions/note-publish-extensions/main.js',
-    analyticsExtensionContent:'./src/main/webapp/vue-app/content-analytics-extension/main.js'
+    analyticsExtensionContent:'./src/main/webapp/vue-app/content-analytics-extension/main.js',
+    links: './src/main/webapp/vue-app/links/main.js',
+    image: './src/main/webapp/vue-app/image/main.js',
   },
   output: {
     filename: 'js/[name].bundle.js',
