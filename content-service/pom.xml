@@ -36,7 +36,7 @@
     <rest.api.doc.version>1.0</rest.api.doc.version>
     <rest.api.doc.description>Content addon used Rest endpoints</rest.api.doc.description>
 
-    <exo.test.coverage.ratio>0.51</exo.test.coverage.ratio>
+    <exo.test.coverage.ratio>0.60</exo.test.coverage.ratio>
   </properties>
 
   <dependencies>
@@ -66,6 +66,11 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
+      <groupId>io.meeds.layout</groupId>
+      <artifactId>layout-service</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
       <groupId>io.meeds.social</groupId>
       <artifactId>social-component-core</artifactId>
       <type>test-jar</type>
@@ -78,8 +83,8 @@
         <groupId>io.openapitools.swagger</groupId>
         <artifactId>swagger-maven-plugin</artifactId>
         <configuration>
-          <applicationClass>io.meeds.news.rest.NewsRest</applicationClass>
-          <applicationClass>io.meeds.news.rest.NewsTargetingRest</applicationClass>
+          <applicationClass>io.meeds.content.news.rest.NewsRest</applicationClass>
+          <applicationClass>io.meeds.content.news.rest.NewsTargetingRest</applicationClass>
           <swaggerConfig>
             <info>
               <title>${rest.api.doc.title}</title>
