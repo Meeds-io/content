@@ -27,10 +27,12 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Profile;
+import org.springframework.stereotype.Component;
 
 import org.exoplatform.commons.file.model.FileItem;
 import org.exoplatform.commons.file.services.FileService;
+import org.exoplatform.container.ExoContainerContext;
 import org.exoplatform.portal.config.model.Application;
 import org.exoplatform.portal.pom.spi.portlet.Portlet;
 import org.exoplatform.portal.pom.spi.portlet.Preference;
@@ -39,26 +41,40 @@ import org.exoplatform.social.attachment.AttachmentService;
 import io.meeds.layout.model.PortletInstanceContext;
 import io.meeds.layout.model.PortletInstancePreference;
 import io.meeds.layout.plugin.PortletInstancePreferencePlugin;
+import io.meeds.layout.service.PortletInstanceService;
 import io.meeds.social.cms.model.CMSSetting;
 import io.meeds.social.cms.service.CMSService;
 
+import jakarta.annotation.PostConstruct;
 import lombok.SneakyThrows;
 
-@Service
+@Component
+@Profile("layout")
 public class ImagePortletInstancePreferencePlugin implements PortletInstancePreferencePlugin {
 
-  private static final String CMS_SETTING_PREFERENCE_NAME = "name";
+  private static final String    CMS_SETTING_PREFERENCE_NAME = "name";
 
-  private static final String DATA_INIT_PREFERENCE_NAME   = "data.init";
-
-  @Autowired
-  private AttachmentService   attachmentService;
+  private static final String    DATA_INIT_PREFERENCE_NAME   = "data.init";
 
   @Autowired
-  private CMSService          cmsService;
+  private AttachmentService      attachmentService;
 
   @Autowired
-  private FileService         fileService;
+  private CMSService             cmsService;
+
+  @Autowired
+  private FileService            fileService;
+
+  @Autowired(required = false)
+  private PortletInstanceService portletInstanceService;
+
+  @PostConstruct
+  public void init() {
+    if (portletInstanceService == null) {
+      portletInstanceService = ExoContainerContext.getService(PortletInstanceService.class);
+    }
+    portletInstanceService.addPortletInstancePreferencePlugin(this);
+  }
 
   @Override
   public String getPortletName() {
@@ -67,7 +83,9 @@ public class ImagePortletInstancePreferencePlugin implements PortletInstancePref
 
   @Override
   @SneakyThrows
-  public List<PortletInstancePreference> generatePreferences(Application application, Portlet preferences, PortletInstanceContext portletInstanceContext) {
+  public List<PortletInstancePreference> generatePreferences(Application application,
+                                                             Portlet preferences,
+                                                             PortletInstanceContext portletInstanceContext) {
     String settingName = getCmsSettingName(preferences);
     if (StringUtils.isBlank(settingName)) {
       if (preferences != null && preferences.getPreference(DATA_INIT_PREFERENCE_NAME) != null) {
