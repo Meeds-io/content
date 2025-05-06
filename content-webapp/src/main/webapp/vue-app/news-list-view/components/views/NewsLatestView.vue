@@ -86,7 +86,9 @@ export default {
   },
   mounted() {
     this.$nextTick().then(() => this.$root.$emit('application-loaded'));
-    this.hasSmallWidthContainer = (this.$refs['news-latest-view']?.clientWidth *100 / window.screen.width) < 33;
+    const lgBreakpoint = this.$vuetify.breakpoint.thresholds.lg;
+    const screenWidth =  window.screen.width < lgBreakpoint ? window.screen.width : lgBreakpoint;
+    this.hasSmallWidthContainer = (this.$refs['news-latest-view']?.clientWidth *100 / screenWidth) < 33;
   },
 };
 </script>
