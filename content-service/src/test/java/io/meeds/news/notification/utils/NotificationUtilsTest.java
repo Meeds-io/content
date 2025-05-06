@@ -58,11 +58,12 @@ public class NotificationUtilsTest {
     space1.setPrettyName("space1");
     space1.setGroupId("space1");
     PORTAL_CONTAINER.when(() -> PortalContainer.getCurrentPortalContainerName()).thenReturn("portal");
+    PROPERTY_MANAGER.when(() -> PropertyManager.getProperty("gatein.email.domain.url")).thenReturn("http://localhost:8080");
 
     // When
     String activityUrl = NotificationUtils.getNotificationActivityLink(space1, "13", false);
 
-    assertEquals("/portal/s/" + space1.getId(), activityUrl);
+    assertEquals("http://localhost:8080/portal/s/" + space1.getId(), activityUrl);
   }
 
   @Test
@@ -75,16 +76,18 @@ public class NotificationUtilsTest {
     space.setGroupId("space1");
 
     PORTAL_CONTAINER.when(() -> PortalContainer.getCurrentPortalContainerName()).thenReturn("portal");
+    PROPERTY_MANAGER.when(() -> PropertyManager.getProperty("gatein.email.domain.url")).thenReturn("http://localhost:8080");
+
     // When
     String activityUrl = NotificationUtils.getNotificationActivityLink(space, "13", false);
 
-    assertEquals("/portal/s/" + space.getId(), activityUrl);
+    assertEquals("http://localhost:8080/portal/s/" + space.getId(), activityUrl);
 
     Space updatedSpace = space;
     updatedSpace.setDisplayName("Space One");
     updatedSpace.setPrettyName(updatedSpace.getDisplayName());
 
     activityUrl = NotificationUtils.getNotificationActivityLink(updatedSpace, "13", false);
-    assertEquals("/portal/s/" + updatedSpace.getId(), activityUrl);
+    assertEquals("http://localhost:8080/portal/s/" + updatedSpace.getId(), activityUrl);
   }
 }

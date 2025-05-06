@@ -46,7 +46,6 @@ import io.meeds.news.model.*;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.exoplatform.social.core.service.LinkProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
@@ -1748,7 +1747,7 @@ public class NewsServiceImpl implements NewsService {
       throw new NullPointerException("Cannot find a space with id " + contentSpaceId + ", it may not exist");
     }
     org.exoplatform.social.core.identity.model.Identity identity = identityManager.getOrCreateUserIdentity(contentAuthor);
-    String authorAvatarUrl = (identity.getProfile() != null && identity.getProfile().getAvatarUrl() != null) ? identity.getProfile().getAvatarUrl() : LinkProvider.PROFILE_DEFAULT_AVATAR_URL;
+    String authorAvatarUrl = LinkProviderUtils.getUserAvatarUrl(identity.getProfile());
     String activityLink = NotificationUtils.getNotificationActivityLink(contentSpace, contentActivityId, canView);
     String contentSpaceName = contentSpace.getDisplayName();
 
