@@ -44,20 +44,14 @@ export default {
   },
   computed: {
     url() {
-      let activityLink = this.notification?.parameters?.ACTIVITY_LINK;
-      // work around for the case when activity url include the domain name
-      activityLink = activityLink.substring(activityLink.indexOf(eXo.env.portal.context));
-      return this.notification?.space?.isMember ? activityLink
+      return this.notification?.space?.isMember ? this.notification?.parameters?.ACTIVITY_LINK
         : `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news-detail?newsId=${this.notification?.parameters?.NEWS_ID}&type=article`;
     },
     eventTitle() {
       return this.notification?.parameters?.CONTENT_TITLE;
     },
     avatarUrl() {
-      let avatarUrl = this.notification?.parameters?.AUTHOR_AVATAR_URL;
-      // work around for the case when avatarUrl include the domain name
-      avatarUrl = avatarUrl.substring(avatarUrl.indexOf(eXo.env.portal.context));
-      return avatarUrl;
+      return this.notification?.parameters?.AUTHOR_AVATAR_URL;
     },
     message() {
       let message;
