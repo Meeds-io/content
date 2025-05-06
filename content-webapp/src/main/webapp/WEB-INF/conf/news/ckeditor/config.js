@@ -30,7 +30,7 @@ CKEDITOR.editorConfig = function (config) {
     {name: 'links', items: ['Link', 'Anchor']},
     {
       name: 'blocks',
-      items: ['Blockquote', 'tagSuggester', 'emoji', 'selectImage', 'Table', 'EmbedSemantic', 'CodeSnippet', 'InsertOptions']
+      items: ['Blockquote', 'tagSuggester', 'emoji', 'selectImage', 'Table', 'EmbedSemantic', 'CodeSnippet']
     },
   ];
 
@@ -49,7 +49,7 @@ CKEDITOR.editorConfig = function (config) {
     {name: 'links', items: ['Link', 'Anchor']},
     {
       name: 'blocks',
-      items: ['Blockquote', 'tagSuggester', 'emoji', 'selectImage', 'Table', 'EmbedSemantic', 'InsertOptions']
+      items: ['Blockquote', 'tagSuggester', 'emoji', 'selectImage', 'Table', 'EmbedSemantic']
     },
   ];
 
