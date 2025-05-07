@@ -54,6 +54,9 @@
             <field name="uiComponent">
               <string>news-search-card</string>
             </field>
+            <field name="icon">
+              <string>fas fa-newspaper</string>
+            </field>
             <field name="favoritesEnabled">
               <boolean>true</boolean>
             </field>
