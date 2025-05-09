@@ -51,6 +51,14 @@ import io.meeds.spring.web.security.WebSecurityConfiguration;
 @SpringBootTest
 @ComponentScan({
   "io.meeds.content",
+  "io.meeds.social.common",
+  "io.meeds.social.navigation",
+  "io.meeds.social.category",
+  "io.meeds.social.space.category",
+  "io.meeds.social.space.storage",
+  "io.meeds.social.space.service",
+  "io.meeds.social.cms",
+  "io.meeds.social.html",
   AvailableIntegration.KERNEL_TEST_MODULE,
   AvailableIntegration.JPA_MODULE,
   AvailableIntegration.LIQUIBASE_MODULE,
