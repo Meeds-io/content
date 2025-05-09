@@ -34,7 +34,7 @@ import io.meeds.content.news.service.NewsService;
 import jakarta.annotation.PostConstruct;
 
 @Component
-public class ArticlePageAttachmentPlugin extends AttachmentPlugin {
+public class NewsPageAttachmentPlugin extends AttachmentPlugin {
 
   @Autowired
   private AttachmentService  attachmentService;
