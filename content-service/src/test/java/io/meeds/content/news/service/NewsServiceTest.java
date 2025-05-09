@@ -73,6 +73,7 @@ import org.exoplatform.commons.file.services.FileService;
 import org.exoplatform.commons.search.index.IndexingService;
 import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.container.PortalContainer;
+import org.exoplatform.portal.config.UserACL;
 import org.exoplatform.services.security.ConversationState;
 import org.exoplatform.services.security.Identity;
 import org.exoplatform.social.core.manager.ActivityManager;
@@ -97,7 +98,7 @@ import io.meeds.content.news.model.News;
 import io.meeds.content.news.model.NewsDraftObject;
 import io.meeds.content.news.model.NewsLatestDraftObject;
 import io.meeds.content.news.model.filter.NewsFilter;
-import io.meeds.content.news.plugin.ArticlePageAttachmentPlugin;
+import io.meeds.content.news.plugin.NewsPageAttachmentPlugin;
 import io.meeds.content.news.search.NewsESSearchResult;
 import io.meeds.content.news.search.NewsSearchConnector;
 import io.meeds.content.news.utils.NewsUtils;
@@ -142,6 +143,9 @@ public class NewsServiceTest {
 
   @Mock
   private NewsSearchConnector                          newsSearchConnector;
+
+  @Mock
+  private UserACL                                      userAcl;
 
   @InjectMocks
   private NewsService                                  newsService;
@@ -552,7 +556,7 @@ public class NewsServiceTest {
     newsArticlePage.setAuthor(newsArticle.getAuthor());
     newsArticlePage.setProperties(new NotePageProperties(Long.parseLong(newsArticle.getId()), null, null, false, false, true));
     newsArticlePage.setLang(null);
-    newsArticlePage.setAttachmentObjectType(ArticlePageAttachmentPlugin.OBJECT_TYPE);
+    newsArticlePage.setAttachmentObjectType(NewsPageAttachmentPlugin.OBJECT_TYPE);
 
     Page createdPage = mock(Page.class);
     when(createdPage.getId()).thenReturn("1");
