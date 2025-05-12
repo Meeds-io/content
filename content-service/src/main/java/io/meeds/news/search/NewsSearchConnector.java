@@ -157,16 +157,7 @@ public class NewsSearchConnector {
         JSONObject jsonHitObject = (JSONObject) jsonHit;
         JSONObject hitSource = (JSONObject) jsonHitObject.get("_source");
         String id = (String) hitSource.get("id");
-        String posterId = (String) hitSource.get("posterId");
-        String spaceDisplayName = (String) hitSource.get("spaceDisplayName");
-        String newsActivityId = (String) hitSource.get("newsActivityId");
         String language = (String) hitSource.get("lang");
-
-        Long postedTime = parseLong(hitSource, "postedTime");
-        Long lastUpdatedTime = parseLong(hitSource, "lastUpdatedTime");
-
-        String title = (String) hitSource.get("title");
-        String body = (String) hitSource.get("body");
         JSONObject highlightSource = (JSONObject) jsonHitObject.get("highlight");
         List<String> excerpts = new ArrayList<>();
         if (highlightSource != null) {
@@ -177,23 +168,6 @@ public class NewsSearchConnector {
         }
         newsSearchResult.setId(id);
         newsSearchResult.setLang(language);
-        newsSearchResult.setTitle(title);
-        if (posterId != null) {
-          Identity posterIdentity = identityManager.getOrCreateIdentity(OrganizationIdentityProvider.NAME, posterId);
-          newsSearchResult.setPoster(posterIdentity);
-        }
-        newsSearchResult.setPostedTime(postedTime);
-        newsSearchResult.setLastUpdatedTime(lastUpdatedTime);
-        newsSearchResult.setSpaceDisplayName(spaceDisplayName);
-        newsSearchResult.setActivityId(newsActivityId);
-
-        String portalName = PortalContainer.getCurrentPortalContainerName();
-        String portalOwner = CommonsUtils.getCurrentPortalOwner();
-        newsSearchResult.setNewsUrl("/" + portalName + "/" + portalOwner + "/activity?id=" + newsActivityId);
-        if (language != null) {
-          newsSearchResult.setNewsUrl(newsSearchResult.getNewsUrl().concat("&lang=" + language));
-        }
-        newsSearchResult.setBody(body);
         newsSearchResult.setExcerpts(excerpts);
 
         results.add(newsSearchResult);

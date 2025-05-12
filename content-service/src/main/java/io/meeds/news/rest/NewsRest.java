@@ -34,6 +34,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import io.meeds.news.utils.EntityBuilder;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 
@@ -70,7 +71,6 @@ import org.exoplatform.social.rest.api.RestUtils;
 
 import io.meeds.news.filter.NewsFilter;
 import io.meeds.news.model.News;
-import io.meeds.news.search.NewsESSearchResult;
 import io.meeds.news.service.NewsService;
 import io.meeds.news.utils.NewsUtils;
 import io.swagger.v3.oas.annotations.Operation;
@@ -699,15 +699,15 @@ public class NewsRest {
     filter.setLimit(limit);
     filter.setOffset(offset);
     filter.setTagNames(tagNames);
-    List<NewsESSearchResult> searchResults = newsService.search(currentIdentity, filter);
-    List<NewsSearchResultEntity> results =
-                                         searchResults.stream()
-                                                      .map(searchResult -> io.meeds.news.utils.EntityBuilder.fromNewsSearchResult(favoriteService,
-                                                                                                                                  searchResult,
-                                                                                                                                  currentIdentity))
-                                                      .collect(Collectors.toList());
-
-    return ResponseEntity.ok(results);
+    List<NewsSearchResultEntity> searchResults = newsService.search(currentIdentity, filter);
+    searchResults.forEach(searchResult -> {
+      Favorite favorite = new Favorite(NewsUtils.NEWS_METADATA_OBJECT_TYPE,
+              searchResult.getLang() != null ? searchResult.getId().concat("-").concat(searchResult.getLang()) : searchResult.getId(),
+              null,
+              Long.parseLong(currentIdentity.getId()));
+      searchResult.setFavorite(favoriteService.isFavorite(favorite));
+    });
+    return ResponseEntity.ok(searchResults);
   }
 
   @GetMapping(path = "canScheduleNews/{spaceId}", produces = MediaType.APPLICATION_JSON_VALUE)

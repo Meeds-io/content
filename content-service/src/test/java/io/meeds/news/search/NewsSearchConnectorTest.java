@@ -197,17 +197,12 @@ public class NewsSearchConnectorTest {
                                           .replaceAll("@limit@", "10");
     lenient().when(client.sendRequest(eq(expectedESQuery), eq(ES_INDEX))).thenReturn(searchResult);
 
-    Identity rootIdentity = new Identity("organization", "root");
-    lenient().when(identityManager.getOrCreateIdentity(OrganizationIdentityProvider.NAME, "posterId")).thenReturn(rootIdentity);
-
     List<NewsESSearchResult> result = newsSearchConnector.search(identity, filter);
     assertNotNull(result);
     assertEquals(2, result.size());
 
     NewsESSearchResult newsESSearchResult = result.iterator().next();
     assertEquals("6", newsESSearchResult.getId());
-    assertEquals(1592227545758L, newsESSearchResult.getPostedTime());
-    assertEquals(1592227545758L, newsESSearchResult.getLastUpdatedTime());
     assertNotNull(newsESSearchResult.getExcerpts());
   }
 
@@ -235,17 +230,12 @@ public class NewsSearchConnectorTest {
                                                              .getResourceAsStream("news-search-result-by-identity.json"));
     lenient().when(client.sendRequest(eq(expectedESQuery), eq(ES_INDEX))).thenReturn(searchResult);
 
-    Identity poster = new Identity(OrganizationIdentityProvider.NAME, "posterId");
-    lenient().when(identityManager.getOrCreateIdentity(OrganizationIdentityProvider.NAME, "posterId")).thenReturn(poster);
-
     List<NewsESSearchResult> result = newsSearchConnector.search(identity, filter);
     assertNotNull(result);
     assertEquals(1, result.size());
 
     NewsESSearchResult newsESSearchResult = result.iterator().next();
     assertEquals("6", newsESSearchResult.getId());
-    assertEquals(1592227545758L, newsESSearchResult.getPostedTime());
-    assertEquals(1592227545758L, newsESSearchResult.getLastUpdatedTime());
     assertNotNull(newsESSearchResult.getExcerpts());
     assertEquals(0, newsESSearchResult.getExcerpts().size());
   }

@@ -20,6 +20,7 @@
 package io.meeds.news.utils;
 
 import io.meeds.news.model.ArticleTarget;
+import io.meeds.news.model.News;
 import org.apache.commons.collections4.CollectionUtils;
 import org.exoplatform.social.core.identity.model.Identity;
 import org.exoplatform.social.metadata.favorite.FavoriteService;
@@ -35,22 +36,24 @@ import java.util.Map;
 
 public class EntityBuilder {
 
-  private EntityBuilder() {
+  public static NewsSearchResultEntity toSearchResult(News news) {
+    if (news == null) return null;
+
+    NewsSearchResultEntity result = new NewsSearchResultEntity();
+    result.setId(news.getId());
+    result.setTitle(news.getTitle());
+    result.setBody(news.getBody());
+    result.setSummary(news.getProperties() != null ? news.getProperties().getSummary() : null);
+    result.setLang(news.getLang());
+    result.setSpaceId(news.getSpaceId());
+    result.setNewsUrl(news.getUrl());
+    result.setLastUpdatedTime(news.getUpdateDate() != null ? news.getUpdateDate().getTime() : 0L);
+    result.setFavorite(news.isFavorite());
+    result.setActivityId(news.getActivityId());
+    result.setUpdaterUserName(news.getUpdater() != null ? news.getUpdater() : news.getAuthor());
+    return result;
   }
 
-  public static NewsSearchResultEntity fromNewsSearchResult(FavoriteService favoriteService,
-                                                            NewsESSearchResult newsESSearchResult,
-                                                            Identity currentIdentity) {
-    NewsSearchResultEntity newsSearchResultEntity = new NewsSearchResultEntity(newsESSearchResult);
-    Favorite favorite = new Favorite(NewsUtils.NEWS_METADATA_OBJECT_TYPE,
-                                     newsESSearchResult.getLang() != null ? newsESSearchResult.getId().concat("-").concat(newsESSearchResult.getLang()) : newsESSearchResult.getId(),
-                                     null,
-                                     Long.parseLong(currentIdentity.getId()));
-    newsSearchResultEntity.setFavorite(favoriteService.isFavorite(favorite));
-
-    return newsSearchResultEntity;
-  }
-  
   public static ArticleTarget toArticleTarget(MetadataItem metadataItem) {
     if (metadataItem == null) {
       return null;

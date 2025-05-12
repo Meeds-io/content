@@ -21,6 +21,7 @@ package io.meeds.news.service;
 
 import java.util.List;
 
+import io.meeds.news.rest.NewsSearchResultEntity;
 import org.exoplatform.commons.exception.ObjectNotFoundException;
 import org.exoplatform.social.core.activity.model.ExoSocialActivity;
 import org.exoplatform.social.core.identity.model.Identity;
@@ -280,7 +281,7 @@ public interface NewsService {
    * @param filter
    * @return News Search Result
    */
-  List<NewsESSearchResult> search(Identity currentIdentity, NewsFilter filter);
+  List<NewsSearchResultEntity> search(Identity currentIdentity, NewsFilter filter);
 
   /**
    * Checks if the user can schedule publishing a News

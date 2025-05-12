@@ -29,23 +29,7 @@ public class NewsESSearchResult {
 
   private String       id;
 
-  private String       title;
-
-  private Identity     poster;
-
-  private String       body;
-
-  private String       spaceDisplayName;
-
-  private String       newsUrl;
-
   private List<String> excerpts;
-
-  private long         postedTime;
-
-  private long         lastUpdatedTime;
-
-  private String       activityId;
 
   private String       lang;
 }

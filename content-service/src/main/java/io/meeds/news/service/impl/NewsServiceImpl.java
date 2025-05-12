@@ -40,12 +40,16 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Matcher;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import io.meeds.news.model.*;
+import io.meeds.news.rest.NewsSearchResultEntity;
+import io.meeds.news.utils.EntityBuilder;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.exoplatform.social.metadata.favorite.FavoriteService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
@@ -551,6 +555,7 @@ public class NewsServiceImpl implements NewsService {
       news = buildArticle(newsId, lang, true);
       if (news != null) {
         news.setTargets(newsTargetingService.getTargetsByNews(news));
+
       }
     } catch (Exception exception) {
       LOG.error("An error occurred while retrieving news with id {}", newsId, exception);
@@ -819,8 +824,23 @@ public class NewsServiceImpl implements NewsService {
    * {@inheritDoc}
    */
   @Override
-  public List<NewsESSearchResult> search(org.exoplatform.social.core.identity.model.Identity currentIdentity, NewsFilter filter) {
-    return newsSearchConnector.search(currentIdentity, filter);
+  public List<NewsSearchResultEntity> search(org.exoplatform.social.core.identity.model.Identity currentIdentity, NewsFilter filter) {
+    List<NewsESSearchResult> searchResults = newsSearchConnector.search(currentIdentity, filter);
+    List<NewsSearchResultEntity> results  = new ArrayList<>();
+    for (NewsESSearchResult result : searchResults) {
+      try {
+        News news = getNewsArticleByIdAndLang(result.getId(), result.getLang());
+        if (news != null) {
+          NewsSearchResultEntity newsSearchResultEntity = EntityBuilder.toSearchResult(news);
+          newsSearchResultEntity.setExcerpts(result.getExcerpts());
+          results.add(newsSearchResultEntity);
+        }
+      } catch (Exception exception) {
+        LOG.error("Error when searching the news with id " + result.getId(), exception);
+      }
+    }
+    results = results.stream().filter(Objects::nonNull).collect(Collectors.toList());
+    return results;
   }
 
   /**
