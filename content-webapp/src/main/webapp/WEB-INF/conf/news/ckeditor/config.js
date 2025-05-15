@@ -53,7 +53,7 @@ CKEDITOR.editorConfig = function (config) {
     },
   ];
 
-  let extraPlugins = 'a11ychecker,balloonpanel,indent,switchView,googleDocPastePl rmatting,indentblock,indentlist,sharedspace,insertContent,vuetifyStyle,' +
+  let extraPlugins = 'a11ychecker,balloonpanel,indent,switchView,googleDocPastePl rmatting,indentblock,indentlist,sharedspace,insertContentLink,vuetifyStyle,' +
         'autolink,colordialog,tagSuggester,emoji,link,font,justify,widget,contextmenu,table,codesnippet,tabletools,tableresize,embedsemantic,suggester';
 
   let removePlugins = 'image,confirmBeforeReload,maximize,resize,autoembed';
