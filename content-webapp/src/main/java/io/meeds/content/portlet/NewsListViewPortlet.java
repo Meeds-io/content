@@ -1,0 +1,111 @@
+/**
+ * This file is part of the Meeds project (https://meeds.io/).
+ *
+ * Copyright (C) 2020 - 2024 Meeds Association contact@meeds.io
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ */
+package io.meeds.content.portlet;
+
+import java.io.IOException;
+import java.util.Enumeration;
+import java.util.Random;
+
+import javax.portlet.ActionRequest;
+import javax.portlet.ActionResponse;
+import javax.portlet.PortletConfig;
+import javax.portlet.PortletException;
+import javax.portlet.PortletPreferences;
+import javax.portlet.RenderRequest;
+import javax.portlet.RenderResponse;
+
+import org.apache.commons.lang3.StringUtils;
+
+import org.exoplatform.commons.api.settings.SettingService;
+import org.exoplatform.commons.api.settings.SettingValue;
+import org.exoplatform.container.ExoContainerContext;
+
+import io.meeds.content.news.utils.NewsUtils;
+import io.meeds.social.portlet.CMSPortlet;
+
+public class NewsListViewPortlet extends CMSPortlet {
+
+  private static final String OBJECT_TYPE    = "newsListViewPortlet";
+
+  private static final String APPLICATION_ID = "applicationId";
+
+  private SettingService settingService;
+
+  @Override
+  public void init(PortletConfig config) throws PortletException {
+    super.init(config);
+    this.contentType = OBJECT_TYPE;
+  }
+
+  @Override
+  public void processAction(ActionRequest request, ActionResponse response) throws PortletException, IOException {
+    PortletPreferences preferences = request.getPreferences();
+    Enumeration<String> parameterNames = request.getParameterNames();
+    while (parameterNames.hasMoreElements()) {
+      String name = parameterNames.nextElement();
+      if (StringUtils.equals(name, "action") || StringUtils.contains(name, "portal:")) {
+        continue;
+      }
+      String value = request.getParameter(name);
+      preferences.setValue(name, value);
+    }
+    preferences.store();
+  }
+
+  @Override
+  public void doView(RenderRequest request, RenderResponse response) throws PortletException, IOException {
+    super.doView(request, response);
+    String applicationId = getOrCreateApplicationId(request.getPreferences());
+    request.setAttribute(APPLICATION_ID, applicationId);
+    initNewsListHeaderTranslationSettings(request);
+  }
+
+  private String getOrCreateApplicationId(PortletPreferences preferences) {
+    String applicationId = preferences.getValue(APPLICATION_ID, null);
+    if (applicationId == null) {
+      Random random = new Random();
+      applicationId = String.valueOf(Math.abs(random.nextLong()));
+      savePreference(APPLICATION_ID, applicationId);
+    }
+    return applicationId;
+  }
+
+  private void initNewsListHeaderTranslationSettings(RenderRequest request) {
+    String applicationId = request.getAttribute(APPLICATION_ID).toString();
+    String settingName = request.getAttribute("settingName").toString();
+    SettingValue<?> storedSettingNameValue = getSettingService().get(NewsUtils.NEWS_LIST_VIEW_CONTEXT,
+                                                                     NewsUtils.NEWS_LIST_VIEW_SCOPE,
+                                                                     applicationId);
+    String storedSettingName = storedSettingNameValue != null ? storedSettingNameValue.getValue().toString() : null;
+    if (storedSettingName == null || !storedSettingName.equals(settingName)) {
+      getSettingService().set(NewsUtils.NEWS_LIST_VIEW_CONTEXT,
+                              NewsUtils.NEWS_LIST_VIEW_SCOPE,
+                              applicationId,
+                              SettingValue.create(settingName));
+    }
+  }
+
+  private SettingService getSettingService() {
+    if (settingService == null) {
+      settingService = ExoContainerContext.getService(SettingService.class);
+    }
+    return settingService;
+  }
+}
