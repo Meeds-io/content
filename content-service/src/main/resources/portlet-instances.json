@@ -38,6 +38,44 @@
         "*:/platform/web-contributors"
       ],
       "system":true
+    },
+    {
+      "nameId":"Links",
+      "categoryNameId":"content",
+      "portletName":"Links",
+      "names":{
+        "en":"layout.portletInstance.Links.name"
+      },
+      "descriptions":{
+        "en":"layout.portletInstance.Links.description"
+      },
+      "illustrationPath":"war:/../images/portlets/links.webp",
+      "preferences":[
+        
+      ],
+      "permissions":[
+        "Everyone"
+      ],
+      "system":true
+    },
+    {
+      "nameId":"Image",
+      "categoryNameId":"content",
+      "portletName":"Image",
+      "names":{
+        "en":"layout.portletInstance.Image.name"
+      },
+      "descriptions":{
+        "en":"layout.portletInstance.Image.description"
+      },
+      "illustrationPath":"war:/../images/portlets/image.webp",
+      "preferences":[
+        
+      ],
+      "permissions":[
+        "Everyone"
+      ],
+      "system":true
     }
   ]
 }
