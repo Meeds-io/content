@@ -20,26 +20,29 @@
 package io.meeds.content.news.rest.model;
 
 import java.util.List;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-import org.exoplatform.social.rest.entity.BaseEntity;
 
-import io.meeds.content.news.search.NewsESSearchResult;
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class NewsSearchResultEntity {
 
-public class NewsSearchResultEntity extends BaseEntity {
-
-  private static final long serialVersionUID = 1L;
+  private String            id;
 
   private String            title;
 
   private String            body;
 
-  private String            spaceDisplayName;
+  private String            summary;
+
+  private String            spaceId;
 
   private String            newsUrl;
 
   private List<String>      excerpts;
-
-  private long              postedTime;
 
   private long              lastUpdatedTime;
 
@@ -47,112 +50,8 @@ public class NewsSearchResultEntity extends BaseEntity {
 
   private String            activityId;
 
-  private String            posterFullName;
+  private String            updaterUserName;
 
-  private String            posterUserName;
-
-  public NewsSearchResultEntity() {
-  }
-
-  public NewsSearchResultEntity(NewsESSearchResult newsESSearchResult) {
-    this.setId(String.valueOf(newsESSearchResult.getId()));
-    this.body = newsESSearchResult.getBody();
-    this.title = newsESSearchResult.getTitle();
-    this.newsUrl = newsESSearchResult.getNewsUrl();
-    this.spaceDisplayName = newsESSearchResult.getSpaceDisplayName();
-    this.excerpts = newsESSearchResult.getExcerpts();
-    this.postedTime = newsESSearchResult.getPostedTime();
-    this.lastUpdatedTime = newsESSearchResult.getLastUpdatedTime();
-    this.activityId = newsESSearchResult.getActivityId();
-    this.posterFullName = newsESSearchResult.getPoster().getProfile().getFullName();
-    this.posterUserName = newsESSearchResult.getPoster().getRemoteId();
-  }
-  public String getPosterFullName() {
-    return posterFullName;
-  }
-
-  public void setPosterFullName(String posterFullName) {
-    this.posterFullName = posterFullName;
-  }
-
-  public String getPosterUserName() {
-    return posterUserName;
-  }
-
-  public void setPosterUserName(String posterUserName) {
-    this.posterUserName = posterUserName;
-  }
-
-  public String getBody() {
-    return body;
-  }
-
-  public void setBody(String body) {
-    this.body = body;
-  }
-
-  public List<String> getExcerpts() {
-    return excerpts;
-  }
-
-  public void setExcerpts(List<String> excerpts) {
-    this.excerpts = excerpts;
-  }
-
-  public long getPostedTime() {
-    return postedTime;
-  }
-
-  public void setPostedTime(long postedTime) {
-    this.postedTime = postedTime;
-  }
-
-  public long getLastUpdatedTime() {
-    return lastUpdatedTime;
-  }
-
-  public void setLastUpdatedTime(long lastUpdatedTime) {
-    this.lastUpdatedTime = lastUpdatedTime;
-  }
-
-  public String getTitle() {
-    return title;
-  }
-
-  public void setTitle(String title) {
-    this.title = title;
-  }
-
-  public String getSpaceDisplayName() {
-    return spaceDisplayName;
-  }
-
-  public void setSpaceDisplayName(String spaceDisplayName) {
-    this.spaceDisplayName = spaceDisplayName;
-  }
-
-  public String getNewsUrl() {
-    return newsUrl;
-  }
-
-  public void setNewsUrl(String newsUrl) {
-    this.newsUrl = newsUrl;
-  }
-
-  public boolean isFavorite() {
-    return favorite;
-  }
-
-  public void setFavorite(boolean favorite) {
-    this.favorite = favorite;
-  }
-
-  public String getActivityId() {
-    return activityId;
-  }
-
-  public void setActivityId(String activityId) {
-    this.activityId = activityId;
-  }
+  private String            lang;
 
 }
