@@ -36,22 +36,6 @@ import javax.ws.rs.core.Response;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.annotation.Secured;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-
 import org.exoplatform.commons.exception.ObjectNotFoundException;
 import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.container.ExoContainerContext;
@@ -78,19 +62,33 @@ import io.meeds.content.news.model.News;
 import io.meeds.content.news.model.filter.NewsFilter;
 import io.meeds.content.news.rest.model.NewsEntity;
 import io.meeds.content.news.rest.model.NewsSearchResultEntity;
-import io.meeds.content.news.search.NewsESSearchResult;
 import io.meeds.content.news.service.NewsService;
-import io.meeds.content.news.utils.EntityBuilder;
 import io.meeds.content.news.utils.NewsUtils;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.annotation.Secured;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import io.swagger.v3.oas.annotations.Parameter;
+
 
 @RestController
 @RequestMapping("contents")
@@ -711,13 +709,15 @@ public class NewsRest {
     filter.setLimit(limit);
     filter.setOffset(offset);
     filter.setTagNames(tagNames);
-    List<NewsESSearchResult> searchResults = newsService.search(currentIdentity, filter);
-    List<NewsSearchResultEntity> results = searchResults.stream()
-                                                        .map(searchResult -> EntityBuilder.fromNewsSearchResult(favoriteService,
-                                                                                                                searchResult,
-                                                                                                                currentIdentity))
-                                                        .toList();
-    return ResponseEntity.ok(results);
+    List<NewsSearchResultEntity> searchResults = newsService.search(currentIdentity, filter);
+    searchResults.forEach(searchResult -> {
+      Favorite favorite = new Favorite(NewsUtils.NEWS_METADATA_OBJECT_TYPE,
+              searchResult.getLang() != null ? searchResult.getId().concat("-").concat(searchResult.getLang()) : searchResult.getId(),
+              null,
+              Long.parseLong(currentIdentity.getId()));
+      searchResult.setFavorite(favoriteService.isFavorite(favorite));
+    });
+    return ResponseEntity.ok(searchResults);
   }
 
   @GetMapping(path = "canScheduleNews/{spaceId}", produces = MediaType.APPLICATION_JSON_VALUE)
