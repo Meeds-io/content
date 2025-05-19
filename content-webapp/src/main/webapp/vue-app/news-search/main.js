@@ -20,6 +20,13 @@
  
 import './initComponents.js';
 
-export function formatSearchResult(result) {
-  return result;
+export function formatSearchResult(results, term) {
+  if (results?.length) {
+    results = results.map(news => {
+      news.summary = news.summary.replace(new RegExp(`(${term})`, 'ig'), '<span class="searchMatchExcerpt">$1</span>');
+      news.excerpt = $('<div />').html(news.excerpt).text().replace(new RegExp(`(${term})`, 'ig'), '<span class="searchMatchExcerpt">$1</span>');
+      return news;
+    });
+  }
+  return results;
 }
