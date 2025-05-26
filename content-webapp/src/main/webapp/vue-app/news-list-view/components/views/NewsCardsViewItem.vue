@@ -27,7 +27,7 @@
       <div class="imgContainer">
         <img
           :src="articleImage"
-          :alt="featuredImageAltText"
+          alt=""
           class="article-illustration-img">
       </div>
     </a>
@@ -44,7 +44,7 @@
             <img
               class="space-icon"
               :src="item.spaceAvatarUrl"
-              :alt="$t('news.space.icon.alt',{ 0:item.spaceDisplayName })">
+              alt="">
             <div class="space-name text-subtitle">{{ item.spaceDisplayName }}</div>
           </div>
         </a>
