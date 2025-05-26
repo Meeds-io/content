@@ -32,13 +32,13 @@
         <img
           class="article-img"
           :src="articleImage"
-          :alt="$t('news.latest.alt.articleImage')">
+          alt="">
         <div class="author-date-container">
           <img
             v-if="showArticleAuthor"
             class="author-photo"
             :src="item.authorAvatarUrl"
-            :alt="$t('news.avatar.author.alt',{0:item.authorDisplayName})">
+            alt="">
           <div v-if="showArticleDate" class="author-date">
             <date-format
               :value="displayDate"
