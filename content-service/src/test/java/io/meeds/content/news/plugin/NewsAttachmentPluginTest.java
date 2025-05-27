@@ -38,7 +38,7 @@ import io.meeds.content.news.model.News;
 import io.meeds.content.news.service.NewsService;
 
 @RunWith(MockitoJUnitRunner.class)
-public class ArticleAttachmentPluginTest {
+public class NewsAttachmentPluginTest {
 
   @Mock
   private NewsService                        newsService;
@@ -47,7 +47,7 @@ public class ArticleAttachmentPluginTest {
   private AttachmentService                  attachmentService;
 
   @InjectMocks
-  private ArticlePageAttachmentPlugin plugin;
+  private NewsPageAttachmentPlugin plugin;
 
   @Before
   public void setUp() {

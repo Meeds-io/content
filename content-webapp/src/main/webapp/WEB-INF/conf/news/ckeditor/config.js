@@ -30,7 +30,7 @@ CKEDITOR.editorConfig = function (config) {
     {name: 'links', items: ['Link', 'Anchor']},
     {
       name: 'blocks',
-      items: ['Blockquote', 'tagSuggester', 'emoji', 'selectImage', 'Table', 'EmbedSemantic', 'CodeSnippet', 'InsertOptions']
+      items: ['Blockquote', 'tagSuggester', 'emoji', 'selectImage', 'Table', 'EmbedSemantic', 'CodeSnippet']
     },
   ];
 
@@ -49,11 +49,11 @@ CKEDITOR.editorConfig = function (config) {
     {name: 'links', items: ['Link', 'Anchor']},
     {
       name: 'blocks',
-      items: ['Blockquote', 'tagSuggester', 'emoji', 'selectImage', 'Table', 'EmbedSemantic', 'InsertOptions']
+      items: ['Blockquote', 'tagSuggester', 'emoji', 'selectImage', 'Table', 'EmbedSemantic']
     },
   ];
 
-  let extraPlugins = 'a11ychecker,balloonpanel,indent,switchView,googleDocPastePlugin,copyformatting,indentblock,indentlist,sharedspace,' +
+  let extraPlugins = 'a11ychecker,balloonpanel,indent,switchView,googleDocPastePl rmatting,indentblock,indentlist,sharedspace,insertContentLink,vuetifyStyle,' +
         'autolink,colordialog,tagSuggester,emoji,link,font,justify,widget,contextmenu,table,codesnippet,tabletools,tableresize,embedsemantic,suggester';
 
   let removePlugins = 'image,confirmBeforeReload,maximize,resize,autoembed';
