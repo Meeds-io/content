@@ -27,7 +27,7 @@
     <div class="articleImage" v-if="showImage">
       <img 
         :src="articleImg"
-        :alt="featuredImageAltText"
+        alt=""
         class="card-border-radius">
     </div>
     <div class="articleInfos">
@@ -35,7 +35,7 @@
         <img
           class="spaceImage"
           :src="item.spaceAvatarUrl"
-          :alt="$t('news.space.icon.alt',{ 0:item.spaceDisplayName })">
+          alt="">
         <span class="spaceName">{{ item.spaceDisplayName }}</span>
       </div>
       <span v-if="showArticleTitle" class="articleTitle text-color text-body">{{ item.title }}</span>

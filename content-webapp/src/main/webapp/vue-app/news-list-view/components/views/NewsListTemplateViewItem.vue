@@ -26,7 +26,7 @@
     <div v-if="showArticleImage" class="article-item-image">
       <img
         :src="articleImage"
-        :alt="featuredImageAltText"
+        alt=""
         class="card-border-radius">
     </div>
     <div class="article-item-content">
