@@ -88,7 +88,6 @@ const newsActivityTypeExtensionOptions = {
     }
     return '';
   },
-  getTooltip: (activity, isActivityDetail) => !isActivityDetail && activity && 'news.activity.clickToShowDetail',
   getActivityViews: (activity) => {
     if (activity?.news?.viewsCount > 0) {
       const news = activity?.news;
