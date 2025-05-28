@@ -25,7 +25,7 @@
         <v-img
           class="author-image"
           :src="authorAvatarUrl"
-          :alt="$t('news.avatar.author.alt',{0:authorDisplayName})" />
+          alt="" />
       </v-avatar>
       <span class="text-capitalize text--white my-auto ml-2">{{ authorDisplayName }}</span>
     </div>
@@ -40,7 +40,7 @@
         <v-img
           class="spaceImage"
           :src="spaceAvatarUrl"
-          :alt="$t('news.space.icon.alt',{ 0:spaceDisplayName })" />
+          alt="" />
       </v-avatar>
       <a 
         :href="spaceUrl" 
