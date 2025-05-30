@@ -46,21 +46,30 @@
 
             <v-list-item-subtitle class="d-flex flex-column">
               <span class="d-flex flex-row mx-auto full-width">
-                <exo-space-avatar
-                  :space-id="spaceId"
-                  size="18"
-                  text-truncate-class="text-truncate text-sub-title"
-                  small-font-size
-                  subtitle-new-line-class
-                  :avatar="isMobile"
-                  popover />
+                <a
+                  v-bind="attrs"
+                  v-on="on"
+                  :href="spaceUrl"
+                  class="flex-nowrap flex-shrink-0 d-flex spaceAvatar">
+                  <v-avatar
+                    :size="18"
+                    tile
+                    class="my-auto">
+                    <img
+                      :src="spaceAvatar"
+                      alt=""
+                      class="object-fit-cover ma-auto"
+                      loading="lazy">
+                  </v-avatar>
+                  <p class="ms-2 my-auto text-subtitle">{{ spaceDisplayName }}</p>
+                </a>
                 <v-icon size="3" class="icon-default-color mx-3">fas fa-circle</v-icon>
                 <exo-user-avatar
                   :profile-id="updaterUsername"
                   :size="18"
                   small-font-size
                   :avatar="isMobile"
-                  :popover="!isMobile" />
+                  :popover="false" />
                 <v-icon
                   v-if="newsUpdateDate"
                   size="3"
@@ -124,14 +133,26 @@ export default {
     spaceId() {
       return this.result?.spaceId;
     },
+    spaceDisplayName() {
+      return this.result?.spaceDisplayName;
+    },
+    spaceAvatar() {
+      return this.result?.spaceAvatar;
+    },
     summary() {
-      return this.result?.summary || this.excerptHtml || this.$utils.htmlToText(this.result.body);
+      return this.$utils.htmlToText(this.result?.summary || this.excerptHtml || this.result.body || '');
     },
     isMobile() {
       return this.$vuetify?.breakpoint?.smAndDown;
     },
     newsUpdateDate() {
       return this.result?.lastUpdatedTime;
+    },
+    spaceUrl() {
+      if (this.spaceId) {
+        return '#';
+      }
+      return `${eXo.env.portal.context}/s/${this.spaceId}`;
     }
   },
   methods: {
