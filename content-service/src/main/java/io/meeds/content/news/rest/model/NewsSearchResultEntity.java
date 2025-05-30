@@ -40,6 +40,10 @@ public class NewsSearchResultEntity {
 
   private String            spaceId;
 
+  private String            spaceDisplayName;
+
+  private String            spaceAvatar;
+
   private String            newsUrl;
 
   private List<String>      excerpts;

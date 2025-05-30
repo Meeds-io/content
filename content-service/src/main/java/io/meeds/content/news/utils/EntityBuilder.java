@@ -57,6 +57,8 @@ public class EntityBuilder {
     result.setFavorite(news.isFavorite());
     result.setActivityId(news.getActivityId());
     result.setUpdaterUserName(news.getUpdater() != null ? news.getUpdater() : news.getAuthor());
+    result.setSpaceAvatar(news.getSpaceAvatarUrl());
+    result.setSpaceDisplayName(news.getSpaceDisplayName());
     return result;
   }
 
