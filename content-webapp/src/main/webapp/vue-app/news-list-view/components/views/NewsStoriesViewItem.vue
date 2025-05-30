@@ -32,7 +32,7 @@
         <img
           class="article-img"
           :src="articleImage"
-          alt="">
+          :alt="featuredImageAltText">
         <div class="author-date-container">
           <img
             v-if="showArticleAuthor"
@@ -126,7 +126,10 @@ export default {
     },
     articleUrl() {
       return eXo.env.portal.userName !== '' ? this.item.url : `${eXo.env.portal.context}/${eXo.env.portal.portalName}/news-detail?newsId=${this.item.id}&type=article`;
-    }
+    },
+    featuredImageAltText() {
+      return this.item?.properties?.featuredImage?.altText || '';
+    },
   },
   created() {
     this.showSeeAll = this.$root.showSeeAll;
