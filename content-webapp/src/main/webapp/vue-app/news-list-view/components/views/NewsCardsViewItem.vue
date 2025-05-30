@@ -27,7 +27,7 @@
       <div class="imgContainer">
         <img
           :src="articleImage"
-          alt=""
+          :alt="featuredImageAltText"
           class="article-illustration-img">
       </div>
     </a>
@@ -150,7 +150,7 @@ export default {
       return this.selectedOption && this.selectedOption.showArticleSpace;
     },
     featuredImageAltText() {
-      return this.item?.properties?.featuredImage?.altText || this.$t('news.latest.alt.articleImage');
+      return this.item?.properties?.featuredImage?.altText || '';
     },
     articleImage() {
       return this.showArticleImage && this.item

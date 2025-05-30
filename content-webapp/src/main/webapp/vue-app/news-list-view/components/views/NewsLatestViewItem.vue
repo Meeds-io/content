@@ -27,7 +27,7 @@
     <div class="articleImage" v-if="showImage">
       <img 
         :src="articleImg"
-        alt=""
+        :alt="featuredImageAltText"
         class="card-border-radius">
     </div>
     <div class="articleInfos">
@@ -115,7 +115,7 @@ export default {
       return  this.showArticleImage || (!this.showArticleImage && !this.index );
     },
     featuredImageAltText() {
-      return this.item?.properties?.featuredImage?.altText || this.$t('news.latest.alt.articleImage');
+      return this.item?.properties?.featuredImage?.altText || '';
     },
     img() {
       return this.illustrationURL() || '/content/images/news.png';
