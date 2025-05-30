@@ -38,7 +38,7 @@
             :src="showArticleImage && item.illustrationURL !== null
               ? item.illustrationURL.concat('&size=1420x222')
               : '/content/images/news.png'"
-            alt=""
+            :alt="item?.properties?.featuredImage?.altText || ''"
             class="articleImage object-fit-cover width-full full-height">
           <v-container class="slide-text-container d-flex text-center">
             <div class="flex flex-column carouselNewsInfo">
