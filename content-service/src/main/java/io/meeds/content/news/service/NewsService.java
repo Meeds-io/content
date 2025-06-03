@@ -68,7 +68,6 @@ import org.exoplatform.social.core.activity.model.ExoSocialActivityImpl;
 import org.exoplatform.social.core.identity.provider.OrganizationIdentityProvider;
 import org.exoplatform.social.core.manager.ActivityManager;
 import org.exoplatform.social.core.manager.IdentityManager;
-import org.exoplatform.social.core.service.LinkProvider;
 import org.exoplatform.social.core.space.model.Space;
 import org.exoplatform.social.core.space.spi.SpaceService;
 import org.exoplatform.social.core.utils.MentionUtils;
@@ -113,7 +112,6 @@ import io.meeds.content.news.utils.NewsUtils.NewsObjectType;
 import io.meeds.notes.model.NotePageProperties;
 import io.meeds.social.html.model.HtmlTransformerContext;
 import io.meeds.social.html.utils.HtmlUtils;
-
 import lombok.SneakyThrows;
 
 @Service
@@ -223,7 +221,7 @@ public class NewsService {
 
   @Autowired
   private NewsSearchConnector      newsSearchConnector;
-
+  
   @Autowired
   private UserACL                  userAcl;
 
@@ -606,9 +604,19 @@ public class NewsService {
     }
     return news;
   }
+  
+  /**
+   * Retrieves a news identified by its technical identifier without identity and lang
+   *
+   * @param newsId {@link News} identifier
+   * @return {@link News} if found else null
+   */
+  public News buildArticle(String newsId) throws Exception {
+    return buildArticle(newsId, null, null, false);
+  }
 
   /**
-   * Retrives a news identified by its technical identifier
+   * Retrieves a news identified by its technical identifier
    * 
    * @param newsId {@link News} identifier
    * @return {@link News} if found else null
@@ -1731,7 +1739,7 @@ public class NewsService {
                           .filter(Objects::nonNull)
                           .toList();
   }
-
+  
   private List<News> getPostedArticles(NewsFilter filter, Identity currentIdentity) throws Exception {
     MetadataFilter metadataFilter = new MetadataFilter();
     metadataFilter.setMetadataName(NEWS_METADATA_NAME);
@@ -2192,10 +2200,6 @@ public class NewsService {
       return news;
     }
     return null;
-  }
-
-  private News buildArticle(String newsId) throws Exception {
-    return buildArticle(newsId, null, null, false);
   }
 
   private News buildArticle(String newsId, Identity currentIdentity, String lang, boolean fetchOriginal) throws Exception {
