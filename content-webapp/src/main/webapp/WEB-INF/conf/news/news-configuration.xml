@@ -3,7 +3,7 @@
 
 	This file is part of the Meeds project (https://meeds.io/).
 
-  Copyright (C) 2020 - 2024 Meeds Association contact@meeds.io
+  Copyright (C) 2020 - 2025 Meeds Association contact@meeds.io
 	This program is free software; you can redistribute it and/or
 	modify it under the terms of the GNU Lesser General Public
 	License as published by the Free Software Foundation; either
@@ -56,6 +56,43 @@
           <property name="name" value="news"/>
           <property name="description" value="news files storage"/>
         </properties-param>
+      </init-params>
+    </component-plugin>
+  </external-component-plugins>
+  
+  <external-component-plugins>
+    <target-component>org.exoplatform.commons.upgrade.UpgradeProductService</target-component>    
+    <component-plugin profiles="content">
+      <name>CleanDuplicatedEsIndexesUpgrade</name>
+      <set-method>addUpgradePlugin</set-method>
+      <type>io.meeds.content.news.upgrade.CleanDuplicatedEsIndexesUpgrade</type>
+      <description>Cleanup duplicated News Es Indexes</description>
+      <init-params>
+        <value-param>
+          <name>product.group.id</name>
+          <description>The groupId of the product</description>
+          <value>org.exoplatform.platform</value>
+        </value-param>
+        <value-param>
+          <name>plugin.execution.order</name>
+          <description>The plugin execution order</description>
+          <value>1</value>
+        </value-param>
+        <value-param>
+          <name>plugin.upgrade.execute.once</name>
+          <description>Execute this upgrade plugin only once</description>
+          <value>true</value>
+        </value-param>
+        <value-param>
+          <name>plugin.upgrade.async.execution</name>
+          <description>The plugin will be executed in an asynchronous mode</description>
+          <value>true</value>
+        </value-param>
+        <value-param>
+          <name>plugin.upgrade.target.version</name>
+          <description>Target version of the plugin</description>
+          <value>7.1.0</value>
+        </value-param>
       </init-params>
     </component-plugin>
   </external-component-plugins>
