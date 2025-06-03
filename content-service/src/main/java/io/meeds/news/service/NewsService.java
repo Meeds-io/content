@@ -150,6 +150,14 @@ public interface NewsService {
                    boolean editMode,
                    String newsObjectType,
                    String lang) throws IllegalAccessException;
+  
+  /**
+   * Retrieves a news identified by its technical identifier without identity and lang
+   *
+   * @param newsId {@link News} identifier
+   * @return {@link News} if found else null
+   */
+  public News buildArticle(String newsId) throws Exception;
 
   /**
    * Retrives a news identified by its technical identifier

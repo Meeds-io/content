@@ -538,6 +538,11 @@ public class NewsServiceImpl implements NewsService {
     }
     return news;
   }
+  
+  @Override
+  public News buildArticle(String newsId) throws Exception {
+    return buildArticle(newsId, null, false);
+  }
 
   @Override
   public News getNewsArticleById(String newsId) {
@@ -2017,10 +2022,6 @@ public class NewsServiceImpl implements NewsService {
       return news;
     }
     return null;
-  }
-
-  private News buildArticle(String newsId) throws Exception {
-    return buildArticle(newsId, null, false);
   }
 
   private News buildArticle(String newsId, String lang, boolean fetchOriginal) throws Exception {
