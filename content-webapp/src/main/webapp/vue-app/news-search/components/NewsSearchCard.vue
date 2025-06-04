@@ -24,6 +24,7 @@
     <v-card
       flat
       class="pa-0"
+      :aria-label="$t('search.access.to.result', {0 :newsTitleText})"
       @click="openNews">
       <v-list class="pa-0" :class="hover && 'light-grey-background-color no-border-radius' || ''">
         <v-list-item>
@@ -32,9 +33,8 @@
           </v-list-item-icon>
 
           <v-list-item-content>
-            <v-list-item-title class="d-flex flex-row full-width align-center" :title="newsTitle">
+            <v-list-item-title class="d-flex flex-row full-width align-center">
               <p
-                :title="newsTitleText"
                 class="flex-grow-1 title pt-1 mb-0 ps-0 my-auto align-center text-start text-truncate"
                 v-sanitized-html="newsTitle"></p>
               <span v-show="hover || isMobile" class="ml-2">
@@ -82,7 +82,6 @@
               </span>
               <div
                 class="pt-2 text-wrap text-body text-break"
-                :title="summaryText"
                 :class="{
                   'text-truncate-2': isMobile,
                   'text-truncate-3': !isMobile,
@@ -117,9 +116,6 @@ export default {
     },
     excerptHtml() {
       return this.excerpts?.join('\r\n...');
-    },
-    summaryText() {
-      return this.excerpt && $('<div />').html(this.excerpt).text() || $('<div />').html(this.summary).text();
     },
     newsTitle() {
       return this.result && this.result.title || '';
