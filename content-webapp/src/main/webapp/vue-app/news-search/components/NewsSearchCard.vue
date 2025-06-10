@@ -25,7 +25,7 @@
       flat
       class="pa-0"
       :aria-label="$t('search.access.to.result', {0 :newsTitleText})"
-      @click="openNews">
+      :href="newsUrl">
       <v-list class="pa-0" :class="hover && 'light-grey-background-color no-border-radius' || ''">
         <v-list-item>
           <v-list-item-icon class="ms-n1 me-2">
@@ -34,9 +34,10 @@
 
           <v-list-item-content>
             <v-list-item-title class="d-flex flex-row full-width align-center">
-              <p
-                class="flex-grow-1 title pt-1 mb-0 ps-0 my-auto align-center text-start text-truncate"
-                v-sanitized-html="newsTitle"></p>
+              <h1
+                class="flex-grow-1 title pt-1 mb-0 ps-0 my-auto align-center text-start text-truncate">
+                {{ newsTitle }}
+              </h1>
               <span v-show="hover || isMobile" class="ml-2">
                 <news-favorite-action
                   :news="result"
@@ -151,12 +152,5 @@ export default {
       return `${eXo.env.portal.context}/s/${this.spaceId}`;
     }
   },
-  methods: {
-    openNews() {
-      if (this.newsUrl) {
-        window.location.href = this.newsUrl;
-      }
-    },
-  }
 };
 </script>
