@@ -113,7 +113,6 @@ export default {
       editorBodyInputRef: 'articleContent',
       editorTitleInputRef: 'articleTitle',
       imagesURLs: new Map(),
-      canScheduleArticle: false,
       canPublishArticle: false,
       postKey: 1,
       editorIcon: 'fas fa-newspaper',
@@ -319,6 +318,7 @@ export default {
         updatedArticle.properties.draft = true;
       }
       updatedArticle.publicationState = 'draft';
+      this.articleType = this.scheduled && 'latest_draft' || this.articleType;
       return this.$newsServices.updateNews(updatedArticle, false, this.articleType).then((createdArticle) => {
         this.spaceUrl = createdArticle.spaceUrl;
         this.articleId = this.article.id = createdArticle.id;
@@ -677,9 +677,6 @@ export default {
         }
       }
       this.canPublishArticle = await this.$newsServices.canPublishNews(this.currentSpace.id);
-      if (this.article.id) {
-        this.canScheduleArticle = await this.$newsServices.canScheduleNews(this.currentSpace.id, this.article.id);
-      }
       this.loading = false;
     },
     async replaceSuggestedUsers(message, mentionedUsers) {
