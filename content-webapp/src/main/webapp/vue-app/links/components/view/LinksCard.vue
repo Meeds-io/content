@@ -58,6 +58,12 @@
         :class="!showIcon && 'pb-3 my-auto'"
         class="pt-3 px-1 full-width text-truncate-2 text-body">
         {{ showName && name || '' }}
+        <v-icon
+          v-if="!link.sameTab"
+          size="16"
+          class="mb-1 text-color">
+          fa-external-link-alt
+        </v-icon>
       </div>
     </v-card>
   </component>
