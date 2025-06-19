@@ -137,7 +137,7 @@ export default {
       return this.result?.spaceAvatar;
     },
     summary() {
-      return this.$utils.htmlToText(this.result?.summary || this.excerptHtml || this.result.body || '');
+      return this.result?.summary || this.excerptHtml || this.result.body || '';
     },
     isMobile() {
       return this.$vuetify?.breakpoint?.smAndDown;
