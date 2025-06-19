@@ -34,7 +34,10 @@ import java.util.concurrent.TimeUnit;
 
 import javax.ws.rs.core.Response;
 
+import io.meeds.social.html.model.HtmlTransformerContext;
+import io.meeds.social.html.utils.HtmlUtils;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.LocaleUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.exoplatform.commons.exception.ObjectNotFoundException;
 import org.exoplatform.commons.utils.CommonsUtils;
@@ -369,8 +372,8 @@ public class NewsRest {
       if (news == null || news.isDeleted()) {
         return ResponseEntity.notFound().build();
       }
-      Locale userLocale = LocalizationFilter.getCurrentLocale();
-      news.setBody(MentionUtils.substituteRoleWithLocale(news.getBody(), userLocale));
+      Locale userLocale = lang == null ? LocalizationFilter.getCurrentLocale() : LocaleUtils.toLocale(news.getLang());
+      news.setBody(HtmlUtils.transform(news.getBody(), new HtmlTransformerContext(currentIdentity, userLocale)));
       // check favorite
       Identity userIdentity = identityManager.getOrCreateUserIdentity(currentIdentity.getUserId());
       if (userIdentity != null) {
@@ -520,7 +523,9 @@ public class NewsRest {
         Locale userLocale = LocalizationFilter.getCurrentLocale();
         news.stream()
             .filter(Objects::nonNull)
-            .forEach(news1 -> news1.setBody(MentionUtils.substituteRoleWithLocale(news1.getBody(), userLocale)));
+            .forEach(newsArticle -> {
+              newsArticle.setBody(HtmlUtils.transform(newsArticle.getBody(), new HtmlTransformerContext(currentIdentity, userLocale)));
+            });
       }
       newsEntity.setNews(news);
       newsEntity.setOffset(offset);
@@ -572,7 +577,7 @@ public class NewsRest {
       Locale userLocale = LocalizationFilter.getCurrentLocale();
       news.forEach(newsArticle -> {
         if (newsArticle != null) {
-          newsArticle.setBody(MentionUtils.substituteRoleWithLocale(newsArticle.getBody(), userLocale));
+          newsArticle.setBody(HtmlUtils.transform(newsArticle.getBody(), new HtmlTransformerContext(currentIdentity, userLocale)));
         }
       });
       newsEntity.setNews(news);
@@ -609,7 +614,7 @@ public class NewsRest {
         return ResponseEntity.notFound().build();
       }
       Locale userLocale = LocalizationFilter.getCurrentLocale();
-      news.setBody(MentionUtils.substituteRoleWithLocale(news.getBody(), userLocale));
+      news.setBody(HtmlUtils.transform(news.getBody(), new HtmlTransformerContext(currentIdentity, userLocale)));
 
       Identity userIdentity = identityManager.getOrCreateUserIdentity(currentIdentity.getUserId());
       if (userIdentity != null) {

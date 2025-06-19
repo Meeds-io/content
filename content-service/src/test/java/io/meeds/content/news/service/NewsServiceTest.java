@@ -58,6 +58,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import org.junit.AfterClass;
@@ -272,6 +273,7 @@ public class NewsServiceTest {
     when(newsTargetingService.getTargetsByNews(any(News.class))).thenReturn(null);
     NEWS_UTILS.when(() -> NewsUtils.buildDraftUrl(any())).thenReturn("url");
     MENTION_UTILS.when(() -> MentionUtils.substituteUsernames(anyString(), anyString())).thenReturn(draftPage.getContent());
+    MENTION_UTILS.when(() -> MentionUtils.substituteRoleWithLocale(anyString(), any())).thenReturn(draftPage.getContent());
 
     // When
     News news = newsService.getNewsById("1", identity, false, NewsUtils.NewsObjectType.DRAFT.name().toLowerCase());
