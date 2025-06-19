@@ -39,10 +39,9 @@
         class="text-color text-start text-wrap"
         :class="showDescription && description && 'text-truncate' || 'text-truncate-2'">
         {{ name }}
-         <v-icon
+        <v-icon
           v-if="!link.sameTab"
-          size="16"
-          class="mb-1 text-color">
+          size="12">
           fa-external-link-alt
         </v-icon>
       </v-list-item-title>

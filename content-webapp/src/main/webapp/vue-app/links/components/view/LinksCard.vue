@@ -60,8 +60,8 @@
         {{ showName && name || '' }}
         <v-icon
           v-if="!link.sameTab"
-          size="16"
-          class="mb-1 text-color">
+          size="12"
+          class="icon-default-color">
           fa-external-link-alt
         </v-icon>
       </div>
