@@ -41,7 +41,7 @@
         {{ name }}
         <v-icon
           v-if="!link.sameTab"
-          class="text-subtitle">
+          size="12">
           fa-external-link-alt
         </v-icon>
       </v-list-item-title>
