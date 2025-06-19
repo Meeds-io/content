@@ -51,6 +51,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.LocaleUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.exoplatform.portal.application.localization.LocalizationFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -961,23 +962,18 @@ public class NewsService {
    * @param filter
    * @return News Search Result
    */
-  public List<NewsSearchResultEntity> search(org.exoplatform.social.core.identity.model.Identity currentIdentity, NewsFilter filter) {
+  public List<NewsSearchResultEntity> search(org.exoplatform.social.core.identity.model.Identity currentIdentity,
+                                             NewsFilter filter) {
     List<NewsESSearchResult> searchResults = newsSearchConnector.search(currentIdentity, filter);
-    List<NewsSearchResultEntity> results  = new ArrayList<>();
-    for (NewsESSearchResult result : searchResults) {
+    return searchResults.stream().map(result -> {
       try {
         News news = getNewsArticleByIdAndLang(result.getId(), result.getLang());
-        if (news != null) {
-          NewsSearchResultEntity newsSearchResultEntity = EntityBuilder.toSearchResult(news);
-          newsSearchResultEntity.setExcerpts(result.getExcerpts());
-          results.add(newsSearchResultEntity);
-        }
-      } catch (Exception exception) {
-        LOG.error("Error when searching the news with id " + result.getId(), exception);
+        return news != null ? EntityBuilder.toSearchResultEntity(result, news, getCurrentIdentity()) : null;
+      } catch (Exception e) {
+        LOG.error("Error when searching the news with id {}", result.getId(), e);
+        return null;
       }
-    }
-    results = results.stream().filter(Objects::nonNull).collect(Collectors.toList());
-    return results;
+    }).filter(Objects::nonNull).toList();
   }
 
   /**
@@ -1582,7 +1578,7 @@ public class NewsService {
       if (draftUpdaterIdentity != null && draftUpdaterIdentity.getProfile() != null) {
         draftArticle.setDraftUpdaterDisplayName(draftUpdaterIdentity.getProfile().getFullName());
       }
-      processPageContent(draftArticlePage, draftArticle, currentIdentity, draftArticle.getLang());
+      processPageContent(draftArticlePage, draftArticle, draftArticle.getLang());
       draftArticle.setPublicationState(DRAFT);
       Space draftArticleSpace = spaceService.getSpaceByGroupId(draftArticlePage.getWikiOwner());
       draftArticle.setSpaceId(draftArticleSpace.getId());
@@ -2274,7 +2270,7 @@ public class NewsService {
         news.setDeleted(articlePage.isDeleted());
         news.setPublicationDate(articlePage.getCreatedDate());
         news.setTitle(pageVersion != null ? pageVersion.getTitle() : articlePage.getTitle());
-        processPageContent(pageVersion, news, currentIdentity, lang);
+        processPageContent(pageVersion, news, lang);
         news.setUpdaterFullName(pageVersion.getAuthorFullName());
         news.setLang(pageVersion.getLang());
         news.setUpdateDate(metadataItem != null ? new Date(metadataItem.getUpdatedDate()) : articlePage.getUpdatedDate());
@@ -2389,13 +2385,14 @@ public class NewsService {
     return draftArticle;
   }
 
-  private void processPageContent(Page page, News news, Identity currentIdentity, String lang) throws Exception {
+  private void processPageContent(Page page, News news, String lang) throws Exception {
     String portalOwner = CommonsUtils.getCurrentPortalOwner();
-    Locale locale = lang == null ? null : LocaleUtils.toLocale(news.getLang());
-    String body = HtmlUtils.transform(page.getContent(), new HtmlTransformerContext(currentIdentity, locale));
+    Locale locale = lang == null ? LocalizationFilter.getCurrentLocale() : LocaleUtils.toLocale(news.getLang());
+    String body = page.getContent();
     String sanitizedBody = HTMLSanitizer.sanitize(body);
     sanitizedBody = sanitizedBody.replaceAll(HTML_AT_SYMBOL_ESCAPED_PATTERN, HTML_AT_SYMBOL_PATTERN);
     news.setBody(MentionUtils.substituteUsernames(portalOwner, sanitizedBody));
+    news.setBody(MentionUtils.substituteRoleWithLocale(news.getBody(), locale));
     news.setOriginalBody(sanitizedBody);
   }
 
