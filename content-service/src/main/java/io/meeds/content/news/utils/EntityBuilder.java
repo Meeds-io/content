@@ -19,39 +19,54 @@
  */
 package io.meeds.content.news.utils;
 
-import java.util.List;
-import java.util.Map;
-
+import io.meeds.content.news.model.ArticleTarget;
+import io.meeds.content.news.model.News;
+import io.meeds.social.html.model.HtmlTransformerContext;
+import io.meeds.social.html.utils.HtmlUtils;
 import org.apache.commons.collections4.CollectionUtils;
-
-import org.exoplatform.social.core.identity.model.Identity;
-import org.exoplatform.social.metadata.favorite.FavoriteService;
-import org.exoplatform.social.metadata.favorite.model.Favorite;
+import org.exoplatform.portal.application.localization.LocalizationFilter;
+import org.exoplatform.services.security.Identity;
 import org.exoplatform.social.metadata.model.Metadata;
 import org.exoplatform.social.metadata.model.MetadataItem;
 
-import io.meeds.content.news.model.ArticleTarget;
+import java.util.List;
+import java.util.Map;
+
 import io.meeds.content.news.rest.model.NewsSearchResultEntity;
 import io.meeds.content.news.search.NewsESSearchResult;
 
 public class EntityBuilder {
 
-  private EntityBuilder() {
+  public static NewsSearchResultEntity toSearchResultEntity(NewsESSearchResult searchResult, News news, Identity identity) {
+    if (news == null)
+      return null;
+
+    NewsSearchResultEntity result = new NewsSearchResultEntity();
+    result.setId(news.getId());
+    result.setTitle(news.getTitle());
+    result.setSummary(news.getProperties() != null ? news.getProperties().getSummary() : null);
+    result.setLang(news.getLang());
+    result.setSpaceId(news.getSpaceId());
+    result.setNewsUrl(news.getUrl());
+    result.setLastUpdatedTime(news.getUpdateDate() != null ? news.getUpdateDate().getTime() : 0L);
+    result.setFavorite(news.isFavorite());
+    result.setActivityId(news.getActivityId());
+    result.setUpdaterUserName(news.getUpdater() != null ? news.getUpdater() : news.getAuthor());
+    result.setSpaceAvatar(news.getSpaceAvatarUrl());
+    result.setSpaceDisplayName(news.getSpaceDisplayName());
+    result.setBody(HtmlUtils.transform(news.getBody(),
+                                       new HtmlTransformerContext(identity, LocalizationFilter.getCurrentLocale())));
+    result.setExcerpts(!CollectionUtils.isNotEmpty(searchResult.getExcerpts()) ? null
+                                                                         : searchResult.getExcerpts()
+                                                                                 .stream()
+                                                                                 .map(text -> HtmlUtils.transform(text,
+                                                                                                                  new HtmlTransformerContext(identity,
+                                                                                                                                             LocalizationFilter.getCurrentLocale(),
+                                                                                                                                             true)))
+                                                                                 .toList());
+    return result;
   }
 
-  public static NewsSearchResultEntity fromNewsSearchResult(FavoriteService favoriteService,
-                                                            NewsESSearchResult newsESSearchResult,
-                                                            Identity currentIdentity) {
-    NewsSearchResultEntity newsSearchResultEntity = new NewsSearchResultEntity(newsESSearchResult);
-    Favorite favorite = new Favorite(NewsUtils.NEWS_METADATA_OBJECT_TYPE,
-                                     newsESSearchResult.getLang() != null ? newsESSearchResult.getId().concat("-").concat(newsESSearchResult.getLang()) : newsESSearchResult.getId(),
-                                     null,
-                                     Long.parseLong(currentIdentity.getId()));
-    newsSearchResultEntity.setFavorite(favoriteService.isFavorite(favorite));
-
-    return newsSearchResultEntity;
-  }
-  
   public static ArticleTarget toArticleTarget(MetadataItem metadataItem) {
     if (metadataItem == null) {
       return null;

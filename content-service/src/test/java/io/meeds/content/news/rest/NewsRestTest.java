@@ -23,6 +23,7 @@ import static io.meeds.content.news.service.NewsService.POSTED;
 import static io.meeds.content.news.utils.NewsUtils.NewsObjectType.ARTICLE;
 import static io.meeds.content.news.utils.NewsUtils.NewsUpdateType.CONTENT_AND_TITLE;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -52,6 +53,7 @@ import java.util.Locale;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.RuntimeDelegate;
 
+import org.exoplatform.social.metadata.favorite.model.Favorite;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
@@ -132,6 +134,7 @@ public class NewsRestTest {
                                                                                                                              null,
                                                                                                                              null);
     when(identityManager.getOrCreateUserIdentity(JOHN)).thenReturn(userIdentity);
+    when(identityManager.getOrCreateIdentity(OrganizationIdentityProvider.NAME, JOHN)).thenReturn(userIdentity);
     request = mock(HttpServletRequest.class);
     when(request.getLocale()).thenReturn(Locale.ENGLISH);
   }
@@ -1379,7 +1382,12 @@ public class NewsRestTest {
     lenient().when(spaceService.getSpaceById(anyString())).thenReturn(new Space());
 
     // When
-    ResponseEntity response = newsRestController.search("", "", 0, null, 10, false);
+    ResponseEntity response = newsRestController.search("q", "", 0, null, 10, false);
+
+    // Then
+    assertEquals(Response.Status.OK.getStatusCode(), response.getStatusCode().value());
+
+    response = newsRestController.search("", "", 0, null, 10, false);
 
     // Then
     assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatusCode().value());
@@ -1459,29 +1467,18 @@ public class NewsRestTest {
   public void shouldGetnewsListWhenSearchingWithQuery() throws Exception {
     // Given
     String text = "text";
-    String spacesIds = "4,1";
-    News news1 = new News();
-    news1.setSpaceId("4");
-    news1.setAuthor(JOHN);
-    news1.setTitle(text);
-    news1.setPublicationState(POSTED);
-    News news2 = new News();
-    news2.setSpaceId("1");
-    news2.setAuthor(JOHN);
-    news2.setTitle(text);
-    news2.setPublicationState(POSTED);
-    News news3 = new News();
-    news3.setSpaceId("4");
-    news3.setAuthor(JOHN);
-    news3.setTitle(text);
-    news3.setPublicationState(POSTED);
-    List<News> allNews = new ArrayList<>();
-    allNews.add(news1);
-    allNews.add(news2);
-    allNews.add(news3);
-    lenient().when(newsService.searchNews(any(), any())).thenReturn(allNews);
-    lenient().when(spaceService.isMember(any(Space.class), any())).thenReturn(true);
-    lenient().when(spaceService.getSpaceById(anyString())).thenReturn(new Space());
+    List<NewsSearchResultEntity> searchResultEntities = new ArrayList<>();
+    NewsSearchResultEntity newsSearchResultEntity = new NewsSearchResultEntity();
+    newsSearchResultEntity.setId("1");
+    searchResultEntities.add(newsSearchResultEntity);
+    newsSearchResultEntity = new NewsSearchResultEntity();
+    newsSearchResultEntity.setId("2");
+    searchResultEntities.add(newsSearchResultEntity);
+    newsSearchResultEntity = new NewsSearchResultEntity();
+    newsSearchResultEntity.setId("3");
+    searchResultEntities.add(newsSearchResultEntity);
+    when(newsService.search(any(org.exoplatform.social.core.identity.model.Identity.class), any(NewsFilter.class))).thenReturn(searchResultEntities);
+    lenient().when(favoriteService.isFavorite(any(Favorite.class))).thenReturn(true).thenReturn(false).thenReturn(false);
     setCurrentUser(JOHN);
 
     // When
@@ -1491,7 +1488,9 @@ public class NewsRestTest {
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatusCode().value());
     List<NewsSearchResultEntity> newsList = (List<NewsSearchResultEntity>) response.getBody();
     assertNotNull(newsList);
-    assertEquals(0, newsList.size());
+    assertEquals(3, newsList.size());
+    assertTrue(newsList.get(0).isFavorite());
+    assertFalse(newsList.get(1).isFavorite());
   }
 
   private void setCurrentUser(final String name) {

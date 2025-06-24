@@ -1,72 +1,99 @@
 <!--
 
-    This file is part of the Meeds project (https://meeds.io/).
+ This file is part of the Meeds project (https://meeds.io/).
 
-  Copyright (C) 2020 - 2024 Meeds Association contact@meeds.io
-    This program is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
+ Copyright (C) 2020 - 2025 Meeds Association contact@meeds.io
 
-  This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+ This program is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
+ License as published by the Free Software Foundation; either
+ version 3 of the License, or (at your option) any later version.
 
-  You should have received a copy of the GNU Lesser General Public License
-    along with this program; if not, write to the Free Software Foundation,
-    Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ Lesser General Public License for more details.
+
+ You should have received a copy of the GNU Lesser General Public License
+ along with this program; if not, write to the Free Software Foundation,
+ Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 -->
 <template>
-  <v-card
-    class="d-flex flex-column border-radius box-shadow"
-    flat
-    min-height="227">
-    <div class="d-flex flex-grow-1 px-3 py-3">
-      <div
-        ref="excerptNode"
-        :title="excerptText"
-        class="text-wrap me-3 text-break caption search-card-text">
-      </div>
-      <exo-news-favorite-action
-        :news="result"
-        :activity-id="result.activityId"
-        absolute
-        top="0"
-        right="0"
-        @removed="$emit('refresh-favorite')" />
-    </div>
-    <v-list class="flex-grow-0 no-border-radius pa-0">
-      <v-list-item class="px-3 pt-1 pb-2 ">
-        <div class="grey-color">
-          <div>
-            {{ $t('search.news.card.author') }} :  <a
-              :href="posterProfileUrl"
-              target="_blank">
-              {{ this.result.posterFullName }}
-            </a>
-          </div>
-          <div>{{ $t('search.news.card.published') }} : {{ formatDate (new Date(result.postedTime)) }}</div>
-        </div>
-      </v-list-item>
-    </v-list>
-    <v-list class="light-grey-background flex-grow-0 border-top-color no-border-radius pa-0">
-      <v-list-item :href="this.result.newsUrl" class="px-0 pt-1 pb-2">
-        <v-list-item-icon class="mx-0">
-          <span class="uiIconActivity uiIconNews tertiary--text ps-2 pe-2"></span>
-        </v-list-item-icon>
-        <v-list-item-content>
-          <v-list-item-title>
-            {{ this.result.title }}
-          </v-list-item-title>
-          <v-list-item-subtitle>
-            {{ this.result.spaceDisplayName }}
-          </v-list-item-subtitle>
-        </v-list-item-content>
-      </v-list-item>
-    </v-list>
-  </v-card>
+  <v-hover v-slot="{ hover }">
+    <v-card
+      flat
+      class="pa-0"
+      :aria-label="$t('search.access.to.result', {0 :newsTitleText})"
+      :href="newsUrl">
+      <v-list class="pa-0" :class="hover && 'light-grey-background-color no-border-radius' || ''">
+        <v-list-item>
+          <v-list-item-icon class="ms-n1 me-2">
+            <v-icon size="32" class="icon-default-color mt-2">fas fa-newspaper</v-icon>
+          </v-list-item-icon>
+
+          <v-list-item-content>
+            <v-list-item-title class="d-flex flex-row full-width align-center">
+              <h1
+                class="flex-grow-1 title pt-1 mb-0 ps-0 my-auto align-center text-start text-truncate"
+                v-sanitized-html="newsTitle">
+              </h1>
+              <span v-show="hover || isMobile" class="ml-2">
+                <news-favorite-action
+                  :news="result"
+                  @removed="$emit('refresh-favorite')" />
+              </span>
+            </v-list-item-title>
+
+            <v-list-item-subtitle class="d-flex flex-column">
+              <span class="d-flex flex-row mx-auto full-width">
+                <a
+                  v-bind="attrs"
+                  v-on="on"
+                  :href="spaceUrl"
+                  class="flex-nowrap flex-shrink-0 d-flex spaceAvatar">
+                  <v-avatar
+                    :size="18"
+                    tile
+                    class="my-auto">
+                    <img
+                      :src="spaceAvatar"
+                      alt=""
+                      class="object-fit-cover ma-auto"
+                      loading="lazy">
+                  </v-avatar>
+                  <p class="ms-2 my-auto text-subtitle">{{ spaceDisplayName }}</p>
+                </a>
+                <v-icon size="3" class="icon-default-color mx-3">fas fa-circle</v-icon>
+                <exo-user-avatar
+                  :profile-id="updaterUsername"
+                  :size="18"
+                  small-font-size
+                  :avatar="isMobile"
+                  :popover="false" />
+                <v-icon
+                  v-if="newsUpdateDate"
+                  size="3"
+                  class="icon-default-color mx-3">fas fa-circle</v-icon>
+                <v-icon
+                  v-if="newsUpdateDate"
+                  size="12"
+                  class="icon-default-color">fas fa-clock</v-icon>
+                <date-format class="ms-1 my-auto" :value="newsUpdateDate" />
+              </span>
+              <div
+                class="pt-2 text-wrap text-body text-break"
+                :class="{
+                  'text-truncate-2': isMobile,
+                  'text-truncate-3': !isMobile,
+                }"
+                v-sanitized-html="summary"></div>
+            </v-list-item-subtitle>
+          </v-list-item-content>
+        </v-list-item>
+      </v-list>
+    </v-card>
+  </v-hover>
 </template>
 
 <script>
@@ -81,89 +108,49 @@ export default {
       default: null,
     },
   },
-  data: () => ({
-    maxEllipsisHeight: 90,
-    lineHeight: 22,
-    profileActionExtensions: [],
-    fullDateFormat: {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    }
-  }),
   computed: {
-    posterProfileUrl() {
-      return this.result && `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/profile/${this.result.posterUserName}`;
+    newsUrl() {
+      return this.result?.newsUrl;
     },
     excerpts() {
-      return this.result && this.result.excerpts;
+      return this.result?.excerpts;
     },
     excerptHtml() {
-      return this.excerpts && this.excerpts.join('\r\n...');
+      return this.excerpts?.join('\r\n...');
     },
-    excerptText() {
-      return $('<div />').html(this.excerptHtml).text();
+    newsTitle() {
+      return this.result && this.result.title || '';
     },
+    newsTitleText() {
+      return $('<div />').html(this.newsTitle).text();
+    },
+    updaterUsername() {
+      return this.result?.updaterUserName;
+    },
+    spaceId() {
+      return this.result?.spaceId;
+    },
+    spaceDisplayName() {
+      return this.result?.spaceDisplayName;
+    },
+    spaceAvatar() {
+      return this.result?.spaceAvatar;
+    },
+    summary() {
+      return this.result?.summary || this.excerptHtml || this.result.body || '';
+    },
+    isMobile() {
+      return this.$vuetify?.breakpoint?.smAndDown;
+    },
+    newsUpdateDate() {
+      return this.result?.lastUpdatedTime;
+    },
+    spaceUrl() {
+      if (this.spaceId) {
+        return '#';
+      }
+      return `${eXo.env.portal.context}/s/${this.spaceId}`;
+    }
   },
-  created() {
-    this.profileActionExtensions = extensionRegistry.loadExtensions('profile-extension', 'action') || [];
-  },
-  mounted() {
-    this.computeEllipsis();
-  },
-  methods: {
-    computeEllipsis() {
-      if ((!this.excerptHtml || this.excerptHtml.length === 0) && (!this.result || !this.result.body || this.result.body.length === 0)) {
-        return;
-      }
-      const excerptParent = this.$refs.excerptNode;
-      if (!excerptParent) {
-        return;
-      }
-      excerptParent.innerHTML = this.excerptHtml || this.result.body;
-
-      let charsToDelete = 20;
-      let excerptParentHeight = excerptParent.getBoundingClientRect().height || this.lineHeight;
-      if (excerptParentHeight > this.maxEllipsisHeight) {
-        while (excerptParentHeight > this.maxEllipsisHeight) {
-          const newHtml = this.deleteLastChars(excerptParent.innerHTML.replace(/&[a-z]*;/, ''), charsToDelete);
-          const oldLength = excerptParent.innerHTML.length;
-          excerptParent.innerHTML = newHtml;
-          if (excerptParent.innerHTML.length === oldLength) {
-            charsToDelete = charsToDelete * 2;
-          }
-          excerptParentHeight = excerptParent.getBoundingClientRect().height || this.lineHeight;
-        }
-        excerptParent.innerHTML = this.deleteLastChars(excerptParent.innerHTML, 4);
-        excerptParent.innerHTML = `${excerptParent.innerHTML}...`;
-      }
-    },
-    deleteLastChars(html, charsToDelete) {
-      if (html.slice(-1) === '>') {
-        // Replace empty tags
-        html = html.replace(/<[a-zA-Z 0-9 "'=]*><\/[a-zA-Z 0-9]*>$/g, '');
-      }
-      html = html.replace(/<br>(\.*)$/g, '');
-
-      charsToDelete = charsToDelete || 1;
-
-      let newHtml = '';
-      if (html.slice(-1) === '>') {
-        // Delete last inner html char
-        html = html.replace(/(<br>)*$/g, '');
-        newHtml = html.replace(new RegExp(`([^>]{${charsToDelete}})(</)([a-zA-Z 0-9]*)(>)$`), '$2$3');
-        newHtml = $('<div />').html(newHtml).html().replace(/&[a-z]*;/, '');
-        if (newHtml.length === html.length) {
-          newHtml = html.replace(new RegExp('([^>]*)(</)([a-zA-Z 0-9]*)(>)$'), '$2$3');
-        }
-      } else {
-        newHtml = html.substring(0, html.trimRight().length - charsToDelete);
-      }
-      return newHtml;
-    },
-    formatDate(time) {
-      return this.$dateUtil.formatDateObjectToDisplay(new Date(time),this.fullDateFormat, eXo.env.portal.language);
-    },
-  }
 };
 </script>

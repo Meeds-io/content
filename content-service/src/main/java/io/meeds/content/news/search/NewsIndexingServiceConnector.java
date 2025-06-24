@@ -48,6 +48,8 @@ import io.meeds.content.news.model.News;
 import io.meeds.content.news.service.NewsService;
 import io.meeds.content.news.utils.NewsUtils;
 
+import static org.exoplatform.wiki.utils.Utils.html2text;
+
 public class NewsIndexingServiceConnector extends ElasticIndexingServiceConnector {
 
   public static final String    TYPE             = "news";
@@ -136,7 +138,7 @@ public class NewsIndexingServiceConnector extends ElasticIndexingServiceConnecto
       } catch (Exception e) {
         LOG.warn("Error sanitizing news '{}' body", news.getId());
       }
-      body = htmlToText(body);
+      body = html2text(body);
       fields.put("body", body);
     }
 
@@ -147,7 +149,7 @@ public class NewsIndexingServiceConnector extends ElasticIndexingServiceConnecto
       } catch (Exception e) {
         LOG.warn("Error sanitizing news '{}' summary", news.getId());
       }
-      summary = htmlToText(summary);
+      summary = html2text(summary);
       fields.put("summary", summary);
     }
 
@@ -202,27 +204,6 @@ public class NewsIndexingServiceConnector extends ElasticIndexingServiceConnecto
     addDocumentMetadata(document, id);
 
     return document;
-  }
-
-  private String htmlToText(String source) {
-    source = source.replaceAll("<( )*head([^>])*>", "<head>");
-    source = source.replaceAll("(<( )*(/)( )*head( )*>)", "</head>");
-    source = source.replaceAll("(<head>).*(</head>)", "");
-    source = source.replaceAll("<( )*script([^>])*>", "<script>");
-    source = source.replaceAll("(<( )*(/)( )*script( )*>)", "</script>");
-    source = source.replaceAll("(<script>).*(</script>)", "");
-    source = source.replace("javascript:", "");
-    source = source.replaceAll("<( )*style([^>])*>", "<style>");
-    source = source.replaceAll("(<( )*(/)( )*style( )*>)", "</style>");
-    source = source.replaceAll("(<style>).*(</style>)", "");
-    source = source.replaceAll("<( )*td([^>])*>", "\t");
-    source = source.replaceAll("<( )*br( )*(/)*>", "\n");
-    source = source.replaceAll("<( )*li( )*>", "\n");
-    source = source.replaceAll("<( )*div([^>])*>", "\n");
-    source = source.replaceAll("<( )*tr([^>])*>", "\n");
-    source = source.replaceAll("<( )*p([^>])*>", "\n");
-    source = source.replaceAll("<[^>]*>", "");
-    return source;
   }
 
   private void addDocumentMetadata(DocumentWithMetadata document, String documentId) {

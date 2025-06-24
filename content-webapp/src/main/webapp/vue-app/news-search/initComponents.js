@@ -19,9 +19,11 @@
  */
  
 import NewsSearchCard from './components/NewsSearchCard.vue';
+import ExoNewsFavoriteAction from '../news-details/components/ExoNewsFavoriteAction.vue';
 
 const components = {
   'news-search-card': NewsSearchCard,
+  'news-favorite-action': ExoNewsFavoriteAction
 };
 
 for (const key in components) {
