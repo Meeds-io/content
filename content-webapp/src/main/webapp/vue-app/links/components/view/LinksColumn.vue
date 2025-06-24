@@ -41,6 +41,7 @@
         {{ name }}
         <v-icon
           v-if="!link.sameTab"
+          class="mt-n1"
           size="12">
           fa-external-link-alt
         </v-icon>
