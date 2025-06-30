@@ -1140,6 +1140,33 @@ public class NewsServiceTest {
     NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.ADD_ARTICLE_TRANSLATION), any(), any()), times(1));
   }
 
+  @Test
+  public void testSearchNewsOfOneSpace() {
+    NewsFilter filter = new NewsFilter();
+    String spacePrettyName = "spacePrettyName";
+    String spaceId = "1";
+    long spaceIdentityId = 10L;
+    filter.setSpaces(Arrays.asList(spaceId));
+    filter.setAuthor("john");
+    filter.setSearchText("test");
+    org.exoplatform.social.core.identity.model.Identity spaceIdentity =
+                                                                      mock(org.exoplatform.social.core.identity.model.Identity.class);
+    org.exoplatform.social.core.identity.model.Identity userIdentity =
+                                                                     mock(org.exoplatform.social.core.identity.model.Identity.class);
+
+    Space space = mock(Space.class);
+    when(spaceService.getSpaceById(filter.getSpaces().get(0))).thenReturn(space);
+    when(space.getPrettyName()).thenReturn(spacePrettyName);
+    when(spaceIdentity.getIdentityId()).thenReturn(spaceIdentityId);
+    when(identityManager.getOrCreateSpaceIdentity(spacePrettyName)).thenReturn(spaceIdentity);
+
+    newsService.search(userIdentity, filter);
+    assertEquals(1, filter.getSpaces().size());
+    assertEquals(Long.toString(spaceIdentityId), filter.getSpaces().getFirst());
+    verify(newsSearchConnector, times(1)).search(userIdentity, filter);
+
+  }
+
   private void mockBuildArticle(List<MetadataItem> metadataItems) throws WikiException {
     when(metadataService.getMetadataItemsByFilter(any(), anyLong(), anyLong())).thenReturn(metadataItems);
     Page page = new Page();

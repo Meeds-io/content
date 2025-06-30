@@ -964,6 +964,19 @@ public class NewsService {
    */
   public List<NewsSearchResultEntity> search(org.exoplatform.social.core.identity.model.Identity currentIdentity,
                                              NewsFilter filter) {
+    List<String> spaceIds = filter.getSpaces();
+    if (!CollectionUtils.isEmpty(spaceIds)) {
+      List<String> identityIds = spaceIds.stream()
+              .map(spaceService::getSpaceById)
+              .filter(Objects::nonNull)
+              .map(Space::getPrettyName)
+              .map(identityManager::getOrCreateSpaceIdentity)
+              .filter(Objects::nonNull)
+              .map(identity -> Long.toString(identity.getIdentityId()))
+              .toList();
+
+      filter.setSpaces(identityIds);
+    }
     List<NewsESSearchResult> searchResults = newsSearchConnector.search(currentIdentity, filter);
     return searchResults.stream().map(result -> {
       try {

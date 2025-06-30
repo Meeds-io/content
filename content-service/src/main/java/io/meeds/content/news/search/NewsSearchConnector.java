@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -113,6 +114,16 @@ public class NewsSearchConnector {
       throw new IllegalArgumentException("Filter term is mandatory");
     }
     Set<Long> streamFeedOwnerIds = this.activityStorage.getStreamFeedOwnerIds(viewerIdentity);
+    if (!CollectionUtils.isEmpty(filter.getSpaces())) {
+      // Filter the space identity IDs that I have access to
+      Set<Long> spaceIds = filter.getSpaces().stream()
+              .map(Long::parseLong)
+              .collect(Collectors.toSet());
+
+      streamFeedOwnerIds = streamFeedOwnerIds.stream()
+              .filter(spaceIds::contains)
+              .collect(Collectors.toSet());
+    }
     String esQuery = buildQueryStatement(viewerIdentity, streamFeedOwnerIds, filter);
     String jsonResponse = this.client.sendRequest(esQuery, this.index);
     return buildResult(jsonResponse);
