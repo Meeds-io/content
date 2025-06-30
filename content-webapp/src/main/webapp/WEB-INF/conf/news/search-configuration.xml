@@ -63,6 +63,9 @@
             <field name="tagsEnabled">
               <boolean>true</boolean>
             </field>
+            <field name="spaceFilterEnabled">
+              <boolean>true</boolean>
+            </field>
           </object>
         </object-param>
       </init-params>
