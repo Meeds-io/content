@@ -23,6 +23,7 @@ import static io.meeds.content.news.utils.NewsUtils.NewsObjectType.ARTICLE;
 import static io.meeds.content.news.utils.NewsUtils.NewsObjectType.EXISTING_PAGE;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -685,6 +686,9 @@ public class NewsRest {
                                                              @Parameter(description = "Offset")
                                                              @RequestParam(name = "offset", defaultValue = "0", required = false)
                                                              int offset,
+                                                             @Parameter(description = "Space id used to search news")
+                                                             @RequestParam(name = "spaceId", required = false)
+                                                             String spaceId,
                                                              @Parameter(description = "Tag names used to search news")
                                                              @RequestParam(name = "tags", required = false)
                                                              List<String> tagNames,
@@ -714,6 +718,9 @@ public class NewsRest {
     filter.setLimit(limit);
     filter.setOffset(offset);
     filter.setTagNames(tagNames);
+    if (spaceId != null) {
+      filter.setSpaces(Arrays.asList(spaceId));
+    }
     List<NewsSearchResultEntity> searchResults = newsService.search(currentIdentity, filter);
     searchResults.forEach(searchResult -> {
       Favorite favorite = new Favorite(NewsUtils.NEWS_METADATA_OBJECT_TYPE,
