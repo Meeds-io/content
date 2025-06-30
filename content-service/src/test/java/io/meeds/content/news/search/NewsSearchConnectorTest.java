@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 import org.junit.After;
@@ -226,7 +227,7 @@ public class NewsSearchConnectorTest {
                                           .replaceAll("@permissions@", StringUtils.join(permissions, ","))
                                           .replaceAll("@offset@", "0")
                                           .replaceAll("@limit@", "10");
-    searchResult = IOUtil.getStreamContentAsString(getClass().getClassLoader()
+    String searchResult = IOUtil.getStreamContentAsString(getClass().getClassLoader()
                                                              .getResourceAsStream("news-search-result-by-identity.json"));
     lenient().when(client.sendRequest(eq(expectedESQuery), eq(ES_INDEX))).thenReturn(searchResult);
 
@@ -240,5 +241,55 @@ public class NewsSearchConnectorTest {
     assertEquals(0, newsESSearchResult.getExcerpts().size());
   }
 
+  @Test
+  public void testSearchWithSpaceResult() {// NOSONAR
+    NewsFilter filter = new NewsFilter();
+    filter.setSearchText("john");
+    filter.setLimit(10);
+    filter.setOffset(0);
 
+    Long allowedSpaceStreamOwnerId = 10L;
+    Long notAllowedSpaceStreamOwnerId = 50L;
+
+    filter.setSpaces(Arrays.asList(Long.toString(allowedSpaceStreamOwnerId)));
+
+    HashSet<Long> permissions = new HashSet<>(Arrays.asList(10L, 20L, 30L));
+    Identity identity = mock(Identity.class);
+    lenient().when(identity.getId()).thenReturn("1");
+    lenient().when(activityStorage.getStreamFeedOwnerIds(eq(identity))).thenReturn(permissions);
+    Set<Long> expectedPermissionsSet = new HashSet<>(Arrays.asList(allowedSpaceStreamOwnerId));
+    String expectedESQuery = FAKE_ES_QUERY
+                                          .replaceAll("@term_query@",
+                                                      ActivitySearchConnector.SEARCH_QUERY_TERM.replace("@term@",
+                                                                                                        filter.getSearchText())
+                                                                                               .replace("@term_query@",
+                                                                                                        filter.getSearchText()))
+                                          .replaceAll("@permissions@", StringUtils.join(expectedPermissionsSet, ","))
+                                          .replaceAll("@offset@", "0")
+                                          .replaceAll("@limit@", "10");
+    lenient().when(client.sendRequest(eq(expectedESQuery), eq(ES_INDEX))).thenReturn(searchResult);
+
+    List<NewsESSearchResult> result = newsSearchConnector.search(identity, filter);
+    assertNotNull(result);
+    assertEquals(2, result.size());
+
+    //
+    filter.setSpaces(Arrays.asList(Long.toString(notAllowedSpaceStreamOwnerId)));
+    expectedPermissionsSet = new HashSet<>();
+
+    expectedESQuery = FAKE_ES_QUERY
+                                   .replaceAll("@term_query@",
+                                               ActivitySearchConnector.SEARCH_QUERY_TERM.replace("@term@", filter.getSearchText())
+                                                                                        .replace("@term_query@",
+                                                                                                 filter.getSearchText()))
+                                   .replaceAll("@permissions@", StringUtils.join(expectedPermissionsSet, ","))
+                                   .replaceAll("@offset@", "0")
+                                   .replaceAll("@limit@", "10");
+    lenient().when(client.sendRequest(eq(expectedESQuery), eq(ES_INDEX))).thenReturn("{}");
+
+    result = newsSearchConnector.search(identity, filter);
+    assertNotNull(result);
+    assertEquals(0, result.size());
+
+  }
 }
