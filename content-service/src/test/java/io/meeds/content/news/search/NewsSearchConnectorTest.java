@@ -227,9 +227,9 @@ public class NewsSearchConnectorTest {
                                           .replaceAll("@permissions@", StringUtils.join(permissions, ","))
                                           .replaceAll("@offset@", "0")
                                           .replaceAll("@limit@", "10");
-    String searchResult = IOUtil.getStreamContentAsString(getClass().getClassLoader()
+    String expectedSearchResult = IOUtil.getStreamContentAsString(getClass().getClassLoader()
                                                              .getResourceAsStream("news-search-result-by-identity.json"));
-    lenient().when(client.sendRequest(eq(expectedESQuery), eq(ES_INDEX))).thenReturn(searchResult);
+    lenient().when(client.sendRequest(eq(expectedESQuery), eq(ES_INDEX))).thenReturn(expectedSearchResult);
 
     List<NewsESSearchResult> result = newsSearchConnector.search(identity, filter);
     assertNotNull(result);
