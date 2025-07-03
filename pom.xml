@@ -35,8 +35,8 @@
   </modules>
 
   <properties>
-    <addon.meeds.notes.version>7.1.x-meed-SNAPSHOT</addon.meeds.notes.version>
-    <addon.meeds.layout.version>7.1.x-meed-SNAPSHOT</addon.meeds.layout.version>
+    <addon.meeds.notes.version>7.1.0-meed-20250703</addon.meeds.notes.version>
+    <addon.meeds.layout.version>7.1.0-meed-20250703</addon.meeds.layout.version>
     <sonar.organization>meeds-io</sonar.organization>
   </properties>
 
