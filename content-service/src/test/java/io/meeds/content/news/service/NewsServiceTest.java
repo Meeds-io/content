@@ -38,6 +38,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -61,6 +62,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import org.exoplatform.social.core.space.SpaceUtils;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
@@ -161,6 +163,8 @@ public class NewsServiceTest {
 
   private static final MockedStatic<MentionUtils>      MENTION_UTILS      = mockStatic(MentionUtils.class);
 
+  private static final MockedStatic<SpaceUtils>        SPACE_UTILS        = mockStatic(SpaceUtils.class);
+
   @Before
   public void setUp() {
     when(johnIdentity.getUserId()).thenReturn("john");
@@ -175,6 +179,7 @@ public class NewsServiceTest {
     PORTAL_CONTAINER.close();
     NEWS_UTILS.close();
     MENTION_UTILS.close();
+    SPACE_UTILS.close();
   }
 
   @Test
@@ -1143,22 +1148,17 @@ public class NewsServiceTest {
   @Test
   public void testSearchNewsOfOneSpace() {
     NewsFilter filter = new NewsFilter();
-    String spacePrettyName = "spacePrettyName";
     String spaceId = "1";
     long spaceIdentityId = 10L;
     filter.setSpaces(Arrays.asList(spaceId));
     filter.setAuthor("john");
     filter.setSearchText("test");
-    org.exoplatform.social.core.identity.model.Identity spaceIdentity =
-                                                                      mock(org.exoplatform.social.core.identity.model.Identity.class);
     org.exoplatform.social.core.identity.model.Identity userIdentity =
                                                                      mock(org.exoplatform.social.core.identity.model.Identity.class);
+    when(userIdentity.getRemoteId()).thenReturn("root");
+    SPACE_UTILS.when(() -> SpaceUtils.getSpaceIdentityIds(anyString(), anyList())).thenReturn(Arrays.asList(String.valueOf(spaceIdentityId)));
 
-    Space space = mock(Space.class);
-    when(spaceService.getSpaceById(filter.getSpaces().get(0))).thenReturn(space);
-    when(space.getPrettyName()).thenReturn(spacePrettyName);
-    when(spaceIdentity.getIdentityId()).thenReturn(spaceIdentityId);
-    when(identityManager.getOrCreateSpaceIdentity(spacePrettyName)).thenReturn(spaceIdentity);
+
 
     newsService.search(userIdentity, filter);
     assertEquals(1, filter.getSpaces().size());
