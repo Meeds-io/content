@@ -115,14 +115,14 @@ public class NewsSearchConnector {
     }
     Set<Long> streamFeedOwnerIds = this.activityStorage.getStreamFeedOwnerIds(viewerIdentity);
     if (!CollectionUtils.isEmpty(filter.getSpaces())) {
-      // Filter the space identity IDs that I have access to
-      Set<Long> spaceIds = filter.getSpaces().stream()
+      Set<Long> spaceIdentityIds = filter.getSpaces().stream()
               .map(Long::parseLong)
               .collect(Collectors.toSet());
 
-      streamFeedOwnerIds = streamFeedOwnerIds.stream()
-              .filter(spaceIds::contains)
-              .collect(Collectors.toSet());
+      streamFeedOwnerIds.retainAll(spaceIdentityIds);
+      if (CollectionUtils.isEmpty(streamFeedOwnerIds)) {
+        return Collections.emptyList();
+      }
     }
     String esQuery = buildQueryStatement(viewerIdentity, streamFeedOwnerIds, filter);
     String jsonResponse = this.client.sendRequest(esQuery, this.index);
