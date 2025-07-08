@@ -41,18 +41,12 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Matcher;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-
-import io.meeds.content.news.rest.model.NewsSearchResultEntity;
-import io.meeds.content.news.utils.EntityBuilder;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.LocaleUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.exoplatform.portal.application.localization.LocalizationFilter;
-import org.exoplatform.social.core.space.SpaceUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -63,6 +57,7 @@ import org.exoplatform.commons.notification.impl.NotificationContextImpl;
 import org.exoplatform.commons.search.index.IndexingService;
 import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.commons.utils.HTMLSanitizer;
+import org.exoplatform.portal.application.localization.LocalizationFilter;
 import org.exoplatform.portal.config.UserACL;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
@@ -74,6 +69,7 @@ import org.exoplatform.social.core.activity.model.ExoSocialActivityImpl;
 import org.exoplatform.social.core.identity.provider.OrganizationIdentityProvider;
 import org.exoplatform.social.core.manager.ActivityManager;
 import org.exoplatform.social.core.manager.IdentityManager;
+import org.exoplatform.social.core.space.SpaceUtils;
 import org.exoplatform.social.core.space.model.Space;
 import org.exoplatform.social.core.space.spi.SpaceService;
 import org.exoplatform.social.core.utils.MentionUtils;
@@ -110,14 +106,14 @@ import io.meeds.content.news.notification.plugin.PublishNewsNotificationPlugin;
 import io.meeds.content.news.notification.utils.NotificationConstants;
 import io.meeds.content.news.notification.utils.NotificationUtils;
 import io.meeds.content.news.plugin.NewsPageAttachmentPlugin;
+import io.meeds.content.news.rest.model.NewsSearchResultEntity;
 import io.meeds.content.news.search.NewsESSearchResult;
 import io.meeds.content.news.search.NewsIndexingServiceConnector;
 import io.meeds.content.news.search.NewsSearchConnector;
+import io.meeds.content.news.utils.EntityBuilder;
 import io.meeds.content.news.utils.NewsUtils;
 import io.meeds.content.news.utils.NewsUtils.NewsObjectType;
 import io.meeds.notes.model.NotePageProperties;
-import io.meeds.social.html.model.HtmlTransformerContext;
-import io.meeds.social.html.utils.HtmlUtils;
 import lombok.SneakyThrows;
 
 @Service
@@ -138,6 +134,9 @@ public class NewsService {
 
   /** The Constant PUBLISHED. */
   public static final String       PUBLISHED                              = "published";
+  
+  /** The Constant PUBLISHER. */
+  public static final String       PUBLISHER                              = "publisher";
 
   /** The Constant POSTED. */
   public static final String       POSTED                                 = "posted";
@@ -398,9 +397,6 @@ public class NewsService {
       }
       NewsUtils.broadcastEvent(NewsUtils.UPDATE_NEWS, updater, news);
       NewsUtils.broadcastEvent(NewsUtils.UPDATE_PUBLISH_CONTENT, updater, new ContentPublishEvent(originalNews, news));
-    }
-    if(newsUpdateType.equals(NewsUtils.NewsUpdateType.POSTING_AND_PUBLISHING.name())){
-      addNewArticleVersionWithLang(news, updaterIdentity, space);
     }
     return news;
   }
@@ -1486,13 +1482,13 @@ public class NewsService {
                                                                                    versionId,
                                                                                    null,
                                                                                    Long.parseLong(spaceId));
-    String creatorIdentityId = identityManager.getOrCreateUserIdentity(creator).getId();
+    org.exoplatform.social.core.identity.model.Identity creatorIdentity = identityManager.getOrCreateUserIdentity(creator);
     Map<String, String> newsArticleVersionMetadataItemProperties = new HashMap<>();
     // create the page version metadata item
     metadataService.createMetadataItem(articleVersionMetaDataObject,
                                        NEWS_METADATA_KEY,
                                        newsArticleVersionMetadataItemProperties,
-                                       Long.parseLong(creatorIdentityId),
+                                       Long.parseLong(creatorIdentity.getId()),
                                        false);
 
     // create metadata item page
@@ -1513,10 +1509,11 @@ public class NewsService {
     newsPageProperties.put(NEWS_ACTIVITY_POSTED, String.valueOf(article.isActivityPosted()));
     newsPageProperties.put(PUBLISHED, String.valueOf(article.isPublished()));
     newsPageProperties.put(NEWS_DELETED, String.valueOf(articlePage.isDeleted()));
+    newsPageProperties.put(PUBLISHER, creatorIdentity.getProfile().getFullName());
     metadataService.createMetadataItem(newsPageObject,
                                        NEWS_METADATA_KEY,
                                        newsPageProperties,
-                                       Long.parseLong(creatorIdentityId),
+                                       Long.parseLong(creatorIdentity.getId()),
                                        false);
   }
 
@@ -1662,6 +1659,9 @@ public class NewsService {
       }
       if (properties.containsKey(PUBLISHED) && StringUtils.isNotEmpty(properties.get(PUBLISHED))) {
         article.setPublished(Boolean.parseBoolean(properties.get(PUBLISHED)));
+      }
+      if (properties.containsKey(PUBLISHER) && StringUtils.isNotEmpty(properties.get(PUBLISHER))) {
+        article.setPublisher(properties.get(PUBLISHER));
       }
       if (properties.containsKey(EXTERNAL_PAGE) && StringUtils.isNotEmpty(properties.get(EXTERNAL_PAGE))) {
         article.setFromExternalPage(Boolean.parseBoolean(properties.get(EXTERNAL_PAGE)));
@@ -2184,6 +2184,11 @@ public class NewsService {
         }
         referOrDeReferArticlePage(news, existingPage, newsPageProperties);
         newsPageProperties.put(NEWS_ACTIVITY_POSTED, String.valueOf(news.isActivityPosted()));
+        if (newsUpdateType.equalsIgnoreCase(POSTING_AND_PUBLISHING.name())) {
+          org.exoplatform.social.core.identity.model.Identity publisherIdentity =
+                                                                                identityManager.getOrCreateUserIdentity(updater.getUserId());
+          newsPageProperties.put(PUBLISHER, publisherIdentity.getProfile().getFullName());
+        }
         existingPageMetadataItem.setProperties(newsPageProperties);
         Date updateDate = Calendar.getInstance().getTime();
         existingPageMetadataItem.setUpdatedDate(updateDate.getTime());
