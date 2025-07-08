@@ -110,6 +110,7 @@
                 :class="{'mt-n2': !hiddenSpace}"
                 class="text-sub-title align-center d-flex">
                 <span v-if="isArticleEdited" class="text-caption ms-2">{{ $t('article.edited.by.label') }}</span>
+                <span v-else class="text-caption ms-2">{{ $t('article.created.by.label') }}</span>
                 <exo-user-avatar
                   :profile-id="articleUpdater"
                   extra-class="ms-2"
@@ -120,6 +121,8 @@
                   :value="updatedDate"
                   :format="dateFormat"
                   class="text-caption" />
+                  <span v-if="articlePublisher" class="px-1">-</span>
+                  <span v-if="articlePublisher" class="text-caption">{{ $t('article.published.by.label') }} {{ articlePublisher }}</span>
               </div>
             </div>
             <div
@@ -130,6 +133,7 @@
                 :value="updatedDate"
                 :format="dateFormat"
                 class="text-caption" />
+                <span class="text-caption">{{ $t('article.published.by.label') }} {{ articlePublisher }}</span>
             </div>
           </div>
         </div>
@@ -234,6 +238,9 @@ export default {
     },
     articleUpdater() {
       return this.news?.updater || this.news?.author;
+    },
+    articlePublisher() {
+      return this.news?.publisher;
     },
     hiddenSpace() {
       return this.news && this.news.hiddenSpace;
