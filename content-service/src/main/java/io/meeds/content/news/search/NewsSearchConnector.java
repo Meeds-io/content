@@ -42,15 +42,12 @@ import org.springframework.stereotype.Component;
 
 import org.exoplatform.commons.search.es.ElasticSearchException;
 import org.exoplatform.commons.search.es.client.ElasticSearchingClient;
-import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.commons.utils.IOUtil;
 import org.exoplatform.commons.utils.PropertyManager;
-import org.exoplatform.container.PortalContainer;
 import org.exoplatform.container.configuration.ConfigurationManager;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
 import org.exoplatform.social.core.identity.model.Identity;
-import org.exoplatform.social.core.identity.provider.OrganizationIdentityProvider;
 import org.exoplatform.social.core.manager.IdentityManager;
 import org.exoplatform.social.core.storage.api.ActivityStorage;
 import org.exoplatform.social.metadata.favorite.FavoriteService;
@@ -113,6 +110,16 @@ public class NewsSearchConnector {
       throw new IllegalArgumentException("Filter term is mandatory");
     }
     Set<Long> streamFeedOwnerIds = this.activityStorage.getStreamFeedOwnerIds(viewerIdentity);
+    if (!CollectionUtils.isEmpty(filter.getSpaces())) {
+      Set<Long> spaceIdentityIds = filter.getSpaces().stream()
+              .map(Long::parseLong)
+              .collect(Collectors.toSet());
+
+      streamFeedOwnerIds.retainAll(spaceIdentityIds);
+      if (CollectionUtils.isEmpty(streamFeedOwnerIds)) {
+        return Collections.emptyList();
+      }
+    }
     String esQuery = buildQueryStatement(viewerIdentity, streamFeedOwnerIds, filter);
     String jsonResponse = this.client.sendRequest(esQuery, this.index);
     return buildResult(jsonResponse);

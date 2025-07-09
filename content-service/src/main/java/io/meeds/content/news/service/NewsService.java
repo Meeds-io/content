@@ -52,6 +52,7 @@ import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.LocaleUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.exoplatform.portal.application.localization.LocalizationFilter;
+import org.exoplatform.social.core.space.SpaceUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -964,6 +965,9 @@ public class NewsService {
    */
   public List<NewsSearchResultEntity> search(org.exoplatform.social.core.identity.model.Identity currentIdentity,
                                              NewsFilter filter) {
+    if (CollectionUtils.isNotEmpty(filter.getSpaces())) {
+      filter.setSpaces(SpaceUtils.getSpaceIdentityIds(currentIdentity.getRemoteId(),  filter.getSpaces()));
+    }
     List<NewsESSearchResult> searchResults = newsSearchConnector.search(currentIdentity, filter);
     return searchResults.stream().map(result -> {
       try {
