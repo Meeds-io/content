@@ -19,6 +19,11 @@
  */
  
 export function initExtensions() {
+  extensionRegistry.registerExtension('favorite', 'favorite-type', {
+    rank: 40,
+    id: 'news',
+    icon: 'fa-newspaper',
+  });
   extensionRegistry.registerComponent('favorite-news', 'favorite-drawer-item', {
     id: 'news',
     vueComponent: Vue.options.components['news-favorite-item'],
