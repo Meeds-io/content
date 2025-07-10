@@ -19,7 +19,11 @@
 
 -->
 <template>
-  <v-list-item class="clickable" :href="url">
+  <v-list-item
+    :href="url"
+    @keydown.enter="setAsViewed"
+    @auxclick="setAsViewed"
+    @click="setAsViewed">
     <v-list-item-icon class="me-3 my-auto">
       <v-avatar
         tile
@@ -58,6 +62,14 @@ export default {
     id: {
       type: String,
       default: () => null,
+    },
+    clickCallback: {
+      type: Function,
+      default: null,
+    },
+    expanded: {
+      type: Boolean,
+      default: false,
     },
   },
   data: () => ({
@@ -99,6 +111,11 @@ export default {
     },
     displayAlert(message, type) {
       this.$root.$emit('alert-message', message, type || 'success');
+    },
+    setAsViewed(event) {
+      if (event.which === 1 || event.which === 2) {
+        this.clickCallback('news', this.id);
+      }
     },
   }
 };
