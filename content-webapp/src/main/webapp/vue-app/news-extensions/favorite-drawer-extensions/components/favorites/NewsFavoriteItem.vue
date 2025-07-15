@@ -19,26 +19,41 @@
 
 -->
 <template>
-  <v-list-item class="clickable" :href="url">
+  <v-list-item
+    :href="url"
+    @keydown.enter="setAsViewed"
+    @auxclick="setAsViewed"
+    @click="setAsViewed">
     <v-list-item-icon class="me-3 my-auto">
-      <v-avatar
-        tile
-        size="25">
-        <img
-          v-if="news?.illustrationURL"
-          :alt="featuredImageAltText"
-          :src="`${news.illustrationURL}&size=25x25`">
-        <img
-          v-else
-          :alt="activityTitle"
-          src="/content/images/news.png">
-      </v-avatar>
+      <v-card
+        :min-width="iconWidth"
+        class="d-flex justify-center no-border-radius"
+        color="transparent"
+        flat>
+        <v-icon :size="iconSize">fa-newspaper</v-icon>
+      </v-card>
     </v-list-item-icon>
-
     <v-list-item-content>
-      <v-list-item-title class="text-color">{{ activityTitle }}</v-list-item-title>
+      <v-list-item-title class="text-color">{{ title }}</v-list-item-title>
+      <v-list-item-subtitle v-if="expanded" class="d-flex align-center full-width overflow-hidden pt-2px">
+        <template v-if="spaceId">
+          <favorite-space-avatar
+            :space-id="spaceId"
+            :size="16"
+            class="flex-grow-0 flex-shrink-1 text-truncate"
+            link-style />
+          <v-icon class="flex-grow-0 flex-shrink-0 mx-2" size="2">fa-circle</v-icon>
+        </template>
+        <date-format class="flex-grow-0 flex-shrink-0" :value="date" />
+        <template v-if="updater">
+          <v-icon class="flex-grow-0 flex-shrink-0 mx-2" size="2">fa-circle</v-icon>
+          <favorite-user-avatar
+            :username="updater"
+            :size="16"
+            class="flex-grow-1 flex-shrink-1 text-truncate" />
+        </template>
+      </v-list-item-subtitle>
     </v-list-item-content>
-
     <v-list-item-action>
       <favorite-button
         :id="id"
@@ -59,18 +74,42 @@ export default {
       type: String,
       default: () => null,
     },
+    clickCallback: {
+      type: Function,
+      default: null,
+    },
+    expanded: {
+      type: Boolean,
+      default: false,
+    },
   },
   data: () => ({
     news: null,
-    activityTitle: '',
-    url: '',
     isFavorite: true,
     newsObjectType: 'article',
   }),
   computed: {
-    featuredImageAltText() {
-      return this.news?.properties?.featuredImage?.altText || this.activityTitle;
-    }
+    iconWidth() {
+      return this.expanded ? 40 : 30;
+    },
+    iconSize() {
+      return this.expanded ? 34 : 24;
+    },
+    title() {
+      return this.news?.title ? this.$utils.htmlToText(this.news.title) : '';
+    },
+    url() {
+      return this.news?.url;
+    },
+    spaceId() {
+      return this.news?.spaceId;
+    },
+    updater() {
+      return this.news ? this.news?.updater || this.news?.author : null;
+    },
+    date() {
+      return this.news?.updateDate || this.news?.publicationDate || this.news?.creationDate;
+    },
   },
   created() {
     let newsId = this.id;
@@ -81,11 +120,7 @@ export default {
       lang = parts[1];
     }
     this.$newsServices.getNewsById(newsId, false, this.newsObjectType, lang)
-      .then(news => {
-        this.activityTitle = news.title;
-        this.url = news.url;
-        this.news = news;
-      });
+      .then(news => this.news = news);
   },
   methods: {
     removed() {
@@ -99,6 +134,11 @@ export default {
     },
     displayAlert(message, type) {
       this.$root.$emit('alert-message', message, type || 'success');
+    },
+    setAsViewed(event) {
+      if (event.which === 1 || event.which === 2) {
+        this.clickCallback('news', this.id);
+      }
     },
   }
 };
