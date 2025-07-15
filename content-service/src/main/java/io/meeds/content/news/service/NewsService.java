@@ -804,7 +804,7 @@ public class NewsService {
         LOG.error("Error while building news article", e);
         return null;
       }
-    }).toList();
+    }).filter(Objects::nonNull).toList();
   }
 
   /**
