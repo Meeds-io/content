@@ -688,7 +688,7 @@ public class NewsRest {
                                                              int offset,
                                                              @Parameter(description = "Space id used to search news")
                                                              @RequestParam(name = "spaceId", required = false)
-                                                             String spaceId,
+                                                             List<String> spaceIds,
                                                              @Parameter(description = "Tag names used to search news")
                                                              @RequestParam(name = "tags", required = false)
                                                              List<String> tagNames,
@@ -718,8 +718,8 @@ public class NewsRest {
     filter.setLimit(limit);
     filter.setOffset(offset);
     filter.setTagNames(tagNames);
-    if (spaceId != null) {
-      filter.setSpaces(Arrays.asList(spaceId));
+    if (CollectionUtils.isNotEmpty(spaceIds)) {
+      filter.setSpaces(spaceIds);
     }
     List<NewsSearchResultEntity> searchResults = newsService.search(currentIdentity, filter);
     searchResults.forEach(searchResult -> {
