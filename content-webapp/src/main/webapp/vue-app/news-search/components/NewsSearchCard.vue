@@ -35,7 +35,7 @@
           <v-list-item-content>
             <v-list-item-title class="d-flex flex-row full-width align-center">
               <h1
-                class="flex-grow-1 font-weight-bold primary--text title pt-1 mb-0 ps-0 my-auto align-center text-start text-truncate"
+                class="flex-grow-1 primary--text title pt-1 mb-0 ps-0 my-auto align-center text-start text-truncate"
                 v-sanitized-html="newsTitle">
               </h1>
               <span v-show="hover || isMobile" class="ml-2">
