@@ -1728,7 +1728,7 @@ public class NewsService {
     metadataFilter.setMetadataName(NEWS_METADATA_NAME);
     metadataFilter.setMetadataTypeName(NEWS_METADATA_TYPE.getName());
     metadataFilter.setMetadataObjectTypes(List.of(NEWS_METADATA_PAGE_OBJECT_TYPE));
-    metadataFilter.setSortField(filter.getOrder());
+    metadataFilter.setSortField(filter.getSortField());
     metadataFilter.setMetadataProperties(Map.of(PUBLISHED,
                                                 "true",
                                                 NEWS_AUDIENCE,
@@ -1767,7 +1767,7 @@ public class NewsService {
     metadataFilter.setMetadataObjectTypes(List.of(NEWS_METADATA_PAGE_OBJECT_TYPE));
     metadataFilter.setMetadataProperties(Map.of(NEWS_PUBLICATION_STATE, POSTED, NEWS_DELETED, "false"));
     metadataFilter.setMetadataSpaceIds(NewsUtils.getMyFilteredSpacesIds(currentIdentity, filter.getSpaces()));
-    metadataFilter.setSortField(filter.getOrder());
+    metadataFilter.setSortField(filter.getSortField());
     metadataFilter.setCombinedMetadataProperties(Map.of(PUBLISHED,
                                                         "true",
                                                         NEWS_AUDIENCE,
@@ -1797,7 +1797,7 @@ public class NewsService {
     metadataFilter.setMetadataObjectTypes(List.of(NEWS_METADATA_PAGE_OBJECT_TYPE));
     metadataFilter.setMetadataProperties(Map.of(NEWS_PUBLICATION_STATE, STAGED, NEWS_DELETED, "false"));
     metadataFilter.setCombinedMetadataProperties(Map.of(UNPUBLISH_SCHEDULED, "true", NEWS_DELETED, "false"));
-    metadataFilter.setSortField(filter.getOrder());
+    metadataFilter.setSortField(filter.getSortField());
     metadataFilter.setMetadataSpaceIds(NewsUtils.getMyFilteredSpacesIds(currentIdentity, filter.getSpaces()));
     return metadataService.getMetadataItemsByFilter(metadataFilter, filter.getOffset(), filter.getLimit())
                           .stream()
@@ -1826,7 +1826,7 @@ public class NewsService {
     metadataFilter.setCreatorId(Long.parseLong(identityManager.getOrCreateUserIdentity(filter.getAuthor()).getId()));
     metadataFilter.setMetadataProperties(Map.of(NEWS_PUBLICATION_STATE, POSTED, NEWS_DELETED, "false"));
     metadataFilter.setMetadataSpaceIds(NewsUtils.getMyFilteredSpacesIds(currentIdentity, filter.getSpaces()));
-    metadataFilter.setSortField(filter.getOrder());
+    metadataFilter.setSortField(filter.getSortField());
     metadataFilter.setCombinedMetadataProperties(Map.of(PUBLISHED,
                                                         "true",
                                                         NEWS_AUDIENCE,
@@ -1853,7 +1853,7 @@ public class NewsService {
     MetadataFilter metadataFilter = new MetadataFilter();
     metadataFilter.setMetadataName(NEWS_METADATA_NAME);
     metadataFilter.setMetadataTypeName(NEWS_METADATA_TYPE.getName());
-    metadataFilter.setSortField(filter.getOrder());
+    metadataFilter.setSortField(filter.getSortField());
     metadataFilter.setMetadataObjectTypes(List.of(NEWS_METADATA_DRAFT_OBJECT_TYPE, NEWS_METADATA_LATEST_DRAFT_OBJECT_TYPE));
     metadataFilter.setMetadataSpaceIds(NewsUtils.getMyFilteredSpacesIds(currentIdentity, filter.getSpaces()));
     return metadataService.getMetadataItemsByFilter(metadataFilter, filter.getOffset(), filter.getLimit())

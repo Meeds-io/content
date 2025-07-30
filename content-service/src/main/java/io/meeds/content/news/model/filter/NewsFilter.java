@@ -36,8 +36,6 @@ public class NewsFilter {
 
   private String       searchText;
 
-  private String       order;
-
   private List<String> spaces;
 
   private List<String> tagNames;
@@ -51,4 +49,9 @@ public class NewsFilter {
   private boolean      favorites;
 
   private String       lang;
+
+  private String       sortField;
+
+  private String       sortDirection;
+
 }
