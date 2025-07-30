@@ -16,11 +16,7 @@
     }
   },
   "sort": [
-    {
-      "lastUpdatedDate": {
-        "order": "desc"
-      }
-    }
+    @sortQuery@
   ],
   "highlight" : {
     "number_of_fragments" : 2,
