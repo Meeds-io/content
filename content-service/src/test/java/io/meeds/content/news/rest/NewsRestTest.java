@@ -1382,12 +1382,12 @@ public class NewsRestTest {
     lenient().when(spaceService.getSpaceById(anyString())).thenReturn(new Space());
 
     // When
-    ResponseEntity response = newsRestController.search("q", "", 0, null, null,  10, false);
+    ResponseEntity response = newsRestController.search("q", "", 0, null, null,  10, false, null, false);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatusCode().value());
 
-    response = newsRestController.search("", "", 0, null, null,  10, false);
+    response = newsRestController.search("", "", 0, null, null,  10, false, null, false);
 
     // Then
     assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatusCode().value());
@@ -1422,7 +1422,7 @@ public class NewsRestTest {
     setCurrentUser(JOHN);
 
     // When
-    ResponseEntity response = newsRestController.search("query", "", -1, null, null,  10, false);
+    ResponseEntity response = newsRestController.search("query", "", -1, null, null,  10, false, null, false);
 
     // Then
     assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatusCode().value());
@@ -1457,7 +1457,7 @@ public class NewsRestTest {
     setCurrentUser(JOHN);
 
     // When
-    ResponseEntity response = newsRestController.search("query", "", 0, null, null,  -1, false);
+    ResponseEntity response = newsRestController.search("query", "", 0, null, null,  -1, false, null, false);
 
     // Then
     assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatusCode().value());
@@ -1482,7 +1482,7 @@ public class NewsRestTest {
     setCurrentUser(JOHN);
 
     // When
-    ResponseEntity response = newsRestController.search(text, "", 0, null, null,  10, false);
+    ResponseEntity response = newsRestController.search(text, "", 0, null, null,  10, false, null, false);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatusCode().value());

@@ -52,6 +52,7 @@ import org.exoplatform.services.security.ConversationState;
 import org.exoplatform.social.core.identity.model.Identity;
 import org.exoplatform.social.core.identity.provider.OrganizationIdentityProvider;
 import org.exoplatform.social.core.manager.IdentityManager;
+import org.exoplatform.social.core.search.Sorting;
 import org.exoplatform.social.core.space.model.Space;
 import org.exoplatform.social.core.space.spi.SpaceService;
 import org.exoplatform.social.core.utils.MentionUtils;
@@ -697,7 +698,13 @@ public class NewsRest {
                                                              int limit,
                                                              @Parameter(description = "Favorites")
                                                              @RequestParam(name = "favorites", defaultValue = "false", required = false)
-                                                             boolean favorites) {
+                                                             boolean favorites,
+                                                             @Parameter(description = "Sort field. Possible values: createdDate, startDate, endDate or relevancy.")
+                                                             @RequestParam("sortBy")
+                                                             String sortField,
+                                                             @Parameter(description = "Whether to retrieve results sorted descending or not")
+                                                             @RequestParam("sortDescending")
+                                                             boolean sortDescending) {
 
     if (StringUtils.isBlank(query) && !favorites && CollectionUtils.isEmpty(tagNames)) {
       return ResponseEntity.badRequest().build();
@@ -721,6 +728,7 @@ public class NewsRest {
     if (CollectionUtils.isNotEmpty(spaceIds)) {
       filter.setSpaces(spaceIds.stream().map(String::valueOf).toList());
     }
+    filter.setSorting(Sorting.valueOf(sortField, sortDescending ? Sorting.OrderBy.DESC.name() :  Sorting.OrderBy.ASC.name()));
     List<NewsSearchResultEntity> searchResults = newsService.search(currentIdentity, filter);
     searchResults.forEach(searchResult -> {
       Favorite favorite = new Favorite(NewsUtils.NEWS_METADATA_OBJECT_TYPE,
