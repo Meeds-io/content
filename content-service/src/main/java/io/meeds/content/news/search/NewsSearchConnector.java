@@ -32,6 +32,7 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.exoplatform.social.core.search.Sorting;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -83,14 +84,31 @@ public class NewsSearchConnector {
 
   private String                       searchQuery;
 
-  private static final Log             LOG                          = ExoLogger.getLogger(NewsSearchConnector.class);
+  private static final Log       LOG                   = ExoLogger.getLogger(NewsSearchConnector.class);
 
-  public static final String           SEARCH_QUERY_TERM            = """
-                                                                      "must":{ "query_string" :{
-                                                                              "fields": ["body", "posterName", "summary","title"],
-                                                                              "default_operator": "AND",
-                                                                              "query": "@term@"}
-                                                                              },""";
+  public static final String     SEARCH_QUERY_TERM     = """
+      "must":{ "query_string" :{
+              "fields": ["body", "posterName", "summary","title"],
+              "default_operator": "AND",
+              "query": "@term@"}
+              },""";
+
+  public static final String     DEFAULT_SORTING_QUERY = """
+          {
+            "_score": {
+              "order": "desc"
+            }
+          }
+      """;
+
+  public static final String     SORTING_QUERY         = """
+          {
+            "@sortField@": {
+              "order": "@sortOrder@"
+            }
+          },
+          "_score"
+      """;
 
   @PostConstruct
   public void init() {
@@ -130,10 +148,12 @@ public class NewsSearchConnector {
     String termQuery = buildTermQueryStatement(filter.getSearchText());
     String favoriteQuery = buildFavoriteQueryStatement(metadataFilters.get(FavoriteService.METADATA_TYPE.getName()));
     String tagsQuery = buildTagsQueryStatement(metadataFilters.get(TagService.METADATA_TYPE.getName()));
+    String sortQuery = buildSortQueryStatement(filter.getSorting());
     return retrieveSearchQuery().replace("@term_query@", termQuery)
                                 .replace("@favorite_query@", favoriteQuery)
                                 .replace("@tags_query@", tagsQuery)
                                 .replace("@permissions@", StringUtils.join(streamFeedOwnerIds, ","))
+                                .replace("@sortQuery@", sortQuery)
                                 .replace("@offset@", String.valueOf(filter.getOffset()))
                                 .replace("@limit@", String.valueOf(filter.getLimit()));
   }
@@ -261,4 +281,22 @@ public class NewsSearchConnector {
     }
     return metadataFilters;
   }
+
+  private String buildSortQueryStatement(Sorting newsSort) {
+
+    if (newsSort == null || newsSort.sortBy == null) {
+      return DEFAULT_SORTING_QUERY;
+    }
+
+    return switch (newsSort.sortBy) {
+    case DATE ->
+      SORTING_QUERY.replace("@sortField@", "lastUpdatedDate").replace("@sortOrder@", newsSort.orderBy.name().toLowerCase());
+    case RELEVANCY ->
+      SORTING_QUERY.replace("@sortField@", "_score").replace("@sortOrder@", newsSort.orderBy.name().toLowerCase());
+    default -> SORTING_QUERY.replace("@sortField@", newsSort.sortBy.getFieldName())
+                            .replace("@sortOrder@", newsSort.orderBy.name().toLowerCase());
+    };
+  }
+
+
 }
