@@ -23,6 +23,7 @@ import java.util.List;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.exoplatform.social.core.search.Sorting;
 
 @Data
 @NoArgsConstructor
@@ -35,8 +36,6 @@ public class NewsFilter {
   private boolean      scheduledNews;
 
   private String       searchText;
-
-  private String       order;
 
   private List<String> spaces;
 
@@ -51,4 +50,9 @@ public class NewsFilter {
   private boolean      favorites;
 
   private String       lang;
+
+  private String       sortField;
+
+  private String       sortDirection;
+
 }
