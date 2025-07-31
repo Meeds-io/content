@@ -148,7 +148,7 @@ public class NewsSearchConnector {
     String termQuery = buildTermQueryStatement(filter.getSearchText());
     String favoriteQuery = buildFavoriteQueryStatement(metadataFilters.get(FavoriteService.METADATA_TYPE.getName()));
     String tagsQuery = buildTagsQueryStatement(metadataFilters.get(TagService.METADATA_TYPE.getName()));
-    String sortQuery = buildSortQueryStatement(filter.getSorting());
+    String sortQuery = buildSortQueryStatement(filter);
     return retrieveSearchQuery().replace("@term_query@", termQuery)
                                 .replace("@favorite_query@", favoriteQuery)
                                 .replace("@tags_query@", tagsQuery)
@@ -282,19 +282,16 @@ public class NewsSearchConnector {
     return metadataFilters;
   }
 
-  private String buildSortQueryStatement(Sorting newsSort) {
+  private String buildSortQueryStatement(NewsFilter newsFilter) {
+    String sortFiled = newsFilter.getSortField();
+    String sortDirection = newsFilter.getSortDirection();
 
-    if (newsSort == null || newsSort.sortBy == null) {
+    if (StringUtils.isBlank(sortFiled)) {
       return DEFAULT_SORTING_QUERY;
     }
-
-    return switch (newsSort.sortBy) {
-    case DATE ->
-      SORTING_QUERY.replace("@sortField@", "lastUpdatedDate").replace("@sortOrder@", newsSort.orderBy.name().toLowerCase());
-    case RELEVANCY ->
-      SORTING_QUERY.replace("@sortField@", "_score").replace("@sortOrder@", newsSort.orderBy.name().toLowerCase());
-    default -> SORTING_QUERY.replace("@sortField@", newsSort.sortBy.getFieldName())
-                            .replace("@sortOrder@", newsSort.orderBy.name().toLowerCase());
+    return switch (sortFiled) {
+      case "date" -> SORTING_QUERY.replace("@sortField@", "lastUpdatedDate").replace("@sortOrder@", sortDirection);
+      default -> SORTING_QUERY.replace("@sortField@", sortFiled).replace("@sortOrder@", sortDirection);
     };
   }
 

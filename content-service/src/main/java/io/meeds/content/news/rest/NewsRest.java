@@ -52,10 +52,8 @@ import org.exoplatform.services.security.ConversationState;
 import org.exoplatform.social.core.identity.model.Identity;
 import org.exoplatform.social.core.identity.provider.OrganizationIdentityProvider;
 import org.exoplatform.social.core.manager.IdentityManager;
-import org.exoplatform.social.core.search.Sorting;
 import org.exoplatform.social.core.space.model.Space;
 import org.exoplatform.social.core.space.spi.SpaceService;
-import org.exoplatform.social.core.utils.MentionUtils;
 import org.exoplatform.social.metadata.favorite.FavoriteService;
 import org.exoplatform.social.metadata.favorite.model.Favorite;
 import org.exoplatform.social.metadata.tag.TagService;
@@ -699,12 +697,12 @@ public class NewsRest {
                                                              @Parameter(description = "Favorites")
                                                              @RequestParam(name = "favorites", defaultValue = "false", required = false)
                                                              boolean favorites,
-                                                             @Parameter(description = "Sort field. Possible values: createdDate, startDate, endDate or relevancy.")
-                                                             @RequestParam("sortBy")
+                                                             @Parameter(description = "Field to sort by")
+                                                             @RequestParam("sort")
                                                              String sortField,
-                                                             @Parameter(description = "Whether to retrieve results sorted descending or not")
-                                                             @RequestParam("sortDescending")
-                                                             boolean sortDescending) {
+                                                             @Parameter(description = "Sort order (asc or desc)")
+                                                             @RequestParam("order")
+                                                             String sortDirection) {
 
     if (StringUtils.isBlank(query) && !favorites && CollectionUtils.isEmpty(tagNames)) {
       return ResponseEntity.badRequest().build();
@@ -728,7 +726,8 @@ public class NewsRest {
     if (CollectionUtils.isNotEmpty(spaceIds)) {
       filter.setSpaces(spaceIds.stream().map(String::valueOf).toList());
     }
-    filter.setSorting(Sorting.valueOf(sortField, sortDescending ? Sorting.OrderBy.DESC.name() :  Sorting.OrderBy.ASC.name()));
+    filter.setSortField(sortField);
+    filter.setSortDirection(sortDirection);
     List<NewsSearchResultEntity> searchResults = newsService.search(currentIdentity, filter);
     searchResults.forEach(searchResult -> {
       Favorite favorite = new Favorite(NewsUtils.NEWS_METADATA_OBJECT_TYPE,
@@ -898,7 +897,7 @@ public class NewsRest {
         break;
       }
       }
-      newsFilter.setOrder("UPDATED_DATE");
+      newsFilter.setSortField("UPDATED_DATE");
     }
     // Set text to search news with
     if (StringUtils.isNotEmpty(text) && text.indexOf("#") != 0) {
