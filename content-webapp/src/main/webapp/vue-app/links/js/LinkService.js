@@ -56,7 +56,6 @@ export function saveSettings(settings) {
 }
 
 export function saveSettingName(url, name) {
-  console.warn('saveSettingName', url, name);
   return fetch(url, {
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
