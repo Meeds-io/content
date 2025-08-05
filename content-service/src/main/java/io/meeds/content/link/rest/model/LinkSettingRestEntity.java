@@ -22,6 +22,7 @@ package io.meeds.content.link.rest.model;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.meeds.content.link.constant.LinkAlignType;
 import io.meeds.content.link.constant.LinkDisplayType;
 
@@ -42,8 +43,10 @@ public class LinkSettingRestEntity {
 
   private LinkDisplayType      type;
 
+  @JsonProperty("vAlign")
   private LinkAlignType        vAlign;
 
+  @JsonProperty("hAlign")
   private LinkAlignType        hAlign;
 
   private boolean              largeIcon;
