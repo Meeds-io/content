@@ -84,6 +84,7 @@
         <artifactId>swagger-maven-plugin</artifactId>
         <configuration>
           <applicationClass>io.meeds.content.news.rest.NewsRest</applicationClass>
+          <applicationClass>io.meeds.content.news.rest.LinkRest</applicationClass>
           <applicationClass>io.meeds.content.news.rest.NewsTargetingRest</applicationClass>
           <swaggerConfig>
             <info>
