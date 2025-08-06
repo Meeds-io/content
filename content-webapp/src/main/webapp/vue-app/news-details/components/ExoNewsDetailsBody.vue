@@ -121,8 +121,8 @@
                   :value="updatedDate"
                   :format="dateFormat"
                   class="text-caption" />
-                  <span v-if="articlePublisher" class="px-1">-</span>
-                  <span v-if="articlePublisher" class="text-caption">{{ $t('article.published.by.label') }} {{ articlePublisher }}</span>
+                <span v-if="articlePublisher" class="px-1">-</span>
+                <span v-if="articlePublisher" class="text-caption">{{ $t('article.published.by.label') }} {{ articlePublisher }}</span>
               </div>
             </div>
             <div
@@ -133,7 +133,7 @@
                 :value="updatedDate"
                 :format="dateFormat"
                 class="text-caption" />
-                <span class="text-caption">{{ $t('article.published.by.label') }} {{ articlePublisher }}</span>
+              <span class="text-caption">{{ $t('article.published.by.label') }} {{ articlePublisher }}</span>
             </div>
           </div>
         </div>

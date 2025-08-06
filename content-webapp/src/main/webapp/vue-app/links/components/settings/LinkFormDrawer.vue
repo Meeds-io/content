@@ -198,6 +198,11 @@ export default {
         }
       },
     },
+    'link.iconUploadId'() {
+      if (this.link.iconUploadId) {
+        this.link.icon = null;
+      }
+    },
     drawer() {
       if (this.drawer) {
         this.valid = false;
