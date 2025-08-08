@@ -240,6 +240,9 @@ export default {
       if (!link.icon) {
         link.icon = null;
       }
+      if (link.icon && link.iconUrl) {
+        link.icon = null;
+      }
       this.link = JSON.parse(JSON.stringify(link));
       this.setLocalizedValue(this.link, 'name');
       this.setLocalizedValue(this.link, 'description');
