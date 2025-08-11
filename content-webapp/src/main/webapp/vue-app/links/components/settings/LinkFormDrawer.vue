@@ -198,6 +198,11 @@ export default {
         }
       },
     },
+    'link.iconUploadId'() {
+      if (this.link.iconUploadId) {
+        this.link.icon = null;
+      }
+    },
     drawer() {
       if (this.drawer) {
         this.valid = false;
@@ -233,6 +238,9 @@ export default {
         link.iconSrc = null;
       }
       if (!link.icon) {
+        link.icon = null;
+      }
+      if (link.icon && link.iconUrl) {
         link.icon = null;
       }
       this.link = JSON.parse(JSON.stringify(link));
