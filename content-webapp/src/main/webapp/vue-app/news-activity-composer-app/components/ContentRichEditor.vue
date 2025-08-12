@@ -29,6 +29,8 @@
       :title-placeholder="contentFormTitlePlaceholder"
       :form-title="contentFormTitle"
       :suggester-space-url="spacePrettyName"
+      :suggester-space-pretty-name="spacePrettyName"
+      :suggester-space-id="spaceId"
       :app-name="appName"
       :languages="languages"
       :translations="translations"
