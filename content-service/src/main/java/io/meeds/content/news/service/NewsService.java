@@ -1193,6 +1193,7 @@ public class NewsService {
     Space space = spaceService.getSpaceById(article.getSpaceId());
     if (articlePage != null && space != null) {
       PageVersion pageVersion = noteService.getPublishedVersionByPageIdAndLang(Long.parseLong(articlePage.getId()), null);
+      article.setAuthor(pageVersion != null ? pageVersion.getAuthor() : articlePage.getAuthor());
       article.setIllustrationURL(NewsUtils.buildIllustrationUrl(articlePage.getProperties(), articlePage.getLang()));
       buildNewArticleProperties(article, articlePage, creator, space.getId(), pageVersion.getId(), true);
     }
