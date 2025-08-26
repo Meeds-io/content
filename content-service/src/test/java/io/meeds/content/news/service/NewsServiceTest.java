@@ -569,6 +569,7 @@ public class NewsServiceTest {
     when(noteService.createNote(wiki, rootPage.getName(), newsArticlePage, identity, false)).thenReturn(createdPage);
     PageVersion pageVersion = mock(PageVersion.class);
     when(noteService.getPublishedVersionByPageIdAndLang(1L, null)).thenReturn(pageVersion);
+    when(pageVersion.getAuthor()).thenReturn("john");
     when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(new org.exoplatform.social.core.identity.model.Identity("1"));
 
     // When
