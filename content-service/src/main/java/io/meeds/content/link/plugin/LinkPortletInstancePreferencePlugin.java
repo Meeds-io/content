@@ -84,7 +84,7 @@ public class LinkPortletInstancePreferencePlugin implements PortletInstancePrefe
         return Collections.emptyList();
       }
     }
-    LinkData linkData = linkService.getLinkData(settingName);
+    LinkData linkData = linkService.getLinkDataByName(settingName);
     return Collections.singletonList(new PortletInstancePreference(DATA_INIT_PREFERENCE_NAME, JsonUtils.toJsonString(linkData)));
   }
 
