@@ -20,6 +20,7 @@
 -->
 <template>
   <v-list-item
+    v-if="news"
     :href="url"
     @keydown.enter="setAsViewed"
     @auxclick="setAsViewed"
@@ -111,7 +112,7 @@ export default {
       return this.news?.updateDate || this.news?.publicationDate || this.news?.creationDate;
     },
   },
-  created() {
+  async created() {
     let newsId = this.id;
     let lang = null;
     if (this.id.includes('-')) {
@@ -119,8 +120,11 @@ export default {
       newsId = parts[0];
       lang = parts[1];
     }
-    this.$newsServices.getNewsById(newsId, false, this.newsObjectType, lang)
-      .then(news => this.news = news);
+    try {
+      this.news = await this.$newsServices.getNewsById(newsId, false, this.newsObjectType, lang);
+    } catch {
+      this.$root.$emit('favorite-removed', 'news', this.id);
+    }
   },
   methods: {
     removed() {
