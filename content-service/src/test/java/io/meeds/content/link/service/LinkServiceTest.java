@@ -113,7 +113,7 @@ public class LinkServiceTest extends AbstractSpringConfigurationTest { // NOSONA
     assertThrows(IllegalArgumentException.class, () -> linkService.initLinkSetting(LINK_SETTING_NAME, null, 0l));
     linkService.initLinkSetting(LINK_SETTING_NAME, pageReference, SPACE_ID);
 
-    LinkSetting linkSetting = linkService.getLinkSetting(LINK_SETTING_NAME);
+    LinkSetting linkSetting = linkService.getLinkSettingByName(LINK_SETTING_NAME);
     assertNotNull(linkSetting);
     assertEquals(LINK_SETTING_NAME, linkSetting.getName());
     assertEquals(pageReference, linkSetting.getPageReference());
@@ -164,7 +164,7 @@ public class LinkServiceTest extends AbstractSpringConfigurationTest { // NOSONA
     updatedLinkSetting = linkService.saveLinkSetting(linkSetting, null, registerAdministratorUser(USERNAME));
     assertNotNull(updatedLinkSetting);
 
-    updatedLinkSetting = linkService.getLinkSetting(updatedLinkSetting.getName(), "en", true);
+    updatedLinkSetting = linkService.getLinkSettingByName(updatedLinkSetting.getName(), "en", true);
     assertNotEquals(linkSetting.getLastModified(), updatedLinkSetting.getLastModified());
     linkSetting.setLastModified(updatedLinkSetting.getLastModified());
     assertEquals(linkSetting, updatedLinkSetting);
@@ -175,7 +175,7 @@ public class LinkServiceTest extends AbstractSpringConfigurationTest { // NOSONA
     updatedLinkSetting = linkService.saveLinkSetting(linkSetting, null, registerAdministratorUser(USERNAME));
     assertNotNull(updatedLinkSetting);
 
-    updatedLinkSetting = linkService.getLinkSetting(updatedLinkSetting.getName(), "en", true);
+    updatedLinkSetting = linkService.getLinkSettingByName(updatedLinkSetting.getName(), "en", true);
     assertNotEquals(linkSetting.getLastModified(), updatedLinkSetting.getLastModified());
     linkSetting.setLastModified(updatedLinkSetting.getLastModified());
     assertEquals(linkSetting, updatedLinkSetting);
@@ -332,19 +332,19 @@ public class LinkServiceTest extends AbstractSpringConfigurationTest { // NOSONA
   @Test
   @SneakyThrows
   public void testGetLinkSettingPermissions() {
-    assertNull(linkService.getLinkSetting(LINK_SETTING_NAME, null, null));
+    assertNull(linkService.getLinkSettingByName(LINK_SETTING_NAME, null, null));
 
     String pageReference = createPage("testGetLinkSettingPermissions1", UserACL.EVERYONE, ADMINISTRATORS_GROUP);
     linkService.initLinkSetting(LINK_SETTING_NAME, pageReference, SPACE_ID);
 
-    assertNotNull(linkService.getLinkSetting(LINK_SETTING_NAME, null, null));
-    assertNotNull(linkService.getLinkSetting(LINK_SETTING_NAME, null, registerInternalUser(USERNAME)));
+    assertNotNull(linkService.getLinkSettingByName(LINK_SETTING_NAME, null, null));
+    assertNotNull(linkService.getLinkSettingByName(LINK_SETTING_NAME, null, registerInternalUser(USERNAME)));
 
     pageReference = createPage("testGetLinkSettingPermissions1", USERS_GROUP, ADMINISTRATORS_GROUP);
     linkService.initLinkSetting(LINK_SETTING_NAME, pageReference, SPACE_ID);
 
-    assertThrows(IllegalAccessException.class, () -> linkService.getLinkSetting(LINK_SETTING_NAME, null, null));
-    assertNotNull(linkService.getLinkSetting(LINK_SETTING_NAME, null, registerInternalUser(USERNAME)));
+    assertThrows(IllegalAccessException.class, () -> linkService.getLinkSettingByName(LINK_SETTING_NAME, null, null));
+    assertNotNull(linkService.getLinkSettingByName(LINK_SETTING_NAME, null, registerInternalUser(USERNAME)));
   }
 
   @Test
