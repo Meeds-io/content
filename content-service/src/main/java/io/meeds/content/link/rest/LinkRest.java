@@ -77,7 +77,7 @@ public class LinkRest {
                                                               @RequestParam(name = "lang", required = false)
                                                               String lang) {
     try {
-      LinkSetting linkSetting = linkService.getLinkSetting(name, lang, RestUtils.getCurrentUserAclIdentity());
+      LinkSetting linkSetting = linkService.getLinkSettingByName(name, lang, RestUtils.getCurrentUserAclIdentity());
       if (linkSetting == null) {
         return ResponseEntity.notFound().build();
       }
@@ -136,7 +136,7 @@ public class LinkRest {
                                                          @PathVariable("id")
                                                          long id) {
     try {
-      LinkSetting linkSetting = linkService.getLinkSetting(name, null, RestUtils.getCurrentUserAclIdentity());
+      LinkSetting linkSetting = linkService.getLinkSettingByName(name, null, RestUtils.getCurrentUserAclIdentity());
       if (linkSetting == null) {
         throw new ResponseStatusException(HttpStatus.NOT_FOUND);
       }

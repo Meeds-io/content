@@ -69,9 +69,9 @@ public class LinkSettingTranslationPlugin extends TranslationPlugin {
   }
 
   @Override
-  public boolean hasAccessPermission(long linkSettingId, String username) throws ObjectNotFoundException {
+  public boolean hasAccessPermission(String linkSettingId, String username) throws ObjectNotFoundException {
     try {
-      LinkSetting linkSetting = linkService.getLinkSetting(linkSettingId);
+      LinkSetting linkSetting = linkService.getLinkSettingById(Long.parseLong(linkSettingId));
       return linkSetting != null && linkService.hasAccessPermission(linkSetting.getName(), getIdentity(username));
     } catch (Exception e) {
       LOG.warn("Error checking access permission on link setting with id {} for user {}", linkSettingId, username, e);
@@ -80,9 +80,9 @@ public class LinkSettingTranslationPlugin extends TranslationPlugin {
   }
 
   @Override
-  public boolean hasEditPermission(long linkSettingId, String username) throws ObjectNotFoundException {
+  public boolean hasEditPermission(String linkSettingId, String username) throws ObjectNotFoundException {
     try {
-      LinkSetting linkSetting = linkService.getLinkSetting(linkSettingId);
+      LinkSetting linkSetting = linkService.getLinkSettingById(Long.parseLong(linkSettingId));
       return linkSetting != null && linkService.hasEditPermission(linkSetting.getName(), getIdentity(username));
     } catch (Exception e) {
       LOG.warn("Error checking edit permission on link setting with id {} for user {}", linkSettingId, username, e);
@@ -91,12 +91,12 @@ public class LinkSettingTranslationPlugin extends TranslationPlugin {
   }
 
   @Override
-  public long getAudienceId(long objectId) throws ObjectNotFoundException {
+  public long getAudienceId(String linkSettingId) throws ObjectNotFoundException {
     return 0;
   }
 
   @Override
-  public long getSpaceId(long objectId) throws ObjectNotFoundException {
+  public long getSpaceId(String linkSettingId) throws ObjectNotFoundException {
     return 0;
   }
 

@@ -79,7 +79,7 @@ public class LinkTranslationPluginTest extends AbstractSpringConfigurationTest {
     String pageId = createPage("testLinkSettingHeaderTranslation1", UserACL.EVERYONE, ADMINISTRATORS_GROUP);
     linkService.initLinkSetting(LINK_SETTING_NAME, pageId, 0l);
 
-    LinkSetting linkSetting = linkService.getLinkSetting(LINK_SETTING_NAME);
+    LinkSetting linkSetting = linkService.getLinkSettingByName(LINK_SETTING_NAME);
     assertNotNull(linkSetting);
     Link linkToSave = new Link(0,
                                Collections.singletonMap("en", "Website"),

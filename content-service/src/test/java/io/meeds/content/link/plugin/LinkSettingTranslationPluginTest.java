@@ -80,8 +80,9 @@ public class LinkSettingTranslationPluginTest extends AbstractSpringConfiguratio
     String pageId = createPage("testLinkSettingHeaderTranslation1", UserACL.EVERYONE, ADMINISTRATORS_GROUP);
     linkService.initLinkSetting(LINK_SETTING_NAME, pageId, 0l);
 
-    LinkSetting linkSetting = linkService.getLinkSetting(LINK_SETTING_NAME);
+    LinkSetting linkSetting = linkService.getLinkSettingByName(LINK_SETTING_NAME);
     assertNotNull(linkSetting);
+    assertTrue(linkSetting.getId() > 0);
 
     TranslationField translationField =
                                       translationService.getTranslationField(LinkSettingTranslationPlugin.LINK_SETTINGS_OBJECT_TYPE,
