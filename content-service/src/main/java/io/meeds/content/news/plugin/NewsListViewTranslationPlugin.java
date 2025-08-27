@@ -33,7 +33,6 @@ import org.exoplatform.services.security.Identity;
 import org.exoplatform.services.security.IdentityRegistry;
 import org.exoplatform.services.security.MembershipEntry;
 
-import io.meeds.content.news.service.NewsService;
 import io.meeds.content.news.utils.NewsUtils;
 import io.meeds.social.cms.service.CMSService;
 import io.meeds.social.translation.plugin.TranslationPlugin;
@@ -63,9 +62,6 @@ public class NewsListViewTranslationPlugin extends TranslationPlugin {
   @Autowired
   private SettingService      settingService;
 
-  @Autowired
-  private NewsService         newsService;
-
   @PostConstruct
   public void init() {
     setIdentityRegistry(ExoContainerContext.getService(IdentityRegistry.class));
@@ -83,16 +79,16 @@ public class NewsListViewTranslationPlugin extends TranslationPlugin {
   }
 
   @Override
-  public boolean hasAccessPermission(long objectId, String username) {
+  public boolean hasAccessPermission(String objectId, String username) {
     return true;
   }
 
   @Override
-  public boolean hasEditPermission(long objectId, String username) {
+  public boolean hasEditPermission(String objectId, String username) {
     try {
       SettingValue<?> settingNameValue = settingService.get(NewsUtils.NEWS_LIST_VIEW_CONTEXT,
                                                             NewsUtils.NEWS_LIST_VIEW_SCOPE,
-                                                            String.valueOf(objectId));
+                                                            objectId);
       String settingName = settingNameValue != null ? settingNameValue.getValue().toString() : null;
       return getIdentity(username) != null
           && (cmsService.hasEditPermission(getIdentity(username), "newsListViewPortlet", settingName));
@@ -102,12 +98,12 @@ public class NewsListViewTranslationPlugin extends TranslationPlugin {
   }
 
   @Override
-  public long getAudienceId(long objectId) throws ObjectNotFoundException {
+  public long getAudienceId(String objectId) throws ObjectNotFoundException {
     return 0;
   }
 
   @Override
-  public long getSpaceId(long objectId) throws ObjectNotFoundException {
+  public long getSpaceId(String objectId) throws ObjectNotFoundException {
     return 0;
   }
 

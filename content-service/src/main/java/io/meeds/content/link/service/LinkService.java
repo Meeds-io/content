@@ -122,8 +122,10 @@ public class LinkService {
    * @throws IllegalAccessException when user isn't allowed to access link
    *           settings
    */
-  public LinkSetting getLinkSetting(String linkSettingName, String language, Identity identity) throws IllegalAccessException {
-    LinkSetting linkSetting = getLinkSetting(linkSettingName, language, true);
+  public LinkSetting getLinkSettingByName(String linkSettingName,
+                                          String language,
+                                          Identity identity) throws IllegalAccessException {
+    LinkSetting linkSetting = getLinkSettingByName(linkSettingName, language, true);
     if (linkSetting == null) {
       return null;
     }
@@ -141,8 +143,8 @@ public class LinkService {
    * @return {@link LinkSetting} corresponding to name or null if not exists.
    *         The result will not include translation field for header
    */
-  public LinkSetting getLinkSetting(String linkSettingName) {
-    return getLinkSetting(linkSettingName, null, false);
+  public LinkSetting getLinkSettingByName(String linkSettingName) {
+    return getLinkSettingByName(linkSettingName, null, false);
   }
 
   /**
@@ -151,7 +153,7 @@ public class LinkService {
    * @param includeTranslations whether to include translations of header or not
    * @return {@link LinkSetting} corresponding to name or null if not exists
    */
-  public LinkSetting getLinkSetting(String linkSettingName, String language, boolean includeTranslations) {
+  public LinkSetting getLinkSettingByName(String linkSettingName, String language, boolean includeTranslations) {
     LinkSetting linkSetting = linkStorage.getLinkSetting(linkSettingName);
     if (linkSetting != null && includeTranslations) {
       Map<String, String> header = getTranslations(LinkSettingTranslationPlugin.LINK_SETTINGS_OBJECT_TYPE,
@@ -167,7 +169,7 @@ public class LinkService {
    * @param linkSettingId {@link LinkSetting} technical id
    * @return {@link LinkSetting} corresponding to id or null if not exists
    */
-  public LinkSetting getLinkSetting(long linkSettingId) {
+  public LinkSetting getLinkSettingById(long linkSettingId) {
     return linkStorage.getLinkSetting(linkSettingId);
   }
 
@@ -285,7 +287,7 @@ public class LinkService {
   public void saveLinkData(String linkSettingName, LinkData linkData) throws ObjectNotFoundException {
     LinkSetting linkSetting = linkData.getLinkSetting();
     if (linkSetting != null) {
-      LinkSetting originalLinkSetting = getLinkSetting(linkSettingName);
+      LinkSetting originalLinkSetting = getLinkSettingByName(linkSettingName);
       linkSetting.setId(originalLinkSetting.getId());
       linkSetting.setName(originalLinkSetting.getName());
       linkSetting.setLastModified(originalLinkSetting.getLastModified());
@@ -318,8 +320,8 @@ public class LinkService {
    *         {@link List} of {@link Link}
    * @throws ObjectNotFoundException when {@link LinkSetting} not found
    */
-  public LinkData getLinkData(String linkSettingName) throws ObjectNotFoundException {
-    LinkSetting linkSetting = getLinkSetting(linkSettingName, null, true);
+  public LinkData getLinkDataByName(String linkSettingName) throws ObjectNotFoundException {
+    LinkSetting linkSetting = getLinkSettingByName(linkSettingName, null, true);
     if (linkSetting == null) {
       throw new ObjectNotFoundException(String.format("Link setting with name %s wasn't found", linkSettingName));
     }
@@ -395,7 +397,7 @@ public class LinkService {
    * @return true if has read access else false
    */
   public boolean hasAccessPermission(String linkSettingName, Identity identity) {
-    LinkSetting linkSetting = getLinkSetting(linkSettingName);
+    LinkSetting linkSetting = getLinkSettingByName(linkSettingName);
     if (linkSetting == null || StringUtils.isBlank(linkSetting.getPageReference())) {
       return false;
     }
@@ -408,7 +410,7 @@ public class LinkService {
    * @return true if has write access else false
    */
   public boolean hasEditPermission(String linkSettingName, Identity identity) {
-    LinkSetting linkSetting = getLinkSetting(linkSettingName);
+    LinkSetting linkSetting = getLinkSettingByName(linkSettingName);
     if (linkSetting == null || StringUtils.isBlank(linkSetting.getPageReference())) {
       return false;
     }
