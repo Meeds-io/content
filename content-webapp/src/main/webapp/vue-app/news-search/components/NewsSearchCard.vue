@@ -87,7 +87,7 @@
                   'text-truncate-2': isMobile,
                   'text-truncate-3': !isMobile,
                 }"
-                v-sanitized-html="summary"></div>
+                v-sanitized-html-no-embed="summary"></div>
             </v-list-item-subtitle>
           </v-list-item-content>
         </v-list-item>
