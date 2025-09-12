@@ -96,36 +96,31 @@ public class NewsTargetingService {
   public List<NewsTargetingEntity> getAllowedTargets(org.exoplatform.services.security.Identity userIdentity) {
     List<Metadata> allTargetsMetadatas = metadataService.getMetadatas(METADATA_TYPE.getName(), 0);
     return allTargetsMetadatas.stream()
-                              .filter(targetMetadata -> targetMetadata.getProperties().get(NewsUtils.TARGET_PERMISSIONS) != null
-                                                        && List.of(targetMetadata.getProperties()
-                                                                                 .get(NewsUtils.TARGET_PERMISSIONS)
-                                                                                 .split(","))
-                                                               .stream()
-                                                               .anyMatch(targetMetadataPermission -> {
-                                                                 if (targetMetadataPermission.contains(SPACE_TARGET_PERMISSION_PREFIX)) {
-                                                                   if (targetMetadataPermission.split(SPACE_TARGET_PERMISSION_PREFIX).length
-                                                                       > 1) {
-                                                                     Space targetPermissionSpace =
-                                                                                                 spaceService.getSpaceById(targetMetadataPermission.split(SPACE_TARGET_PERMISSION_PREFIX)[1]);
-                                                                     return targetPermissionSpace != null
-                                                                            && NewsUtils.canPublishNews(targetPermissionSpace.getId(),
-                                                                                                        userIdentity);
-                                                                   }
-                                                                   return false;
-                                                                 }
-                                                                 try {
-                                                                   Group targetPermissionGroup =
-                                                                                               organizationService.getGroupHandler()
-                                                                                                                  .findGroupById(targetMetadataPermission);
-                                                                   return targetPermissionGroup != null
-                                                                          && userIdentity.isMemberOf(targetMetadataPermission,
-                                                                                                     PUBLISHER_MEMBERSHIP_NAME);
-                                                                 } catch (Exception e) {
-                                                                   LOG.error("Could not find group from permission " +
-                                                                       targetMetadataPermission);
-                                                                   return false;
-                                                                 }
-                                                               }))
+                              .filter(targetMetadata -> targetMetadata.getProperties() != null
+                                  && targetMetadata.getProperties().get(NewsUtils.TARGET_PERMISSIONS) != null
+                                  && List.of(targetMetadata.getProperties().get(NewsUtils.TARGET_PERMISSIONS).split(","))
+                                         .stream()
+                                         .anyMatch(targetMetadataPermission -> {
+                                           if (targetMetadataPermission.contains(SPACE_TARGET_PERMISSION_PREFIX)) {
+                                             if (targetMetadataPermission.split(SPACE_TARGET_PERMISSION_PREFIX).length > 1) {
+                                               Space targetPermissionSpace =
+                                                                           spaceService.getSpaceById(targetMetadataPermission.split(SPACE_TARGET_PERMISSION_PREFIX)[1]);
+                                               return targetPermissionSpace != null
+                                                   && NewsUtils.canPublishNews(targetPermissionSpace.getId(), userIdentity);
+                                             }
+                                             return false;
+                                           }
+                                           try {
+                                             Group targetPermissionGroup =
+                                                                         organizationService.getGroupHandler()
+                                                                                            .findGroupById(targetMetadataPermission);
+                                             return targetPermissionGroup != null
+                                                 && userIdentity.isMemberOf(targetMetadataPermission, PUBLISHER_MEMBERSHIP_NAME);
+                                           } catch (Exception e) {
+                                             LOG.error("Could not find group from permission " + targetMetadataPermission);
+                                             return false;
+                                           }
+                                         }))
                               .map(this::toEntity)
                               .toList();
   }
@@ -408,52 +403,52 @@ public class NewsTargetingService {
     newsTargetingEntity.setName(metadata.getName());
     if (metadata.getProperties() != null) {
       newsTargetingEntity.setProperties(metadata.getProperties());
-    }
-    if (newsTargetingEntity.getProperties().get(NewsUtils.TARGET_PERMISSIONS) != null) {
-      org.exoplatform.services.security.Identity currentIdentity = NewsUtils.getUserIdentity(RestUtils.getCurrentUser());
-      boolean isSpacePublisher = false;
-      boolean isGroupPublisher = false;
-      String permissions = newsTargetingEntity.getProperties().get(NewsUtils.TARGET_PERMISSIONS);
-      List<String> permissionsList = List.of(permissions.split(","));
-      List<NewsTargetingPermissionsEntity> permissionsEntities = new ArrayList<>();
-      for (String permission : permissionsList) {
-        NewsTargetingPermissionsEntity permissionEntity = new NewsTargetingPermissionsEntity();
-        if (permission.contains(SPACE_TARGET_PERMISSION_PREFIX)) {
-          if (permission.split(SPACE_TARGET_PERMISSION_PREFIX).length > 1) {
-            Space space = spaceService.getSpaceById(permission.split(SPACE_TARGET_PERMISSION_PREFIX)[1]);
-            if (space != null) {
-              permissionEntity.setId(SPACE_TARGET_PERMISSION_PREFIX + space.getId());
-              permissionEntity.setName(space.getDisplayName());
-              permissionEntity.setProviderId("space");
-              permissionEntity.setRemoteId(space.getPrettyName());
-              permissionEntity.setAvatar(space.getAvatarUrl());
-              if (!isSpacePublisher) {
-                isSpacePublisher = NewsUtils.canPublishNews(space.getId(), currentIdentity);
+      if (newsTargetingEntity.getProperties().get(NewsUtils.TARGET_PERMISSIONS) != null) {
+        org.exoplatform.services.security.Identity currentIdentity = NewsUtils.getUserIdentity(RestUtils.getCurrentUser());
+        boolean isSpacePublisher = false;
+        boolean isGroupPublisher = false;
+        String permissions = newsTargetingEntity.getProperties().get(NewsUtils.TARGET_PERMISSIONS);
+        List<String> permissionsList = List.of(permissions.split(","));
+        List<NewsTargetingPermissionsEntity> permissionsEntities = new ArrayList<>();
+        for (String permission : permissionsList) {
+          NewsTargetingPermissionsEntity permissionEntity = new NewsTargetingPermissionsEntity();
+          if (permission.contains(SPACE_TARGET_PERMISSION_PREFIX)) {
+            if (permission.split(SPACE_TARGET_PERMISSION_PREFIX).length > 1) {
+              Space space = spaceService.getSpaceById(permission.split(SPACE_TARGET_PERMISSION_PREFIX)[1]);
+              if (space != null) {
+                permissionEntity.setId(SPACE_TARGET_PERMISSION_PREFIX + space.getId());
+                permissionEntity.setName(space.getDisplayName());
+                permissionEntity.setProviderId("space");
+                permissionEntity.setRemoteId(space.getPrettyName());
+                permissionEntity.setAvatar(space.getAvatarUrl());
+                if (!isSpacePublisher) {
+                  isSpacePublisher = NewsUtils.canPublishNews(space.getId(), currentIdentity);
+                }
               }
             }
-          }
-        } else {
-          try {
-            Group group = organizationService.getGroupHandler().findGroupById(permission);
-            if (group != null) {
-              permissionEntity.setId(group.getId());
-              permissionEntity.setName(group.getLabel());
-              permissionEntity.setProviderId("group");
-              permissionEntity.setRemoteId(group.getGroupName());
-              if (!isGroupPublisher) {
-                isGroupPublisher = currentIdentity.isMemberOf(group.getId(), PUBLISHER_MEMBERSHIP_NAME);
+          } else {
+            try {
+              Group group = organizationService.getGroupHandler().findGroupById(permission);
+              if (group != null) {
+                permissionEntity.setId(group.getId());
+                permissionEntity.setName(group.getLabel());
+                permissionEntity.setProviderId("group");
+                permissionEntity.setRemoteId(group.getGroupName());
+                if (!isGroupPublisher) {
+                  isGroupPublisher = currentIdentity.isMemberOf(group.getId(), PUBLISHER_MEMBERSHIP_NAME);
+                }
               }
+            } catch (Exception e) {
+              LOG.error("Could not find group from permission" + permission);
             }
-          } catch (Exception e) {
-            LOG.error("Could not find group from permission" + permission);
+          }
+          if (permissionEntity.getId() != null) {
+            permissionsEntities.add(permissionEntity);
           }
         }
-        if (permissionEntity.getId() != null) {
-          permissionsEntities.add(permissionEntity);
-        }
+        newsTargetingEntity.setPermissions(permissionsEntities);
+        newsTargetingEntity.setRestrictedAudience(isSpacePublisher && !isGroupPublisher);
       }
-      newsTargetingEntity.setPermissions(permissionsEntities);
-      newsTargetingEntity.setRestrictedAudience(isSpacePublisher && !isGroupPublisher);
     }
     return newsTargetingEntity;
   }
