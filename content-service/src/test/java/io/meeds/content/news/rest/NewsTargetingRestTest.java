@@ -29,9 +29,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 import javax.ws.rs.core.Response;
-import javax.ws.rs.ext.RuntimeDelegate;
 
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
@@ -41,8 +39,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.server.ResponseStatusException;
 
-import org.exoplatform.container.PortalContainer;
-import org.exoplatform.services.rest.impl.RuntimeDelegateImpl;
 import org.exoplatform.services.security.ConversationState;
 import org.exoplatform.services.security.Identity;
 import org.exoplatform.social.core.manager.IdentityManager;
@@ -56,22 +52,13 @@ import io.meeds.content.news.utils.NewsUtils;
 public class NewsTargetingRestTest {
 
   @Mock
-  NewsTargetingService newsTargetingService;
+  NewsTargetingService      newsTargetingService;
 
   @Mock
-  PortalContainer      container;
-
-  @Mock
-  IdentityManager      identityManager;
+  IdentityManager           identityManager;
 
   @InjectMocks
   private NewsTargetingRest newsTargetingRestController;
-
-  @Before
-  public void setup() {
-    newsTargetingRestController.init();
-    RuntimeDelegate.setInstance(new RuntimeDelegateImpl());
-  }
 
   @Test
   public void shouldReturnOkWhenGetTargets() {
@@ -120,15 +107,15 @@ public class NewsTargetingRestTest {
     lenient().when(newsTargetingService.getAllTargets()).thenReturn(targets);
 
     // When
-    Response response = newsTargetingRestController.deleteTarget(targets.get(0).getName(), 0);
+    Response response = newsTargetingRestController.deleteTarget(targets.get(0).getName());
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
 
-    when(newsTargetingRestController.deleteTarget(targets.get(0).getName(), 0)).thenThrow(RuntimeException.class);
+    when(newsTargetingRestController.deleteTarget(targets.get(0).getName())).thenThrow(RuntimeException.class);
 
     // When
-    response = newsTargetingRestController.deleteTarget(targets.get(0).getName(), 0);
+    response = newsTargetingRestController.deleteTarget(targets.get(0).getName());
 
     // Then
     assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
@@ -164,7 +151,6 @@ public class NewsTargetingRestTest {
     // When
     assertThrows(ResponseStatusException.class, () -> newsTargetingRestController.createNewsTarget(newsTargetingEntity));
 
-
   }
 
   @Test
@@ -193,8 +179,7 @@ public class NewsTargetingRestTest {
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
 
-    when(newsTargetingRestController.updateNewsTarget(newsTargetingEntity,
-                                                       originalTargetName)).thenThrow(RuntimeException.class);
+    when(newsTargetingRestController.updateNewsTarget(newsTargetingEntity, originalTargetName)).thenThrow(RuntimeException.class);
 
     // When
     response = newsTargetingRestController.updateNewsTarget(newsTargetingEntity, originalTargetName);

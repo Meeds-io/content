@@ -178,26 +178,16 @@ export default {
       }
     },
     deleteNewsTarget(targetName) {
-      const deleteDelay = 6;
-      const redirectionTime = 8100;
-      this.$newsTargetingService.deleteTargetByName(targetName, deleteDelay)
+      this.$newsTargetingService.deleteTargetByName(targetName)
         .then(() => {
           this.$root.$emit('confirm-newsTarget-deletion', targetName);
-          const clickMessage = this.$t('news.details.undoDelete');
           const message = this.$t('news.newsTarget.deleteSuccess');
           document.dispatchEvent(new CustomEvent('alert-message', {detail: {
             alertType: 'success',
             alertMessage: message ,
-            alertLinkText: clickMessage ,
-            alertLinkCallback: () => this.undoDeleteNewsTarget(targetName),
           }}));
-        });
-      setTimeout(() => {
-        const deletedNewsTarget = localStorage.getItem('deletedNewsTarget');
-        if (deletedNewsTarget != null) {
           this.init();
-        }
-      }, redirectionTime);
+        });
     },
     deleteConfirmDialog(target) {
       this.selectedTargetName = target;
@@ -216,16 +206,6 @@ export default {
     },
     openAddTargetDrawer() {
       this.$refs.newsPublishTargetsManagementDrawer.open();
-    },
-    undoDeleteNewsTarget(targetName) {
-      return this.$newsTargetingService.undoDeleteTarget(targetName)
-        .then(() => {
-          const message =  this.$t('news.newsTarget.deleteCanceled');
-          document.dispatchEvent(new CustomEvent('alert-message', {detail: {
-            alertType: 'success',
-            alertMessage: message
-          }}));
-        });
     },
   }
 };
