@@ -18,12 +18,7 @@
  */
 package io.meeds.content.news.rest;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -40,13 +35,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
-import org.exoplatform.container.ExoContainerContext;
-import org.exoplatform.container.PortalContainer;
-import org.exoplatform.container.component.RequestLifeCycle;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
 import org.exoplatform.services.security.ConversationState;
@@ -56,14 +47,10 @@ import org.exoplatform.social.metadata.model.Metadata;
 import io.meeds.content.news.rest.model.NewsTargetingEntity;
 import io.meeds.content.news.service.NewsTargetingService;
 import io.meeds.content.news.utils.NewsUtils;
-
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
 
 @RestController
 @RequestMapping("targeting")
@@ -74,26 +61,6 @@ public class NewsTargetingRest {
 
   @Autowired
   private NewsTargetingService     newsTargetingService;
-
-  @Autowired
-  private PortalContainer          container;
-
-  private ScheduledExecutorService scheduledExecutor;
-
-  private Map<String, String>      newsTargetToDeleteQueue = new HashMap<>();
-
-
-  @PostConstruct
-  public void init() {
-    scheduledExecutor = Executors.newScheduledThreadPool(1);
-  }
-
-  @PreDestroy
-  public void destroy() {
-    if (scheduledExecutor != null) {
-      scheduledExecutor.shutdown();
-    }
-  }
 
   @GetMapping(produces = MediaType.APPLICATION_JSON)
   @Secured("users")
@@ -134,72 +101,17 @@ public class NewsTargetingRest {
       @ApiResponse(responseCode = "401", description = "User not authorized to delete the news target"),
       @ApiResponse(responseCode = "500", description = "Internal server error") })
   public Response deleteTarget(@PathVariable("targetName")
-                               String targetName,
-                               @Parameter(description = "Time to effectively delete news target")
-                               @RequestParam(name = "delay", required = false)
-                               long delay) {
+                               String targetName) {
     org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
     try {
       if (StringUtils.isBlank(targetName)) {
         return Response.status(Response.Status.BAD_REQUEST).entity("Target name ist mandatory").build();
       }
-      if (delay > 0) {
-        newsTargetToDeleteQueue.put(targetName, currentIdentity.getUserId());
-        scheduledExecutor.schedule(() -> {
-          if (newsTargetToDeleteQueue.containsKey(targetName)) {
-            ExoContainerContext.setCurrentContainer(container);
-            RequestLifeCycle.begin(container);
-            try {
-              newsTargetToDeleteQueue.remove(targetName);
-              newsTargetingService.deleteTargetByName(targetName, currentIdentity);
-            } catch (IllegalAccessException e) {
-              LOG.warn("User '{}' is not authorized to delete the news target with name " + targetName,
-                       currentIdentity.getUserId(),
-                       e);
-            } catch (Exception e) {
-              LOG.error("Error when deleting the news target with name " + targetName, e);
-            } finally {
-              RequestLifeCycle.end();
-            }
-          }
-        }, delay, TimeUnit.SECONDS);
-      } else {
-        newsTargetToDeleteQueue.remove(targetName);
-        newsTargetingService.deleteTargetByName(targetName, currentIdentity);
-      }
+      newsTargetingService.deleteTargetByName(targetName, currentIdentity);
       return Response.ok().build();
     } catch (Exception e) {
       LOG.error("Error when deleting the news target with name " + targetName, e);
       return Response.serverError().entity(e.getMessage()).build();
-    }
-  }
-
-  @PostMapping(path = "{targetName}/undoDelete")
-  @Secured("users")
-  @Operation(summary = "Undo deleting news target if not yet effectively deleted", method = "POST", description = "Undo deleting news target if not yet effectively deleted")
-  @ApiResponses(value = { @ApiResponse(responseCode = "400", description = "Invalid query input"),
-      @ApiResponse(responseCode = "403", description = "Forbidden operation") })
-  public Response undoDeleteTarget(@PathVariable("targetName")
-                                   String targetName) {
-    if (StringUtils.isBlank(targetName)) {
-      return Response.status(Response.Status.BAD_REQUEST).entity("Target name ist mandatory").build();
-    }
-    if (newsTargetToDeleteQueue.containsKey(targetName)) {
-      org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
-      String authenticatedUser = currentIdentity.getUserId();
-      String originalModifierUser = newsTargetToDeleteQueue.get(targetName);
-      if (!originalModifierUser.equals(authenticatedUser)) {
-        LOG.warn("User {} attempts to cancel deletion of a news target deleted by user {}",
-                 authenticatedUser,
-                 originalModifierUser);
-        return Response.status(Response.Status.FORBIDDEN).build();
-      }
-      newsTargetToDeleteQueue.remove(targetName);
-      return Response.noContent().build();
-    } else {
-      return Response.status(Response.Status.BAD_REQUEST)
-                     .entity("News target with name {} was already deleted or isn't planned to be deleted" + targetName)
-                     .build();
     }
   }
 
