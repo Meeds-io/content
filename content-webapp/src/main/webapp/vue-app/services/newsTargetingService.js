@@ -40,29 +40,13 @@ export function getAllowedTargets() {
   });
 }
 
-export function deleteTargetByName(targetName, delay) {
-  if (delay > 0) {
-    localStorage.setItem('deletedNewsTarget', targetName);
-  }
-  return fetch(`${newsConstants.CONTENT_API}/targeting/${targetName}?delay=${delay || 0}`, {
+export function deleteTargetByName(targetName) {
+  return fetch(`${newsConstants.CONTENT_API}/targeting/${targetName}`, {
     credentials: 'include',
     method: 'DELETE'
   }).then((resp) => {
     if (resp && !resp.ok) {
       throw new Error('Error when deleting news target');
-    }
-  });
-}
-
-export function undoDeleteTarget(targetName) {
-  return fetch(`${newsConstants.CONTENT_API}/targeting/${targetName}/undoDelete`, {
-    method: 'POST',
-    credentials: 'include',
-  }).then((resp) => {
-    if (resp && resp.ok) {
-      localStorage.removeItem('deletedNewsTarget');
-    } else {
-      throw new Error('Error when undoing deleting news target');
     }
   });
 }
