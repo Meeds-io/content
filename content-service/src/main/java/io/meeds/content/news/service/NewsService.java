@@ -2201,7 +2201,9 @@ public class NewsService {
         DraftPage draftPage = noteService.getLatestDraftPageByUserAndTargetPageAndLang(Long.parseLong(existingPage.getId()),
                                                                                        updater.getUserId(),
                                                                                        null);
-        deleteDraftArticle(draftPage.getId(), updater.getUserId());
+        if (draftPage != null) {
+          deleteDraftArticle(draftPage.getId(), updater.getUserId());
+        }
       }
       Map<String, String> metadataItemProperties = existingPageMetadataItem.getProperties();
       if (metadataItemProperties.containsKey(NEWS_ACTIVITIES) && metadataItemProperties.get(NEWS_ACTIVITIES) != null) {
