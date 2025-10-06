@@ -99,6 +99,26 @@
           || $t('content.article.deRefer.label') }}
       </span>
     </v-list-item>
+    <template v-if="menuExtensions?.length">
+      <v-list-item
+        v-for="extension in menuExtensions"
+        :key="extension.id"
+        :class="extension.class"
+        class="ps-2 pe-4 action-menu-item d-flex align-center"
+        @click="extension.click(news)">
+        <v-icon
+          :class="extension.iconClass"
+          class="clickable icon-menu"
+          size="16">
+          {{ extension.icon }}
+        </v-icon>
+        <span
+          :class="extension.labelClass"
+          class="pt-1">
+          {{ $t(extension.labelKey) }}
+        </span>
+      </v-list-item>
+    </template>
     <v-list-item
       v-if="showDeleteButton"
       class="ps-2 pe-4 action-menu-item d-flex align-center deleteArticleOption"
@@ -114,7 +134,6 @@
     </v-list-item>
   </v-list>
 </template>
-
 <script>
 export default {
   props: {
@@ -162,6 +181,24 @@ export default {
       type: Boolean,
       default: false
     }
+  },
+  data: () => ({
+    menuExtensions: null,
+    extensionApp: 'news-detail',
+    extensionType: 'other-actions',
+  }),
+  created() {
+    document.addEventListener(`extension-${this.extensionApp}-${this.extensionType}-updated`, this.refreshExtensions);
+    Vue.prototype.$utils.includeExtensions('NewsDetailExtension');
+    this.refreshExtensions();
+  },
+  beforeDestroy() {
+    document.addEventListener(`extension-${this.extensionApp}-${this.extensionType}-updated`, this.refreshExtensions);
+  },
+  methods: {
+    refreshExtensions() {
+      this.menuExtensions = extensionRegistry.loadExtensions(this.extensionApp, this.extensionType);
+    },
   },
 };
 </script>

@@ -364,6 +364,7 @@
 
   <module>
     <name>newsDetails</name>
+    <load-group>NewsDetailsGRP</load-group>
     <script>
       <minify>false</minify>
       <path>/js/newsDetails.bundle.js</path>
