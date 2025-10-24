@@ -73,14 +73,17 @@
           <v-icon class="me-1" size="12">
             mdi-thumb-up
           </v-icon>
+          <span class="screen-reader-only">{{ $t('news.app.number.likes') }}</span>  
           <div class="likes-count me-2">{{ item.likesCount }}</div>
           <v-icon class="me-1" size="12">
             mdi-comment
           </v-icon>
+          <span class="screen-reader-only">{{ $t('news.app.number.comments') }}</span>  
           <div class="comments-count me-2">{{ item.commentsCount }}</div>
           <v-icon class="me-1" size="12">
             mdi-eye
           </v-icon>
+          <span class="screen-reader-only">{{ $t('news.app.number.views') }}</span>  
           <div class="viewCount">{{ item.viewsCount }}</div>           
         </div>
       </div>
