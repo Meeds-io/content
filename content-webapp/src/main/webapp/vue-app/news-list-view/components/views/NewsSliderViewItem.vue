@@ -60,6 +60,7 @@
     <div v-if="showArticleReactions" class="reactions-container d-flex ml-4">
       <div class="likes-container mb-1">
         <v-icon class="likeIconStyle" size="14">mdi-thumb-up</v-icon>
+        <span class="screen-reader-only">{{ $t('news.app.number.likes') }}</span>  
         <span class="counterStyle ml-1">{{ likesCount }}</span>
       </div>
       <div class="comments-container ml-2">
@@ -68,10 +69,12 @@
           size="14">
           mdi-comment
         </v-icon>
+        <span class="screen-reader-only">{{ $t('news.app.number.comments') }}</span>  
         <span class="counterStyle ml-1">{{ commentsCount }}</span>
       </div>
       <div class="views-container ml-2">
         <v-icon class="views-icon" size="16">mdi-eye</v-icon>
+        <span class="screen-reader-only">{{ $t('news.app.number.views') }}</span>  
         <span class="counterStyle">{{ viewsCount }}</span>
       </div>
     </div>
