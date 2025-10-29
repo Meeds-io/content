@@ -24,12 +24,16 @@
       :href="news.url"
       :style="{ 'background-image': 'url(' + illustrationUrl + ')' }"
       class="newsSmallIllustration"
+      tabindex="-1"
       :target="news.target"
       :aria-label="$t('news.illustration.link.title', {0: news.title})"></a>
     <div class="newsItemContent">
       <div class="newsItemContentHeader">
         <h3>
-          <a :href="news.url" :target="news.target">{{ news.title }} </a>
+          <a
+            :href="news.url"
+            :target="news.target"
+            tabindex="-1">{{ news.title }} </a>
         </h3>
         <news-spaces-shared-in
           v-if="news.activities && news.activities.split(';')[1]"
@@ -37,6 +41,7 @@
           :activities="news.activities" />
         <exo-news-details-action-menu-app
           v-if="!news.schedulePostDate"
+          focusable="false"
           :news="news"
           :show-edit-button="news.canEdit && !isDraftsFilter"
           :show-delete-button="news.canDelete"
@@ -51,6 +56,7 @@
           <exo-user-avatar
             :profile-id="newsAuthor"
             :size="25"
+            focusable="false"
             class="align-center width-full my-auto text-truncate flex-grow-0 flex"
             small-font-size
             popover />
@@ -63,6 +69,7 @@
           <exo-space-avatar
             v-if="!news.hiddenSpace"
             :space-id="spaceId"
+            focusable="false"
             class="width-full text-truncate"
             :size="25"
             extra-class="ps-1"
@@ -95,7 +102,10 @@
         </div>
       </div>
       <div class="newsItemContentDetails">
-        <a :href="news.url" :target="news.target">
+        <a
+          :href="news.url"
+          :target="news.target"
+          tabindex="-1">
           <p class="newsSummary" v-sanitized-html="news.newsText"></p>
         </a>
       </div>
