@@ -23,6 +23,7 @@
     <a
       class="articleLink"
       target="_self"
+      tabindex="-1"
       :href="articleUrl">
       <div class="imgContainer">
         <img
@@ -35,6 +36,7 @@
       <div class="upper-row">
         <a
           v-if="!isHiddenSpace && showArticleSpace"
+          tabindex="-1"
           :id="`space-link-${item.activityId}`"
           :href="item.spaceUrl"
           class="space-link"
@@ -50,6 +52,7 @@
         </a>
         <a
           class="articleLink"
+          tabindex="-1"
           target="_self"
           :href="articleUrl">
           <div v-if="showArticleTitle" class="article-title text-body">{{ item.title }}</div>
@@ -71,6 +74,7 @@
       <div v-if="showArticleReactions" class="bottom-row border-top-color pa-2 width-full b-0 position-absolute white-background text-subtitle">
         <div class="d-flex text-truncate text-no-wrap">
           <a
+            tabindex="-1"
             class="width-fit-content"
             target="_self"
             :href="activityReactionsLink">
@@ -90,6 +94,7 @@
           </a>
           <a
             class="articleLink"
+            tabindex="-1"
             target="_self"
             :href="activityReactionsLink">
             <div class="views">
@@ -171,5 +176,6 @@ export default {
       return eXo.env.portal.userName !== '' ? this.item.url : `${eXo.env.portal.context}/${eXo.env.portal.portalName}/news-detail?newsId=${this.item.id}&type=article`;
     }
   }
+
 };
 </script>

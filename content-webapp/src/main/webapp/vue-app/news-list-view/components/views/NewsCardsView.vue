@@ -25,7 +25,11 @@
         v-for="(item, index) in news"
         :key="index"
         :item="item"
-        :selected-option="selectedOption" />
+        :selected-option="selectedOption"
+        tabindex="0"
+        role="article"
+        :aria-label="$t('news.illustration.link.title', {0: item.title})"
+        @keydown.native="openNewsOnEnter($event, item)" />
     </card-carousel>
   </div>
 </template>
@@ -51,5 +55,12 @@ export default {
       return this.newsList && this.newsList.filter(news => !!news);
     },
   },
+  methods: {
+    openNewsOnEnter(event, news) {
+      if (event.key === 'Enter') {
+        window.open(news.url, '_self');
+      }
+    },
+  }
 };
 </script>
