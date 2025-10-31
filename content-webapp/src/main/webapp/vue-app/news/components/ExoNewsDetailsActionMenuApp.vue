@@ -32,7 +32,6 @@
       <v-btn
         v-bind="attrs"
         :aria-label="$t('news.details.menu.open')"
-        :tabindex="isNotFocusable ? -1 : 0"
         class="pull-right"
         icon
         v-on="on"
@@ -105,11 +104,7 @@ export default {
     showReferButton: {
       type: Boolean,
       default: false
-    },
-    focusable: {
-      type: Boolean,
-      default: () => true,
-    },
+    }
   },
   data: () => ({
     actionMenu: null,
@@ -137,10 +132,7 @@ export default {
     },
     staged() {
       return this.news?.publicationState === 'staged';
-    },
-    isNotFocusable() {
-      return this.focusable === false || this.focusable === 'false';
-    },
+    }
   },
   methods: {
     copyLink() {
