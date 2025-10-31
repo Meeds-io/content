@@ -116,14 +116,16 @@ public class LinkSettingTranslationPluginTest extends AbstractSpringConfiguratio
                                                                 linkSetting.getId(),
                                                                 FIELD_NAME,
                                                                 Collections.singletonMap(Locale.ENGLISH, translationValue),
-                                                                USERNAME));
+                                                                USERNAME,
+                                                                false));
 
     registerAdministratorUser(USERNAME);
     translationService.saveTranslationLabels(LinkSettingTranslationPlugin.LINK_SETTINGS_OBJECT_TYPE,
                                              linkSetting.getId(),
                                              FIELD_NAME,
                                              Collections.singletonMap(Locale.ENGLISH, translationValue),
-                                             USERNAME);
+                                             USERNAME,
+                                             false);
 
     registerInternalUser(USERNAME);
     translationField = translationService.getTranslationField(LinkSettingTranslationPlugin.LINK_SETTINGS_OBJECT_TYPE,

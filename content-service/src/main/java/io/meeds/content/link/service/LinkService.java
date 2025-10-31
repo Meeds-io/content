@@ -513,7 +513,8 @@ public class LinkService {
                                                id,
                                                fieldName,
                                                Collections.singletonMap(localeConfigService.getDefaultLocaleConfig().getLocale(),
-                                                                        ""));
+                                                                        ""),
+                                               false);
     } else {
       translationService.saveTranslationLabels(type,
                                                id,
@@ -521,7 +522,8 @@ public class LinkService {
                                                values.entrySet()
                                                      .stream()
                                                      .collect(Collectors.toMap(e -> Locale.forLanguageTag(e.getKey()),
-                                                                               Entry::getValue)));
+                                                                               Entry::getValue)),
+                                               false);
     }
   }
 
