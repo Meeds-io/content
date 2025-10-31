@@ -93,10 +93,6 @@
           :news="news"
           :news-filter="newsFilter"
           class="newsItem"
-          tabindex="0"
-          role="article"
-          :aria-label="$t('news.illustration.link.title', {0: news.title})"
-          @keydown.native="openNewsOnEnter($event, news)"
           @update-news-list="updateNewsList"
           @delete-news="deleteNews"
           @open-delete-confirm-dialog="deleteConfirmDialog" />
@@ -275,7 +271,7 @@ export default {
   methods: {
     editLink(news) {
       const editUrl = this.getEditUrl(news);
-      window.open(editUrl, '_target');
+      window.open(editUrl, '_blank');
       this.$refs?.mobileActionMenu?.close();
     },
     deleteByConfirm() {
@@ -462,12 +458,7 @@ export default {
             alertMessage: message
           }}));
         });
-    },
-    openNewsOnEnter(event, news) {
-      if (event.key === 'Enter') {
-        window.open(news.url, '_self');
-      }
-    },
+    }
   },
 };
 </script>
