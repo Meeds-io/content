@@ -19,7 +19,7 @@
 
 -->
 <template>
-  <div class="card card-border-radius" tabindex="0">
+  <div class="card card-border-radius">
     <a
       class="articleLink"
       target="_self"
@@ -176,5 +176,6 @@ export default {
       return eXo.env.portal.userName !== '' ? this.item.url : `${eXo.env.portal.context}/${eXo.env.portal.portalName}/news-detail?newsId=${this.item.id}&type=article`;
     }
   }
+
 };
 </script>
