@@ -41,7 +41,6 @@
         class="upper-row">
         <div
           v-if="!isHiddenSpace && showArticleSpace"
-          tabindex="-1"
           :id="`space-link-${item.activityId}`"
           class="space-link"
           :aria-label="$t('news.space.icon.title', { 0: item.spaceDisplayName })">
