@@ -19,7 +19,10 @@
 
 -->
 <template>
-  <div class="card card-border-radius">
+  <a
+    class="card card-border-radius" 
+    target="_self"
+    :href="articleUrl">
     <a
       class="articleLink"
       target="_self"
@@ -33,14 +36,14 @@
       </div>
     </a>
     <div class="text-area">
-      <div class="upper-row">
-        <a
+      <a
+        class="upper-row"
+        :href="articleUrl"
+        target="_self">
+        <div
           v-if="!isHiddenSpace && showArticleSpace"
-          tabindex="-1"
           :id="`space-link-${item.activityId}`"
-          :href="item.spaceUrl"
           class="space-link"
-          target="_self"
           :arial-label="$t('news.space.icon.title',{ 0:item.spaceDisplayName })">
           <div class="article-space">
             <img
@@ -49,12 +52,9 @@
               alt="">
             <div class="space-name text-subtitle">{{ item.spaceDisplayName }}</div>
           </div>
-        </a>
-        <a
-          class="articleLink"
-          tabindex="-1"
-          target="_self"
-          :href="articleUrl">
+        </div>
+        <div
+          class="articleLink">
           <div v-if="showArticleTitle" class="article-title text-body">{{ item.title }}</div>
           <div class="d-flex text-no-wrap text-truncate text-subtitle">
             <div v-if="showArticleAuthor" class="author-name">{{ item.authorDisplayName }}</div>
@@ -69,15 +69,12 @@
           </div>
           <div v-if="showArticleSummary" class="d-flex mt-4 text-subtitle"> {{ item?.properties?.summary }} </div>
           <div class="mt-2 align-self-center text-subtitle font-weight-bold primary--text">{{ $t('news.cards.readMore') }}</div>
-        </a>
-      </div>
+        </div>
+      </a>
       <div v-if="showArticleReactions" class="bottom-row border-top-color pa-2 width-full b-0 position-absolute white-background text-subtitle">
         <div class="d-flex text-truncate text-no-wrap">
-          <a
-            tabindex="-1"
-            class="width-fit-content"
-            target="_self"
-            :href="activityReactionsLink">
+          <div
+            class="width-fit-content">
             <div class="d-flex text-truncate text-subtitle">
               <v-icon
                 size="14">mdi-thumb-up</v-icon>
@@ -91,12 +88,9 @@
               <span class="screen-reader-only">{{ $t('news.app.number.comments') }}</span>  
               <div class="comments-count ms-1">{{ item.commentsCount }}</div>
             </div>
-          </a>
-          <a
-            class="articleLink"
-            tabindex="-1"
-            target="_self"
-            :href="activityReactionsLink">
+          </div>
+          <div
+            class="articleLink">
             <div class="views">
               <v-icon
                 class="counters-icons"
@@ -104,11 +98,11 @@
               <span class="screen-reader-only">{{ $t('news.app.number.views') }}</span>  
               <div class="views-count ms-1">{{ item.viewsCount }}</div>
             </div>
-          </a>
+          </div>
         </div>
       </div>
     </div>
-  </div>
+  </a>
 </template>
 
 <script>
@@ -168,9 +162,6 @@ export default {
     },
     isHiddenSpace() {
       return this.item && !this.item.spaceMember && this.item.hiddenSpace;
-    },
-    activityReactionsLink() {
-      return this.item && `${this.item.url}#activityReactions`;
     },
     articleUrl() {
       return eXo.env.portal.userName !== '' ? this.item.url : `${eXo.env.portal.context}/${eXo.env.portal.portalName}/news-detail?newsId=${this.item.id}&type=article`;
