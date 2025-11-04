@@ -28,8 +28,7 @@
         :selected-option="selectedOption"
         tabindex="0"
         role="article"
-        :aria-label="$t('news.illustration.link.title', {0: item.title})"
-        @keydown.native="openNewsOnEnter($event, item)" />
+        :aria-label="$t('news.illustration.link.title', {0: item.title})" />
     </card-carousel>
   </div>
 </template>
@@ -53,13 +52,6 @@ export default {
   computed: {
     news(){
       return this.newsList && this.newsList.filter(news => !!news);
-    },
-  },
-  methods: {
-    openNewsOnEnter(event, news) {
-      if (event.key === 'Enter') {
-        window.open(news.url, '_self');
-      }
     },
   }
 };
