@@ -216,7 +216,7 @@ export default {
       return this?.news.illustrationURL;
     },
     featuredImageAltText() {
-      return this.news?.properties?.featuredImage?.altText || this.newsTitle;
+      return this.news?.properties?.featuredImage?.altText || '';
     },
     newsTitle() {
       return this.news && this.newsTitleContent;
