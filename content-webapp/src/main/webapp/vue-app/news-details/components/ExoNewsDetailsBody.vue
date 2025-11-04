@@ -43,7 +43,7 @@
             <v-tooltip bottom>
               <template #activator="{ on, attrs }">
                 <span v-on="on" v-bind="attrs">
-                  <v-icon 
+                  <v-icon
                     size="20"
                     class="ms-3 icon-default-color">
                     fas fa-eye
@@ -216,7 +216,7 @@ export default {
       return this?.news.illustrationURL;
     },
     featuredImageAltText() {
-      return this.news?.properties?.featuredImage?.altText || this.newsTitle;
+      return this.news?.properties?.featuredImage?.altText || null;
     },
     newsTitle() {
       return this.news && this.newsTitleContent;
