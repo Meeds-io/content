@@ -1404,7 +1404,7 @@ public class NewsService {
     return (spaceService.canRedactOnSpace(space, authenticatedUserIdentity)
         && (news.isReferred() || news.isFromExternalPage() || isArticleOwner(news, authenticatedUser)))
         || spaceService.isManager(space, authenticatedUser) || spaceService.isSuperManager(space, authenticatedUser)
-        || spaceService.isRedactor(space, authenticatedUser);
+        || spaceService.isRedactor(space, authenticatedUser) || spaceService.canPublishOnSpace(space, authenticatedUser);
   }
 
   private boolean canReferToNote(News article, org.exoplatform.services.security.Identity currentIdentity) {
