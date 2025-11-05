@@ -20,88 +20,103 @@
 -->
 <template>
   <a
-    class="card card-border-radius" 
+    class="card card-border-radius"
+    :href="articleUrl"
     target="_self"
-    :href="articleUrl">
-    <a
-      class="articleLink"
-      target="_self"
-      tabindex="-1"
-      :href="articleUrl">
-      <div class="imgContainer">
-        <img
-          :src="articleImage"
-          :alt="featuredImageAltText"
-          class="article-illustration-img">
-      </div>
-    </a>
+    @keydown="onCardKeydown"
+    @focus="onCardFocus"
+    @blur="onCardBlur"
+    :class="{ 'keyboard-slide': slideActive }"
+    ref="cardEl"
+    tabindex="0">
+    <div class="imgContainer">
+      <img
+        :src="articleImage"
+        :alt="featuredImageAltText"
+        class="article-illustration-img">
+    </div>
     <div class="text-area">
-      <a
-        class="upper-row"
-        :href="articleUrl"
-        target="_self">
+      <div class="upper-row">
         <div
           v-if="!isHiddenSpace && showArticleSpace"
           :id="`space-link-${item.activityId}`"
           class="space-link"
-          :arial-label="$t('news.space.icon.title',{ 0:item.spaceDisplayName })">
+          :aria-label="$t('news.space.icon.title', { 0: item.spaceDisplayName })">
           <div class="article-space">
             <img
               class="space-icon"
               :src="item.spaceAvatarUrl"
               alt="">
-            <div class="space-name text-subtitle">{{ item.spaceDisplayName }}</div>
+            <div class="space-name text-subtitle">
+              {{ item.spaceDisplayName }}
+            </div>
           </div>
         </div>
-        <div
-          class="articleLink">
-          <div v-if="showArticleTitle" class="article-title text-body">{{ item.title }}</div>
+        <div class="articleLink">
+          <div v-if="showArticleTitle" class="article-title text-body">
+            {{ item.title }}
+          </div>
           <div class="d-flex text-no-wrap text-truncate text-subtitle">
-            <div v-if="showArticleAuthor" class="author-name">{{ item.authorDisplayName }}</div>
-                
-            <span v-if="showArticleAuthor && showArticleDate">,&nbsp;</span>
+            <div v-if="showArticleAuthor" class="author-name">
+              {{ item.authorDisplayName }}
+            </div>
+            <span v-if="showArticleAuthor && showArticleDate">, </span>
             <div v-if="showArticleDate">
               <date-format
                 :value="displayDate"
                 :format="dateFormat" />
             </div>
-                
           </div>
-          <div v-if="showArticleSummary" class="d-flex mt-4 text-subtitle"> {{ item?.properties?.summary }} </div>
-          <div class="mt-2 align-self-center text-subtitle font-weight-bold primary--text">{{ $t('news.cards.readMore') }}</div>
-        </div>
-      </a>
-      <div v-if="showArticleReactions" class="bottom-row border-top-color pa-2 width-full b-0 position-absolute white-background text-subtitle">
-        <div class="d-flex text-truncate text-no-wrap">
           <div
-            class="width-fit-content">
-            <div class="d-flex text-truncate text-subtitle">
-              <v-icon
-                size="14">mdi-thumb-up</v-icon>
-              <span class="screen-reader-only">{{ $t('news.app.number.likes') }}</span>  
-              <div class="likes-count ms-1">{{ item.likesCount }}</div>
-              <v-icon
-                class="counters-icons mt-1 ml-2"
-                size="14">
-                mdi-comment
-              </v-icon>
-              <span class="screen-reader-only">{{ $t('news.app.number.comments') }}</span>  
-              <div class="comments-count ms-1">{{ item.commentsCount }}</div>
+            v-if="showArticleSummary"
+            class="d-flex mt-4 text-subtitle">
+            {{ item?.properties?.summary }}
+          </div>
+          <div
+            class="mt-2 align-self-center text-subtitle font-weight-bold primary--text">
+            {{ $t('news.cards.readMore') }}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
+      v-if="showArticleReactions"
+      class="bottom-row border-top-color pa-2 width-full b-0 position-absolute white-background text-subtitle">
+      <div class="d-flex text-truncate text-no-wrap">
+        <div class="width-fit-content">
+          <div class="d-flex text-truncate text-subtitle">
+            <v-icon size="14">mdi-thumb-up</v-icon>
+            <span class="screen-reader-only">
+              {{ $t('news.app.number.likes') }}
+            </span>
+            <div class="likes-count ms-1">
+              {{ item.likesCount }}
+            </div>
+            <v-icon class="counters-icons mt-1 ml-2" size="14">
+              mdi-comment
+            </v-icon>
+            <span class="screen-reader-only">
+              {{ $t('news.app.number.comments') }}
+            </span>
+            <div class="comments-count ms-1">
+              {{ item.commentsCount }}
             </div>
           </div>
-          <div
-            class="articleLink">
-            <div class="views">
-              <v-icon
-                class="counters-icons"
-                size="16">mdi-eye</v-icon>
-              <span class="screen-reader-only">{{ $t('news.app.number.views') }}</span>  
-              <div class="views-count ms-1">{{ item.viewsCount }}</div>
+        </div>
+        <div class="articleLink">
+          <div class="views">
+            <v-icon class="counters-icons" size="16">mdi-eye</v-icon>
+            <span class="screen-reader-only">
+              {{ $t('news.app.number.views') }}
+            </span>
+            <div class="views-count ms-1">
+              {{ item.viewsCount }}
             </div>
           </div>
         </div>
       </div>
     </div>
+
   </a>
 </template>
 
@@ -125,6 +140,9 @@ export default {
       month: 'long',
       day: 'numeric',
     },
+    slideActive: false,
+    tabConsumed: false,
+    hasFocus: false   
   }),
   computed: {
     displayDate() {
@@ -165,6 +183,42 @@ export default {
     },
     articleUrl() {
       return eXo.env.portal.userName !== '' ? this.item.url : `${eXo.env.portal.context}/${eXo.env.portal.portalName}/news-detail?newsId=${this.item.id}&type=article`;
+    }
+  },
+  methods: {
+    onCardFocus() {
+      this.hasFocus = true;
+    },
+
+    onCardBlur() {
+      this.hasFocus = false;
+      this.slideActive = false;
+      this.tabConsumed = false;
+    },
+
+    onCardKeydown(e) {
+      if (e.key === 'Enter') {
+        return;
+      }
+      if (e.key === 'Tab') {
+        const isShift = e.shiftKey;
+        if (!this.tabConsumed && !isShift) {
+          e.preventDefault();
+          this.slideActive = true;
+          this.tabConsumed = true;
+          return;
+        }
+        if (this.tabConsumed && !isShift) {
+          this.tabConsumed = false;
+          this.slideActive = false;
+          return;
+        }
+        if (isShift) {
+          this.tabConsumed = false;
+          this.slideActive = false;
+          return;
+        }
+      }
     }
   }
 
