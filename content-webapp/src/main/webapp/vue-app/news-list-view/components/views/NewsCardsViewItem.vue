@@ -36,7 +36,9 @@
         class="article-illustration-img">
     </div>
     <div class="text-area">
-      <div class="upper-row">
+      <a
+        class="upper-row"
+        :aria-label="$t('news.illustration.link.title', {0: item.title})">
         <div
           v-if="!isHiddenSpace && showArticleSpace"
           :id="`space-link-${item.activityId}`"
@@ -77,7 +79,7 @@
             {{ $t('news.cards.readMore') }}
           </div>
         </div>
-      </div>
+      </a>
     </div>
     <div
       v-if="showArticleReactions"
