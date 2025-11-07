@@ -79,7 +79,7 @@
             {{ $t('news.cards.readMore') }}
           </div>
         </div>
-      </div>
+      </a>
     </div>
     <div
       v-if="showArticleReactions"
