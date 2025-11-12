@@ -23,11 +23,7 @@
     class="card card-border-radius"
     :href="articleUrl"
     target="_self"
-    @keydown="onCardKeydown"
-    @focus="onCardFocus"
-    @blur="onCardBlur"
     :class="{ 'keyboard-slide': slideActive }"
-    ref="cardEl"
     tabindex="0">
     <div class="imgContainer">
       <img
@@ -35,10 +31,14 @@
         :alt="featuredImageAltText"
         class="article-illustration-img">
     </div>
-    <div class="text-area">
-      <a
-        class="upper-row"
-        :aria-label="$t('news.illustration.link.title', {0: item.title})">
+    <div
+      class="text-area"
+      tabindex="0"
+      role="link"
+      :aria-label="$t('news.illustration.link.title', {0: item.title})"
+      @keydown.enter.prevent="openArticle">
+      <div
+        class="upper-row">
         <div
           v-if="!isHiddenSpace && showArticleSpace"
           :id="`space-link-${item.activityId}`"
@@ -79,7 +79,7 @@
             {{ $t('news.cards.readMore') }}
           </div>
         </div>
-      </a>
+      </div>
     </div>
     <div
       v-if="showArticleReactions"
@@ -118,7 +118,6 @@
         </div>
       </div>
     </div>
-
   </a>
 </template>
 
@@ -143,8 +142,6 @@ export default {
       day: 'numeric',
     },
     slideActive: false,
-    tabConsumed: false,
-    hasFocus: false   
   }),
   computed: {
     displayDate() {
@@ -188,41 +185,9 @@ export default {
     }
   },
   methods: {
-    onCardFocus() {
-      this.hasFocus = true;
-    },
-
-    onCardBlur() {
-      this.hasFocus = false;
-      this.slideActive = false;
-      this.tabConsumed = false;
-    },
-
-    onCardKeydown(e) {
-      if (e.key === 'Enter') {
-        return;
-      }
-      if (e.key === 'Tab') {
-        const isShift = e.shiftKey;
-        if (!this.tabConsumed && !isShift) {
-          e.preventDefault();
-          this.slideActive = true;
-          this.tabConsumed = true;
-          return;
-        }
-        if (this.tabConsumed && !isShift) {
-          this.tabConsumed = false;
-          this.slideActive = false;
-          return;
-        }
-        if (isShift) {
-          this.tabConsumed = false;
-          this.slideActive = false;
-          return;
-        }
-      }
+    openArticle() {
+      window.open(this.articleUrl, '_self');
     }
   }
-
 };
 </script>
