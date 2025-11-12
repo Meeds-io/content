@@ -27,7 +27,6 @@
         :item="item"
         :selected-option="selectedOption"
         tabindex="0"
-        role="article"
         :aria-label="$t('news.illustration.link.title', {0: item.title})" />
     </card-carousel>
   </div>
