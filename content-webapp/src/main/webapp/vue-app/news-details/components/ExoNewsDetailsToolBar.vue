@@ -62,6 +62,13 @@
       :activity-id="activityId"
       :icon-size="20"
       class="pull-right mt-1 me-2" />
+    <extension-registry-components
+      :params="params"
+      name="NewsDetails"
+      type="news-toolbar"
+      parent-element="div"
+      element="div"
+      class="pull-right mt-1 d-inline-flex" />
     <v-tooltip
       v-if="canOpenInNotes"
       bottom>
@@ -170,7 +177,12 @@ export default {
     },
     canOpenInNotes() {
       return this.news?.referred || this.news?.fromExternalPage;
-    }
+    },
+    params() {
+      return {
+        news: this.news,
+      };
+    },
   },
   methods: {
     goBack() {
