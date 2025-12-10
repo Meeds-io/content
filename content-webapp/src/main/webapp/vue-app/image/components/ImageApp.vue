@@ -117,6 +117,8 @@ export default {
           uploadId: imageItem.uploadId,
           altText: imageItem.altText,
           format: imageItem.format,
+          linkUrl: imageItem.linkUrl,
+          linkTarget: imageItem.linkTarget
         }],
       })
         .then(() => this.refresh())
