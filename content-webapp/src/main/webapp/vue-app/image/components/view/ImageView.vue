@@ -19,15 +19,21 @@
 
 -->
 <template>
-  <img
-    v-if="$root.imageUrl"
-    :src="$root.imageUrl"
-    :alt="$root.imageAltText"
-    :width="$root.fixedHeight && `${width}px` || '100%'"
-    :height="$root.fixedHeight && `${$root.fixedHeight}px` || '100%'"
-    :class="cssClass"
-    :style="cssStyle"
-    class="border-box-sizing">
+  <a 
+    :href="linkUrl"
+    :target="target"
+    :rel="rel"
+    class="d-block full-width full-height">
+    <img
+      v-if="$root.imageUrl"
+      :src="$root.imageUrl"
+      :alt="$root.imageAltText"
+      :width="$root.fixedHeight && `${width}px` || '100%'"
+      :height="$root.fixedHeight && `${$root.fixedHeight}px` || '100%'"
+      :class="cssClass"
+      :style="cssStyle"
+      class="border-box-sizing">
+  </a>
 </template>
 <script>
 export default {
@@ -62,6 +68,22 @@ export default {
         'min-width': `${this.width}px`,
       };
     },
-  },
+    linkUrl() {
+      return this.$utils.toLinkUrl(this.$root.imageLinkUrl, {
+        urls: true,
+        email: true,
+        phone: true,
+      });
+    },
+    sameTab() {
+      return this.$root.imageLinkTarget !== 'false';
+    },
+    target() {
+      return !this.sameTab && '_blank' || null;
+    },
+    rel() {
+      return this.target && 'noopener noreferrer' || null;
+    }
+  }
 };
 </script>
