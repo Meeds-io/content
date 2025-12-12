@@ -19,10 +19,13 @@
 
 -->
 <template>
-  <a 
-    :href="linkUrl"
-    :target="$root.imageLinkTarget || null"
-    :rel="rel"
+  <component
+    v-bind="linkUrl && {
+      href: linkUrl,
+      target: $root.imageLinkTarget,
+      rel,
+    }"
+    :is="linkUrl ? 'a' : 'div'"
     class="d-block full-width full-height">
     <img
       v-if="$root.imageUrl"
@@ -33,7 +36,7 @@
       :class="cssClass"
       :style="cssStyle"
       class="border-box-sizing">
-  </a>
+  </component>
 </template>
 <script>
 export default {
