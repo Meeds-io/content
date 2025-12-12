@@ -21,7 +21,7 @@
 <template>
   <a 
     :href="linkUrl"
-    :target="target"
+    :target="$root.imageLinkTarget || null"
     :rel="rel"
     class="d-block full-width full-height">
     <img
@@ -75,14 +75,8 @@ export default {
         phone: true,
       });
     },
-    sameTab() {
-      return this.$root.imageLinkTarget !== 'false';
-    },
-    target() {
-      return !this.sameTab && '_blank' || null;
-    },
     rel() {
-      return this.target && 'noopener noreferrer' || null;
+      return this.$root.imageLinkTarget === '_blank' && 'noopener noreferrer' || null;
     }
   }
 };
