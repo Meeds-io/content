@@ -78,6 +78,12 @@ export function init(appId, name, canEdit, files) {
           imageAltText() {
             return this.files?.[0]?.altText || '';
           },
+          imageLinkUrl() {
+            return this.files?.[0]?.linkUrl || '';
+          },
+          imageLinkTarget() {
+            return this.files?.[0]?.linkTarget || null;
+          },
           imageFormat() {
             return this.imageDisplayFormats[this.imageFormatName];
           },
