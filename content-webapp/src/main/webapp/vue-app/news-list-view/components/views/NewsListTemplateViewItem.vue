@@ -40,14 +40,26 @@
         class="text-subtitle">
         {{ item?.properties?.summary }}
       </span>
-      <div class="d-flex align-center text-subtitle mb-1">
-        <span v-if="showArticleAuthor">{{ item.authorDisplayName }}</span>
+      <div class="d-flex text-subtitle mb-1 width-full">
+        <span
+          v-if="showArticleAuthor"
+          :class="{
+            'flex-shrink-1': truncateAuthorName,
+            'flex-shrink-0' : !truncateAuthorName
+          }"
+          class="text-truncate flex-grow-0">
+          {{ item.authorDisplayName }}
+        </span>
         <v-icon
           v-if="showArticleSpace && showArticleAuthor"
           small>
           mdi-chevron-right
         </v-icon>
-        <span v-if="showArticleSpace">{{ item.spaceDisplayName }}</span>
+        <span 
+          v-if="showArticleSpace"
+          class="text-truncate flex-grow-1 flex-shrink-1">
+          {{ item.spaceDisplayName }}
+        </span>
       </div>
       <div class="text-no-wrap text-truncate d-flex text-subtitle">
         <span class="article-date me-2">
@@ -98,6 +110,9 @@ export default {
     },
   }),
   computed: {
+    truncateAuthorName() {
+      return this.item?.authorDisplayName?.length > 15;
+    },
     displayDate() {
       return this.item?.publishDate && new Date(this.item.publishDate);
     },
