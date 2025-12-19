@@ -482,6 +482,7 @@ public class NewsRest {
       NewsEntity newsEntity = new NewsEntity();
       // Get news drafts by space
       List<String> spacesList = new ArrayList<>();
+      boolean hasTextQuery = StringUtils.isNotEmpty(text);
       // Set spaces to search news in
       if (StringUtils.isNotEmpty(spaces)) {
         for (String spaceId : spaces.split(",")) {
@@ -490,7 +491,14 @@ public class NewsRest {
               || (!spaceService.isSuperManager(space, authenticatedUser) && !spaceService.isMember(space, authenticatedUser))) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
           }
-          spacesList.add(spaceId);
+          if (hasTextQuery) {
+            Identity spaceIdentity = identityManager.getOrCreateSpaceIdentity(space.getPrettyName());
+            if (spaceIdentity != null) {
+              spacesList.add(String.valueOf(spaceIdentity.getIdentityId()));
+            }
+          } else {
+            spacesList.add(spaceId);
+          }
         }
       }
       NewsFilter newsFilter = buildFilter(spacesList, filter, text, author, limit, offset);
@@ -499,7 +507,7 @@ public class NewsRest {
       List<News> news;
       org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
       // Set text to search news with
-      if (StringUtils.isNotEmpty(text)) {
+      if (hasTextQuery) {
         TagService tagService = CommonsUtils.getService(TagService.class);
         long userIdentityId = RestUtils.getCurrentUserIdentityId();
         if (text.indexOf("#") == 0) {
