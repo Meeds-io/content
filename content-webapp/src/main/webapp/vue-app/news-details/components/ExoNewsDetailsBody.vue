@@ -133,7 +133,11 @@
                 :value="updatedDate"
                 :format="dateFormat"
                 class="text-caption" />
-              <span class="text-caption">{{ $t('article.published.by.label') }} {{ articlePublisher }}</span>
+              <span 
+                v-if="articlePublisher" 
+                class="text-caption">
+                {{ $t('article.published.by.label') }} {{ articlePublisher }}
+              </span>
             </div>
           </div>
         </div>
@@ -239,8 +243,11 @@ export default {
     articleUpdater() {
       return this.news?.updater || this.news?.author;
     },
+    published() {
+      return this.news?.published;
+    },
     articlePublisher() {
-      return this.news?.publisher;
+      return this.published && this.news?.publisher;
     },
     hiddenSpace() {
       return this.news && this.news.hiddenSpace;
