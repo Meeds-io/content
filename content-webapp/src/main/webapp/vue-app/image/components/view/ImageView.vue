@@ -31,6 +31,7 @@
       v-if="$root.imageUrl"
       :src="$root.imageUrl"
       :alt="$root.imageAltText"
+      :aria-label="(!!linkUrl && !$root.imageAltText) ? $t('image.label.accessLink') : null"
       :width="$root.fixedHeight && `${width}px` || '100%'"
       :height="$root.fixedHeight && `${$root.fixedHeight}px` || '100%'"
       :class="cssClass"
