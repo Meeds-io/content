@@ -26,7 +26,9 @@
       rel,
     }"
     :is="linkUrl ? 'a' : 'div'"
-    class="d-block full-width full-height">
+    class="d-block full-width full-height"
+    @focus="isFocused = true"
+    @blur="isFocused = false">
     <img
       v-if="$root.imageUrl"
       :src="$root.imageUrl"
@@ -34,13 +36,18 @@
       :aria-label="(!!linkUrl && !$root.imageAltText) ? $t('image.label.accessLink') : null"
       :width="$root.fixedHeight && `${width}px` || '100%'"
       :height="$root.fixedHeight && `${$root.fixedHeight}px` || '100%'"
-      :class="cssClass"
+      :class="[cssClass, imageFocusCss]"
       :style="cssStyle"
       class="border-box-sizing">
   </component>
 </template>
 <script>
 export default {
+  data() {
+    return {
+      isFocused: false
+    };
+  },
   computed: {
     appWidth() {
       return this.$root.imageAspectRatio * this.$root.imageHeight;
@@ -81,6 +88,9 @@ export default {
     },
     rel() {
       return this.$root.imageLinkTarget === '_blank' && 'noopener noreferrer' || null;
+    },
+    imageFocusCss() {
+      return this.isFocused && 'border-primary-dashed';
     }
   }
 };
