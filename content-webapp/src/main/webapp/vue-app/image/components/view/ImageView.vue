@@ -26,7 +26,9 @@
       rel,
     }"
     :is="linkUrl ? 'a' : 'div'"
-    class="d-block full-width full-height">
+    class="d-block full-width full-height"
+    @focus="isFocused = true"
+    @blur="isFocused = false">
     <img
       v-if="$root.imageUrl"
       :src="$root.imageUrl"
@@ -35,12 +37,17 @@
       :width="$root.fixedHeight && `${width}px` || '100%'"
       :height="$root.fixedHeight && `${$root.fixedHeight}px` || '100%'"
       :class="cssClass"
-      :style="cssStyle"
+      :style="[cssStyle, imageFocusStyle]"
       class="border-box-sizing">
   </component>
 </template>
 <script>
 export default {
+  data() {
+    return {
+      isFocused: false
+    };
+  },
   computed: {
     appWidth() {
       return this.$root.imageAspectRatio * this.$root.imageHeight;
@@ -81,6 +88,9 @@ export default {
     },
     rel() {
       return this.$root.imageLinkTarget === '_blank' && 'noopener noreferrer' || null;
+    },
+    imageFocusStyle() {
+      return this.isFocused && { border: '2px dashed var(--allPagesPrimaryColor, @primaryColorDefault)'};
     }
   }
 };
