@@ -36,8 +36,8 @@
       :aria-label="(!!linkUrl && !$root.imageAltText) ? $t('image.label.accessLink') : null"
       :width="$root.fixedHeight && `${width}px` || '100%'"
       :height="$root.fixedHeight && `${$root.fixedHeight}px` || '100%'"
-      :class="cssClass"
-      :style="[cssStyle, imageFocusStyle]"
+      :class="[cssClass, imageFocusCss]"
+      :style="cssStyle"
       class="border-box-sizing">
   </component>
 </template>
@@ -89,8 +89,8 @@ export default {
     rel() {
       return this.$root.imageLinkTarget === '_blank' && 'noopener noreferrer' || null;
     },
-    imageFocusStyle() {
-      return this.isFocused && { border: '2px dashed var(--allPagesPrimaryColor, @primaryColorDefault)'};
+    imageFocusCss() {
+      return this.isFocused && 'border-primary-dashed';
     }
   }
 };
