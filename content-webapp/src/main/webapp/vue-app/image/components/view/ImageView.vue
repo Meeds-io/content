@@ -27,7 +27,7 @@
     }"
     :is="linkUrl ? 'a' : 'div'"
     class="d-block full-width full-height"
-    @focus="isFocused = true"
+    @focus="onFocus"
     @blur="isFocused = false">
     <img
       v-if="$root.imageUrl"
@@ -45,7 +45,8 @@
 export default {
   data() {
     return {
-      isFocused: false
+      isFocused: false,
+      isTabbing: false
     };
   },
   computed: {
@@ -91,6 +92,29 @@ export default {
     },
     imageFocusCss() {
       return this.isFocused && 'border-primary-dashed';
+    }
+  },
+  mounted() {
+    window.addEventListener('keydown', this.onKeyDown);
+    window.addEventListener('mousedown', this.onMouseDown);
+  },
+  beforeDestroy() {
+    window.removeEventListener('keydown', this.onKeyDown);
+    window.removeEventListener('mousedown', this.onMouseDown);
+  },
+  methods: {
+    onKeyDown(e) {
+      if (e.key === 'Tab') {
+        this.isTabbing = true;
+      }
+    },
+    onMouseDown() {
+      this.isTabbing = false;
+    },
+    onFocus() {
+      if (this.isTabbing) {
+        this.isFocused = true;
+      }
     }
   }
 };
