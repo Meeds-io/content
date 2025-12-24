@@ -26,9 +26,7 @@
       rel,
     }"
     :is="linkUrl ? 'a' : 'div'"
-    class="d-block full-width full-height"
-    @focus="onFocus"
-    @blur="isFocused = false">
+    class="d-block full-width full-height">
     <img
       v-if="$root.imageUrl"
       :src="$root.imageUrl"
@@ -36,19 +34,13 @@
       :aria-label="(!!linkUrl && !$root.imageAltText) ? $t('image.label.accessLink') : null"
       :width="$root.fixedHeight && `${width}px` || '100%'"
       :height="$root.fixedHeight && `${$root.fixedHeight}px` || '100%'"
-      :class="[cssClass, imageFocusCss]"
+      :class="cssClass"
       :style="cssStyle"
       class="border-box-sizing">
   </component>
 </template>
 <script>
 export default {
-  data() {
-    return {
-      isFocused: false,
-      isTabbing: false
-    };
-  },
   computed: {
     appWidth() {
       return this.$root.imageAspectRatio * this.$root.imageHeight;
@@ -89,32 +81,6 @@ export default {
     },
     rel() {
       return this.$root.imageLinkTarget === '_blank' && 'noopener noreferrer' || null;
-    },
-    imageFocusCss() {
-      return this.isFocused && 'border-primary-dashed';
-    }
-  },
-  mounted() {
-    window.addEventListener('keydown', this.onKeyDown);
-    window.addEventListener('mousedown', this.onMouseDown);
-  },
-  beforeDestroy() {
-    window.removeEventListener('keydown', this.onKeyDown);
-    window.removeEventListener('mousedown', this.onMouseDown);
-  },
-  methods: {
-    onKeyDown(e) {
-      if (e.key === 'Tab') {
-        this.isTabbing = true;
-      }
-    },
-    onMouseDown() {
-      this.isTabbing = false;
-    },
-    onFocus() {
-      if (this.isTabbing) {
-        this.isFocused = true;
-      }
     }
   }
 };
