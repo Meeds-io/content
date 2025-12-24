@@ -19,15 +19,25 @@
 
 -->
 <template>
-  <img
-    v-if="$root.imageUrl"
-    :src="$root.imageUrl"
-    :alt="$root.imageAltText"
-    :width="$root.fixedHeight && `${width}px` || '100%'"
-    :height="$root.fixedHeight && `${$root.fixedHeight}px` || '100%'"
-    :class="cssClass"
-    :style="cssStyle"
-    class="border-box-sizing">
+  <component
+    v-bind="linkUrl && {
+      href: linkUrl,
+      target: $root.imageLinkTarget,
+      rel,
+    }"
+    :is="linkUrl ? 'a' : 'div'"
+    class="d-block full-width full-height">
+    <img
+      v-if="$root.imageUrl"
+      :src="$root.imageUrl"
+      :alt="$root.imageAltText"
+      :aria-label="(!!linkUrl && !$root.imageAltText) ? $t('image.label.accessLink') : null"
+      :width="$root.fixedHeight && `${width}px` || '100%'"
+      :height="$root.fixedHeight && `${$root.fixedHeight}px` || '100%'"
+      :class="cssClass"
+      :style="cssStyle"
+      class="border-box-sizing">
+  </component>
 </template>
 <script>
 export default {
@@ -62,6 +72,16 @@ export default {
         'min-width': `${this.width}px`,
       };
     },
-  },
+    linkUrl() {
+      return this.$utils.toLinkUrl(this.$root.imageLinkUrl, {
+        urls: true,
+        email: true,
+        phone: true,
+      });
+    },
+    rel() {
+      return this.$root.imageLinkTarget === '_blank' && 'noopener noreferrer' || null;
+    }
+  }
 };
 </script>
