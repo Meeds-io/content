@@ -63,17 +63,7 @@
                 :selected-translation="selectedTranslation"
                 :article="news" />
             </span>
-            <extension-registry-components
-              name="NewsDetails"
-              type="content-details-extension"
-              :params="{
-                entityId: news.latestVersionId,
-                editMode: false,
-                entityType: 'WIKI_PAGE_VERSIONS'
-              }"
-              element-class="ms-3"
-              parent-element="span"
-              element="span" />
+            
           </p>
         </div>
         <p
@@ -145,6 +135,16 @@
           class="mt-8 content-treeview-processor rich-editor-content extended-rich-content"
           v-sanitized-html="newsBody">
         </div>
+        <extension-registry-components
+            name="NewsDetailsFooter"
+            type="content-details-extension"
+            :params="{
+              entityId: news.latestVersionId,
+              entityType: 'WIKI_PAGE_VERSIONS'
+            }"
+            element-class="ms-3"
+            parent-element="span"
+            element="span" />
       </div>
     </div>
   </div>
