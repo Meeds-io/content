@@ -63,7 +63,12 @@
                 :selected-translation="selectedTranslation"
                 :article="news" />
             </span>
-            
+            <extension-registry-components
+              name="NewsDetailTitle"
+              type="content-details-extension"
+              element-class="ms-3"
+              parent-element="span"
+              element="span" />
           </p>
         </div>
         <p
