@@ -6,7 +6,7 @@ export function initPublishExtension(params) {
     sortable: true,
     cssClass: 'ps-2 pe-4 action-menu-item',
     rank: 30,
-    enabled: (note) => !note.draftPage && note.canManage,
+    enabled: (note) => !note.draftPage && note.canManage && eXo.env.portal.spaceId,
     action: (vm) => {
       vm.$root.$emit('open-publish-drawer', {
         savedSettings: params.savedSettings,
