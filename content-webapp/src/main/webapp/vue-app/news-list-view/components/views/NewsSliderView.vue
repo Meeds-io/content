@@ -41,7 +41,7 @@
             :alt="item?.properties?.featuredImage?.altText || ''"
             class="articleImage object-fit-cover width-full full-height">
           <v-container class="slide-text-container d-flex text-center">
-            <div class="flex flex-column carouselNewsInfo">
+            <div class="flex d-flex flex-column carouselNewsInfo">
               <div
                 :class="$vuetify.rtl && 'l-0' || 'r-0'"
                 class="flex flex-row position-absolute">
