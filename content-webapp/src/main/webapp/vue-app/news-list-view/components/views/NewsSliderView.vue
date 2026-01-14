@@ -40,11 +40,11 @@
               : '/content/images/news.png'"
             :alt="item?.properties?.featuredImage?.altText || ''"
             class="articleImage object-fit-cover width-full full-height">
-          <v-container class="slide-text-container d-flex text-center">
-            <div class="flex d-flex flex-column carouselNewsInfo">
+          <v-container class="slide-text-container align-center full-width full-height d-flex text-center">
+            <div class="flex d-flex mx-10 flex-column carouselNewsInfo">
               <div
                 :class="$vuetify.rtl && 'l-0' || 'r-0'"
-                class="flex flex-row position-absolute">
+                class="flex flex-row t-0 position-absolute">
                 <v-btn
                   v-if="$root.canManageNewsList && hover"
                   :aria-label="$t('news.latest.openSettings')"
@@ -57,8 +57,7 @@
               <a
                 v-if="showArticleTitle"
                 :href="articleUrl(item)"
-                class="flex flex-row flex-grow-1 align-center justify-center headLinesTruncate"
-                :class="extraClass.concat($root.canManageNewsList ? 'mt-12' : '')">
+                class="flex flex-row flex-grow-1 align-center justify-center headLinesTruncate">
                 <span class="text-h4 font-weight-medium white--text text-truncate-2">
                   {{ item.title }}
                 </span>
@@ -109,9 +108,6 @@ export default {
   computed: {
     news(){
       return this.newsList && this.newsList.filter(news => !!news);
-    },
-    extraClass() {
-      return this.$vuetify.breakpoint.width > 550 ? (!this.$root.canManageNewsList && 'mt-7' || '') : '' ;
     },
     articleUrl() {
       return (item) => {
