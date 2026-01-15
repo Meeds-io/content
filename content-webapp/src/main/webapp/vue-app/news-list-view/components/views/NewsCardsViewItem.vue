@@ -21,9 +21,11 @@
 <template>
   <a
     class="card card-border-radius"
+    ref="newsCard"
     :href="articleUrl"
     target="_self"
     :class="{ 'keyboard-slide': slideActive }"
+    @keydown.esc="blurContentHover($event)"
     tabindex="0">
     <div class="imgContainer">
       <img
@@ -187,6 +189,10 @@ export default {
   methods: {
     openArticle() {
       window.open(this.articleUrl, '_self');
+    },
+    blurContentHover(event) {
+      event.target.blur();
+      this.$refs.newsCard.focus();
     }
   }
 };
