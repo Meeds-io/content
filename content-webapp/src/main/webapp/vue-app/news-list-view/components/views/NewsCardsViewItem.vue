@@ -38,8 +38,11 @@
       tabindex="0"
       role="link"
       :aria-label="$t('news.illustration.link.title', {0: item.title})"
+      @focus="isArticleLinkFocused=true"
+      @blur="isArticleLinkFocused=false"
       @keydown.enter.prevent="openArticle">
       <div
+        :class="isArticleLinkFocused ? 'border-color-black' : ''"
         class="upper-row">
         <div
           v-if="!isHiddenSpace && showArticleSpace"
@@ -144,6 +147,7 @@ export default {
       day: 'numeric',
     },
     slideActive: false,
+    isArticleLinkFocused: false,
   }),
   computed: {
     displayDate() {
