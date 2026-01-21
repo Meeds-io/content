@@ -34,7 +34,8 @@
         class="article-illustration-img">
     </div>
     <div
-      class="text-area"
+      :class="{ 'is-article-link-focused': isArticleLinkFocused }"
+      class="text-area articleLinkDetails"
       tabindex="0"
       role="link"
       :aria-label="$t('news.illustration.link.title', {0: item.title})"
