@@ -276,7 +276,7 @@ export default {
         this.translations.unshift(lang);
       }
       const articleId = !this.article.targetPageId ? this.article.id : this.article.targetPageId;
-      this.fillArticle(articleId, true,lang.value).then(() => {
+      this.fillArticle(articleId, true, lang.value).then(() => {
         this.updateUrl();
         this.draftSavingStatus = '';
         this.currentArticleInitDone = true;
@@ -613,10 +613,14 @@ export default {
       }
     },
     editorReady(editor) {
-      this.editor = editor;
-      this.setEditorData(this.article?.content);
-      this.currentArticleInitDone = true;
-      this.attachRemoveMentionClickHandler();
+      this.currentArticleInitDone = false;
+      try {
+        this.editor = editor;
+        this.setEditorData(this.article?.content);
+        this.attachRemoveMentionClickHandler();
+      } finally {
+        this.currentArticleInitDone = true;
+      }
     },
     initEditor() {
       this.$refs.editor.initCKEditor();
@@ -677,10 +681,10 @@ export default {
             this.article.content = message;
             localStorage.removeItem('exo-activity-composer-message');
           }
-          this.initDone = true;
         }
       }
       this.canPublishArticle = await this.$newsServices.canPublishNews(this.currentSpace.id);
+      this.initDone = true;
       this.loading = false;
     },
     async replaceSuggestedUsers(message, mentionedUsers) {
