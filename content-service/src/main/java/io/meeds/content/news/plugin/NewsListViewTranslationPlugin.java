@@ -28,6 +28,7 @@ import org.exoplatform.commons.api.settings.SettingService;
 import org.exoplatform.commons.api.settings.SettingValue;
 import org.exoplatform.commons.exception.ObjectNotFoundException;
 import org.exoplatform.container.ExoContainerContext;
+import org.exoplatform.portal.config.UserACL;
 import org.exoplatform.services.organization.OrganizationService;
 import org.exoplatform.services.security.Identity;
 import org.exoplatform.services.security.IdentityRegistry;
@@ -46,13 +47,6 @@ public class NewsListViewTranslationPlugin extends TranslationPlugin {
 
   public static final String        NEWS_LIST_VIEW_OBJECT_TYPE      = "newsListView";
   
-
-  @Setter
-  private IdentityRegistry    identityRegistry;
-
-  @Autowired
-  private OrganizationService organizationService;
-
   @Autowired
   private TranslationService  translationService;
 
@@ -62,9 +56,11 @@ public class NewsListViewTranslationPlugin extends TranslationPlugin {
   @Autowired
   private SettingService      settingService;
 
+  @Autowired
+  private UserACL            userAcl;
+
   @PostConstruct
   public void init() {
-    setIdentityRegistry(ExoContainerContext.getService(IdentityRegistry.class));
     translationService.addPlugin(this);
   }
 
@@ -90,8 +86,9 @@ public class NewsListViewTranslationPlugin extends TranslationPlugin {
                                                             NewsUtils.NEWS_LIST_VIEW_SCOPE,
                                                             objectId);
       String settingName = settingNameValue != null ? settingNameValue.getValue().toString() : null;
-      return getIdentity(username) != null
-          && (cmsService.hasEditPermission(getIdentity(username), "newsListViewPortlet", settingName));
+      Identity userAclIdentity = userAcl.getUserIdentity(username);
+      return userAclIdentity != null
+             && (cmsService.hasEditPermission(userAclIdentity, "newsListViewPortlet", settingName));
     } catch (Exception e) {
       return false;
     }
@@ -107,21 +104,4 @@ public class NewsListViewTranslationPlugin extends TranslationPlugin {
     return 0;
   }
 
-  private Identity getIdentity(String username) throws Exception {
-    if (StringUtils.isBlank(username)) {
-      return null;
-    }
-    Identity aclIdentity = identityRegistry.getIdentity(username);
-    if (aclIdentity == null) {
-      List<MembershipEntry> entries = organizationService.getMembershipHandler()
-                                                         .findMembershipsByUser(username)
-                                                         .stream()
-                                                         .map(membership -> new MembershipEntry(membership.getGroupId(),
-                                                                                                membership.getMembershipType()))
-                                                         .toList();
-      aclIdentity = new Identity(username, entries);
-      identityRegistry.register(aclIdentity);
-    }
-    return aclIdentity;
-  }
 }
