@@ -18,21 +18,14 @@
  */
 package io.meeds.content.news.plugin;
 
-import java.util.List;
-
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import org.exoplatform.commons.api.settings.SettingService;
 import org.exoplatform.commons.api.settings.SettingValue;
 import org.exoplatform.commons.exception.ObjectNotFoundException;
-import org.exoplatform.container.ExoContainerContext;
 import org.exoplatform.portal.config.UserACL;
-import org.exoplatform.services.organization.OrganizationService;
 import org.exoplatform.services.security.Identity;
-import org.exoplatform.services.security.IdentityRegistry;
-import org.exoplatform.services.security.MembershipEntry;
 
 import io.meeds.content.news.utils.NewsUtils;
 import io.meeds.social.cms.service.CMSService;
@@ -40,7 +33,6 @@ import io.meeds.social.translation.plugin.TranslationPlugin;
 import io.meeds.social.translation.service.TranslationService;
 
 import jakarta.annotation.PostConstruct;
-import lombok.Setter;
 
 @Component
 public class NewsListViewTranslationPlugin extends TranslationPlugin {
