@@ -18,19 +18,13 @@
  */
 package io.meeds.content.link.plugin;
 
-import java.util.List;
-
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import org.exoplatform.commons.exception.ObjectNotFoundException;
+import org.exoplatform.portal.config.UserACL;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
-import org.exoplatform.services.organization.OrganizationService;
-import org.exoplatform.services.security.Identity;
-import org.exoplatform.services.security.IdentityRegistry;
-import org.exoplatform.services.security.MembershipEntry;
 
 import io.meeds.content.link.model.LinkSetting;
 import io.meeds.content.link.service.LinkService;
@@ -42,21 +36,18 @@ import jakarta.annotation.PostConstruct;
 @Component
 public class LinkSettingTranslationPlugin extends TranslationPlugin {
 
-  public static final String    LINK_SETTINGS_OBJECT_TYPE = "link-settings";
+  public static final String   LINK_SETTINGS_OBJECT_TYPE = "link-settings";
 
-  private static final Log      LOG                       = ExoLogger.getLogger(LinkSettingTranslationPlugin.class);
-
-  @Autowired
-  protected LinkService         linkService;
+  private static final Log     LOG                       = ExoLogger.getLogger(LinkSettingTranslationPlugin.class);
 
   @Autowired
-  protected IdentityRegistry    identityRegistry;
+  protected LinkService        linkService;
 
   @Autowired
-  protected OrganizationService organizationService;
+  protected TranslationService translationService;
 
   @Autowired
-  protected TranslationService  translationService;
+  protected UserACL            userAcl;
 
   @PostConstruct
   public void init() {
@@ -72,7 +63,7 @@ public class LinkSettingTranslationPlugin extends TranslationPlugin {
   public boolean hasAccessPermission(String linkSettingId, String username) throws ObjectNotFoundException {
     try {
       LinkSetting linkSetting = linkService.getLinkSettingById(Long.parseLong(linkSettingId));
-      return linkSetting != null && linkService.hasAccessPermission(linkSetting.getName(), getIdentity(username));
+      return linkSetting != null && linkService.hasAccessPermission(linkSetting.getName(), userAcl.getUserIdentity(username));
     } catch (Exception e) {
       LOG.warn("Error checking access permission on link setting with id {} for user {}", linkSettingId, username, e);
       return false;
@@ -83,7 +74,7 @@ public class LinkSettingTranslationPlugin extends TranslationPlugin {
   public boolean hasEditPermission(String linkSettingId, String username) throws ObjectNotFoundException {
     try {
       LinkSetting linkSetting = linkService.getLinkSettingById(Long.parseLong(linkSettingId));
-      return linkSetting != null && linkService.hasEditPermission(linkSetting.getName(), getIdentity(username));
+      return linkSetting != null && linkService.hasEditPermission(linkSetting.getName(), userAcl.getUserIdentity(username));
     } catch (Exception e) {
       LOG.warn("Error checking edit permission on link setting with id {} for user {}", linkSettingId, username, e);
       return false;
@@ -100,21 +91,4 @@ public class LinkSettingTranslationPlugin extends TranslationPlugin {
     return 0;
   }
 
-  private Identity getIdentity(String username) throws Exception {
-    if (StringUtils.isBlank(username)) {
-      return null;
-    }
-    Identity aclIdentity = identityRegistry.getIdentity(username);
-    if (aclIdentity == null) {
-      List<MembershipEntry> entries = organizationService.getMembershipHandler()
-                                                         .findMembershipsByUser(username)
-                                                         .stream()
-                                                         .map(membership -> new MembershipEntry(membership.getGroupId(),
-                                                                                                membership.getMembershipType()))
-                                                         .toList();
-      aclIdentity = new Identity(username, entries);
-      identityRegistry.register(aclIdentity);
-    }
-    return aclIdentity;
-  }
 }
