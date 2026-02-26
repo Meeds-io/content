@@ -34,6 +34,7 @@ import NewsStoriesView from './components/views/NewsStoriesView.vue';
 import NewsStoriesViewItem from './components/views/NewsStoriesViewItem.vue';
 import NewsCardsView from './components/views/NewsCardsView.vue';
 import NewsCardsViewItem from './components/views/NewsCardsViewItem.vue';
+import NewsTargetSuggester from './components/settings/NewsTargetSuggester.vue';
 
 
 const components = {
@@ -54,6 +55,7 @@ const components = {
   'news-stories-view-item': NewsStoriesViewItem,
   'news-cards-view': NewsCardsView,
   'news-cards-view-item': NewsCardsViewItem,
+  'news-target-suggester': NewsTargetSuggester
 };
 
 for (const key in components) {

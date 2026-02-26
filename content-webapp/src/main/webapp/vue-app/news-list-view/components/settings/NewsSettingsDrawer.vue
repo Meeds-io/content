@@ -88,26 +88,7 @@
           </div>
           <div class="d-flex flex-row infosLabel font-italic">{{ $t('news.list.settings.newsTargets.description') }}</div>
           <div class="d-flex flex-row">
-            <v-select
-              id="newsTargetRefs"
-              ref="newsTargetRefs"
-              v-model="newsTarget"
-              :items="newsTargets"
-              :menu-props="{ bottom: true, offsetY: true}"
-              :disabled="!newsTargets.length"
-              :background-color="backgroundColor"
-              item-text="label"
-              item-value="name"
-              dense
-              outlined
-              class="pa-0"
-              @blur="blurSelection">
-              <template #selection="{ item }">
-                <span :title="item.toolTipInfo">
-                  {{ item.label }}
-                </span>
-              </template>
-            </v-select>
+            <news-target-suggester v-model="newsTarget" :allowed-targets="newsTargets" />
           </div>
           <div v-if="$root.canManageNewsTarget" class="d-flex flex-row clickable text-decoration-underline">
             <a @click="createNewTarget"> {{ $t('news.list.settings.drawer.createNewTarget') }} </a>
