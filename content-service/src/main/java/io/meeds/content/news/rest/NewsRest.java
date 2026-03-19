@@ -225,6 +225,7 @@ public class NewsRest {
       news.setUpdaterFullName(updatedNews.getUpdaterFullName());
       news.setActivityPosted(updatedNews.isActivityPosted());
       news.setTargets(updatedNews.getTargets());
+      news.setCategories(updatedNews.getCategories());
       news.setAudience(updatedNews.getAudience());
       news.setSchedulePostDate(updatedNews.getSchedulePostDate());
       news.setScheduleUnpublishDate(updatedNews.getScheduleUnpublishDate());

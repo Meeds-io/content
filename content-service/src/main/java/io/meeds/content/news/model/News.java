@@ -50,9 +50,9 @@ public class News {
   private String                          originalBody;
 
   private String                          author;
-  
+
   private String                          owner;
-  
+
   private String                          publisher;
 
   private String                          authorDisplayName;
@@ -135,6 +135,8 @@ public class News {
 
   private List<ArticleTarget>             targets;
 
+  private List<Long>                      categories;
+
   private boolean                         favorite;
 
   private boolean                         deleted;
@@ -150,11 +152,11 @@ public class News {
   private boolean                         fromDraft;
 
   private boolean                         fromExternalPage;
-  
+
   private boolean                         canRefer;
-  
+
   private boolean                         isReferred;
-  
+
   private long                            deReferPageId;
 
 }
