@@ -31,6 +31,7 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -40,10 +41,12 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Matcher;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.LocaleUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,6 +59,7 @@ import org.exoplatform.commons.notification.impl.NotificationContextImpl;
 import org.exoplatform.commons.search.index.IndexingService;
 import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.commons.utils.HTMLSanitizer;
+import org.exoplatform.container.PortalContainer;
 import org.exoplatform.portal.application.localization.LocalizationFilter;
 import org.exoplatform.portal.config.UserACL;
 import org.exoplatform.services.log.ExoLogger;
@@ -113,6 +117,9 @@ import io.meeds.content.news.utils.EntityBuilder;
 import io.meeds.content.news.utils.NewsUtils;
 import io.meeds.content.news.utils.NewsUtils.NewsObjectType;
 import io.meeds.notes.model.NotePageProperties;
+import io.meeds.social.category.model.CategoryObject;
+import io.meeds.social.category.service.CategoryLinkService;
+import io.meeds.social.category.service.CategoryService;
 import lombok.SneakyThrows;
 
 @Service
@@ -166,6 +173,9 @@ public class NewsService {
 
   /** The Constant NEWS_ACTIVITY_POSTED. */
   public static final String       NEWS_ACTIVITY_POSTED                   = "activityPosted";
+  
+  /** The Constant NEWS_ACTIVITY_CATEGORIES. */
+  public static final String       NEWS_ACTIVITY_CATEGORIES               = "activityCategories";
 
   /** The Constant NEWS_METADATA_PAGE_OBJECT_TYPE. */
   public static final String       NEWS_METADATA_PAGE_OBJECT_TYPE         = "newsPage";
@@ -198,7 +208,8 @@ public class NewsService {
                                                      new MetadataKey(NEWS_METADATA_TYPE.getName(), NEWS_METADATA_NAME, 0);
 
   private static final Log         LOG                                    = ExoLogger.getLogger(NewsService.class);
-
+  
+  
   @Autowired
   private SpaceService             spaceService;
 
@@ -228,7 +239,7 @@ public class NewsService {
   
   @Autowired
   private UserACL                  userAcl;
-
+  
   /**
    * Create and publish a News containing the data. If the given News has an id
    * and that a draft already exists with this id, the draft is updated and
@@ -601,6 +612,7 @@ public class NewsService {
         RealtimeListAccess<ExoSocialActivity> listAccess = activityManager.getCommentsWithListAccess(activity, true);
         news.setCommentsCount(listAccess.getSize());
         news.setLikesCount(activity.getLikeIdentityIds() == null ? 0 : activity.getLikeIdentityIds().length);
+        news.setCategories(activity.getCategoryIds());
       }
     }
     return news;
@@ -1506,6 +1518,10 @@ public class NewsService {
     }
     newsPageProperties.put(EXTERNAL_PAGE, String.valueOf(externalPage));
     newsPageProperties.put(NEWS_ACTIVITY_POSTED, String.valueOf(article.isActivityPosted()));
+    if (article.getSchedulePostDate() != null && article.getCategories() != null) {
+      String categories = article.getCategories().stream().map(String::valueOf).collect(Collectors.joining(";"));
+      newsPageProperties.put(NEWS_ACTIVITY_CATEGORIES, categories);
+    }
     newsPageProperties.put(PUBLISHED, String.valueOf(article.isPublished()));
     newsPageProperties.put(NEWS_DELETED, String.valueOf(articlePage.isDeleted()));
     newsPageProperties.put(PUBLISHER, creatorIdentity.getProfile().getFullName());
@@ -1678,6 +1694,12 @@ public class NewsService {
         article.setActivityPosted(Boolean.parseBoolean(properties.get(NEWS_ACTIVITY_POSTED)));
       } else {
         article.setActivityPosted(false);
+      }
+      if (properties.containsKey(NEWS_ACTIVITY_CATEGORIES)) {
+        List<Long> categories = Arrays.stream(properties.get(NEWS_ACTIVITY_CATEGORIES).split(";"))
+                                      .map(Long::valueOf)
+                                      .collect(Collectors.toList());
+        article.setCategories(categories);
       }
     }
   }
@@ -2033,6 +2055,7 @@ public class NewsService {
       activity.setMetadataObjectId(news.getId());
       activity.setMetadataObjectType(NewsUtils.NEWS_METADATA_OBJECT_TYPE);
       activityManager.updateActivity(activity, true);
+      linkActivityCategories(activity, news.getCategories());
     }
   }
 
@@ -2098,6 +2121,9 @@ public class NewsService {
           } else {
             properties.put(NEWS_ACTIVITIES, newsActivity);
           }
+          if (properties.containsKey(NEWS_ACTIVITY_CATEGORIES)) {
+            properties.remove(NEWS_ACTIVITY_CATEGORIES);
+          }
           metadataItem.setProperties(properties);
           String updaterId = identityManager.getOrCreateUserIdentity(news.getAuthor()).getId();
           Date updateDate = Calendar.getInstance().getTime();
@@ -2129,8 +2155,8 @@ public class NewsService {
     activity.setTemplateParams(templateParams);
     activity.setMetadataObjectId(news.getId());
     activity.setMetadataObjectType(NewsUtils.NEWS_METADATA_OBJECT_TYPE);
-
     activityManager.saveActivityNoReturn(spaceIdentity, activity);
+    linkActivityCategories(activity, news.getCategories());
     updateNewsActivities(activity.getId(), news);
   }
 
@@ -2178,6 +2204,10 @@ public class NewsService {
         }
         referOrDeReferArticlePage(news, existingPage, newsPageProperties);
         newsPageProperties.put(NEWS_ACTIVITY_POSTED, String.valueOf(news.isActivityPosted()));
+        if (newsUpdateType.equalsIgnoreCase(NewsUtils.NewsUpdateType.SCHEDULE.name()) && news.getCategories() != null) {
+          String categories = news.getCategories().stream().map(String::valueOf).collect(Collectors.joining(";"));
+          newsPageProperties.put(NEWS_ACTIVITY_CATEGORIES, categories);
+        }
         if (newsUpdateType.equalsIgnoreCase(POSTING_AND_PUBLISHING.name())) {
           org.exoplatform.social.core.identity.model.Identity publisherIdentity =
                                                                                 identityManager.getOrCreateUserIdentity(updater.getUserId());
@@ -2548,5 +2578,26 @@ public class NewsService {
       NewsUtils.broadcastEvent("note.draft.for.new.page.created", this, eventData);
     }
   }
-
+  
+  private void linkActivityCategories(ExoSocialActivity activity, List<Long> categories) {
+    if (activity.getSpaceId() == null || (activity.getCategoryIds() == null && categories == null)) {
+      return;
+    }
+    CategoryObject activityCategoryObject =
+                                          new CategoryObject("activity", activity.getId(), Long.parseLong(activity.getSpaceId()));
+    Set<Long> currentCategories = activity.getCategoryIds() != null ? new HashSet<>(activity.getCategoryIds())
+                                                                    : Collections.emptySet();
+    Set<Long> newCategories = categories != null ? new HashSet<>(categories) : Collections.emptySet();
+    CategoryLinkService categoryLinkService = CommonsUtils.getService(CategoryLinkService.class);
+    for (Long categoryId : currentCategories) {
+      if (!newCategories.contains(categoryId)) {
+        categoryLinkService.unlink(categoryId, activityCategoryObject);
+      }
+    }
+    for (Long categoryId : newCategories) {
+      if (!currentCategories.contains(categoryId)) {
+        categoryLinkService.link(categoryId, activityCategoryObject);
+      }
+    }
+  }
 }

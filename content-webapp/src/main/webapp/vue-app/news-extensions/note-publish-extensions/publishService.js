@@ -28,6 +28,7 @@ export async function getSavedNotePublicationSettings(id, lang) {
     }
     return {
       activityPosted: article.activityPosted,
+      categories: article.categories,
       published: article.published,
       targets: article.targets,
       audience: article.audience,
@@ -95,6 +96,7 @@ function noteToArticle(note, spaceId) {
     author: note.author,
     published: note.published,
     targets: note.targets,
+    categories: note.categories,
     spaceId: spaceId,
     publicationState: 'posted',
     schedulePostDate: note.schedulePostDate,
