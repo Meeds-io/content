@@ -29,13 +29,14 @@
           <v-spacer />
           <div
             class="d-flex flex-row justify-end my-auto flex-nowrap">
-            <div :class="searchInputDisplayed ? '' : 'newsAppHideSearchInput'">
+            <div>
               <div class="inputNewsSearchWrapper">
                 <v-scale-transition>
                   <v-text-field
                     v-model="searchText"
                     :placeholder="$t('news.app.searchPlaceholder')"
                     prepend-inner-icon="fa-filter"
+                    :disabled="disableSearchText"
                     class="pa-0 my-auto" />
                 </v-scale-transition>
               </div>
@@ -139,7 +140,6 @@ export default {
       searchText: '',
       searchNews: '',
       searchDelay: 300,
-      searchInputDisplayed: false,
       newsFilter: '',
       spacesFilter: [],
       newsStatusLabel: this.$t('news.app.filter.all'),
@@ -185,6 +185,9 @@ export default {
     confirmDeleteNewsDialogTitle() {
       return this.isDraftsFilter ? this.$t('news.title.confirmDeleteDraftNews') : this.$t('news.title.confirmDeleteNews');
     },
+    disableSearchText() {
+      return this.isDraftsFilter;
+    }
   },
   watch: {
     searchText() {
@@ -372,7 +375,7 @@ export default {
     },
     fetchNews(append = true) {
       this.loadingNews = true;
-      const searchTerm = this.searchText.trim().toLowerCase();
+      const searchTerm = !this.isDraftsFilter && this.searchText.trim().toLowerCase() || '';
       const offset = append ? this.newsList.length : 0;
       return this.$newsServices.getNews(this.newsFilter, this.spacesFilter, searchTerm, offset, this.newsPerPage + 1, false).then(data => {
         if (data.news && data.news.length) {
