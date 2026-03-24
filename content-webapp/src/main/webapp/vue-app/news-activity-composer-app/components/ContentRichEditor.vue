@@ -397,6 +397,7 @@ export default {
         published: this.originalArticle.published,
         referred: this.article.referred,
         activityPosted: this.originalArticle.activityPosted,
+        categories: this.originalArticle.categories,
         schedulePostDate: this.article.schedulePostDate,
         publicationState: this.article.publicationState,
         scheduleUnpublishDate: this.article.scheduleUnpublishDate,
@@ -506,6 +507,7 @@ export default {
         schedulePostDate: null,
         timeZoneId: null,
         activityPosted: this.article.activityPosted,
+        categories: this.article.categories,
         audience: this.article.audience,
         draftPage: this.article.publicationState === 'draft',
         scheduleUnpublishDate: this.article.scheduleUnpublishDate,
@@ -595,6 +597,7 @@ export default {
       this.article.published = publicationSettings?.publish;
       this.article.targets = publicationSettings?.selectedTargets;
       this.article.audience = publicationSettings?.selectedAudience;
+      this.article.categories = publicationSettings?.selectedCategoryIds;
       if (this.editMode) {
         this.updateAndPostArticle();
         return;
@@ -768,6 +771,7 @@ export default {
             draftUpdaterUserName: article.draftUpdaterUserName,
             draftUpdateDate: article.draftUpdateDate,
             activityPosted: article.activityPosted,
+            categories: article.categories,
             audience: article.audience,
             url: article.url,
             properties: article.properties,

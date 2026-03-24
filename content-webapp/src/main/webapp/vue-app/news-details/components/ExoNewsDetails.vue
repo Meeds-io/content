@@ -340,6 +340,7 @@ export default {
       this.news.activityPosted = publicationSettings?.post;
       this.news.published = publicationSettings?.publish;
       this.news.targets = publicationSettings?.selectedTargets;
+      this.news.categories = publicationSettings?.selectedCategoryIds;
       this.news.audience = publicationSettings?.selectedAudience;
       const scheduleSettings = publicationSettings?.scheduleSettings;
       const editScheduleAction = scheduleSettings?.editScheduleAction;
