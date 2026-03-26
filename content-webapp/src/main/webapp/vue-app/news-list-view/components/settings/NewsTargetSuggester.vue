@@ -20,6 +20,7 @@
 -->
 <template>
   <v-autocomplete
+    v-if="!selectedTarget"
     ref="selectAutoComplete"
     v-model="value"
     :items="newsTargetItems"
@@ -35,20 +36,13 @@
     chips
     dense
     flat
-    required
     @update:search-input="searchTerm = $event">
     <template #no-data>
       <v-list-item class="pa-0">
-        <v-list-item-title
-          class="px-2">
+        <v-list-item-title class="px-2">
           {{ $t('newsTargets.settings.noTargets') }}
         </v-list-item-title>
       </v-list-item>
-    </template>
-    <template #selection="{ item }">
-      <span :title="item.toolTipInfo">
-        {{ item.label }}
-      </span>
     </template>
     <template #item="{ item }">
       <v-list-item-title class="text-truncate">
@@ -56,13 +50,29 @@
       </v-list-item-title>
     </template>
   </v-autocomplete>
+  <div
+    v-else
+    class="d-flex flex-column">
+    <span :title="selectedTarget?.toolTipInfo" class="d-flex align-center justify-space-between pe-2 py-1 text-body">
+      {{ selectedTarget?.label }}
+      <v-icon
+        small
+        class="ml-2 red--text"
+        @click="clearSelection">
+        fa-trash
+      </v-icon>
+    </span>
+    <span :title="selectedTarget?.toolTipInfo" class="text-subtitle">
+      {{ selectedTarget?.description }}
+    </span>
+  </div>
 </template>
 
 <script>
 export default {
   props: {
     value: {
-      type: Object,
+      type: String,
       default: null
     },
     allowedTargets: {
@@ -79,11 +89,22 @@ export default {
     newsTargetItems() {
       return this.allowedTargets;
     },
+    selectedTarget() {
+      if (!this.value) {
+        return null;
+      }
+      return this.newsTargetItems.find(item => item.name === this.value) || null;
+    }
   },
   watch: {
     value() {
       this.$emit('input', this.value);
-    },
+    }
   },
+  methods: {
+    clearSelection() {
+      this.$emit('input', null);
+    }
+  }
 };
 </script>
