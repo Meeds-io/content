@@ -27,7 +27,7 @@
     :placeholder="$t('news.newsTarget.selector.placeholder')"
     append-icon=""
     menu-props="closeOnClick, closeOnContentClick, maxHeight = 100"
-    class="identitySuggester identitySuggesterInputStyle"
+    class="identitySuggester identitySuggesterInputStyle mt-0"
     content-class="identitySuggesterContent"
     width="100%"
     max-width="100%"
@@ -62,7 +62,7 @@
         fa-trash
       </v-icon>
     </span>
-    <span :title="selectedTarget?.toolTipInfo" class="text-subtitle">
+    <span :title="selectedTarget?.toolTipInfo" class="text-subtitle text-truncate">
       {{ selectedTarget?.description }}
     </span>
   </div>
