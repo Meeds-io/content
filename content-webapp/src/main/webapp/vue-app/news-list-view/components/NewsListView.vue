@@ -215,6 +215,9 @@ export default {
     },
     canManageNewsTarget() {
       return this.$root.canManageNewsTarget || false;
+    },
+    articlesSourceOption() {
+      return this.$root.articlesSourceOption;
     }
   },
   watch: {
@@ -236,9 +239,7 @@ export default {
     this.showHeader = this.$root.showHeader;
     this.newsTarget = this.$root.newsTarget;
     this.limit = this.$root.limit;
-    if (this.newsTarget) {
-      this.retrieveNewsList().finally(() => this.$root.$applicationLoaded());
-    }
+    this.retrieveNewsList().finally(() => this.$root.$applicationLoaded());
     document.addEventListener(`component-${this.extensionApp}-${this.extensionType}-updated`, this.refreshViewExtensions);
     this.refreshViewExtensions();
   },
@@ -246,14 +247,20 @@ export default {
     document.removeEventListener(`component-${this.extensionApp}-${this.extensionType}-updated`, this.refreshViewExtensions);
   },
   methods: {
-    retrieveNewsList() {
+    async retrieveNewsList() {
       this.loading = true;
-      return this.$newsListService.getNewsList(this.newsTarget, this.offset, this.limit, true)
-        .then(newsList => {
-          this.newsList = newsList.news.filter(news => !!news) || [];
-          this.hasMore = this.newsList.length > this.limit;
-        })
-        .finally(() => this.loading = false);
+      let newsList = [];
+      switch (this.articlesSourceOption) {
+      case 'posted':
+        newsList = await this.$newsListService.getPostedNews(this.offset, this.limit, true);
+        break;
+      case 'target':
+        newsList = await this.$newsListService.getNewsListByTarget(this.newsTarget, this.offset, this.limit, true);
+        break;
+      }
+      this.newsList = newsList?.news?.filter(news => !!news) || [];
+      this.hasMore = this.newsList.length > this.limit;
+      this.loading = false;
     },
     refreshViewExtensions() {
       const extensions = extensionRegistry.loadComponents(this.extensionApp)

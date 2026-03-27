@@ -19,17 +19,45 @@
  */
 import {newsConstants} from '../../services/newsConstants.js';
 
-export function getNewsList(targetName, offset, limit, returnSize) {
+export function getNewsListByTarget(targetName, offset, limit, returnSize) {
   return fetch(`${newsConstants.CONTENT_API}/contents/byTarget/${targetName}?offset=${offset}&limit=${limit}&returnSize=${returnSize}`, {
     headers: {
       'Content-Type': 'application/json'
     },
     method: 'GET'
   }).then((resp) => {
-    if (resp && resp.ok) {
+    if (resp?.ok) {
       return resp.json();
     } else {
       throw new Error('Error getting news list by target name');
+    }
+  });
+}
+
+export function getPostedNews(offset, limit, returnSize) {
+  let url = `${newsConstants.CONTENT_API}/contents?author=${newsConstants.userName}&filter=all`;
+  if (newsConstants.SPACE_ID) {
+    url += `&spaces=${newsConstants.SPACE_ID}`;
+  }
+  if (!Number.isNaN(offset)) {
+    url += `&offset=${offset}`;
+  }
+  if (!Number.isNaN(limit)) {
+    url += `&limit=${limit}`;
+  }
+  if (returnSize) {
+    url += `&returnSize=${returnSize}`;
+  }
+  return fetch(url, {
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    method: 'GET'
+  }).then((resp) => {
+    if (resp?.ok) {
+      return resp.json();
+    } else {
+      throw new Error('Error getting news list');
     }
   });
 }
