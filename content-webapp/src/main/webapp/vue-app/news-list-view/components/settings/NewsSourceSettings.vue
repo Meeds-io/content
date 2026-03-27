@@ -19,37 +19,38 @@
 
 -->
 <template>
-  <v-radio-group
-    v-model="choice"
-    mandatory>
-    <template #label>
-      <span class="text-header">
-        {{ $t('news.list.settings.newsTarget') }}
-      </span>
-    </template>
-    <v-radio
-      value="posted"
-      class="mt-0 mb-2">
-      <template #label>
-        <div class="d-flex flex-column">
-          <div class="text-body">
-            {{ $t('news.list.settings.source.posted') }}
+  <div class="flex-column align-start">
+    <label for="name" class="text-header me-1 my-auto mt-4">
+      {{ $t('news.list.settings.newsTarget') }}
+    </label>
+    <v-radio-group
+      class="ma-0 pa-0"
+      v-model="choice"
+      mandatory>
+      <v-radio
+        value="posted"
+        class="mb-2 ms-n1">
+        <template #label>
+          <div class="d-flex flex-column">
+            <div class="text-body">
+              {{ $t('news.list.settings.source.posted') }}
+            </div>
           </div>
-        </div>
-      </template>
-    </v-radio>
-    <v-radio
-      value="target"
-      class="mt-0">
-      <template #label>
-        <div class="d-flex flex-column">
-          <div class="text-body">
-            {{ $t('news.list.settings.source.target') }}
+        </template>
+      </v-radio>
+      <v-radio
+        value="target"
+        class="mt-0 ms-n1">
+        <template #label>
+          <div class="d-flex flex-column">
+            <div class="text-body">
+              {{ $t('news.list.settings.source.target') }}
+            </div>
           </div>
-        </div>
-      </template>
-    </v-radio>
-    <div v-if="isTargetChoice" class="d-flex flex-column mt-0 px-2">
+        </template>
+      </v-radio>
+    </v-radio-group>
+    <div v-if="isTargetChoice" class="d-flex flex-column mt-0">
       <news-target-suggester v-model="selectedNewsTarget" :allowed-targets="newsTargets" />
       <span v-if="$root.canManageNewsTarget" class="d-flex flex-row clickable text-decoration-underline">
         <a @click="createNewTarget"> {{ $t('news.list.settings.drawer.createNewTarget') }} </a>
@@ -59,7 +60,7 @@
         <span class="mx-2"> {{ $t('news.composer.stepper.selectedTarget.noTargetAllowed') }}</span>
       </div>
     </div>
-  </v-radio-group>
+  </div>
 </template>
 <script>
 export default {
