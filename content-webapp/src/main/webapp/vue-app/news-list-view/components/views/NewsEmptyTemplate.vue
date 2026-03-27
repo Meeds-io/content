@@ -62,7 +62,7 @@
 export default {
   computed: {
     isNewsSettingDefined() {
-      return this.$root.viewTemplate && this.$root.newsTarget;
+      return this.$root.viewTemplate;
     }
   },
   methods: {
