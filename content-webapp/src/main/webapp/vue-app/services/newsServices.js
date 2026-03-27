@@ -80,10 +80,10 @@ export function getNews(filter, spaces, searchText, offset, limit, returnSize) {
   if (spaces) {
     url += `&spaces=${spaces}`;
   }
-  if (!isNaN(offset)) {
+  if (!Number.isNaN(offset)) {
     url += `&offset=${offset}`;
   }
-  if (!isNaN(limit)) {
+  if (!Number.isNaN(limit)) {
     url += `&limit=${limit}`;
   }
   if (returnSize) {

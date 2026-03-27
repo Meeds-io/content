@@ -42,28 +42,11 @@
         <div v-else class="flex flex-column">{{ $t('news.list.settings.title') }}</div>
       </div>
     </template>
-    <template slot="titleIcons">
-      <v-tooltip
-        v-model="showTooltip"
-        max-width="350px"
-        color="grey darken-4"
-        bottom>
-        <template #activator="{ on, attrs }">
-          <v-btn
-            icon
-            v-bind="attrs"
-            v-on="on">
-            <v-icon class="iconInfo">mdi-information</v-icon>
-          </v-btn>
-        </template>
-        <span>{{ $t('news.list.settings.information') }}</span>
-      </v-tooltip>
-    </template>
     <template slot="content">
       <form ref="form1" class="pa-2 ms-2">
         <div v-if="!showAdvancedSettings" class="d-flex flex-column flex-grow-1">
           <div d-flex flex-row>
-            <label for="name" class="listViewLabel text-subtitle-1 me-1 my-auto mt-4">
+            <label for="name" class="text-header me-1 my-auto mt-4">
               {{ $t('news.list.settings.header') }}:
             </label>
           </div>
@@ -81,28 +64,12 @@
               autofocus
               required />
           </div>
+          <news-source-settings :news-targets="newsTargets" @update-source-option="updateArticlesSourceOption" />
           <div class="d-flex flex-row">
-            <label for="newsTarget" class="listViewLabel text-subtitle-1 mt-6">
-              {{ $t('news.list.settings.newsTarget') }}:
+            <label for="viewTemplate" class="text-header mt-2">
+              {{ $t('news.list.settings.blockDisplay') }}:
             </label>
           </div>
-          <div class="d-flex flex-row infosLabel font-italic">{{ $t('news.list.settings.newsTargets.description') }}</div>
-          <div class="d-flex flex-row">
-            <news-target-suggester v-model="newsTarget" :allowed-targets="newsTargets" />
-          </div>
-          <div v-if="$root.canManageNewsTarget" class="d-flex flex-row clickable text-decoration-underline">
-            <a @click="createNewTarget"> {{ $t('news.list.settings.drawer.createNewTarget') }} </a>
-          </div>
-          <div v-if="newsTargets.length === 0" class="d-flex flex-row grey--text">
-            <i class="fas fa-exclamation-triangle mt-3"></i>
-            <span class="mx-2"> {{ $t('news.composer.stepper.selectedTarget.noTargetAllowed') }}</span>
-          </div>
-          <div class="d-flex flex-row">
-            <label for="viewTemplate" class="listViewLabel text-subtitle-1 mt-2">
-              {{ $t('news.list.settings.viewTemplate') }}:
-            </label>
-          </div>
-          <div class="d-flex flex-row infosLabel font-italic">{{ $t('news.list.settings.viewTemplate.description') }}</div>
           <div class="d-flex flex-row">
             <v-select
               id="viewTemplateRefs"
@@ -194,6 +161,7 @@ export default {
     saveSettingsURL: '',
     translationObjectType: 'newsListView',
     headerTitleFieldName: 'headerNameInput',
+    articlesSourceOption: null
   }),
   props: {
     language: {
@@ -225,8 +193,11 @@ export default {
     displayedViewTemplates() {
       return this.viewTemplates.filter(e=> !e.name.includes('EmptyTemplate'));
     },
+    isTargetSourceOption() {
+      return this.articlesSourceOption === 'target';
+    },
     disabled() {
-      return this.showSeeAll && !this.isValidSeeAllUrl;
+      return (this.showSeeAll && !this.isValidSeeAllUrl) || (this.isTargetSourceOption && !this.newsTarget);
     },
     previewTemplate() {
       if ( this.viewTemplate === 'NewsLatest') {
@@ -305,6 +276,7 @@ export default {
       this.viewTemplate = this.$root.viewTemplate;
       this.viewExtensions = this.$root.viewExtensions;
       this.newsTarget = this.$root.newsTarget;
+      this.articlesSourceOption = this.$root.articlesSourceOption;
       this.newsHeader = ((Object.keys(this.savedHeaderTranslations || {})?.length && this.savedHeaderTranslations
                                                        || {[this.$root.defaultLanguage]: this.$root.headerTitle}))
                                                        || this.$root.headerTitle;
@@ -320,20 +292,17 @@ export default {
       this.showArticleReactions = this.viewTemplate === 'NewsAlert' ? false : this.$root.showArticleReactions;
       this.seeAllUrl = this.$root.seeAllUrl || '';
     },
-    init() {
+    async init() {
       if (!this.initialized) {
         this.initializing = true;
-        this.$newsTargetingService.getAllowedTargets()
-          .then(newsTargets => {
-            this.newsTargets = newsTargets.map(newsTarget => ({
-              name: newsTarget.name,
-              label: newsTarget.properties && newsTarget.properties.label && newsTarget.properties.label.length > 35 ? newsTarget.properties.label.substring(0, 35).concat('...'): newsTarget.properties.label,
-              toolTipInfo: newsTarget.properties && newsTarget.properties.label,
-              description: newsTarget.properties && newsTarget.properties.description
-            }));
-            this.initialized = true;
-          })
-          .finally(() => this.initializing = false);
+        const newsTargets = await this.$newsTargetingService.getAllowedTargets();
+        this.newsTargets = newsTargets.map(newsTarget => ({
+          name: newsTarget.name,
+          label: newsTarget.properties && newsTarget.properties.label && newsTarget.properties.label.length > 35 ? newsTarget.properties.label.substring(0, 35).concat('...'): newsTarget.properties.label,
+          toolTipInfo: newsTarget.properties && newsTarget.properties.label,
+          description: newsTarget.properties && newsTarget.properties.description
+        }));
+        this.initializing = false;
       }
     },
     save() {
@@ -342,6 +311,7 @@ export default {
       const settings = {
         viewTemplate: this.viewTemplate,
         newsTarget: this.newsTarget,
+        articlesSourceOption: this.articlesSourceOption,
         showHeader: this.showHeader,
         showSeeAll: this.showSeeAll,
         showArticleTitle: this.showArticleTitle,
@@ -359,6 +329,7 @@ export default {
           this.saveHeaderTranslations();
           this.$root.viewTemplate = this.viewTemplate;
           this.$root.newsTarget = this.newsTarget;
+          this.$root.articlesSourceOption = this.articlesSourceOption;
           this.$root.headerTranslations = this.newsHeader;
           this.$root.headerTitle =  this.newsHeader?.[this.language]
               || this.newsHeader?.[this.$root.defaultLanguage];
@@ -480,11 +451,12 @@ export default {
     switchSettingsDrawer() {
       this.showAdvancedSettings = !this.showAdvancedSettings;
     },
-    createNewTarget() {
-      this.$root.$emit('open-news-publish-targets-management-drawer');
-    },
     setSeeAllUrl(newUrl) {
       this.seeAllUrl = newUrl;
+    },
+    updateArticlesSourceOption(options) {
+      this.articlesSourceOption = options?.articlesSourceOption;
+      this.newsTarget = options?.newsTarget;
     }
   },
 };
