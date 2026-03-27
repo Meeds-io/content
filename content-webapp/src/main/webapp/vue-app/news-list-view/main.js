@@ -62,9 +62,9 @@ const url = `/content/i18n/locale.portlet.news.News?lang=${lang}`;
 export function init(params) {
   const applicationId = params.applicationId;
   const appId = params.appId;
-  const viewTemplate = params.viewTemplate;
+  const viewTemplate = params.viewTemplate || 'NewsCards';
   const saveSettingsURL = params.saveSettingsURL;
-  const newsTarget = params.newsTarget;
+  const newsTarget = params.newsTarget === 'null' ? null : params.newsTarget;
   const limit = params.limit === '' ? '4' : params.limit;
   const showHeader = viewTemplate === 'NewsSlider' ? false: params.showHeader === 'true';
   const showSeeAll = params.showSeeAll === 'true' && !!params.seeAllUrl?.length;
@@ -78,6 +78,10 @@ export function init(params) {
   const seeAllUrl = params.seeAllUrl;
   const canEditNewsList = params.canEdit;
   const canManageNewsTarget = params.canManageNewsPublishTargets;
+  let articlesSourceOption = params.articlesSourceOption || 'posted';
+  if (newsTarget && articlesSourceOption !== 'target') {
+    articlesSourceOption = 'target';
+  }
 
   exoi18n.loadLanguageAsync(lang, url).then(i18n => {
     // init Vue app when locale resources are ready
@@ -104,7 +108,8 @@ export function init(params) {
         canEditNewsList,
         canManageNewsList: false,
         canManageNewsTarget,
-        canPublishNews: false
+        canPublishNews: false,
+        articlesSourceOption
       },
       created() {
         Vue.prototype.$translationService.getTranslations('newsListView', applicationId, 'headerNameInput').then(translations => {

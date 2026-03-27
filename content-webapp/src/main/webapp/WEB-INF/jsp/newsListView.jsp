@@ -36,6 +36,7 @@
     String[] showArticleReactionsParams = (String[]) request.getAttribute("showArticleReactions");
     String[] showArticleDateParams = (String[]) request.getAttribute("showArticleDate");
     String[] seeAllUrlParams = (String[]) request.getAttribute("seeAllUrl");
+    String[] articlesSourceOptionParams = (String[]) request.getAttribute("articlesSourceOption");
     String viewTemplate = viewTemplateParams == null || viewTemplateParams.length == 0 ? "": viewTemplateParams[0];
     String newsTarget = newsTargetParams == null || newsTargetParams.length == 0 ? "": newsTargetParams[0];
     String headerTitle = headerParams == null || headerParams.length == 0 ? "": headerParams[0];
@@ -50,6 +51,7 @@
     String showArticleSpace = showArticleSpaceParams == null || showArticleSpaceParams.length == 0 ? "true": showArticleSpaceParams[0];
     String showArticleReactions = showArticleReactionsParams == null || showArticleReactionsParams.length == 0 ? "true": showArticleReactionsParams[0];
     String seeAllUrl = seeAllUrlParams == null || seeAllUrlParams.length == 0 ? "": seeAllUrlParams[0];
+    String articlesSourceOption = articlesSourceOptionParams == null || articlesSourceOptionParams.length == 0 ? "" : articlesSourceOptionParams[0];
 
     ConversationState conversationState = ConversationState.getCurrent();
     Identity currentIdentity = null;
@@ -88,6 +90,7 @@
         seeAllUrl: <%= seeAllUrl == null ? null : "'" + seeAllUrl + "'" %>,
         canEdit: <%= hasEditPermission %>,
         canManageNewsPublishTargets: <%=canManageNewsPublishTargets%>,
+        articlesSourceOption: <%= articlesSourceOption == null ? null : "'" + articlesSourceOption + "'" %>,
       }));
     </script>
   </div>
