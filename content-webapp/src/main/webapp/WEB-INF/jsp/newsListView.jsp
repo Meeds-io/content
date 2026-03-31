@@ -37,6 +37,7 @@
     String[] showArticleDateParams = (String[]) request.getAttribute("showArticleDate");
     String[] seeAllUrlParams = (String[]) request.getAttribute("seeAllUrl");
     String[] articlesSourceOptionParams = (String[]) request.getAttribute("articlesSourceOption");
+    String[] selectedArticleIdsParams  = (String[]) request.getAttribute("selectedArticleIds");
     String viewTemplate = viewTemplateParams == null || viewTemplateParams.length == 0 ? "": viewTemplateParams[0];
     String newsTarget = newsTargetParams == null || newsTargetParams.length == 0 ? "": newsTargetParams[0];
     String headerTitle = headerParams == null || headerParams.length == 0 ? "": headerParams[0];
@@ -52,6 +53,7 @@
     String showArticleReactions = showArticleReactionsParams == null || showArticleReactionsParams.length == 0 ? "true": showArticleReactionsParams[0];
     String seeAllUrl = seeAllUrlParams == null || seeAllUrlParams.length == 0 ? "": seeAllUrlParams[0];
     String articlesSourceOption = articlesSourceOptionParams == null || articlesSourceOptionParams.length == 0 ? "" : articlesSourceOptionParams[0];
+    String selectedArticleIdsString = selectedArticleIdsParams == null || selectedArticleIdsParams.length == 0 ? null : String.join(",", selectedArticleIdsParams);
 
     ConversationState conversationState = ConversationState.getCurrent();
     Identity currentIdentity = null;
@@ -91,6 +93,7 @@
         canEdit: <%= hasEditPermission %>,
         canManageNewsPublishTargets: <%=canManageNewsPublishTargets%>,
         articlesSourceOption: <%= articlesSourceOption == null ? null : "'" + articlesSourceOption + "'" %>,
+        selectedArticleIds: <%= selectedArticleIdsString == null ? null : "'" + selectedArticleIdsString + "'" %>
       }));
     </script>
   </div>

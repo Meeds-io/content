@@ -36,6 +36,7 @@ import NewsCardsView from './components/views/NewsCardsView.vue';
 import NewsCardsViewItem from './components/views/NewsCardsViewItem.vue';
 import NewsTargetSuggester from './components/settings/NewsTargetSuggester.vue';
 import NewsSourceSettings from './components/settings/NewsSourceSettings.vue';
+import NewsListSelector from './components/settings/NewsListSelector.vue';
 
 
 const components = {
@@ -57,7 +58,8 @@ const components = {
   'news-cards-view': NewsCardsView,
   'news-cards-view-item': NewsCardsViewItem,
   'news-target-suggester': NewsTargetSuggester,
-  'news-source-settings': NewsSourceSettings
+  'news-source-settings': NewsSourceSettings,
+  'news-list-selector': NewsListSelector
 };
 
 for (const key in components) {

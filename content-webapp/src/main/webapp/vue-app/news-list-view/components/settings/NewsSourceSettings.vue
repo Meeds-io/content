@@ -39,6 +39,20 @@
         </template>
       </v-radio>
       <v-radio
+        value="selectedList"
+        class="mt-0 ms-n1">
+        <template #label>
+          <div class="d-flex flex-column">
+            <div class="text-body">
+              {{ $t('news.list.settings.source.selectedList') }}
+            </div>
+          </div>
+        </template>
+      </v-radio>
+      <div v-if="isSelectedLIstChoice" class="d-flex flex-column mt-0">
+        <news-list-selector v-model="selectedArticles" />
+      </div>
+      <v-radio
         value="target"
         class="mt-0 ms-n1">
         <template #label>
@@ -68,15 +82,32 @@ export default {
     newsTargets: {
       type: Array,
       default: () => []
+    },
+    newsTarget: {
+      type: String,
+      default: () => null
+    },
+    articles: {
+      type: Array,
+      default: () => []
+    },
+    articlesSourceOption: {
+      type: String,
+      default: () => null
     }
   },
   data: () => ({
     choice: 'posted',
     selectedNewsTarget: null,
+    selectedArticles: [],
+    defaultLimit: 4
   }),
   computed: {
     isTargetChoice() {
       return this.choice === 'target';
+    },
+    isSelectedLIstChoice() {
+      return this.choice === 'selectedList';
     }
   },
   watch: {
@@ -84,30 +115,39 @@ export default {
       switch (this.choice) {
       case 'posted':
         this.selectedNewsTarget = null;
-        this.emitSourceOptionUpdate();
+        this.selectedArticles = [];
+        this.updateLimitValue(this.defaultLimit);
         break;
       case 'target':
-        this.emitSourceOptionUpdate();
+        this.updateLimitValue(this.defaultLimit);
+        break;
+      case 'selectedList':
+        this.updateLimitValue(this.selectedArticles?.length || 0);
         break;
       }
+      this.emitSourceOptionUpdate();
     },
     selectedNewsTarget() {
+      if (this.selectedNewsTarget) {
+        this.selectedArticles = [];
+      }
       this.emitSourceOptionUpdate();
+    },
+    selectedArticles() {
+      if (this.selectedArticles?.length) {
+        this.selectedNewsTarget = null;
+        this.updateLimitValue(this.selectedArticles.length);
+      }
+      this.emitSourceOptionUpdate();
+    },
+    newsTarget() {
+      this.selectedNewsTarget = this.newsTarget;
     }
   },
   created() {
-    this.selectedNewsTarget = this.$root.newsTarget;
-    this.choice = this.$root.articlesSourceOption;
-    this.$root.$on('new-news-target-created', (target) => {
-      const newTarget = {
-        name: target.name,
-        label: target?.properties?.label && target.properties.label.length > 35 ? target.properties.label.substring(0, 35).concat('...'): target.properties.label,
-        toolTipInfo: target?.properties?.label,
-        description: target?.properties?.description
-      };
-      this.newsTargets.push(newTarget);
-      this.selectedNewsTarget = newTarget.name;
-    });
+    this.selectedNewsTarget = this.newsTarget;
+    this.selectedArticles = this.articles;
+    this.choice = this.articlesSourceOption;
   },
   methods: {
     createNewTarget() {
@@ -116,8 +156,12 @@ export default {
     emitSourceOptionUpdate() {
       this.$emit('update-source-option', {
         articlesSourceOption: this.choice,
-        newsTarget: this.selectedNewsTarget
+        newsTarget: this.selectedNewsTarget,
+        selectedArticles: this.selectedArticles
       });
+    },
+    updateLimitValue(limit) {
+      this.$root.$emit('limit-updated', limit);
     }
   }
 
