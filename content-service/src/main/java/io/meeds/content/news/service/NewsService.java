@@ -1395,6 +1395,19 @@ public class NewsService {
   public List<String> getArticleLanguages(String articleId, boolean withDrafts) {
     return noteService.getPageAvailableTranslationLanguages(Long.parseLong(articleId), withDrafts);
   }
+  
+  public List<News> getNewsByIds(List<Long> ids, String userName, String lang) {
+    if (CollectionUtils.isEmpty(ids)) {
+      return Collections.emptyList();
+    }
+    return ids.stream().map(id -> {
+      try {
+        return buildArticle(String.valueOf(id), null, lang, true);
+      } catch (Exception e) {
+        return null;
+      }
+    }).filter(news -> news != null && canViewNews(news, userName)).toList();
+  }
 
   @SneakyThrows
   private void updateArticleTargets(News article, List<ArticleTarget> oldTargets, String updater) {
