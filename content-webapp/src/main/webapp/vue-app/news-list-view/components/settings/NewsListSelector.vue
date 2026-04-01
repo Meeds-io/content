@@ -48,7 +48,7 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
               {{ $t('Search.label.inProgress') }}
             </span>
             <span v-else>
-              {{ $t('news.newsTarget.selector.noData') }}
+              {{ $t('newsTargets.settings.noResultsFound') }}
             </span>
           </v-list-item-title>
         </v-list-item>
