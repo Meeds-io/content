@@ -64,9 +64,14 @@
               autofocus
               required />
           </div>
-          <news-source-settings :news-targets="newsTargets" @update-source-option="updateArticlesSourceOption" />
+          <news-source-settings
+            :news-targets="newsTargets"
+            :news-target="newsTarget"
+            :articles-source-option="articlesSourceOption"
+            :articles="selectedArticles"
+            @update-source-option="updateArticlesSourceOption" />
           <div class="d-flex flex-row">
-            <label for="viewTemplate" class="text-header mt-2">
+            <label for="viewTemplate" class="text-header mt-4">
               {{ $t('news.list.settings.blockDisplay') }}:
             </label>
           </div>
@@ -98,6 +103,7 @@
           :show-header="showHeader"
           :show-article-author="showArticleAuthor"
           :view-template="viewTemplate"
+          :articles-source-option="articlesSourceOption"
           @limit-value="limit = $event"
           @see-all-url="setSeeAllUrl"
           @selected-option="selectedOption" />
@@ -143,7 +149,7 @@ export default {
     newsTargets: [],
     viewExtensions: {},
     newsTarget: null,
-    limit: 5,
+    limit: 4,
     newsHeader: null,
     showAdvancedSettings: false,
     showHeader: false,
@@ -161,7 +167,8 @@ export default {
     saveSettingsURL: '',
     translationObjectType: 'newsListView',
     headerTitleFieldName: 'headerNameInput',
-    articlesSourceOption: null
+    articlesSourceOption: null,
+    selectedArticles: []
   }),
   props: {
     language: {
@@ -196,8 +203,11 @@ export default {
     isTargetSourceOption() {
       return this.articlesSourceOption === 'target';
     },
+    isSelectedListSourceOption() {
+      return this.articlesSourceOption === 'selectedList';
+    },
     disabled() {
-      return (this.showSeeAll && !this.isValidSeeAllUrl) || (this.isTargetSourceOption && !this.newsTarget);
+      return (this.showSeeAll && !this.isValidSeeAllUrl) || (this.isTargetSourceOption && !this.newsTarget) || (this.isSelectedListSourceOption && !this.selectedArticles?.length);
     },
     previewTemplate() {
       if ( this.viewTemplate === 'NewsLatest') {
@@ -277,6 +287,12 @@ export default {
       this.viewExtensions = this.$root.viewExtensions;
       this.newsTarget = this.$root.newsTarget;
       this.articlesSourceOption = this.$root.articlesSourceOption;
+      this.selectedArticles = this.$root?.newsList.map(item => {
+        return {
+          id: item?.id,
+          title: item?.title
+        };
+      });
       this.newsHeader = ((Object.keys(this.savedHeaderTranslations || {})?.length && this.savedHeaderTranslations
                                                        || {[this.$root.defaultLanguage]: this.$root.headerTitle}))
                                                        || this.$root.headerTitle;
@@ -311,6 +327,7 @@ export default {
       const settings = {
         viewTemplate: this.viewTemplate,
         newsTarget: this.newsTarget,
+        selectedArticleIds: this.selectedArticles.map(item => item.id),
         articlesSourceOption: this.articlesSourceOption,
         showHeader: this.showHeader,
         showSeeAll: this.showSeeAll,
@@ -330,6 +347,7 @@ export default {
           this.$root.viewTemplate = this.viewTemplate;
           this.$root.newsTarget = this.newsTarget;
           this.$root.articlesSourceOption = this.articlesSourceOption;
+          this.$root.selectedArticleIds = this.selectedArticles.map(item => item.id)?.join(',');
           this.$root.headerTranslations = this.newsHeader;
           this.$root.headerTitle =  this.newsHeader?.[this.language]
               || this.newsHeader?.[this.$root.defaultLanguage];
@@ -457,6 +475,7 @@ export default {
     updateArticlesSourceOption(options) {
       this.articlesSourceOption = options?.articlesSourceOption;
       this.newsTarget = options?.newsTarget;
+      this.selectedArticles = options?.selectedArticles;
     }
   },
 };

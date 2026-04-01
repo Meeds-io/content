@@ -62,6 +62,44 @@ export function getPostedNews(offset, limit, returnSize) {
   });
 }
 
+export function searchArticles(searchTerm) {
+  const url = `/social/rest/contentLinks/news/search?query=${searchTerm}&offset=0&limit=10`;
+  return fetch(url, {
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    method: 'GET'
+  }).then((resp) => {
+    if (resp?.ok) {
+      return resp.json();
+    } else {
+      throw new Error('Error searching news');
+    }
+  });
+}
+
+export function getSelectedNewsList(newsIds, lang) {
+  const formData = new FormData();
+  newsIds.forEach(id => formData.append('id', id));
+  if (lang) {
+    formData.append('lang', lang);
+  }
+  const urlParams = new URLSearchParams(formData).toString();
+  const url = `${newsConstants.CONTENT_API}/contents/list?${urlParams}`;
+  return fetch(url, {
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    method: 'GET'
+  }).then((resp) => {
+    if (resp?.ok) {
+      return resp.json();
+    } else {
+      throw new Error('Error getting news list');
+    }
+  });
+}
+
 export function saveSettings(saveSettingsURL, settings) {
   const formData = new FormData();
   if (settings) {
