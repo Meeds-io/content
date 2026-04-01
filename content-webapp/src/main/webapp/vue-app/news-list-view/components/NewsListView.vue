@@ -46,6 +46,7 @@
 </template>
 
 <script>
+
 export default {
   props: {
     applicationId: {
@@ -218,6 +219,9 @@ export default {
     },
     articlesSourceOption() {
       return this.$root.articlesSourceOption;
+    },
+    selectedArticleIds() {
+      return this.$root.selectedArticleIds.split(',');
     }
   },
   watch: {
@@ -253,12 +257,20 @@ export default {
       switch (this.articlesSourceOption) {
       case 'posted':
         newsList = await this.$newsListService.getPostedNews(this.offset, this.limit, true);
+        this.newsList = newsList?.news?.filter(news => !!news) || [];
         break;
       case 'target':
         newsList = await this.$newsListService.getNewsListByTarget(this.newsTarget, this.offset, this.limit, true);
+        this.newsList = newsList?.news?.filter(news => !!news) || [];
         break;
+      case 'selectedList':
+        newsList = await this.$newsListService.getSelectedNewsList(this.selectedArticleIds, this.language);
+        newsList.sort((a, b) => {
+          return this.selectedArticleIds.indexOf(a.id) - this.selectedArticleIds.indexOf(b.id);
+        });
+        this.newsList = newsList || [];
+        this.$root.newsList = this.newsList;
       }
-      this.newsList = newsList?.news?.filter(news => !!news) || [];
       this.hasMore = this.newsList.length > this.limit;
       this.loading = false;
     },
