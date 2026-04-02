@@ -27,7 +27,7 @@
     :placeholder="$t('news.newsTarget.selector.placeholder')"
     append-icon=""
     menu-props="closeOnClick, closeOnContentClick, maxHeight = 100"
-    class="identitySuggester identitySuggesterInputStyle mt-0"
+    class="identitySuggester identitySuggesterInputStyle mt-1"
     content-class="identitySuggesterContent"
     width="100%"
     max-width="100%"

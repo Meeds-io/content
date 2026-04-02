@@ -30,7 +30,7 @@
       mandatory>
       <v-radio
         value="posted"
-        class="mb-2 ms-n1">
+        class="mb-1 ms-n1">
         <template #label>
           <div class="d-flex flex-column">
             <div class="text-body">
@@ -41,7 +41,7 @@
       </v-radio>
       <v-radio
         value="selectedList"
-        class="mt-0 ms-n1">
+        class="mt-0 mb-1 ms-n1">
         <template #label>
           <div class="d-flex flex-column">
             <div class="text-body">
