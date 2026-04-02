@@ -22,13 +22,13 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
       ref="selectAutoComplete"
       v-model="selectedArticles"
       :placeholder="$t('news.list.settings.source.selectedList.placeholder')"
-      :items="items"
+      :items="articles"
       :loading="loadingSuggestions"
-      :hide-no-data="!searchStarted"
-      :no-filter="true"
+      :hide-no-data="hideNoData"
       append-icon=""
       menu-props="closeOnClick, closeOnContentClick, maxHeight = 100"
       class="identitySuggester identitySuggesterInputStyle mt-0"
+      :class="selectedArticles?.length && 'mb-0' || 'mb-2'"
       content-class="identitySuggesterContent"
       width="100%"
       max-width="100%"
@@ -44,12 +44,7 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
       <template #no-data>
         <v-list-item class="pa-0">
           <v-list-item-title class="px-2">
-            <span v-if="loadingSuggestions">
-              {{ $t('Search.label.inProgress') }}
-            </span>
-            <span v-else>
-              {{ $t('newsTargets.settings.noResultsFound') }}
-            </span>
+            {{ noDataLabel }}
           </v-list-item-title>
         </v-list-item>
       </template>
@@ -65,7 +60,7 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
       <v-list-item
         class="px-0"
         v-for="(article, index) in selectedArticles"
-        :class="{ 'mb-n2': index !== lastSelectedIndex }"
+        :class="index === lastSelectedIndex && 'mb-2' || 'mb-n2'"
         :key="article.id">
         <v-list-item-content class="pa-0">
           <v-list-item-title class="text-truncate pa-0 ma-0">
@@ -120,16 +115,14 @@ export default {
     };
   },
   computed: {
-    items() {
-      return this.articles.map(item => {
-        return {
-          id: item?.objectId || item?.id,
-          title: item.title,
-        };
-      });
-    },
     lastSelectedIndex() {
       return this.selectedArticles.length - 1;
+    },
+    noDataLabel() {
+      return this.loadingSuggestions && this.$t('Search.label.inProgress') || this.$t('news.article.selector.noResultsFound');
+    },
+    hideNoData() {
+      return !this.searchStarted;
     },
   },
   watch: {
@@ -146,11 +139,17 @@ export default {
       },
     },
     searchTerm() {
+      this.$refs.selectAutoComplete.focus();
       this.startTypingKeywordTimeout =
           Date.now() + this.startSearchAfterInMilliseconds;
       if (!this.typing) {
         this.typing = true;
         this.waitForEndTyping();
+      }
+    },
+    loadingSuggestions() {
+      if (this.loadingSuggestions && !this.searchStarted) {
+        this.searchStarted = true;
       }
     },
   },
@@ -169,7 +168,13 @@ export default {
       if (this.searchTerm?.length) {
         this.loadingSuggestions = true;
         this.articles = [];
-        this.articles = await this.$newsListService.searchArticles(this.searchTerm) || [];
+        const result = await this.$newsListService.searchArticles(this.searchTerm) || [];
+        this.articles = result.map(item => {
+          return {
+            id: item?.objectId || item?.id,
+            title: item.title,
+          };
+        });
         this.loadingSuggestions = false;
         this.searchStarted = true;
       } else {
