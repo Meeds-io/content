@@ -62,31 +62,34 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
         v-for="(article, index) in selectedArticles"
         :class="index === lastSelectedIndex && 'mb-2' || 'mb-n2'"
         :key="article.id">
-        <v-list-item-content class="pa-0">
-          <v-list-item-title class="text-truncate pa-0 ma-0">
-            {{ article.title }}
-          </v-list-item-title>
-        </v-list-item-content>
-        <v-btn
-          v-if="index !== 0"
-          icon
-          small
-          @click="moveUp(index)">
-          <v-icon small>fa-arrow-up</v-icon>
-        </v-btn>
-        <v-btn
-          v-if="index !== lastSelectedIndex"
-          icon
-          small
-          @click="moveDown(index)">
-          <v-icon small>fa-arrow-down</v-icon>
-        </v-btn>
-        <v-icon
-          small
-          class="ml-2 red--text"
-          @click="remove(article)">
-          fa-trash
-        </v-icon>
+        <v-list-item-title class="text-truncate pa-0 ma-0">
+          {{ article.title }}
+        </v-list-item-title>
+        <v-list-item-action class="flex-row ma-0 align-center justify-end">
+          <v-btn
+            v-if="index !== 0"
+            icon
+            small
+            @click="moveUp(index)">
+            <v-icon small>fa-arrow-up</v-icon>
+          </v-btn>
+          <v-btn
+            v-if="index !== lastSelectedIndex"
+            icon
+            small
+            @click="moveDown(index)">
+            <v-icon small>fa-arrow-down</v-icon>
+          </v-btn>
+          <v-btn
+            icon
+            small
+            class="ml-2"
+            @click="remove(article)">
+            <v-icon class="error-color" small>
+              fa-trash
+            </v-icon>
+          </v-btn>
+        </v-list-item-action>
       </v-list-item>
     </v-list>
   </v-flex>
