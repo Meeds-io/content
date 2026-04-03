@@ -179,7 +179,7 @@ public class NewsUtils {
   
   public static boolean canPublishNews(String spaceId, org.exoplatform.services.security.Identity currentIdentity) {
     if (!StringUtils.isBlank(spaceId)) {
-      SpaceService spaceService = CommonsUtils.getService(SpaceService.class);
+      SpaceService spaceService = getSpaceService();
       Space space = spaceService.getSpaceById(spaceId);
       return currentIdentity != null && space != null && spaceService.canPublishOnSpace(space, currentIdentity.getUserId());
     }
@@ -188,6 +188,16 @@ public class NewsUtils {
 
   public static boolean canManageNewsPublishTargets(org.exoplatform.services.security.Identity currentIdentity) {
     return currentIdentity != null && currentIdentity.isMemberOf(PLATFORM_ADMINISTRATORS_GROUP);
+  }
+
+  public static boolean canCreateNewsPublishTargets(org.exoplatform.services.security.Identity currentIdentity, Long spaceId) {
+    Space space = null;
+    if (spaceId != null && spaceId > 0) {
+      space = getSpaceService().getSpaceById(spaceId);
+    }
+    return currentIdentity != null && (currentIdentity.isMemberOf(PLATFORM_ADMINISTRATORS_GROUP)
+        || (space != null && (getSpaceService().isManager(space, currentIdentity.getUserId())
+            || getSpaceService().isPublisher(space, currentIdentity.getUserId()))));
   }
 
   public static org.exoplatform.services.security.Identity getUserIdentity(String username) {
@@ -221,9 +231,9 @@ public class NewsUtils {
     return draftArticleUrl.toString();
   }
 
-  public static String buildNewsArticleUrl(News news, String currentUsername) throws SpaceException {
+  public static String buildNewsArticleUrl(News news, String currentUsername) {
     StringBuilder newsArticleUrl = new StringBuilder();
-    SpaceService spaceService = CommonsUtils.getService(SpaceService.class);
+    SpaceService spaceService = getSpaceService();
     if (currentUsername != null && spaceService.isMember(news.getSpaceId(), currentUsername) && news.getActivityId() != null) {
       newsArticleUrl.append("/")
                     .append(PortalContainer.getCurrentPortalContainerName())
@@ -286,7 +296,7 @@ public class NewsUtils {
   }
 
   private static List<Space> getMySpaces(org.exoplatform.services.security.Identity userIdentity) throws Exception {
-    SpaceService spaceService = CommonsUtils.getService(SpaceService.class);
+    SpaceService spaceService = getSpaceService();
     ListAccess<Space> memberSpacesListAccess = spaceService.getMemberSpaces(userIdentity.getUserId());
     return Arrays.asList(memberSpacesListAccess.load(0, memberSpacesListAccess.getSize()));
   }
