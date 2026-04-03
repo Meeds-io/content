@@ -67,7 +67,7 @@
     </v-radio-group>
     <div v-if="isTargetChoice" class="d-flex flex-column mt-0">
       <news-target-suggester v-model="selectedNewsTarget" :allowed-targets="newsTargets" />
-      <span v-if="$root.canManageNewsTarget" class="d-flex flex-row clickable text-decoration-underline">
+      <span v-if="canCreateNewsTarget" class="d-flex flex-row clickable text-decoration-underline">
         <a @click="createNewTarget"> {{ $t('news.list.settings.drawer.createNewTarget') }} </a>
       </span>
       <div v-if="newsTargets.length === 0" class="d-flex flex-row grey--text">
@@ -109,6 +109,9 @@ export default {
     },
     isSelectedLIstChoice() {
       return this.choice === 'selectedList';
+    },
+    canCreateNewsTarget() {
+      return this.$root?.canCreateNewsTarget;
     }
   },
   watch: {

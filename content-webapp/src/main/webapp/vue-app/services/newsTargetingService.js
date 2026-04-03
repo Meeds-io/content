@@ -51,8 +51,12 @@ export function deleteTargetByName(targetName) {
   });
 }
 
-export function createTarget(target) {
-  return fetch(`${newsConstants.CONTENT_API}/targeting`, {
+export function createTarget(target, spaceId) {
+  let fetchUrl = `${newsConstants.CONTENT_API}/targeting`;
+  if (spaceId) {
+    fetchUrl = `${fetchUrl}?spaceId=${spaceId}`;
+  }
+  return fetch(fetchUrl, {
     method: 'POST',
     credentials: 'include',
     headers: {
