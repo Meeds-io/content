@@ -463,7 +463,7 @@ public class NewsTargetingTest {
     newsTargetingEntity.setName(sliderNews.getName());
     newsTargetingEntity.setProperties(sliderNews.getProperties());
     when(metadataService.createMetadata(sliderNews, 1)).thenReturn(sliderNews);
-    NEWS_UTILS.when(() -> NewsUtils.canManageNewsPublishTargets(any(org.exoplatform.services.security.Identity.class)))
+    NEWS_UTILS.when(() -> NewsUtils.canCreateNewsPublishTargets(any(org.exoplatform.services.security.Identity.class), any()))
               .thenReturn(true);
 
     Metadata createdMetadata = newsTargetingService.createNewsTarget(newsTargetingEntity, currentIdentity);
@@ -491,7 +491,7 @@ public class NewsTargetingTest {
 
     EXO_CONTAINER_CONTEXT.when(() -> ExoContainerContext.getService(IdentityRegistry.class)).thenReturn(identityRegistry);
     org.exoplatform.services.security.Identity identity1 = mock(org.exoplatform.services.security.Identity.class);
-    NEWS_UTILS.when(() -> NewsUtils.canManageNewsPublishTargets(any(org.exoplatform.services.security.Identity.class)))
+    NEWS_UTILS.when(() -> NewsUtils.canCreateNewsPublishTargets(any(org.exoplatform.services.security.Identity.class), any()))
               .thenReturn(false);
     try {
       newsTargetingService.createNewsTarget(newsTargetingEntity, identity1);
@@ -532,6 +532,8 @@ public class NewsTargetingTest {
     when(metadataService.createMetadata(sliderNews, 1)).thenReturn(sliderNews);
 
     NEWS_UTILS.when(() -> NewsUtils.canManageNewsPublishTargets(any(org.exoplatform.services.security.Identity.class)))
+              .thenReturn(true);
+    NEWS_UTILS.when(() -> NewsUtils.canCreateNewsPublishTargets(any(org.exoplatform.services.security.Identity.class), any()))
               .thenReturn(true);
     Metadata createdMetadata = newsTargetingService.createNewsTarget(newsTargetingEntity, currentIdentity);
 
