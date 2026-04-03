@@ -141,15 +141,15 @@ public class NewsTargetingRestTest {
     lenient().when(newsTargetingService.createNewsTarget(newsTargetingEntity, currentIdentity)).thenReturn(sliderNews);
 
     // When
-    ResponseEntity response = newsTargetingRestController.createNewsTarget(newsTargetingEntity);
+    ResponseEntity response = newsTargetingRestController.createNewsTarget(null, newsTargetingEntity);
 
     // Then
     assertEquals(HttpStatus.OK, response.getStatusCode());
 
-    when(newsTargetingRestController.createNewsTarget(newsTargetingEntity)).thenThrow(RuntimeException.class);
+    when(newsTargetingRestController.createNewsTarget(null, newsTargetingEntity)).thenThrow(RuntimeException.class);
 
     // When
-    assertThrows(ResponseStatusException.class, () -> newsTargetingRestController.createNewsTarget(newsTargetingEntity));
+    assertThrows(ResponseStatusException.class, () -> newsTargetingRestController.createNewsTarget(null, newsTargetingEntity));
 
   }
 
