@@ -296,7 +296,7 @@ public class NewsTargetingService {
   public Metadata createNewsTarget(NewsTargetingEntity newsTargetingEntity,
                                    org.exoplatform.services.security.Identity currentIdentity) throws IllegalArgumentException,
                                                                                                IllegalAccessException {
-    return createNewsTarget(newsTargetingEntity, currentIdentity, true);
+    return createNewsTarget(newsTargetingEntity, currentIdentity, null);
   }
 
   /**
@@ -305,7 +305,7 @@ public class NewsTargetingService {
    * @param newsTargetingEntity {@link News} TargetingEntity
    * @param currentIdentity current {@link Identity} attempting to create
    *          {@link News} target
-   * @param checkPermissions true if permissions are checked
+   * @param spaceId the space identifier used to scope the target creation (optional)
    * @return created {@link News} target {@link Metadata}
    * @throws IllegalArgumentException when user creates a {@link News} target
    *           that already exists
@@ -314,8 +314,8 @@ public class NewsTargetingService {
    */
   public Metadata createNewsTarget(NewsTargetingEntity newsTargetingEntity,
                                    org.exoplatform.services.security.Identity currentIdentity,
-                                   boolean checkPermissions) throws IllegalArgumentException, IllegalAccessException {
-    if (checkPermissions && !NewsUtils.canManageNewsPublishTargets(currentIdentity)) {
+                                   Long spaceId) throws IllegalArgumentException, IllegalAccessException {
+    if (!NewsUtils.canCreateNewsPublishTargets(currentIdentity, spaceId)) {
       throw new IllegalAccessException(String.format("User %s not authorized to create news targets",
                                                      currentIdentity.getUserId()));
     }
