@@ -83,6 +83,7 @@ export function init(params) {
     articlesSourceOption = 'target';
   }
   const selectedArticleIds = params?.selectedArticleIds;
+  const canCreateNewsTarget = params?.canCreateNewsTarget;
 
   exoi18n.loadLanguageAsync(lang, url).then(i18n => {
     // init Vue app when locale resources are ready
@@ -112,7 +113,8 @@ export function init(params) {
         canPublishNews: false,
         articlesSourceOption,
         selectedArticleIds,
-        newsList: []
+        newsList: [],
+        canCreateNewsTarget
       },
       created() {
         Vue.prototype.$translationService.getTranslations('newsListView', applicationId, 'headerNameInput').then(translations => {

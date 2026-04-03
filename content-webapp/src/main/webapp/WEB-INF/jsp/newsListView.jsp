@@ -6,6 +6,8 @@
 <%@ page import="org.exoplatform.commons.utils.CommonsUtils" %>
 <%@ page import="org.exoplatform.portal.config.UserACL" %>
 <%@ page import="org.exoplatform.portal.config.model.Page" %>
+<%@ page import="static org.exoplatform.social.core.space.SpaceUtils.getSpaceByContext" %>
+<%@ page import="org.exoplatform.social.core.space.model.Space" %>
 <%@ taglib uri="http://java.sun.com/portlet_2_0" prefix="portlet" %>
 
 <portlet:defineObjects />
@@ -65,10 +67,12 @@
     PortalHttpServletResponseWrapper responseWrapper = ( PortalHttpServletResponseWrapper ) rcontext.getResponse();
     String newsListUrl = "/content/rest/contents/byTarget/" + newsTarget + "?offset=0&limit=" + limit + "&returnSize=true";
     responseWrapper.addHeader("Link", "<" + newsListUrl + ">; rel=prefetch; as=fetch; crossorigin=use-credentials", false);
-    boolean canManageNewsPublishTargets = NewsUtils.canManageNewsPublishTargets(currentIdentity);
     UserACL userACL = CommonsUtils.getService(UserACL.class);
     Page currentPage = rcontext.getPage();
     boolean hasEditPermission = currentIdentity != null && userACL.hasEditPermission(currentPage, currentIdentity);
+    Space currentSpace = getSpaceByContext();
+    boolean canCreateNewsPublishTarget = NewsUtils.canCreateNewsPublishTargets(currentIdentity, currentSpace != null ? currentSpace.getSpaceId() : null);
+    boolean canManageNewsPublishTargets = NewsUtils.canManageNewsPublishTargets(currentIdentity);
   %>
   <div class="news-list-view-app" id="<%= appId %>">
     <script type="text/javascript">
@@ -92,6 +96,7 @@
         seeAllUrl: <%= seeAllUrl == null ? null : "'" + seeAllUrl + "'" %>,
         canEdit: <%= hasEditPermission %>,
         canManageNewsPublishTargets: <%=canManageNewsPublishTargets%>,
+        canCreateNewsTarget: <%=canCreateNewsPublishTarget%>,
         articlesSourceOption: <%= articlesSourceOption == null ? null : "'" + articlesSourceOption + "'" %>,
         selectedArticleIds: <%= selectedArticleIdsString == null ? null : "'" + selectedArticleIdsString + "'" %>
       }));
