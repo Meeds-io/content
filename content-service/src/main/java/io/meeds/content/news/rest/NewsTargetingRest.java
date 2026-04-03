@@ -23,6 +23,7 @@ import java.util.List;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import io.swagger.v3.oas.annotations.Parameter;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -35,6 +36,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -122,7 +124,10 @@ public class NewsTargetingRest {
       @ApiResponse(responseCode = "403", description = "Forbidden operation"),
       @ApiResponse(responseCode = "409", description = "Conflict operation"),
           @ApiResponse(responseCode = "500", description = "Internal server error")})
-  public ResponseEntity<Metadata> createNewsTarget(@RequestBody NewsTargetingEntity newsTargetingEntity) {
+  public ResponseEntity<Metadata> createNewsTarget(@Parameter(description = "space id")
+                                                   @RequestParam(name = "spaceId", required = false)
+                                                   Long spaceId,
+                                                   @RequestBody NewsTargetingEntity newsTargetingEntity) {
     if (newsTargetingEntity.getProperties() == null
             || newsTargetingEntity.getProperties().get(NewsUtils.TARGET_PERMISSIONS) == null
             || newsTargetingEntity.getProperties().get(NewsUtils.TARGET_PERMISSIONS).isEmpty()) {
@@ -135,7 +140,7 @@ public class NewsTargetingRest {
       targetName.append('_');
       targetName.append(System.currentTimeMillis());
       newsTargetingEntity.setName(targetName.toString());
-      Metadata addedNewsTarget = newsTargetingService.createNewsTarget(newsTargetingEntity, currentIdentity);
+      Metadata addedNewsTarget = newsTargetingService.createNewsTarget(newsTargetingEntity, currentIdentity, spaceId);
       return ResponseEntity.ok(addedNewsTarget);
     } catch (IllegalAccessException e) {
       LOG.warn("User '{}' is not authorized to create a news target with name " + newsTargetingEntity.getName(),
