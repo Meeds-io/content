@@ -108,14 +108,21 @@
           @see-all-url="setSeeAllUrl"
           @selected-option="selectedOption" />
       </form>
-      <div class="d-flex flex-row mt-4 mx-8 justify-end advancedSettings">
-        <span
-          v-if="!showAdvancedSettings"
-          class="primary--text text-decoration-underline clickable"
-          @click="showAdvancedSettings = !showAdvancedSettings">
-          {{ $t('news.list.settings.drawer.advancedSettings') }}
-        </span>
-      </div>
+      <v-list dense v-if="!showAdvancedSettings">
+        <v-list-item>
+          <v-list-item-title>
+            {{ $t('news.list.settings.drawer.editDisplaySettings') }}
+          </v-list-item-title>
+          <v-list-item-action class="align-center justify-end">
+            <v-btn
+              icon
+              small
+              @click="showAdvancedSettings = !showAdvancedSettings">
+              <v-icon small>fa-edit</v-icon>
+            </v-btn>
+          </v-list-item-action>
+        </v-list-item> 
+      </v-list>
     </template>
     <template slot="footer">
       <div class="d-flex">
