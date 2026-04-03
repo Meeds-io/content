@@ -40,7 +40,7 @@
         :saved-header-translations="headerTranslations"
         :language="language"
         :application-id="applicationId" />
-      <news-publish-targets-management-drawer v-if="canManageNewsTarget" />
+      <news-publish-targets-management-drawer v-if="canCreateNewsTarget" />
     </v-app>
   </v-hover>
 </template>
@@ -214,8 +214,8 @@ export default {
     canManageNewsList() {
       return this.$root.canManageNewsList || this.$root.canPublishNews;
     },
-    canManageNewsTarget() {
-      return this.$root.canManageNewsTarget || false;
+    canCreateNewsTarget() {
+      return this.$root.canCreateNewsTarget;
     },
     articlesSourceOption() {
       return this.$root.articlesSourceOption;
