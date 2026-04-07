@@ -114,18 +114,18 @@ export function init(params) {
         articlesSourceOption,
         selectedArticleIds,
         newsList: [],
-        canCreateNewsTarget
+        canCreateNewsTarget,
+        canCreateNews: false
       },
-      created() {
+      async created() {
         Vue.prototype.$translationService.getTranslations('newsListView', applicationId, 'headerNameInput').then(translations => {
           this.headerTranslations = translations;
           this.headerTitle = translations?.[lang] || translations?.[this.defaultLanguage]
                                                   || params.headerTitle;
         });
-        this.$newsServices.canPublishNews().then(canPublishNews => {
-          this.canPublishNews = canPublishNews;
-          this.canManageNewsList = this.canEditNewsList || this.canPublishNews;
-        });
+        this.canPublishNews = await  this.$newsServices.canPublishNews();
+        this.canManageNewsList = this.canEditNewsList || this.canPublishNews;
+        this.canCreateNews = await this.$newsServices.canUserCreateNews();
       },
       template: `<news-list-view
                   id="${appId}"
