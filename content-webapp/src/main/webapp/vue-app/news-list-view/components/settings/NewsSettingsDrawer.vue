@@ -46,14 +46,14 @@
       <form ref="form1" class="pa-2 ms-2">
         <div v-if="!showAdvancedSettings" class="d-flex flex-column flex-grow-1">
           <div d-flex flex-row>
-            <label for="name" class="text-header me-1 my-auto mt-4">
+            <label for="headerName" class="text-header me-1 my-auto mt-4">
               {{ $t('news.list.settings.header') }}:
             </label>
           </div>
           <div class="d-flex flex-row mt-2">
             <translation-text-field
               ref="headerNameInput"
-              id="headerNameInput"
+              id="headerName"
               v-model="newsHeader"
               :placeholder="$t('news.list.settings.placeHolderName')"
               drawer-title="news.list.settings.translation.header"
@@ -70,14 +70,12 @@
             :articles-source-option="articlesSourceOption"
             :articles="selectedArticles"
             @update-source-option="updateArticlesSourceOption" />
-          <div class="d-flex flex-row">
+          <div class="flex-column">
             <label for="viewTemplate" class="text-header mt-4">
               {{ $t('news.list.settings.blockDisplay') }}:
             </label>
-          </div>
-          <div class="d-flex flex-row">
             <v-select
-              id="viewTemplateRefs"
+              id="viewTemplate"
               ref="viewTemplateRefs"
               v-model="viewTemplate"
               :items="displayedViewTemplates"
