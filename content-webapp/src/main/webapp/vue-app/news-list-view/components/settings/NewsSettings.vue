@@ -30,6 +30,7 @@
       <v-icon
         v-if="$root.canManageNewsList && showSettingsIcon"
         :class="classButtonOpenSettings"
+        :title="$t('news.list.openSettings.title')"
         :aria-label="$t('news.latest.openSettings')"
         size="24"
         icon
