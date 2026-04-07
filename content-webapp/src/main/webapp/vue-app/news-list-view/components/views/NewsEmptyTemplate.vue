@@ -21,30 +21,29 @@
 <template>
   <v-hover v-slot="{ hover }">
     <v-app
-      v-show="$root.canManageNewsList"
+      v-show="displayEmptyTemplateOptions"
       class="newsEmptyTemplate border-box-sizing"
       flat>
-      <v-main>
+      <v-main class="d-flex flex-column fill-height position-relative">
         <v-sheet
-          v-if="isNewsSettingDefined"
-          height="32"
-          class="news-empty-header d-flex mx-3 my-2">
-          <v-spacer />
-          <div class="d-flex flex-row newsSettingButton justify-end">
-            <v-btn
-              v-if="hover"
-              icon
-              @click="openDrawer">
-              <v-icon>mdi-cog</v-icon>
-            </v-btn>
-          </div>
+          class="d-flex justify-end"
+          :height="40"
+          :min-height="40">
+          <v-btn
+            v-if="hover && canManageNewsList"
+            icon
+            @click="openDrawer">
+            <v-icon>mdi-cog</v-icon>
+          </v-btn>
         </v-sheet>
-        <v-flex class="d-flex news-empty-template noNews">
-          <div v-if="isNewsSettingDefined" class="ma-auto py-5 d-flex flex-column align-center noNewsContent mb-10">
-            <span class="text-title">
-              {{ $t('news.latest.noNews') }}
-            </span>
-          </div>
+        <div class="d-flex flex-grow-1 mb-6 align-center justify-center">
+          <v-btn
+            v-if="canCreateNews"
+            class="btn btn-primary"
+            outlined
+            @click="openNewsEditor">
+            {{ $t('news.list.settings.createNews') }}
+          </v-btn>
           <v-btn
             v-else
             class="btn btn-primary"
@@ -52,23 +51,35 @@
             @click="openDrawer">
             {{ $t('news.latest.openSettings') }}
           </v-btn>
-        </v-flex>
+        </div>
       </v-main>
     </v-app>
   </v-hover>
 </template>
 
 <script>
+
 export default {
   computed: {
-    isNewsSettingDefined() {
-      return this.$root.viewTemplate;
+    canManageNewsList() {
+      return this.$root.canManageNewsList;
+    },
+    canCreateNews() {
+      return this.$root.canCreateNews;
+    },
+    displayEmptyTemplateOptions() {
+      return this.canManageNewsList || this.canCreateNews ;
     }
   },
   methods: {
     openDrawer() {
       this.$root.$emit('news-settings-drawer-open');
     },
+    openNewsEditor() {
+      let url = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news-editor`;
+      url += `?spaceId=${eXo.env.portal.spaceId}&spaceName=${eXo.env.portal.spaceName}&type=draft`;
+      window.open(url, '_blank');
+    }
   }
 };
 </script>
