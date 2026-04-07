@@ -55,13 +55,15 @@
     class="d-flex flex-column">
     <span :title="selectedTarget?.toolTipInfo" class="d-flex align-center justify-space-between pe-2 py-1 text-body">
       {{ selectedTarget?.label }}
-      <v-icon
+      <v-btn
+        icon
         small
-        class="ml-2 red--text"
+        class="ml-2"
         @click="clearSelection">
-        fa-trash
-      </v-icon>
-    </span>
+        <v-icon class="error-color" small>
+          fa-trash
+        </v-icon>
+      </v-btn></span>
     <span :title="selectedTarget?.toolTipInfo" class="text-subtitle text-truncate">
       {{ selectedTarget?.description }}
     </span>

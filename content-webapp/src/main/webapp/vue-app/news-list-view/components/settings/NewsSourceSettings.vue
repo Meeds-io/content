@@ -19,15 +19,18 @@
 
 -->
 <template>
-  <div class="flex-column align-start">
-    <label for="name" class="text-header me-1 my-auto mt-4">
-      {{ $t('news.list.settings.newsTarget') }}
-    </label>
+  <div class="flex-column align-start mt-4">
     <v-radio-group
+      id="news-source-label"
       class="ma-0 pa-0"
       v-model="choice"
       hide-details
       mandatory>
+      <template #label>
+        <span class="text-header me-1 my-auto">
+          {{ $t('news.list.settings.newsTarget') }}
+        </span>
+      </template>
       <v-radio
         value="posted"
         class="mb-1 ms-n1">
