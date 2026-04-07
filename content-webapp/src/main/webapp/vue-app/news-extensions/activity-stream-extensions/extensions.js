@@ -35,6 +35,7 @@ const newsActivityTypeExtensionOptions = {
     }
   },
   extendSharedActivity: (activity, isActivityDetail) => isActivityDetail,
+  hideViewersCounter: () => true,
   showSharedInformationFooter: (activity, isActivityDetail) => isActivityDetail,
   init: (activity, isActivityDetail) => {
     let activityId = activity.id;
