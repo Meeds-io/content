@@ -20,17 +20,14 @@
 -->
 <template>
   <div class="flex-column align-start mt-4">
+    <span id="news-source-group-label" class="text-header me-1 my-auto">
+      {{ $t('news.list.settings.newsTarget') }}
+    </span>
     <v-radio-group
-      id="news-source-label"
       class="ma-0 pa-0"
       v-model="choice"
       hide-details
       mandatory>
-      <template #label>
-        <span class="text-header me-1 my-auto">
-          {{ $t('news.list.settings.newsTarget') }}
-        </span>
-      </template>
       <v-radio
         value="posted"
         class="mb-1 ms-n1">
@@ -155,6 +152,13 @@ export default {
     this.selectedNewsTarget = this.newsTarget;
     this.selectedArticles = this.articles;
     this.choice = this.articlesSourceOption;
+  },
+  async mounted() {
+    await this.$nextTick();
+    const radiogroup = this.$el.querySelector('[role="radiogroup"]');
+    if (radiogroup) {
+      radiogroup.setAttribute('aria-labelledby', 'news-source-group-label');
+    }
   },
   methods: {
     createNewTarget() {
