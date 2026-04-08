@@ -70,7 +70,7 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
             v-if="index !== 0"
             icon
             small
-            :title="$t('news.list.settings.source.moveUp.title')"
+            :title="$t('news.list.settings.source.moveUp.title', {0: article?.title})"
             @click="moveUp(index)">
             <v-icon small>fa-arrow-up</v-icon>
           </v-btn>
@@ -78,7 +78,7 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
             v-if="index !== lastSelectedIndex"
             icon
             small
-            :title="$t('news.list.settings.source.moveDown.title')"
+            :title="$t('news.list.settings.source.moveDown.title', {0: article?.title})"
             @click="moveDown(index)">
             <v-icon small>fa-arrow-down</v-icon>
           </v-btn>
@@ -86,7 +86,7 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
             icon
             small
             class="ml-2"
-            :title="$t('news.list.settings.source.remove.title')"
+            :title="$t('news.list.settings.source.remove.title', {0: article?.title})"
             @click="remove(article)">
             <v-icon class="error-color" small>
               fa-trash
