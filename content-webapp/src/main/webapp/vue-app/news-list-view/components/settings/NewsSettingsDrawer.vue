@@ -108,11 +108,14 @@
       </form>
       <v-list dense v-if="!showAdvancedSettings">
         <v-list-item>
-          <v-list-item-title>
-            {{ $t('news.list.settings.drawer.editDisplaySettings') }}
+          <v-list-item-title :title="$t('news.list.settings.drawer.editDisplaySettings')" :aria-label="$t('news.list.settings.drawer.editDisplaySettings')">
+            <label for="editDisplaySettings">{{ $t('news.list.settings.drawer.editDisplaySettings') }}</label>
           </v-list-item-title>
           <v-list-item-action class="align-center justify-end">
             <v-btn
+              id="editDisplaySettings"
+              :title="$t('news.list.settings.drawer.editDisplaySettings')"
+              :aria-label="$t('news.list.settings.drawer.editDisplaySettings')"
               icon
               small
               @click="showAdvancedSettings = !showAdvancedSettings">
