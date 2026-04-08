@@ -302,7 +302,7 @@ export default {
       this.emitLimitChange();
     },
     emitLimitChange() {
-      this.$root.$emit('limit-value', this.limit);
+      this.$emit('limit-value', this.limit);
     }
   }
 };

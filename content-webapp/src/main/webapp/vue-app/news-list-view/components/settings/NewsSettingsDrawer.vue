@@ -106,24 +106,23 @@
           @see-all-url="setSeeAllUrl"
           @selected-option="selectedOption" />
       </form>
-      <v-list dense v-if="!showAdvancedSettings">
-        <v-list-item>
-          <v-list-item-title :title="$t('news.list.settings.drawer.editDisplaySettings')" :aria-label="$t('news.list.settings.drawer.editDisplaySettings')">
-            <label for="editDisplaySettings">{{ $t('news.list.settings.drawer.editDisplaySettings') }}</label>
-          </v-list-item-title>
-          <v-list-item-action class="align-center justify-end">
-            <v-btn
-              id="editDisplaySettings"
-              :title="$t('news.list.settings.drawer.editDisplaySettings')"
-              :aria-label="$t('news.list.settings.drawer.editDisplaySettings')"
-              icon
-              small
-              @click="showAdvancedSettings = !showAdvancedSettings">
-              <v-icon small>fa-edit</v-icon>
-            </v-btn>
-          </v-list-item-action>
-        </v-list-item> 
-      </v-list>
+      <div
+        v-if="!showAdvancedSettings"
+        class="d-flex align-center justify-space-between px-4">
+        <span id="edit-display-settings-label" class="text-body">
+          {{ $t('news.list.settings.drawer.editDisplaySettings') }}
+        </span>
+        <v-btn
+          icon
+          small
+          class="ml-2"
+          :aria-labelledby="'edit-display-settings-label'"
+          @click="showAdvancedSettings = !showAdvancedSettings">
+          <v-icon small>
+            fa-edit
+          </v-icon>
+        </v-btn>
+      </div>
     </template>
     <template slot="footer">
       <div class="d-flex">
@@ -331,7 +330,6 @@ export default {
     },
     save() {
       this.saving = true;
-      let selectedOptions = null;
       const settings = {
         viewTemplate: this.viewTemplate,
         newsTarget: this.newsTarget,
@@ -351,11 +349,14 @@ export default {
       };
       this.$newsListService.saveSettings(this.saveSettingsURL , settings)
         .then(() => {
+          const selectedArticleIds = this.selectedArticles?.map(item => item.id) || [];
+          const newlySelectedArticleIds = selectedArticleIds.filter(id => !this.$root.selectedArticleIds.includes(id)
+          );
           this.saveHeaderTranslations();
           this.$root.viewTemplate = this.viewTemplate;
           this.$root.newsTarget = this.newsTarget;
           this.$root.articlesSourceOption = this.articlesSourceOption;
-          this.$root.selectedArticleIds = this.selectedArticles.map(item => item.id)?.join(',');
+          this.$root.selectedArticleIds = selectedArticleIds.join(',');
           this.$root.headerTranslations = this.newsHeader;
           this.$root.headerTitle =  this.newsHeader?.[this.language]
               || this.newsHeader?.[this.$root.defaultLanguage];
@@ -370,23 +371,7 @@ export default {
           this.$root.showArticleDate = this.showArticleDate;
           this.$root.showArticleReactions = this.showArticleReactions;
           this.$root.seeAllUrl = this.seeAllUrl;
-          selectedOptions = {
-            limit: this.limit,
-            showHeader: this.showHeader,
-            headerTranslations: this.newsHeader,
-            headerTitle: this.newsHeader?.[this.language]
-                || this.newsHeader?.[this.$root.defaultLanguage],
-            showSeeAll: this.showSeeAll,
-            showArticleTitle: this.showArticleTitle,
-            showArticleSummary: this.showArticleSummary,
-            showArticleAuthor: this.showArticleAuthor,
-            showArticleSpace: this.showArticleSpace,
-            showArticleDate: this.showArticleDate,
-            showArticleReactions: this.showArticleReactions,
-            showArticleImage: this.showArticleImage,
-            seeAllUrl: this.seeAllUrl,
-          };
-          this.$root.$emit('saved-news-settings', this.newsTarget, selectedOptions);
+          this.$root.$emit('saved-news-settings', newlySelectedArticleIds);
           this.close();
         })
         .finally(() => {
