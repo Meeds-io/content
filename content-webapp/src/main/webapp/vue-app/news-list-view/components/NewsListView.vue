@@ -233,25 +233,15 @@ export default {
     },
   },
   created() {
-    this.$root.$on('saved-news-settings', (newsTarget, selectedOptions) => {
-      this.seeAllUrl = selectedOptions.seeAllUrl;
-      this.showSeeAll = selectedOptions.showSeeAll;
-      this.showHeader = selectedOptions.showHeader;
-      this.newsTarget = newsTarget;
-      this.limit = this.$root.limit;
-      this.retrieveNewsList();
-    });
-    this.seeAllUrl = this.$root.seeAllUrl;
-    this.showSeeAll = this.$root.showSeeAll;
-    this.showHeader = this.$root.showHeader;
-    this.newsTarget = this.$root.newsTarget;
-    this.limit = this.$root.limit;
+    this.$root.$on('saved-news-settings', this.handleSaveSettingsEvent);
+    this.initFromRoot();
     this.retrieveNewsList().finally(() => this.$root.$applicationLoaded());
     document.addEventListener(`component-${this.extensionApp}-${this.extensionType}-updated`, this.refreshViewExtensions);
     this.refreshViewExtensions();
   },
   beforeDestroy() {
     document.removeEventListener(`component-${this.extensionApp}-${this.extensionType}-updated`, this.refreshViewExtensions);
+    this.$root.$off('saved-news-settings', this.handleSaveSettingsEvent);
   },
   methods: {
     async retrieveNewsList() {
@@ -286,6 +276,39 @@ export default {
           this.$set(this.viewExtensions, extension.id, extension);
         }
       });
+    },
+    initFromRoot() {
+      this.seeAllUrl = this.$root.seeAllUrl;
+      this.showSeeAll = this.$root.showSeeAll;
+      this.showHeader = this.$root.showHeader;
+      this.newsTarget = this.$root.newsTarget;
+      this.limit = this.$root.limit;
+    },
+    async handleSaveSettingsEvent(newlySelectedArticleIds) {
+      this.initFromRoot();
+      await this.retrieveNewsList();
+      const newlySelectedArticles = this.newsList.filter(article => newlySelectedArticleIds?.includes(article.id)) || [];
+      this.sendSelectStatistics(newlySelectedArticles);
+    },
+    sendSelectStatistics(newlySelectedArticles) {
+      if (newlySelectedArticles?.length) {
+        newlySelectedArticles.forEach((article) => {
+          document.dispatchEvent(new CustomEvent('exo-statistic-message', {
+            detail: {
+              module: 'Content',
+              userId: eXo.env.portal.userIdentityId,
+              userName: eXo.env.portal.userName,
+              operation: 'Select content',
+              parameters: {
+                contentTitle: article?.title,
+                contentType: 'News',
+              },
+              spaceId: article?.spaceId,
+              timestamp: Date.now()
+            }
+          }));
+        });
+      }
     },
   },
 };
