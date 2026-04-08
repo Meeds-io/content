@@ -107,6 +107,7 @@ export function init(params) {
         showArticleDate,
         seeAllUrl,
         defaultLanguage: eXo?.env?.portal?.defaultLanguage,
+        spaceId: eXo?.env?.portal?.spaceId,
         canEditNewsList,
         canManageNewsList: false,
         canManageNewsTarget,
@@ -125,7 +126,9 @@ export function init(params) {
         });
         this.canPublishNews = await  this.$newsServices.canPublishNews();
         this.canManageNewsList = this.canEditNewsList || this.canPublishNews;
-        this.canCreateNews = await this.$newsServices.canUserCreateNews();
+        if (this.spaceId) {
+          this.canCreateNews = await this.$newsServices.canUserCreateNews(this.spaceId);
+        }
       },
       template: `<news-list-view
                   id="${appId}"
