@@ -26,15 +26,19 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import io.meeds.social.space.plugin.SpaceAclPlugin;
+import lombok.SneakyThrows;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import org.exoplatform.commons.api.settings.data.Context;
 import org.exoplatform.commons.api.settings.data.Scope;
+import org.exoplatform.commons.exception.ObjectNotFoundException;
 import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.commons.utils.ListAccess;
 import org.exoplatform.container.ExoContainerContext;
 import org.exoplatform.container.PortalContainer;
+import org.exoplatform.portal.config.UserACL;
 import org.exoplatform.services.listener.ListenerService;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
@@ -189,14 +193,28 @@ public class NewsUtils {
     return currentIdentity != null && currentIdentity.isMemberOf(PLATFORM_ADMINISTRATORS_GROUP);
   }
 
-  public static boolean canCreateNewsPublishTargets(org.exoplatform.services.security.Identity currentIdentity, Long spaceId) {
-    Space space = null;
-    if (spaceId != null && spaceId > 0) {
-      space = getSpaceService().getSpaceById(spaceId);
+  @SneakyThrows
+  public static boolean canCreateNewsPublishTargets(org.exoplatform.services.security.Identity currentIdentity,
+                                                    Long spaceId) {
+    UserACL userAcl = ExoContainerContext.getService(UserACL.class);
+    if (spaceId == null || spaceId == 0) {
+      return userAcl.isAdministrator(currentIdentity);
+    } else {
+      Space space = getSpaceService().getSpaceById(spaceId);
+      if (space == null) {
+        throw new ObjectNotFoundException("Space with id '%s' doesn't exist".formatted(spaceId));
+      } else {
+        return userAcl.hasPermission(SpaceAclPlugin.OBJECT_TYPE,
+                                     space.getId(),
+                                     SpaceAclPlugin.MANAGE_PERMISSION_TYPE,
+                                     currentIdentity)
+            || userAcl.hasPermission(SpaceAclPlugin.OBJECT_TYPE,
+                                     space.getId(),
+                                     SpaceAclPlugin.PUBLISH_PERMISSION_TYPE,
+                                     currentIdentity);
+      }
+
     }
-    return currentIdentity != null && (currentIdentity.isMemberOf(PLATFORM_ADMINISTRATORS_GROUP)
-        || (space != null && (getSpaceService().isManager(space, currentIdentity.getUserId())
-            || getSpaceService().isPublisher(space, currentIdentity.getUserId()))));
   }
 
   public static org.exoplatform.services.security.Identity getUserIdentity(String username) {
