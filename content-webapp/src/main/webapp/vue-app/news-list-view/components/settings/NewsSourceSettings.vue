@@ -71,7 +71,7 @@
         <a @click="createNewTarget"> {{ $t('news.list.settings.drawer.createNewTarget') }} </a>
       </span>
       <div v-if="newsTargets.length === 0" class="d-flex flex-row grey--text">
-        <i class="fas fa-exclamation-triangle mt-2"></i>
+        <v-icon class="mt-2">fa-exclamation-triangle</v-icon>
         <span class="mx-2"> {{ $t('news.composer.stepper.selectedTarget.noTargetAllowed') }}</span>
       </div>
     </div>

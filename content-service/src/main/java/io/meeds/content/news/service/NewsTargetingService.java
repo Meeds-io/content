@@ -324,9 +324,8 @@ public class NewsTargetingService {
     // Verify that the permission corresponds to the given space
     // when the target is created by a space admin or publisher
     if (spaceId != null && spaceId > 0
-        && !NewsUtils.canManageNewsPublishTargets(currentIdentity)
         && !matchesSpacePermission(newsTargetingEntity.getProperties().get(TARGET_PERMISSIONS), spaceId)) {
-      throw new IllegalStateException(String.format("Invalid target permission for the given spaceId: %s", spaceId));
+      throw new IllegalStateException(String.format("Invalid target permission for the given space with Id: %s", spaceId));
     }
     Identity identity = identityManager.getOrCreateIdentity(OrganizationIdentityProvider.NAME, currentIdentity.getUserId());
     long userIdentityId = identity == null ? 0 : Long.parseLong(identity.getId());
