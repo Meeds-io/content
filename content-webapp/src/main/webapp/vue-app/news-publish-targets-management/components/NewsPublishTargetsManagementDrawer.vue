@@ -25,7 +25,7 @@
     body-classes="hide-scroll decrease-z-index-more"
     right
     @closed="reset">
-    <template v-if="saveMode === 'creationMode'" slot="title">
+    <template v-if="saveMode === 'creationMode'" #title>
       {{ $t('news.publishTargets.management.addTarget') }}
     </template>
     <template v-else #title>
@@ -295,12 +295,7 @@ export default {
         name: '',
         properties: ''
       };
-      let permissions = '';
-      if (this.permissions.length > 0) {
-        this.permissions.forEach(permission => {
-          permissions = `${permissions + permission.id},`;
-        }); 
-      } 
+      const permissions = this.permissions?.map(p => p.id).join(',') || '';
       target.name = this.targetLabel;
       target.properties = {
         description: this.targetDescription,
@@ -331,12 +326,7 @@ export default {
         type: '',
         properties: ''
       };
-      let permissions = '';
-      if (this.permissions.length > 0) {
-        this.permissions.forEach(permission => {
-          permissions = `${permissions + permission.id},`;
-        }); 
-      } 
+      const permissions = this.permissions?.map(p => p.id).join(',') || '';
       target.name = this.selectedTarget?.targetName;
       target.properties = {
         description: this.targetDescription,

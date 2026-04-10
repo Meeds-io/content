@@ -20,7 +20,7 @@
 -->
 <template>
   <v-autocomplete
-    v-if="!value"
+    v-if="!selectedTarget"
     ref="selectAutoComplete"
     v-model="value"
     :items="newsTargetItems"
