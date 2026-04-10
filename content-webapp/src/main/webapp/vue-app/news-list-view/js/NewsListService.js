@@ -80,7 +80,7 @@ export function searchArticles(searchTerm) {
 
 export function getSelectedNewsList(newsIds, lang) {
   const formData = new FormData();
-  newsIds.forEach(id => formData.append('id', id));
+  newsIds?.forEach(id => formData.append('id', id));
   if (lang) {
     formData.append('lang', lang);
   }
