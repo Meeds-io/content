@@ -32,10 +32,10 @@
       <v-list-item-action>
         <input
           v-model="limit"
+          :disabled="disableMaxArticle"
           type="number"
           id="maxArticle"
           name="maxArticle"
-          :disabled="disableMaxArticle"
           @change="emitLimitChange"
           class="maxArticle input-block-level ignore-vuetify-classes">
       </v-list-item-action>
