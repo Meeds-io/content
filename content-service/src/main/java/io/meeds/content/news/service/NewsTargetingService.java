@@ -55,6 +55,8 @@ import io.meeds.content.news.rest.model.NewsTargetingPermissionsEntity;
 import io.meeds.content.news.utils.EntityBuilder;
 import io.meeds.content.news.utils.NewsUtils;
 
+import static io.meeds.content.news.utils.NewsUtils.TARGET_PERMISSIONS;
+
 @SuppressWarnings("removal")
 @Service
 public class NewsTargetingService {
@@ -97,8 +99,8 @@ public class NewsTargetingService {
     List<Metadata> allTargetsMetadatas = metadataService.getMetadatas(METADATA_TYPE.getName(), 0);
     return allTargetsMetadatas.stream()
                               .filter(targetMetadata -> targetMetadata.getProperties() != null
-                                  && targetMetadata.getProperties().get(NewsUtils.TARGET_PERMISSIONS) != null
-                                  && List.of(targetMetadata.getProperties().get(NewsUtils.TARGET_PERMISSIONS).split(","))
+                                  && targetMetadata.getProperties().get(TARGET_PERMISSIONS) != null
+                                  && List.of(targetMetadata.getProperties().get(TARGET_PERMISSIONS).split(","))
                                          .stream()
                                          .anyMatch(targetMetadataPermission -> {
                                            if (targetMetadataPermission.contains(SPACE_TARGET_PERMISSION_PREFIX)) {
@@ -319,6 +321,13 @@ public class NewsTargetingService {
       throw new IllegalAccessException(String.format("User %s not authorized to create news targets",
                                                      currentIdentity.getUserId()));
     }
+    // Verify that the permission corresponds to the given space
+    // when the target is created by a space admin or publisher
+    if (spaceId != null && spaceId > 0
+        && !NewsUtils.canManageNewsPublishTargets(currentIdentity)
+        && !matchesSpacePermission(newsTargetingEntity.getProperties().get(TARGET_PERMISSIONS), spaceId)) {
+      throw new IllegalStateException(String.format("Invalid target permission for the given spaceId: %s", spaceId));
+    }
     Identity identity = identityManager.getOrCreateIdentity(OrganizationIdentityProvider.NAME, currentIdentity.getUserId());
     long userIdentityId = identity == null ? 0 : Long.parseLong(identity.getId());
     Metadata metadata = fromEntity(newsTargetingEntity);
@@ -402,11 +411,11 @@ public class NewsTargetingService {
     NewsTargetingEntity newsTargetingEntity = new NewsTargetingEntity();
     newsTargetingEntity.setName(metadata.getName());
     newsTargetingEntity.setProperties(metadata.getProperties());
-    if (newsTargetingEntity.getProperties().get(NewsUtils.TARGET_PERMISSIONS) != null) {
+    if (newsTargetingEntity.getProperties().get(TARGET_PERMISSIONS) != null) {
       org.exoplatform.services.security.Identity currentIdentity = NewsUtils.getUserIdentity(RestUtils.getCurrentUser());
       boolean isSpacePublisher = false;
       boolean isGroupPublisher = false;
-      String permissions = newsTargetingEntity.getProperties().get(NewsUtils.TARGET_PERMISSIONS);
+      String permissions = newsTargetingEntity.getProperties().get(TARGET_PERMISSIONS);
       List<String> permissionsList = List.of(permissions.split(","));
       List<NewsTargetingPermissionsEntity> permissionsEntities = new ArrayList<>();
       for (String permission : permissionsList) {
@@ -459,6 +468,10 @@ public class NewsTargetingService {
     metadata.setProperties(newsTargetingEntity.getProperties());
     metadata.setCreatorId(0);
     return metadata;
+  }
+
+  private boolean matchesSpacePermission(String permission, Long spaceId) {
+    return String.format("%s%s", SPACE_TARGET_PERMISSION_PREFIX, spaceId).equals(permission);
   }
 
 }
