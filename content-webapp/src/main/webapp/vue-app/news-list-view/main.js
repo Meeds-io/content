@@ -82,7 +82,7 @@ export function init(params) {
   if (newsTarget && articlesSourceOption !== 'target') {
     articlesSourceOption = 'target';
   }
-  const selectedArticleIds = params?.selectedArticleIds;
+  const selectedArticleIds = params?.selectedArticleIds || [];
   const canCreateNewsTarget = params?.canCreateNewsTarget;
 
   exoi18n.loadLanguageAsync(lang, url).then(i18n => {

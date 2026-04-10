@@ -350,7 +350,7 @@ export default {
       this.$newsListService.saveSettings(this.saveSettingsURL , settings)
         .then(() => {
           const selectedArticleIds = this.selectedArticles?.map(item => item.id) || [];
-          const newlySelectedArticleIds = selectedArticleIds.filter(id => !this.$root.selectedArticleIds.includes(id)
+          const newlySelectedArticleIds = selectedArticleIds.filter(id => !this.$root.selectedArticleIds?.includes(id)
           );
           this.saveHeaderTranslations();
           this.$root.viewTemplate = this.viewTemplate;
