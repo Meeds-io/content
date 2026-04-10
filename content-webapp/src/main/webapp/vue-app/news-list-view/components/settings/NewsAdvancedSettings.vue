@@ -277,6 +277,9 @@ export default {
     this.reset();
     this.$root.$on('limit-updated', this.setLimit);
   },
+  beforeDestroy() {
+    this.$root.$off('limit-updated', this.setLimit);
+  },
   methods: {
     selectedOption(selectedOption, optionValue) {
       this.$emit('selected-option', selectedOption, optionValue);
