@@ -232,6 +232,7 @@ public class NewsRest {
       news.setProperties(updatedNews.getProperties());
       news.setLang(updatedNews.getLang());
       news.setReferred(updatedNews.isReferred());
+      news.setParameters(updatedNews.getParameters());
       news = newsService.updateNews(news,
                                     currentIdentity.getUserId(),
                                     post,
@@ -868,6 +869,38 @@ public class NewsRest {
       return ResponseEntity.ok(newsService.getArticleLanguages(articleId, withDrafts));
     } catch (Exception e) {
       LOG.error("Error when getting the article available translation languages with id " + articleId, e);
+      return ResponseEntity.internalServerError().build();
+    }
+  }
+
+  @PutMapping(path = "metadata/{articleId}", produces = MediaType.APPLICATION_JSON_VALUE)
+  @Secured("users")
+  @Operation(
+      summary = "Update article metadata properties",
+      method = "PUT",
+      description = "Update article metadata properties")
+  @ApiResponses(value = {
+      @ApiResponse(responseCode = "200", description = "Request fulfilled"),
+      @ApiResponse(responseCode = "400", description = "Invalid query input"),
+      @ApiResponse(responseCode = "401", description = "User not authorized"),
+      @ApiResponse(responseCode = "404", description = "Article not found"),
+      @ApiResponse(responseCode = "500", description = "Internal server error") })
+  public ResponseEntity<Map<String, String>> updateNewsMetadataProperties(
+      @Parameter(description = "Article id") @PathVariable("articleId") String articleId,
+      @Parameter(description = "Metadata properties") @RequestBody Map<String, String> properties) {
+    try {
+      if (StringUtils.isBlank(articleId)) {
+        return ResponseEntity.badRequest().build();
+      }
+      long currentUserId = RestUtils.getCurrentUserIdentityId();
+      if (currentUserId <= 0) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+      }
+      return ResponseEntity.ok(newsService.updateMetadataProperties(articleId, properties, currentUserId));
+    } catch (ObjectNotFoundException e) {
+      return ResponseEntity.notFound().build();
+    } catch (Exception e) {
+      LOG.error("Error when updating metadata properties for article with id {}", articleId, e);
       return ResponseEntity.internalServerError().build();
     }
   }

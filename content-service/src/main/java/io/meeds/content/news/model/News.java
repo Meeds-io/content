@@ -131,7 +131,7 @@ public class News {
 
   private boolean                         activityPosted;
 
-  private Map<String, List<MetadataItem>> metadatas;
+  private Map<String, String>             parameters;
 
   private List<ArticleTarget>             targets;
 
