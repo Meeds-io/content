@@ -19,66 +19,64 @@
 
 -->
 <template>
-  <v-app>
+  <div
+    id="newsDetails"
+    class="pa-5">
     <div
-      id="newsDetails"
-      class="pa-5">
-      <div
-        class="application-body">
-        <exo-news-details-toolbar
-          :news="news"
-          :news-id="newsId"
-          :current-user="currentUser"
-          :activity-id="activityId"
-          :show-edit-button="showEditButton"
-          :show-delete-button="showDeleteButton"
-          :show-publish-button="showPublishButton"
-          :show-copy-link-button="showCopyLinkButton"
-          :show-refer-button="showReferButton"
-          :article-page-url="articlePage?.url"
-          @delete-article="deleteConfirmDialog"
-          @edit-article="editLink"
-          @open-publication-drawer="openPublicationDrawer" />
-        <exo-news-details-body
-          :current-user="currentUser"
-          :news="news"
-          :translations="translations"
-          :selected-translation="selectedTranslation" />
-      </div>
-      <exo-confirm-dialog
-        v-if="currentUser"
-        ref="deleteConfirmDialog"
-        :message="$t('news.message.confirmDeleteNews')"
-        :title="$t('news.title.confirmDeleteNews')"
-        :ok-label="$t('news.button.ok')"
-        :cancel-label="$t('news.button.cancel')"
-        @ok="deleteNews" />
-      <note-publication-drawer
-        ref="publicationDrawer"
-        :is-publishing="isPublishing"
-        :params="{
-          spaceId: spaceId,
-          allowedTargets: allowedTargets,
-          canPublish: news?.canPublish,
-          canSchedule: news?.canSchedule
-        }"
-        :edit-mode="true"
-        @publish="publishArticle" />
-      <note-publication-target-drawer />
-      <news-mobile-action-menu
-        :news="news"
+      class="application-body">
+      <exo-news-details-toolbar
+        :news="localNews"
+        :news-id="newsId"
+        :current-user="currentUser"
+        :activity-id="activityId"
+        :show-edit-button="showEditButton"
+        :show-delete-button="showDeleteButton"
+        :show-publish-button="showPublishButton"
+        :show-copy-link-button="showCopyLinkButton"
+        :show-refer-button="showReferButton"
+        :article-page-url="articlePage?.url"
+        @delete-article="deleteConfirmDialog"
         @edit-article="editLink"
-        @delete-article="deleteConfirmDialog" />
-      <note-treeview-drawer
-        :settings="{
-          saveButtonLabel: $t('content.article.refer.label'),
-          drawerTitle: $t('content.article.refer.to.note'),
-          showCurrentDestination: false,
-          spaceDisplayName: currentSpace?.displayName
-        }"
-        ref="noteTreeview" />
+        @open-publication-drawer="openPublicationDrawer" />
+      <exo-news-details-body
+        :current-user="currentUser"
+        :news="localNews"
+        :translations="translations"
+        :selected-translation="selectedTranslation" />
     </div>
-  </v-app>
+    <exo-confirm-dialog
+      v-if="currentUser"
+      ref="deleteConfirmDialog"
+      :message="$t('news.message.confirmDeleteNews')"
+      :title="$t('news.title.confirmDeleteNews')"
+      :ok-label="$t('news.button.ok')"
+      :cancel-label="$t('news.button.cancel')"
+      @ok="deleteNews" />
+    <note-publication-drawer
+      ref="publicationDrawer"
+      :is-publishing="isPublishing"
+      :params="{
+        spaceId: spaceId,
+        allowedTargets: allowedTargets,
+        canPublish: localNews?.canPublish,
+        canSchedule: localNews?.canSchedule
+      }"
+      :edit-mode="true"
+      @publish="publishArticle" />
+    <note-publication-target-drawer />
+    <news-mobile-action-menu
+      :news="localNews"
+      @edit-article="editLink"
+      @delete-article="deleteConfirmDialog" />
+    <note-treeview-drawer
+      :settings="{
+        saveButtonLabel: $t('content.article.refer.label'),
+        drawerTitle: $t('content.article.refer.to.note'),
+        showCurrentDestination: false,
+        spaceDisplayName: currentSpace?.displayName
+      }"
+      ref="noteTreeview" />
+  </div>
 </template>
 <script>
 
@@ -146,6 +144,7 @@ export default {
   },
   data() {
     return {
+      localNews: null,
       currentSpace: null,
       currentUser: `${eXo.env.portal.userName}`,
       spaceId: null,
@@ -170,21 +169,22 @@ export default {
       return this.activityId && this.activityId !== '' ? this.$newsConstants.newsObjectType.ARTICLE : this.newsType;
     },
     scheduled() {
-      return !!this.news.schedulePostDate || this.staged;
+      return !!this.localNews?.schedulePostDate || this.staged;
     },
     staged() {
-      return this.news?.publicationState === 'staged';
+      return this.localNews?.publicationState === 'staged';
     }
   },
   created() {
+    this.localNews = { ...this.news };
     this.getAllowedTargets();
     if (!this.news || !this.news.spaceId) {
       this.getNewsById(this.newsId);
     } else {
       this.spaceId = this.news.spaceId;
       this.getSpaceById(this.spaceId );
-      if (!this.news.newsId) {
-        this.news.newsId = this.newsId;
+      if (!this.localNews.newsId) {
+        this.localNews.newsId = this.newsId;
       }
       this.$root.$emit('application-loaded');
     }
@@ -212,16 +212,21 @@ export default {
       }
     }
   },
+  watch: {
+    news() {
+      this.localNews = { ...this.news };
+    }
+  },
   methods: {
     moveArticlePage(page, newParentPage) {
       const previousParentPageId = page.parentPageId;
       page.parentPageId = newParentPage.id;
-      this.news.referred = true;
+      this.localNews.referred = true;
       this.$refs.noteTreeview.isLoading = true;
-      return this.$newsServices.updateNews(this.news, false, this.$newsConstants.newsObjectType.ARTICLE,
+      return this.$newsServices.updateNews(this.localNews, false, this.$newsConstants.newsObjectType.ARTICLE,
         this.$newsConstants.newsUpdateType.PAGE_REFERENCE).then(() => {
         return this.$newsServices.moveArticlePage(page, newParentPage).then(() => {
-          this.news.deReferPageId = previousParentPageId;
+          this.localNews.deReferPageId = previousParentPageId;
           this.$refs.noteTreeview.isLoading = true;
           this.$refs.noteTreeview.close();
           this.displayMessage({
@@ -238,12 +243,12 @@ export default {
       });
     },
     referArticle() {
-      if (this.news.referred) {
-        return this.$newsServices.getArticlePage(this.news.deReferPageId).then((deReferPage) => {
+      if (this.localNews.referred) {
+        return this.$newsServices.getArticlePage(this.localNews.deReferPageId).then((deReferPage) => {
           this.articlePage.parentPageId = deReferPage.id;
           return this.$newsServices.moveArticlePage(this.articlePage, deReferPage).then(() => {
-            this.news.referred = false;
-            return this.$newsServices.updateNews(this.news, false, this.$newsConstants.newsObjectType.ARTICLE,
+            this.localNews.referred = false;
+            return this.$newsServices.updateNews(this.localNews, false, this.$newsConstants.newsObjectType.ARTICLE,
               this.$newsConstants.newsUpdateType.PAGE_REFERENCE).then(() => {
               this.displayMessage({
                 message: this.$t('content.article.deReferred.success'),
@@ -256,10 +261,10 @@ export default {
       }
     },
     openPublicationDrawer() {
-      this.$refs?.publicationDrawer?.open(this.news);
+      this.$refs?.publicationDrawer?.open(this.localNews);
     },
     getArticlePage() {
-      return this.$newsServices.getArticlePage(this.news?.id || this.newsId).then((page) => {
+      return this.$newsServices.getArticlePage(this.localNews?.id || this.newsId).then((page) => {
         this.articlePage = page;
       });
     },
@@ -276,8 +281,8 @@ export default {
     editLink() {
       const newsType = this.activityId || this.scheduled ? this.$newsConstants.newsObjectType.LATEST_DRAFT : this.newsType;
       let editUrl = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news-editor?spaceId=${this.spaceId}&newsId=${this.newsId}&activityId=${this.activityId}&spaceName=${this.currentSpace.prettyName}&type=${newsType}`;
-      if (this.news.lang) {
-        editUrl = `${editUrl}&lang=${this.news.lang}`;
+      if (this.localNews.lang) {
+        editUrl = `${editUrl}&lang=${this.localNews.lang}`;
       }
       window.open(editUrl, '_target');
     },
@@ -289,7 +294,7 @@ export default {
       const redirectionTime = 6100;
       this.$newsServices.deleteNews(this.newsId, this.$newsConstants.newsObjectType.ARTICLE, deleteDelay)
         .then(() => {
-          this.$root.$emit('confirm-news-deletion', this.news);
+          this.$root.$emit('confirm-news-deletion', this.localNews);
           const clickMessage = this.$t('news.details.undoDelete');
           const message = this.$t('news.details.deleteSuccess');
           document.dispatchEvent(new CustomEvent('alert-message', {detail: {
@@ -302,7 +307,7 @@ export default {
       setTimeout(() => {
         const deletedNews = localStorage.getItem('deletedNews');
         if (deletedNews != null) {
-          window.location.href = this.news.spaceUrl;
+          window.location.href = this.localNews.spaceUrl;
         }
       }, redirectionTime);
     },
@@ -320,71 +325,81 @@ export default {
     },
     publish(editScheduleAction, scheduleSettings) {
       if (editScheduleAction === 'schedule') {
-        this.news.publicationState = scheduleSettings?.postDate && 'staged' || '';
-        return this.$newsServices.scheduleNews(this.news, this.$newsConstants.newsObjectType.ARTICLE);
+        this.localNews.publicationState = scheduleSettings?.postDate && 'staged' || '';
+        return this.$newsServices.scheduleNews(this.localNews, this.$newsConstants.newsObjectType.ARTICLE);
       } else if (editScheduleAction === 'publish_now') {
-        this.news.schedulePostDate = 0;
-        this.news.publicationState = 'posted';
-        return this.$newsServices.saveNews(this.news);
+        this.localNews.schedulePostDate = 0;
+        this.localNews.publicationState = 'posted';
+        return this.$newsServices.saveNews(this.localNews);
       } else {
-        this.news.publicationState = 'posted';
-        return this.$newsServices.updateNews(this.news, this.news.activityPosted,
+        this.localNews.publicationState = 'posted';
+        return this.$newsServices.updateNews(this.localNews, this.localNews.activityPosted,
           this.$newsConstants.newsObjectType.ARTICLE, this.$newsConstants.newsUpdateType.POSTING_AND_PUBLISHING);
       }
     },
     redirectToDrafts() {
       window.location.href = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news?filter=drafts`;
     },
-    publishArticle(publicationSettings) {
+    publishArticle(publicationSettings, extensionsCallback) {
       this.isPublishing = true;
-      this.news.activityPosted = publicationSettings?.post;
-      this.news.published = publicationSettings?.publish;
-      this.news.targets = publicationSettings?.selectedTargets;
-      this.news.categories = publicationSettings?.selectedCategoryIds;
-      this.news.audience = publicationSettings?.selectedAudience;
+      this.localNews.isPublishing = true;
+      this.localNews.activityPosted = publicationSettings?.post;
+      this.localNews.published = publicationSettings?.publish;
+      this.localNews.targets = publicationSettings?.selectedTargets;
+      this.localNews.categories = publicationSettings?.selectedCategoryIds;
+      this.localNews.audience = publicationSettings?.selectedAudience;
       const scheduleSettings = publicationSettings?.scheduleSettings;
       const editScheduleAction = scheduleSettings?.editScheduleAction;
-      this.news.timeZoneId = USER_TIMEZONE_ID;
-      this.news.schedulePostDate = scheduleSettings?.postDate;
-      this.news.scheduleUnpublishDate = scheduleSettings?.unpublishDate;
+      this.localNews.timeZoneId = USER_TIMEZONE_ID;
+      this.localNews.schedulePostDate = scheduleSettings?.postDate;
+      this.localNews.scheduleUnpublishDate = scheduleSettings?.unpublishDate;
       if (editScheduleAction === 'cancel_schedule') {
-        this.news.schedulePostDate = 0;
-        this.news.publicationState = 'draft';
-        this.$newsServices.saveNews(this.news).then((createdNews) => {
-          this.news.id = createdNews.id;
+        this.localNews.schedulePostDate = 0;
+        this.localNews.publicationState = 'draft';
+        this.$newsServices.saveNews(this.localNews).then((createdNews) => {
+          this.localNews.id = createdNews.id;
           this.$emit('draftCreated');
           this.redirectToDrafts();
         });
       } else {
         const successMessage = this.$t('notes.publication.settings.update.success');
         const errorMessage = this.$t('notes.publication.settings.update.error');
-        document.dispatchEvent(new Event('closeDisplayedDrawer'));
-        this.publish(editScheduleAction, scheduleSettings).then((article) => {
+
+        this.publish(editScheduleAction, scheduleSettings).then(async (article) => {
           this.displayMessage({message: successMessage, type: 'success'});
           history.replaceState({}, article.url);
-          this.news = article;
+          this.localNews = { ...article };
+          await this.executePublishExtensions(extensionsCallback, article.id);
         }).catch(() => {
           this.displayMessage({message: errorMessage, type: 'error'});
         }).finally(() => {
+          this.$refs?.publicationDrawer?.close?.();
           this.isPublishing = false;
         });
       }
+    },
+    async executePublishExtensions(extensionsCallback, articleId) {
+      const metadata = await extensionsCallback.executeExtensions();
+      const parameters = await this.$newsServices.updateArticleMetadataProperties(articleId, metadata);
+      const cleanParameters = Object.fromEntries(
+        Object.entries(parameters).filter(([, v]) => v != null)
+      );
+
+      this.localNews = {
+        ...this.localNews,
+        parameters: cleanParameters
+      };
     },
     getNewsById(newsId) {
       this.$newsServices.getNewsById(newsId, false, this.processedNewsType, this.selectedTranslation.value)
         .then(news => {
           this.spaceId = news.spaceId;
           this.getSpaceById(this.spaceId);
-          if (!this.news) {
-            this.news = news;
-          }
-          if (!this.news.newsId) {
-            this.news.newsId = newsId;
-          }
+          this.localNews = { ...news, newsId: news.newsId || newsId };
           return this.$nextTick();
         })
         .finally(() => {
-          document.title = this.$root.$t('news.window.title', {0: this.news.title});
+          document.title = this.$root.$t('news.window.title', {0: this.localNews.title});
           this.$root.$emit('application-loaded');
         });
     },
