@@ -22,7 +22,7 @@
   <exo-news-details
     v-if="news"
     :news="news"
-    :key="`${news.id}${news.lang && '_' + news.lang || ''}`"
+    :key="`activity_${news.id}${news.lang && '_' + news.lang || ''}`"
     :news-id="newsId || sharedNewsId"
     :activity-id="activityId"
     :show-edit-button="showEditButton"
