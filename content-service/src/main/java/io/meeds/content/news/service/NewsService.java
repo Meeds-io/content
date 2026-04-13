@@ -1396,6 +1396,59 @@ public class NewsService {
     return noteService.getPageAvailableTranslationLanguages(Long.parseLong(articleId), withDrafts);
   }
 
+  public void removeArticleMetadataProperty(String articleId, String propertyKey, long updater) {
+    News article = getNewsArticleById(articleId);
+    if (article == null) {
+      return;
+    }
+    MetadataItem metadataItem = getArticlePageMetadataItem(article);
+    if (metadataItem == null) {
+      return;
+    }
+    Map<String, String> properties = metadataItem.getProperties();
+    if (!properties.containsKey(propertyKey)) {
+      return;
+    }
+    properties.remove(propertyKey);
+    metadataItem.setProperties(properties);
+    metadataService.updateMetadataItem(metadataItem, updater, false);
+  }
+
+  public Map<String, String> updateMetadataProperties(String articleId, Map<String, String> properties, Long updater)
+      throws ObjectNotFoundException {
+
+    News article = getNewsArticleById(articleId);
+    if (article == null) {
+      throw new ObjectNotFoundException("Article not found");
+    }
+
+    MetadataItem existingItem = getArticlePageMetadataItem(article);
+
+    if (existingItem != null) {
+      Map<String, String> mergedProperties = new HashMap<>(existingItem.getProperties());
+      mergedProperties.putAll(properties);
+      existingItem.setProperties(mergedProperties);
+      metadataService.updateMetadataItem(existingItem, updater, false);
+      updateNewsActivity(article, false, article.isActivityPosted());
+      article.setParameters(mergedProperties);
+      NewsUtils.broadcastEvent(NewsUtils.UPDATE_NEWS, updater, article);
+      return mergedProperties;
+    } else {
+      return properties;
+    }
+  }
+
+  private MetadataItem getArticlePageMetadataItem(News article) {
+    NewsPageObject newsPageObject = new NewsPageObject(
+        NEWS_METADATA_PAGE_OBJECT_TYPE, article.getId(), null, Long.parseLong(article.getSpaceId())
+    );
+
+    return metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY, newsPageObject)
+                          .stream()
+                          .findFirst()
+                          .orElse(null);
+  }
+
   @SneakyThrows
   private void updateArticleTargets(News article, List<ArticleTarget> oldTargets, String updater) {
     Set<String> oldTargetNames = new HashSet<>(NewsUtils.toTargetNames(oldTargets));
@@ -1534,6 +1587,11 @@ public class NewsService {
     newsPageProperties.put(PUBLISHED, String.valueOf(article.isPublished()));
     newsPageProperties.put(NEWS_DELETED, String.valueOf(articlePage.isDeleted()));
     newsPageProperties.put(PUBLISHER, creatorIdentity.getProfile().getFullName());
+
+    if (MapUtils.isNotEmpty(article.getParameters())) {
+      newsPageProperties.putAll(article.getParameters());
+    }
+
     metadataService.createMetadataItem(newsPageObject,
                                        NEWS_METADATA_KEY,
                                        newsPageProperties,
@@ -1711,6 +1769,7 @@ public class NewsService {
                                       .collect(Collectors.toList());
         article.setCategories(categories);
       }
+      article.setParameters(properties);
     }
   }
 
@@ -2067,7 +2126,7 @@ public class NewsService {
       activity.setTemplateParams(templateParams);
       activity.setMetadataObjectId(news.getId());
       activity.setMetadataObjectType(NewsUtils.NEWS_METADATA_OBJECT_TYPE);
-      activityManager.updateActivity(activity, true);
+      activityManager.updateActivity(activity, false);
       linkActivityCategories(activity, news.getCategories());
     }
   }
@@ -2226,6 +2285,9 @@ public class NewsService {
           org.exoplatform.social.core.identity.model.Identity publisherIdentity =
                                                                                 identityManager.getOrCreateUserIdentity(updater.getUserId());
           newsPageProperties.put(PUBLISHER, publisherIdentity.getProfile().getFullName());
+        }
+        if (MapUtils.isNotEmpty(news.getParameters())) {
+          newsPageProperties.putAll(news.getParameters());
         }
         existingPageMetadataItem.setProperties(newsPageProperties);
         Date updateDate = Calendar.getInstance().getTime();

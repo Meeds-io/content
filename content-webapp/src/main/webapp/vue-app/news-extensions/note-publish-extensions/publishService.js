@@ -88,6 +88,10 @@ export function updateNotePublication(scheduleSettings, article, spaceId) {
   }
 }
 
+export function updatePublishedNoteMetadata(articleId, metadata) {
+  return newsService.updateArticleMetadataProperties(articleId, metadata);
+}
+
 function noteToArticle(note, spaceId) {
   return {
     id: note.id,

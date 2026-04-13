@@ -31,10 +31,7 @@ import static io.meeds.content.news.service.NewsService.UNPUBLISH_SCHEDULED;
 import static io.meeds.content.news.utils.NewsUtils.NewsObjectType.ARTICLE;
 import static io.meeds.content.news.utils.NewsUtils.NewsObjectType.LATEST_DRAFT;
 import static io.meeds.content.news.utils.NewsUtils.NewsUpdateType.CONTENT_AND_TITLE;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -61,6 +58,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import org.exoplatform.commons.exception.ObjectNotFoundException;
 import org.exoplatform.social.core.space.SpaceUtils;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -1165,6 +1163,130 @@ public class NewsServiceTest {
     assertEquals(Long.toString(spaceIdentityId), filter.getSpaces().getFirst());
     verify(newsSearchConnector, times(1)).search(userIdentity, filter);
 
+  }
+
+  @Test
+  public void testUpdateMetadataProperties() throws Exception {
+
+    // Given - article not found (noteService returns null)
+    when(noteService.getNoteById(eq("99"))).thenReturn(null);
+
+    Map<String, String> inputProperties = new HashMap<>();
+    inputProperties.put("key1", "value1");
+
+    // When, Then
+    assertThrows(ObjectNotFoundException.class,
+                 () -> newsService.updateMetadataProperties("99", inputProperties, 1L));
+
+    Page existingPage = mock(Page.class);
+    when(existingPage.getId()).thenReturn("1");
+    when(existingPage.getWikiOwner()).thenReturn("/space/groupId");
+    when(existingPage.getAuthor()).thenReturn("john");
+    when(noteService.getNoteById(eq("1"))).thenReturn(existingPage);
+
+    Space space = mock(Space.class);
+    when(space.getId()).thenReturn("1");
+    when(space.getGroupId()).thenReturn("/space/groupId");
+    when(space.getAvatarUrl()).thenReturn("space/avatar/url");
+    when(space.getDisplayName()).thenReturn("spaceDisplayName");
+    when(space.getVisibility()).thenReturn("public");
+    when(spaceService.getSpaceByGroupId(anyString())).thenReturn(space);
+
+    PageVersion pageVersion = mock(PageVersion.class);
+    when(pageVersion.getAuthor()).thenReturn("john");
+    when(pageVersion.getTitle()).thenReturn("title");
+    when(pageVersion.getContent()).thenReturn("content");
+    when(pageVersion.getUpdatedDate()).thenReturn(new Date());
+    when(pageVersion.getAuthorFullName()).thenReturn("John Doe");
+    when(noteService.getPublishedVersionByPageIdAndLang(1L, null)).thenReturn(pageVersion);
+
+    when(newsTargetingService.getTargetsByNews(any(News.class))).thenReturn(null);
+    PORTAL_CONTAINER.when(PortalContainer::getCurrentPortalContainerName).thenReturn("portal");
+    COMMONS_UTILS.when(CommonsUtils::getCurrentPortalOwner).thenReturn("dw");
+    NEWS_UTILS.when(() -> NewsUtils.buildNewsArticleUrl(any(), any())).thenReturn("url");
+
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+                                                             any(MetadataObject.class)))
+        .thenReturn(new ArrayList<>());
+
+    assertThrows(ObjectNotFoundException.class,
+                 () -> newsService.updateMetadataProperties("1", inputProperties, 1L));
+
+    MetadataItem existingMetadataItem = mock(MetadataItem.class);
+    Map<String, String> existingProperties = new HashMap<>();
+    existingProperties.put("existingKey", "existingValue");
+    existingProperties.put("key1", "oldValue");
+
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+                                                             any(MetadataObject.class)))
+        .thenReturn(List.of(existingMetadataItem));
+    when(existingMetadataItem.getProperties()).thenReturn(existingProperties);
+    when(existingMetadataItem.getId()).thenReturn(1L);
+
+    Map<String, String> newProperties = new HashMap<>();
+    newProperties.put("key1", "newValue");
+    newProperties.put("key2", "value2");
+
+    // When
+    Map<String, String> mergedResult = newsService.updateMetadataProperties("1", newProperties, 1L);
+
+    // Then
+    verify(metadataService, times(1)).updateMetadataItem(eq(existingMetadataItem), eq(1L), eq(false));
+    assertNotNull(mergedResult);
+    assertEquals("newValue", mergedResult.get("key1"));
+    assertEquals("value2", mergedResult.get("key2"));
+    assertEquals("existingValue", mergedResult.get("existingKey"));
+  }
+
+  @Test
+  public void testRemoveArticleMetadataProperty() throws Exception {
+    Page existingPage = mock(Page.class);
+    when(existingPage.getId()).thenReturn("1");
+    when(existingPage.getWikiOwner()).thenReturn("/space/groupId");
+    when(existingPage.getAuthor()).thenReturn("john");
+    when(noteService.getNoteById(eq("1"))).thenReturn(existingPage);
+    when(spaceService.getSpaceByGroupId(anyString())).thenReturn(mock(Space.class));
+
+    Space space = mock(Space.class);
+    when(space.getId()).thenReturn("1");
+    when(space.getGroupId()).thenReturn("/space/groupId");
+    when(space.getVisibility()).thenReturn("public");
+    when(spaceService.getSpaceByGroupId(anyString())).thenReturn(space);
+
+    PageVersion pageVersion = mock(PageVersion.class);
+    when(pageVersion.getAuthor()).thenReturn("john");
+    when(pageVersion.getUpdatedDate()).thenReturn(new Date());
+    when(pageVersion.getAuthorFullName()).thenReturn("John Doe");
+    when(noteService.getPublishedVersionByPageIdAndLang(1L, null)).thenReturn(pageVersion);
+    when(newsTargetingService.getTargetsByNews(any(News.class))).thenReturn(null);
+    PORTAL_CONTAINER.when(PortalContainer::getCurrentPortalContainerName).thenReturn("portal");
+    COMMONS_UTILS.when(CommonsUtils::getCurrentPortalOwner).thenReturn("dw");
+    NEWS_UTILS.when(() -> NewsUtils.buildNewsArticleUrl(any(), any())).thenReturn("url");
+
+    MetadataItem articleMetadataItem = mock(MetadataItem.class);
+    when(articleMetadataItem.getProperties()).thenReturn(new HashMap<>());
+
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class), any(MetadataObject.class)))
+        .thenReturn(new ArrayList<>());
+
+    newsService.removeArticleMetadataProperty("1", "key1", 1L);
+    verify(metadataService, times(0)).updateMetadataItem(any(MetadataItem.class), anyLong(), anyBoolean());
+
+    MetadataItem pageMetadataItem = mock(MetadataItem.class);
+    Map<String, String> props = new HashMap<>();
+    props.put("key1", "value1");
+    props.put("key2", "value2");
+    when(pageMetadataItem.getProperties()).thenReturn(props);
+
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class), any(MetadataObject.class)))
+        .thenReturn(List.of(articleMetadataItem))
+        .thenReturn(List.of(pageMetadataItem));
+
+    newsService.removeArticleMetadataProperty("1", "key1", 1L);
+
+    verify(metadataService, times(1)).updateMetadataItem(eq(pageMetadataItem), eq(1L), eq(false));
+    assertFalse(props.containsKey("key1"));
+    assertEquals("value2", props.get("key2"));
   }
 
   private void mockBuildArticle(List<MetadataItem> metadataItems) throws WikiException {
