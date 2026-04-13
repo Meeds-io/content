@@ -27,7 +27,7 @@
     fixed
     detached
     @closed="close">
-    <template slot="title">
+    <template #title>
       <div class="flex flex-row">
         <v-btn
           v-if="showAdvancedSettings"
@@ -42,15 +42,13 @@
         <div v-else class="flex flex-column">{{ $t('news.list.settings.title') }}</div>
       </div>
     </template>
-    <template slot="content">
+    <template #content>
       <form ref="form1" class="pa-2 ms-2">
         <div v-if="!showAdvancedSettings" class="d-flex flex-column flex-grow-1">
-          <div d-flex flex-row>
-            <label for="headerName" class="text-header me-1 my-auto mt-4">
+          <div class="d-flex flex-column">
+            <label for="headerName" class="text-header me-1 my-4">
               {{ $t('news.list.settings.header') }}:
             </label>
-          </div>
-          <div class="d-flex flex-row mt-2">
             <translation-text-field
               ref="headerNameInput"
               id="headerName"
@@ -71,7 +69,7 @@
             :articles="selectedArticles"
             @update-source-option="updateArticlesSourceOption" />
           <div class="flex-column">
-            <label for="viewTemplate" class="text-header mt-4">
+            <label for="viewTemplate" class="text-header my-4">
               {{ $t('news.list.settings.blockDisplay') }}:
             </label>
             <v-select
@@ -114,17 +112,15 @@
         </span>
         <v-btn
           icon
-          small
-          class="ml-2"
           :aria-labelledby="'edit-display-settings-label'"
           @click="showAdvancedSettings = !showAdvancedSettings">
-          <v-icon small>
+          <v-icon size="20">
             fa-edit
           </v-icon>
         </v-btn>
       </div>
     </template>
-    <template slot="footer">
+    <template #footer>
       <div class="d-flex">
         <v-spacer />
         <v-btn
