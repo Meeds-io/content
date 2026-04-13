@@ -231,6 +231,7 @@ public class NewsRest {
       news.setProperties(updatedNews.getProperties());
       news.setLang(updatedNews.getLang());
       news.setReferred(updatedNews.isReferred());
+      news.setParameters(updatedNews.getParameters());
       news = newsService.updateNews(news,
                                     currentIdentity.getUserId(),
                                     post,
