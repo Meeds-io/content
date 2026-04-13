@@ -75,7 +75,7 @@
     <v-list-item
       v-if="showPublishButton"
       class="ps-2 pe-4 action-menu-item"
-      @click="$root.$emit('open-edit-publishing-drawer')">
+      @click="openPublicationDrawer">
       <v-icon
         size="16"
         class="clickable icon-menu">
@@ -196,6 +196,9 @@ export default {
     document.addEventListener(`extension-${this.extensionApp}-${this.extensionType}-updated`, this.refreshExtensions);
   },
   methods: {
+    openPublicationDrawer() {
+      this.$root.$emit('open-edit-publishing-drawer');
+    },
     refreshExtensions() {
       this.menuExtensions = extensionRegistry.loadExtensions(this.extensionApp, this.extensionType);
     },
