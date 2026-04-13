@@ -48,7 +48,7 @@ export default {
     translations: [],
     languages: [],
     originalVersion: null,
-    previousSelectedTranslation: null
+    previousSelectedTranslation: null,
   }),
   created() {
     this.getAvailableLanguages();
