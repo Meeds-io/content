@@ -525,9 +525,11 @@ export default {
       if (article.publicationState ==='staged') {
         this.$newsServices.scheduleNews(article, this.articleType).then(async (scheduleArticle) => {
           this.articleType = 'latest_draft';
-          document.dispatchEvent(new CustomEvent('update-processed-image-url', {detail: {
-            content: scheduleArticle.body
-          }}));
+          document.dispatchEvent(new CustomEvent('update-processed-image-url', {
+            detail: {
+              content: scheduleArticle.body
+            }
+          }));
           this.fillArticle(scheduleArticle.id, false, null).then(() => {
             this.updateUrl();
             this.initDataPropertiesFromUrl();
