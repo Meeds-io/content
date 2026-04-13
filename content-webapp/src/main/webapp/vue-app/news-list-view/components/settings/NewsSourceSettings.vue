@@ -19,10 +19,12 @@
 
 -->
 <template>
-  <div class="flex-column align-start mt-4">
-    <span id="news-source-group-label" class="text-header me-1 my-auto">
-      {{ $t('news.list.settings.newsTarget') }}
-    </span>
+  <div class="flex-column align-start">
+    <div class="my-4">
+      <span id="news-source-group-label" class="text-header me-1">
+        {{ $t('news.list.settings.newsTarget') }}
+      </span>
+    </div>
     <v-radio-group
       class="ma-0 pa-0"
       v-model="choice"
@@ -71,7 +73,7 @@
         <a @click="createNewTarget"> {{ $t('news.list.settings.drawer.createNewTarget') }} </a>
       </span>
       <div v-if="newsTargets.length === 0" class="d-flex flex-row grey--text">
-        <v-icon class="mt-2">fa-exclamation-triangle</v-icon>
+        <v-icon small class="mt-2">fa-exclamation-triangle</v-icon>
         <span class="mx-2"> {{ $t('news.composer.stepper.selectedTarget.noTargetAllowed') }}</span>
       </div>
     </div>
