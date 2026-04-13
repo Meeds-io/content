@@ -1,4 +1,4 @@
-import * as publishService from './publishService';
+import * as publishService from './publishService.js';
 import {initPublishExtension} from './extensions.js';
 
 const treeViewNavigationTemplate = `
@@ -21,19 +21,26 @@ const spaceId = eXo.env.portal.spaceId;
 const publicationParams = {};
 
 function publishNote(event) {
-  const {editPublication, article, scheduleSettings} = event.detail;
+  const {editPublication, article, scheduleSettings, extensionsCallback} = event.detail;
   if (editPublication) {
-    publishService.updateNotePublication(scheduleSettings, article, spaceId).then(() => {
+    publishService.updateNotePublication(scheduleSettings, article, spaceId).then(async () => {
+      await executePublishExtensions(extensionsCallback, article.id);
       emitNotePublished(true);
       updateSavedPublicationSettings(article.id);
     });
   } else {
     checkInsertTocNavigationTemplate(article);
-    publishService.saveNoteArticle(article, spaceId).then((article) => {
+    publishService.saveNoteArticle(article, spaceId).then(async (article) => {
+      await executePublishExtensions(extensionsCallback, article.id);
       emitNotePublished(false, !!article?.schedulePostDate, article?.url);
       updateSavedPublicationSettings(article.id);
     });
   }
+}
+
+async function executePublishExtensions(extensionsCallback, articleId) {
+  const metadata = await extensionsCallback.executeExtensions();
+  await publishService.updatePublishedNoteMetadata(articleId, metadata);
 }
 
 function checkInsertTocNavigationTemplate(article) {
