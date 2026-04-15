@@ -137,8 +137,26 @@
           </div>
         </div>
         <div
-          class="mt-8 content-treeview-processor rich-editor-content extended-rich-content"
-          v-sanitized-html="newsBody">
+          :class="{ 'd-flex align-start': !mdAndDown }">
+          <extension-registry-components
+            v-if="mdAndDown"
+            :params="contentDetailsExtensionsParams"
+            name="ContentDetails"
+            type="content-event-detail"
+            parent-element="div"
+            element="div" />
+          <div
+            class="mt-8 content-treeview-processor rich-editor-content extended-rich-content"
+            v-sanitized-html="newsBody">
+          </div>
+          <extension-registry-components
+            v-if="!mdAndDown"
+            :params="contentDetailsExtensionsParams"
+            name="ContentDetails"
+            type="content-event-detail"
+            parent-element="div"
+            element="div"
+            class="position-sticky d-flex ms-auto" />
         </div>
         <extension-registry-components
           name="NewsDetailsFooter"
@@ -204,6 +222,14 @@ export default {
     this.$root.$on('update-news-body', this.setNewsContent);
   },
   computed: {
+    mdAndDown () {
+      return this.$vuetify.breakpoint.width < this.$vuetify.breakpoint.thresholds.md;
+    },
+    contentDetailsExtensionsParams() {
+      return {
+        eventId: this.news?.parameters?.eventId
+      };
+    },
     showUpdaterInfo() {
       return !this.isPublicAccess && !this.hideAuthor;
     },
