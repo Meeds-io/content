@@ -35,7 +35,8 @@ export async function getSavedNotePublicationSettings(id, lang) {
       schedulePostDate: article.schedulePostDate,
       scheduleUnpublishDate: article.scheduleUnpublishDate,
       fromExternalPage: article.fromExternalPage,
-      properties: article.properties ?? {}
+      properties: article.properties ?? {},
+      parameters: article?.parameters
     };
   } catch (error) {
     console.error(error);
