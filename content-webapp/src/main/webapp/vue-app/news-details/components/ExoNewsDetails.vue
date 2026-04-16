@@ -340,7 +340,7 @@ export default {
     redirectToDrafts() {
       window.location.href = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news?filter=drafts`;
     },
-    publishArticle(publicationSettings, extensionsCallback) {
+    publishArticle(publicationSettings, content, extensionsCallback) {
       this.isPublishing = true;
       this.localNews.isPublishing = true;
       this.localNews.activityPosted = publicationSettings?.post;
