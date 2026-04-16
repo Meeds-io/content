@@ -16,4 +16,14 @@ export function initPublishExtension(params) {
       });
     }
   });
+
+  extensionRegistry.registerExtension('Publication', 'note-publication-settings', {
+    id: 'note-publication-settings',
+    rank: 1,
+    enabled: () => !!params,
+    getSettings: () => {
+      return params;
+    }
+  });
+  document.dispatchEvent(new CustomEvent('publication-extensions-updated'));
 }
