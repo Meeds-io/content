@@ -144,7 +144,8 @@
             name="ContentDetails"
             type="content-event-detail"
             parent-element="div"
-            element="div" />
+            element="div"
+            class="mt-8" />
           <div
             class="mt-8 content-treeview-processor rich-editor-content extended-rich-content"
             v-sanitized-html="newsBody">
@@ -156,7 +157,7 @@
             type="content-event-detail"
             parent-element="div"
             element="div"
-            class="position-sticky d-flex ms-auto" />
+            class="position-sticky d-flex mt-8 ms-auto" />
         </div>
         <extension-registry-components
           name="NewsDetailsFooter"
