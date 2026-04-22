@@ -27,7 +27,7 @@
     fixed
     detached
     @closed="close">
-    <template slot="title">
+    <template #title>
       <div class="flex flex-row">
         <v-btn
           v-if="showAdvancedSettings"
@@ -42,35 +42,16 @@
         <div v-else class="flex flex-column">{{ $t('news.list.settings.title') }}</div>
       </div>
     </template>
-    <template slot="titleIcons">
-      <v-tooltip
-        v-model="showTooltip"
-        max-width="350px"
-        color="grey darken-4"
-        bottom>
-        <template #activator="{ on, attrs }">
-          <v-btn
-            icon
-            v-bind="attrs"
-            v-on="on">
-            <v-icon class="iconInfo">mdi-information</v-icon>
-          </v-btn>
-        </template>
-        <span>{{ $t('news.list.settings.information') }}</span>
-      </v-tooltip>
-    </template>
-    <template slot="content">
+    <template #content>
       <form ref="form1" class="pa-2 ms-2">
         <div v-if="!showAdvancedSettings" class="d-flex flex-column flex-grow-1">
-          <div d-flex flex-row>
-            <label for="name" class="listViewLabel text-subtitle-1 me-1 my-auto mt-4">
+          <div class="d-flex flex-column">
+            <label for="headerName" class="text-header me-1 my-4">
               {{ $t('news.list.settings.header') }}:
             </label>
-          </div>
-          <div class="d-flex flex-row mt-2">
             <translation-text-field
               ref="headerNameInput"
-              id="headerNameInput"
+              id="headerName"
               v-model="newsHeader"
               :placeholder="$t('news.list.settings.placeHolderName')"
               drawer-title="news.list.settings.translation.header"
@@ -81,31 +62,18 @@
               autofocus
               required />
           </div>
-          <div class="d-flex flex-row">
-            <label for="newsTarget" class="listViewLabel text-subtitle-1 mt-6">
-              {{ $t('news.list.settings.newsTarget') }}:
+          <news-source-settings
+            :news-targets="newsTargets"
+            :news-target="newsTarget"
+            :articles-source-option="articlesSourceOption"
+            :articles="selectedArticles"
+            @update-source-option="updateArticlesSourceOption" />
+          <div class="flex-column">
+            <label for="viewTemplate" class="text-header my-4">
+              {{ $t('news.list.settings.blockDisplay') }}:
             </label>
-          </div>
-          <div class="d-flex flex-row infosLabel font-italic">{{ $t('news.list.settings.newsTargets.description') }}</div>
-          <div class="d-flex flex-row">
-            <news-target-suggester v-model="newsTarget" :allowed-targets="newsTargets" />
-          </div>
-          <div v-if="$root.canManageNewsTarget" class="d-flex flex-row clickable text-decoration-underline">
-            <a @click="createNewTarget"> {{ $t('news.list.settings.drawer.createNewTarget') }} </a>
-          </div>
-          <div v-if="newsTargets.length === 0" class="d-flex flex-row grey--text">
-            <i class="fas fa-exclamation-triangle mt-3"></i>
-            <span class="mx-2"> {{ $t('news.composer.stepper.selectedTarget.noTargetAllowed') }}</span>
-          </div>
-          <div class="d-flex flex-row">
-            <label for="viewTemplate" class="listViewLabel text-subtitle-1 mt-2">
-              {{ $t('news.list.settings.viewTemplate') }}:
-            </label>
-          </div>
-          <div class="d-flex flex-row infosLabel font-italic">{{ $t('news.list.settings.viewTemplate.description') }}</div>
-          <div class="d-flex flex-row">
             <v-select
-              id="viewTemplateRefs"
+              id="viewTemplate"
               ref="viewTemplateRefs"
               v-model="viewTemplate"
               :items="displayedViewTemplates"
@@ -131,20 +99,28 @@
           :show-header="showHeader"
           :show-article-author="showArticleAuthor"
           :view-template="viewTemplate"
+          :articles-source-option="articlesSourceOption"
           @limit-value="limit = $event"
           @see-all-url="setSeeAllUrl"
           @selected-option="selectedOption" />
       </form>
-      <div class="d-flex flex-row mt-4 mx-8 justify-end advancedSettings">
-        <span
-          v-if="!showAdvancedSettings"
-          class="primary--text text-decoration-underline clickable"
-          @click="showAdvancedSettings = !showAdvancedSettings">
-          {{ $t('news.list.settings.drawer.advancedSettings') }}
+      <div
+        v-if="!showAdvancedSettings"
+        class="d-flex align-center justify-space-between px-4">
+        <span id="edit-display-settings-label" class="text-body">
+          {{ $t('news.list.settings.drawer.editDisplaySettings') }}
         </span>
+        <v-btn
+          icon
+          :aria-labelledby="'edit-display-settings-label'"
+          @click="showAdvancedSettings = !showAdvancedSettings">
+          <v-icon size="20">
+            fa-edit
+          </v-icon>
+        </v-btn>
       </div>
     </template>
-    <template slot="footer">
+    <template #footer>
       <div class="d-flex">
         <v-spacer />
         <v-btn
@@ -176,7 +152,7 @@ export default {
     newsTargets: [],
     viewExtensions: {},
     newsTarget: null,
-    limit: 5,
+    limit: 4,
     newsHeader: null,
     showAdvancedSettings: false,
     showHeader: false,
@@ -194,6 +170,8 @@ export default {
     saveSettingsURL: '',
     translationObjectType: 'newsListView',
     headerTitleFieldName: 'headerNameInput',
+    articlesSourceOption: null,
+    selectedArticles: []
   }),
   props: {
     language: {
@@ -225,8 +203,14 @@ export default {
     displayedViewTemplates() {
       return this.viewTemplates.filter(e=> !e.name.includes('EmptyTemplate'));
     },
+    isTargetSourceOption() {
+      return this.articlesSourceOption === 'target';
+    },
+    isSelectedListSourceOption() {
+      return this.articlesSourceOption === 'selectedList';
+    },
     disabled() {
-      return this.showSeeAll && !this.isValidSeeAllUrl;
+      return (this.showSeeAll && !this.isValidSeeAllUrl) || (this.isTargetSourceOption && !this.newsTarget) || (this.isSelectedListSourceOption && !this.selectedArticles?.length);
     },
     previewTemplate() {
       if ( this.viewTemplate === 'NewsLatest') {
@@ -305,6 +289,13 @@ export default {
       this.viewTemplate = this.$root.viewTemplate;
       this.viewExtensions = this.$root.viewExtensions;
       this.newsTarget = this.$root.newsTarget;
+      this.articlesSourceOption = this.$root.articlesSourceOption;
+      this.selectedArticles = this.$root?.newsList.map(item => {
+        return {
+          id: item?.id,
+          title: item?.title
+        };
+      });
       this.newsHeader = ((Object.keys(this.savedHeaderTranslations || {})?.length && this.savedHeaderTranslations
                                                        || {[this.$root.defaultLanguage]: this.$root.headerTitle}))
                                                        || this.$root.headerTitle;
@@ -320,28 +311,26 @@ export default {
       this.showArticleReactions = this.viewTemplate === 'NewsAlert' ? false : this.$root.showArticleReactions;
       this.seeAllUrl = this.$root.seeAllUrl || '';
     },
-    init() {
+    async init() {
       if (!this.initialized) {
         this.initializing = true;
-        this.$newsTargetingService.getAllowedTargets()
-          .then(newsTargets => {
-            this.newsTargets = newsTargets.map(newsTarget => ({
-              name: newsTarget.name,
-              label: newsTarget.properties && newsTarget.properties.label && newsTarget.properties.label.length > 35 ? newsTarget.properties.label.substring(0, 35).concat('...'): newsTarget.properties.label,
-              toolTipInfo: newsTarget.properties && newsTarget.properties.label,
-              description: newsTarget.properties && newsTarget.properties.description
-            }));
-            this.initialized = true;
-          })
-          .finally(() => this.initializing = false);
+        const newsTargets = await this.$newsTargetingService.getAllowedTargets();
+        this.newsTargets = newsTargets.map(newsTarget => ({
+          name: newsTarget.name,
+          label: newsTarget.properties && newsTarget.properties.label && newsTarget.properties.label.length > 35 ? newsTarget.properties.label.substring(0, 35).concat('...'): newsTarget.properties.label,
+          toolTipInfo: newsTarget.properties && newsTarget.properties.label,
+          description: newsTarget.properties && newsTarget.properties.description
+        }));
+        this.initializing = false;
       }
     },
     save() {
       this.saving = true;
-      let selectedOptions = null;
       const settings = {
         viewTemplate: this.viewTemplate,
         newsTarget: this.newsTarget,
+        selectedArticleIds: this.selectedArticles.map(item => item.id),
+        articlesSourceOption: this.articlesSourceOption,
         showHeader: this.showHeader,
         showSeeAll: this.showSeeAll,
         showArticleTitle: this.showArticleTitle,
@@ -356,9 +345,14 @@ export default {
       };
       this.$newsListService.saveSettings(this.saveSettingsURL , settings)
         .then(() => {
+          const selectedArticleIds = this.selectedArticles?.map(item => item.id) || [];
+          const newlySelectedArticleIds = selectedArticleIds.filter(id => !this.$root.selectedArticleIds?.includes(id)
+          );
           this.saveHeaderTranslations();
           this.$root.viewTemplate = this.viewTemplate;
           this.$root.newsTarget = this.newsTarget;
+          this.$root.articlesSourceOption = this.articlesSourceOption;
+          this.$root.selectedArticleIds = selectedArticleIds.join(',');
           this.$root.headerTranslations = this.newsHeader;
           this.$root.headerTitle =  this.newsHeader?.[this.language]
               || this.newsHeader?.[this.$root.defaultLanguage];
@@ -373,23 +367,7 @@ export default {
           this.$root.showArticleDate = this.showArticleDate;
           this.$root.showArticleReactions = this.showArticleReactions;
           this.$root.seeAllUrl = this.seeAllUrl;
-          selectedOptions = {
-            limit: this.limit,
-            showHeader: this.showHeader,
-            headerTranslations: this.newsHeader,
-            headerTitle: this.newsHeader?.[this.language]
-                || this.newsHeader?.[this.$root.defaultLanguage],
-            showSeeAll: this.showSeeAll,
-            showArticleTitle: this.showArticleTitle,
-            showArticleSummary: this.showArticleSummary,
-            showArticleAuthor: this.showArticleAuthor,
-            showArticleSpace: this.showArticleSpace,
-            showArticleDate: this.showArticleDate,
-            showArticleReactions: this.showArticleReactions,
-            showArticleImage: this.showArticleImage,
-            seeAllUrl: this.seeAllUrl,
-          };
-          this.$root.$emit('saved-news-settings', this.newsTarget, selectedOptions);
+          this.$root.$emit('saved-news-settings', newlySelectedArticleIds);
           this.close();
         })
         .finally(() => {
@@ -480,11 +458,13 @@ export default {
     switchSettingsDrawer() {
       this.showAdvancedSettings = !this.showAdvancedSettings;
     },
-    createNewTarget() {
-      this.$root.$emit('open-news-publish-targets-management-drawer');
-    },
     setSeeAllUrl(newUrl) {
       this.seeAllUrl = newUrl;
+    },
+    updateArticlesSourceOption(options) {
+      this.articlesSourceOption = options?.articlesSourceOption;
+      this.newsTarget = options?.newsTarget;
+      this.selectedArticles = options?.selectedArticles;
     }
   },
 };

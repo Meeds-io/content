@@ -32,10 +32,11 @@
       <v-list-item-action>
         <input
           v-model="limit"
+          :disabled="disableMaxArticle"
           type="number"
           id="maxArticle"
           name="maxArticle"
-          @change="$emit('limit-value', limit)"
+          @change="emitLimitChange"
           class="maxArticle input-block-level ignore-vuetify-classes">
       </v-list-item-action>
     </v-list-item>
@@ -232,6 +233,10 @@ export default {
     seeAllUrl: {
       type: String,
       default: '',
+    },
+    articlesSourceOption: {
+      type: String,
+      default: 'posted',
     }
   },
   data: () => ({
@@ -264,9 +269,16 @@ export default {
     disableSeeAll() {
       return this.viewTemplate === 'NewsSlider' || this.viewTemplate === 'NewsAlert';
     },
+    disableMaxArticle() {
+      return this.articlesSourceOption === 'selectedList';
+    }
   },
   created() {
     this.reset();
+    this.$root.$on('limit-updated', this.setLimit);
+  },
+  beforeDestroy() {
+    this.$root.$off('limit-updated', this.setLimit);
   },
   methods: {
     selectedOption(selectedOption, optionValue) {
@@ -288,6 +300,13 @@ export default {
       this.showArticleReactions = this.viewTemplate === 'NewsAlert' ? false : this.$root.showArticleReactions;
       this.seeAllUrl = this.$root.seeAllUrl || '';
     },
+    setLimit(limit) {
+      this.limit = limit;
+      this.emitLimitChange();
+    },
+    emitLimitChange() {
+      this.$emit('limit-value', this.limit);
+    }
   }
 };
 </script>

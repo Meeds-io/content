@@ -19,17 +19,83 @@
  */
 import {newsConstants} from '../../services/newsConstants.js';
 
-export function getNewsList(targetName, offset, limit, returnSize) {
+export function getNewsListByTarget(targetName, offset, limit, returnSize) {
   return fetch(`${newsConstants.CONTENT_API}/contents/byTarget/${targetName}?offset=${offset}&limit=${limit}&returnSize=${returnSize}`, {
     headers: {
       'Content-Type': 'application/json'
     },
     method: 'GET'
   }).then((resp) => {
-    if (resp && resp.ok) {
+    if (resp?.ok) {
       return resp.json();
     } else {
       throw new Error('Error getting news list by target name');
+    }
+  });
+}
+
+export function getPostedNews(offset, limit, returnSize) {
+  let url = `${newsConstants.CONTENT_API}/contents?author=${newsConstants.userName}&filter=all`;
+  if (newsConstants.SPACE_ID) {
+    url += `&spaces=${newsConstants.SPACE_ID}`;
+  }
+  if (!Number.isNaN(offset)) {
+    url += `&offset=${offset}`;
+  }
+  if (!Number.isNaN(limit)) {
+    url += `&limit=${limit}`;
+  }
+  if (returnSize) {
+    url += `&returnSize=${returnSize}`;
+  }
+  return fetch(url, {
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    method: 'GET'
+  }).then((resp) => {
+    if (resp?.ok) {
+      return resp.json();
+    } else {
+      throw new Error('Error getting news list');
+    }
+  });
+}
+
+export function searchArticles(searchTerm) {
+  const url = `/social/rest/contentLinks/news/search?query=${searchTerm}&offset=0&limit=10`;
+  return fetch(url, {
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    method: 'GET'
+  }).then((resp) => {
+    if (resp?.ok) {
+      return resp.json();
+    } else {
+      throw new Error('Error searching news');
+    }
+  });
+}
+
+export function getSelectedNewsList(newsIds, lang) {
+  const formData = new FormData();
+  newsIds?.forEach(id => formData.append('id', id));
+  if (lang) {
+    formData.append('lang', lang);
+  }
+  const urlParams = new URLSearchParams(formData).toString();
+  const url = `${newsConstants.CONTENT_API}/contents/list?${urlParams}`;
+  return fetch(url, {
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    method: 'GET'
+  }).then((resp) => {
+    if (resp?.ok) {
+      return resp.json();
+    } else {
+      throw new Error('Error getting news list');
     }
   });
 }

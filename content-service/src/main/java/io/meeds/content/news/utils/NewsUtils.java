@@ -26,15 +26,19 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import io.meeds.social.space.plugin.SpaceAclPlugin;
+import lombok.SneakyThrows;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import org.exoplatform.commons.api.settings.data.Context;
 import org.exoplatform.commons.api.settings.data.Scope;
+import org.exoplatform.commons.exception.ObjectNotFoundException;
 import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.commons.utils.ListAccess;
 import org.exoplatform.container.ExoContainerContext;
 import org.exoplatform.container.PortalContainer;
+import org.exoplatform.portal.config.UserACL;
 import org.exoplatform.services.listener.ListenerService;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
@@ -43,7 +47,6 @@ import org.exoplatform.services.security.IdentityRegistry;
 import org.exoplatform.social.core.identity.model.Identity;
 import org.exoplatform.social.core.identity.provider.OrganizationIdentityProvider;
 import org.exoplatform.social.core.identity.provider.SpaceIdentityProvider;
-import org.exoplatform.social.core.space.SpaceException;
 import org.exoplatform.social.core.space.model.Space;
 import org.exoplatform.social.core.space.spi.SpaceService;
 import org.exoplatform.social.core.storage.api.IdentityStorage;
@@ -179,7 +182,7 @@ public class NewsUtils {
   
   public static boolean canPublishNews(String spaceId, org.exoplatform.services.security.Identity currentIdentity) {
     if (!StringUtils.isBlank(spaceId)) {
-      SpaceService spaceService = CommonsUtils.getService(SpaceService.class);
+      SpaceService spaceService = getSpaceService();
       Space space = spaceService.getSpaceById(spaceId);
       return currentIdentity != null && space != null && spaceService.canPublishOnSpace(space, currentIdentity.getUserId());
     }
@@ -188,6 +191,30 @@ public class NewsUtils {
 
   public static boolean canManageNewsPublishTargets(org.exoplatform.services.security.Identity currentIdentity) {
     return currentIdentity != null && currentIdentity.isMemberOf(PLATFORM_ADMINISTRATORS_GROUP);
+  }
+
+  @SneakyThrows
+  public static boolean canCreateNewsPublishTargets(org.exoplatform.services.security.Identity currentIdentity,
+                                                    Long spaceId) {
+    UserACL userAcl = ExoContainerContext.getService(UserACL.class);
+    if (spaceId == null || spaceId == 0) {
+      return userAcl.isAdministrator(currentIdentity);
+    } else {
+      Space space = getSpaceService().getSpaceById(spaceId);
+      if (space == null) {
+        throw new ObjectNotFoundException("Space with id '%s' doesn't exist".formatted(spaceId));
+      } else {
+        return userAcl.hasPermission(SpaceAclPlugin.OBJECT_TYPE,
+                                     space.getId(),
+                                     SpaceAclPlugin.MANAGE_PERMISSION_TYPE,
+                                     currentIdentity)
+            || userAcl.hasPermission(SpaceAclPlugin.OBJECT_TYPE,
+                                     space.getId(),
+                                     SpaceAclPlugin.PUBLISH_PERMISSION_TYPE,
+                                     currentIdentity);
+      }
+
+    }
   }
 
   public static org.exoplatform.services.security.Identity getUserIdentity(String username) {
@@ -221,9 +248,9 @@ public class NewsUtils {
     return draftArticleUrl.toString();
   }
 
-  public static String buildNewsArticleUrl(News news, String currentUsername) throws SpaceException {
+  public static String buildNewsArticleUrl(News news, String currentUsername) {
     StringBuilder newsArticleUrl = new StringBuilder();
-    SpaceService spaceService = CommonsUtils.getService(SpaceService.class);
+    SpaceService spaceService = getSpaceService();
     if (currentUsername != null && spaceService.isMember(news.getSpaceId(), currentUsername) && news.getActivityId() != null) {
       newsArticleUrl.append("/")
                     .append(PortalContainer.getCurrentPortalContainerName())
@@ -286,7 +313,7 @@ public class NewsUtils {
   }
 
   private static List<Space> getMySpaces(org.exoplatform.services.security.Identity userIdentity) throws Exception {
-    SpaceService spaceService = CommonsUtils.getService(SpaceService.class);
+    SpaceService spaceService = getSpaceService();
     ListAccess<Space> memberSpacesListAccess = spaceService.getMemberSpaces(userIdentity.getUserId());
     return Arrays.asList(memberSpacesListAccess.load(0, memberSpacesListAccess.getSize()));
   }

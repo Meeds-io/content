@@ -62,9 +62,9 @@ const url = `/content/i18n/locale.portlet.news.News?lang=${lang}`;
 export function init(params) {
   const applicationId = params.applicationId;
   const appId = params.appId;
-  const viewTemplate = params.viewTemplate;
+  const viewTemplate = params.viewTemplate || 'NewsCards';
   const saveSettingsURL = params.saveSettingsURL;
-  const newsTarget = params.newsTarget;
+  const newsTarget = params.newsTarget === 'null' ? null : params.newsTarget;
   const limit = params.limit === '' ? '4' : params.limit;
   const showHeader = viewTemplate === 'NewsSlider' ? false: params.showHeader === 'true';
   const showSeeAll = params.showSeeAll === 'true' && !!params.seeAllUrl?.length;
@@ -78,6 +78,12 @@ export function init(params) {
   const seeAllUrl = params.seeAllUrl;
   const canEditNewsList = params.canEdit;
   const canManageNewsTarget = params.canManageNewsPublishTargets;
+  let articlesSourceOption = params.articlesSourceOption || 'posted';
+  if (newsTarget && articlesSourceOption !== 'target') {
+    articlesSourceOption = 'target';
+  }
+  const selectedArticleIds = params?.selectedArticleIds || [];
+  const canCreateNewsTarget = params?.canCreateNewsTarget;
 
   exoi18n.loadLanguageAsync(lang, url).then(i18n => {
     // init Vue app when locale resources are ready
@@ -101,21 +107,28 @@ export function init(params) {
         showArticleDate,
         seeAllUrl,
         defaultLanguage: eXo?.env?.portal?.defaultLanguage,
+        spaceId: eXo?.env?.portal?.spaceId,
         canEditNewsList,
         canManageNewsList: false,
         canManageNewsTarget,
-        canPublishNews: false
+        canPublishNews: false,
+        articlesSourceOption,
+        selectedArticleIds,
+        newsList: [],
+        canCreateNewsTarget,
+        canCreateNews: false
       },
-      created() {
+      async created() {
         Vue.prototype.$translationService.getTranslations('newsListView', applicationId, 'headerNameInput').then(translations => {
           this.headerTranslations = translations;
           this.headerTitle = translations?.[lang] || translations?.[this.defaultLanguage]
                                                   || params.headerTitle;
         });
-        this.$newsServices.canPublishNews().then(canPublishNews => {
-          this.canPublishNews = canPublishNews;
-          this.canManageNewsList = this.canEditNewsList || this.canPublishNews;
-        });
+        this.canPublishNews = await  this.$newsServices.canPublishNews();
+        this.canManageNewsList = this.canEditNewsList || this.canPublishNews;
+        if (this.spaceId) {
+          this.canCreateNews = await this.$newsServices.canUserCreateNews(this.spaceId);
+        }
       },
       template: `<news-list-view
                   id="${appId}"

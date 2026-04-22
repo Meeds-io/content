@@ -30,6 +30,7 @@
       <v-icon
         v-if="$root.canManageNewsList && showSettingsIcon"
         :class="classButtonOpenSettings"
+        :title="$t('news.list.openSettings.title')"
         :aria-label="$t('news.latest.openSettings')"
         size="24"
         icon
@@ -89,10 +90,10 @@ export default {
     }
   },
   created() {
-    this.$root.$on('saved-news-settings', (newsTarget, selectedOptions) => {
-      this.seeAllUrl = selectedOptions.seeAllUrl;
-      this.showSeeAll = selectedOptions.showSeeAll;
-      this.showHeader = selectedOptions.showHeader;
+    this.$root.$on('saved-news-settings', () => {
+      this.seeAllUrl = this.$root.seeAllUrl;
+      this.showSeeAll = this.$root.showSeeAll;
+      this.showHeader = this.$root.showHeader;
     });
     this.seeAllUrl = this.$root.seeAllUrl;
     this.showSeeAll = this.$root.showSeeAll;

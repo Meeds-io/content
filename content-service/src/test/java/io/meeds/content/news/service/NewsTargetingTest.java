@@ -21,6 +21,7 @@ package io.meeds.content.news.service;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -463,7 +464,7 @@ public class NewsTargetingTest {
     newsTargetingEntity.setName(sliderNews.getName());
     newsTargetingEntity.setProperties(sliderNews.getProperties());
     when(metadataService.createMetadata(sliderNews, 1)).thenReturn(sliderNews);
-    NEWS_UTILS.when(() -> NewsUtils.canManageNewsPublishTargets(any(org.exoplatform.services.security.Identity.class)))
+    NEWS_UTILS.when(() -> NewsUtils.canCreateNewsPublishTargets(any(org.exoplatform.services.security.Identity.class), any()))
               .thenReturn(true);
 
     Metadata createdMetadata = newsTargetingService.createNewsTarget(newsTargetingEntity, currentIdentity);
@@ -491,7 +492,7 @@ public class NewsTargetingTest {
 
     EXO_CONTAINER_CONTEXT.when(() -> ExoContainerContext.getService(IdentityRegistry.class)).thenReturn(identityRegistry);
     org.exoplatform.services.security.Identity identity1 = mock(org.exoplatform.services.security.Identity.class);
-    NEWS_UTILS.when(() -> NewsUtils.canManageNewsPublishTargets(any(org.exoplatform.services.security.Identity.class)))
+    NEWS_UTILS.when(() -> NewsUtils.canCreateNewsPublishTargets(any(org.exoplatform.services.security.Identity.class), any()))
               .thenReturn(false);
     try {
       newsTargetingService.createNewsTarget(newsTargetingEntity, identity1);
@@ -499,6 +500,24 @@ public class NewsTargetingTest {
     } catch (IllegalAccessException e) {
       // Expected
     }
+  }
+  
+  @Test
+  public void shouldThrowExceptionWhenSpacePermissionIsInvalid() {
+    // GIVEN
+    Long spaceId = 10L;
+    org.exoplatform.services.security.Identity currentIdentity = mock(org.exoplatform.services.security.Identity.class);
+
+    NewsTargetingEntity entity = mock(NewsTargetingEntity.class);
+    Map<String, String> properties = new HashMap<>();
+    properties.put("TARGET_PERMISSIONS", "space:999"); // different space
+    when(entity.getProperties()).thenReturn(properties);
+    // User can create publish targets
+    NEWS_UTILS.when(() -> NewsUtils.canCreateNewsPublishTargets(currentIdentity, spaceId)).thenReturn(true);
+    NEWS_UTILS.when(() -> NewsUtils.canManageNewsPublishTargets(currentIdentity)).thenReturn(false);
+
+    assertThrows(IllegalStateException.class,
+                 () -> newsTargetingService.createNewsTarget(entity, currentIdentity, spaceId));
   }
 
   @Test
@@ -532,6 +551,8 @@ public class NewsTargetingTest {
     when(metadataService.createMetadata(sliderNews, 1)).thenReturn(sliderNews);
 
     NEWS_UTILS.when(() -> NewsUtils.canManageNewsPublishTargets(any(org.exoplatform.services.security.Identity.class)))
+              .thenReturn(true);
+    NEWS_UTILS.when(() -> NewsUtils.canCreateNewsPublishTargets(any(org.exoplatform.services.security.Identity.class), any()))
               .thenReturn(true);
     Metadata createdMetadata = newsTargetingService.createNewsTarget(newsTargetingEntity, currentIdentity);
 

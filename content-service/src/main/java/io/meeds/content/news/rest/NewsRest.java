@@ -22,7 +22,6 @@ import static io.meeds.content.news.utils.NewsUtils.NewsObjectType.ARTICLE;
 import static io.meeds.content.news.utils.NewsUtils.NewsObjectType.EXISTING_PAGE;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -916,5 +915,21 @@ public class NewsRest {
 
     return newsFilter;
   }
+
+  @GetMapping(path = "list", produces = MediaType.APPLICATION_JSON_VALUE)
+  @Secured("users")
+  @Operation(summary = "Get news list", method = "GET", description = "Fetches the list of news articles corresponding to the given list of news IDs")
+  @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "News list returned"),
+      @ApiResponse(responseCode = "500", description = "Internal server error") })
+  public List<News> getAccessibleNewsByIds(@Parameter(description = "List of news IDs to fetch")
+                                           @RequestParam(name = "id")
+                                           List<Long> newsIds,
+                                           @Parameter(description = "Language used to fetch the news")
+                                           @RequestParam(name = "lang")
+                                           String lang) {
+    org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
+    return newsService.getNewsByIds(newsIds, currentIdentity, lang);
+  }
+
 
 }

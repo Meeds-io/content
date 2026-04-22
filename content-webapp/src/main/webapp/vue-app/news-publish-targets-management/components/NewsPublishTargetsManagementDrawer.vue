@@ -25,13 +25,13 @@
     body-classes="hide-scroll decrease-z-index-more"
     right
     @closed="reset">
-    <template v-if="saveMode === 'creationMode'" slot="title">
+    <template v-if="saveMode === 'creationMode'" #title>
       {{ $t('news.publishTargets.management.addTarget') }}
     </template>
-    <template v-else slot="title">
+    <template v-else #title>
       {{ $t('news.publishTargets.management.editTarget') }}
     </template>
-    <template slot="content">
+    <template #content>
       <v-form
         ref="activityShareFrom"
         class="flex mx-4"
@@ -109,20 +109,31 @@
             </span>
           </div>
           <div class="d-flex flex-row">
-            <exo-identity-suggester
-              ref="targetPermissions"
-              :labels="suggesterLabels"
-              v-model="targetPermissions"
-              name="permissions"
-              height="40"
-              :ignore-items="ignoredItems"
-              :group-member="userGroup"
-              :group-type="groupType"
-              :all-groups-for-admin="allGroupsForAdmin"
-              :search-options="{filterType: 'all'}"
-              include-spaces
-              include-groups
-              required />
+            <v-tooltip bottom :disabled="!canCreateTargetScopedToSpace">
+              <template #activator="{ on, attrs }">
+                <div
+                  v-on="on"
+                  v-bind="attrs"
+                  class="flex-grow-1">
+                  <exo-identity-suggester
+                    ref="targetPermissions"
+                    :labels="suggesterLabels"
+                    v-model="targetPermissions"
+                    name="permissions"
+                    height="40"
+                    :ignore-items="ignoredItems"
+                    :group-member="userGroup"
+                    :group-type="groupType"
+                    :all-groups-for-admin="allGroupsForAdmin"
+                    :search-options="{filterType: 'all'}"
+                    :disabled="canCreateTargetScopedToSpace"
+                    include-spaces
+                    include-groups
+                    required />
+                </div>
+              </template>
+              <span>{{ $t('newsTargets.setting.restricted.permission.tooltip') }}</span>
+            </v-tooltip>
           </div>
         </div>
       </v-form>
@@ -131,11 +142,11 @@
           v-for="permission in permissions"
           :key="permission"
           :permission="permission"
-          :close="true"
+          :close="!canCreateTargetScopedToSpace"
           @remove-permission="removePermission" />
       </div>
     </template>
-    <template slot="footer">
+    <template #footer>
       <div class="d-flex justify-end">
         <v-btn
           class="btn ms-2"
@@ -172,6 +183,8 @@ export default {
     saveMode: 'creationMode',
     permissions: [],
     permissionsUpdated: false,
+    spaceId: eXo?.env?.portal?.spaceId,
+    space: null
   }),
   computed: {
     ignoredItems() {
@@ -192,6 +205,9 @@ export default {
     isMobile() {
       return this.$vuetify.breakpoint.name === 'xs' || this.$vuetify.breakpoint.name === 'sm';
     },
+    canCreateTargetScopedToSpace() {
+      return !!this.spaceId && !this.$root.canManageNewsTarget && this.$root.canCreateNewsTarget;
+    }
   },
   watch: {
     targetPermissions() {
@@ -218,16 +234,16 @@ export default {
       }
     },
   },
-  created() {
-    this.$root.$on('selected-target', (selectedTarget) => {
-      this.selectedTarget = selectedTarget;
-      this.originalTargetName = selectedTarget.targetName;
-      this.targetLabel = selectedTarget.targetLabel;
-      this.targetDescription = selectedTarget.targetDescription;
-      this.permissions = JSON.parse(JSON.stringify(selectedTarget.targetPermissions));
-      this.saveMode = 'edit';
-    });
-    this.$root.$on('open-news-publish-targets-management-drawer', () => { this.open(); });
+  async created() {
+    if (this.canCreateTargetScopedToSpace) {
+      this.space = await this.$spaceService.getSpaceById(this.spaceId);
+    }
+    this.$root.$on('selected-target', this.selectTarget);
+    this.$root.$on('open-news-publish-targets-management-drawer', this.open);
+  },
+  beforeDestroy() {
+    this.$root.$off('open-news-publish-targets-management-drawer', this.open);
+    this.$root.$off('selected-target', this.selectTarget);
   },
   methods: {
     removePermission(permission) {
@@ -257,6 +273,9 @@ export default {
       };
     },
     open() {
+      if (this.canCreateTargetScopedToSpace) {
+        this.permissions.push(this.buildSpacePermission());
+      }
       this.$refs.newsPublishTargetsManagementDrawer.open();
     },
     closeDrawer() {
@@ -276,12 +295,7 @@ export default {
         name: '',
         properties: ''
       };
-      let permissions = '';
-      if (this.permissions.length > 0) {
-        this.permissions.forEach(permission => {
-          permissions = `${permissions + permission.id},`;
-        }); 
-      } 
+      const permissions = this.permissions?.map(p => p.id).join(',') || '';
       target.name = this.targetLabel;
       target.properties = {
         description: this.targetDescription,
@@ -289,7 +303,7 @@ export default {
         permissions: permissions,
       };
       this.sameTargetError = false;
-      this.$newsTargetingService.createTarget(target)
+      this.$newsTargetingService.createTarget(target, this.canCreateTargetScopedToSpace && this.spaceId)
         .then((createdTarget) => {
           this.$emit('news-target-saved');
           this.$root.$emit('new-news-target-created', createdTarget);
@@ -312,12 +326,7 @@ export default {
         type: '',
         properties: ''
       };
-      let permissions = '';
-      if (this.permissions.length > 0) {
-        this.permissions.forEach(permission => {
-          permissions = `${permissions + permission.id},`;
-        }); 
-      } 
+      const permissions = this.permissions?.map(p => p.id).join(',') || '';
       target.name = this.selectedTarget?.targetName;
       target.properties = {
         description: this.targetDescription,
@@ -341,6 +350,23 @@ export default {
       this.permissions=[];
       this.permissionsUpdated= false;
     },
+    buildSpacePermission() {
+      return this.space && {
+        id: `space:${this.space?.id}`,
+        name: this.space?.displayName,
+        remoteId: this.space?.prettyName,
+        providerId: 'space',
+        avatar: this.space?.avatarUrl
+      };
+    },
+    selectTarget(selectedTarget) {
+      this.selectedTarget = selectedTarget;
+      this.originalTargetName = selectedTarget.targetName;
+      this.targetLabel = selectedTarget.targetLabel;
+      this.targetDescription = selectedTarget.targetDescription;
+      this.permissions = JSON.parse(JSON.stringify(selectedTarget.targetPermissions));
+      this.saveMode = 'edit';
+    }
   },
 };
 </script>

@@ -627,7 +627,7 @@ public class NewsService {
    * @param newsId {@link News} identifier
    * @return {@link News} if found else null
    */
-  public News buildArticle(String newsId) throws Exception {
+  public News buildArticle(String newsId) {
     return buildArticle(newsId, null, null, false);
   }
 
@@ -713,19 +713,7 @@ public class NewsService {
   public List<News> getNewsByTargetName(NewsFilter newsFilter, String targetName, Identity currentIdentity) throws Exception {
     List<MetadataItem> newsTargetItems =
                                        newsTargetingService.getNewsTargetItemsByTargetName(targetName, newsFilter.getOffset(), 0);
-    return newsTargetItems.stream().filter(target -> {
-      try {
-        News news = getNewsByIdAndLang(target.getObjectId(),
-                                       currentIdentity,
-                                       false,
-                                       ARTICLE.name().toLowerCase(),
-                                       newsFilter.getLang());
-        return news != null && (StringUtils.isEmpty(news.getAudience()) || news.getAudience().equals(NewsUtils.ALL_NEWS_AUDIENCE)
-            || news.isSpaceMember());
-      } catch (Exception e) {
-        return false;
-      }
-    }).map(target -> {
+    return newsTargetItems.stream().map(target -> {
       try {
         News news = getNewsByIdAndLang(target.getObjectId(),
                                        currentIdentity,
@@ -737,7 +725,11 @@ public class NewsService {
       } catch (Exception e) {
         return null;
       }
-    }).filter(Objects::nonNull).limit(newsFilter.getLimit()).toList();
+    })
+                          .filter(news -> news != null && (StringUtils.isEmpty(news.getAudience())
+                              || news.getAudience().equals(NewsUtils.ALL_NEWS_AUDIENCE) || news.isSpaceMember()))
+                          .limit(newsFilter.getLimit())
+                          .toList();
   }
 
   /**
@@ -1342,9 +1334,8 @@ public class NewsService {
   /**
    * @param news {@link News} news article to be deleted
    * @param articleCreator
-   * @throws Exception when error occurs
    */
-  public void deleteArticle(News news, String articleCreator) throws Exception {
+  public void deleteArticle(News news, String articleCreator) {
     Page articlePage = noteService.getNoteById(news.getId());
 
     if (articlePage != null) {
@@ -1394,6 +1385,16 @@ public class NewsService {
   @SneakyThrows
   public List<String> getArticleLanguages(String articleId, boolean withDrafts) {
     return noteService.getPageAvailableTranslationLanguages(Long.parseLong(articleId), withDrafts);
+  }
+  
+  public List<News> getNewsByIds(List<Long> ids, Identity currentUser, String lang) {
+    if (CollectionUtils.isEmpty(ids)) {
+      return Collections.emptyList();
+    }
+    return ids.stream()
+              .map(id -> buildArticle(String.valueOf(id), currentUser, lang, true))
+              .filter(news -> news != null && canViewNews(news, currentUser.getUserId()))
+              .toList();
   }
 
   @SneakyThrows
@@ -1647,7 +1648,7 @@ public class NewsService {
     return null;
   }
 
-  private void buildArticleProperties(News article, String currentUsername, MetadataItem metadataItem) throws Exception {
+  private void buildArticleProperties(News article, String currentUsername, MetadataItem metadataItem) {
     if (metadataItem != null && !MapUtils.isEmpty(metadataItem.getProperties())) {
       Map<String, String> properties = metadataItem.getProperties();
       if (properties.containsKey(NEWS_ACTIVITIES) && properties.get(NEWS_ACTIVITIES) != null) {
@@ -2267,10 +2268,10 @@ public class NewsService {
     return null;
   }
 
-  private News buildArticle(String newsId, Identity currentIdentity, String lang, boolean fetchOriginal) throws Exception {
+  private News buildArticle(String newsId, Identity currentIdentity, String lang, boolean fetchOriginal) {
     if (StringUtils.isNumeric(newsId)) {
       Page articlePage = noteService.getNoteById(newsId);
-      Identity userIdentity = getCurrentIdentity();
+      Identity userIdentity = currentIdentity != null ? currentIdentity : getCurrentIdentity();
       String currentUsername = userIdentity == null ? null : userIdentity.getUserId();
       if (articlePage != null) {
         Space space = spaceService.getSpaceByGroupId(articlePage.getWikiOwner());
@@ -2434,7 +2435,7 @@ public class NewsService {
     return draftArticle;
   }
 
-  private void processPageContent(Page page, News news, String lang) throws Exception {
+  private void processPageContent(Page page, News news, String lang) {
     String portalOwner = CommonsUtils.getCurrentPortalOwner();
     Locale locale = lang == null ? LocalizationFilter.getCurrentLocale() : LocaleUtils.toLocale(news.getLang());
     String body = page.getContent();

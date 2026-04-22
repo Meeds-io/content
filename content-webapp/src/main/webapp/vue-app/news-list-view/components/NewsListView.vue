@@ -40,7 +40,7 @@
         :saved-header-translations="headerTranslations"
         :language="language"
         :application-id="applicationId" />
-      <news-publish-targets-management-drawer v-if="canManageNewsTarget" />
+      <news-publish-targets-management-drawer v-if="canCreateNewsTarget" />
     </v-app>
   </v-hover>
 </template>
@@ -191,7 +191,7 @@ export default {
       };
     },
     hideEmptyNewsTemplate() {
-      return this.selectedViewExtension?.id === 'NewsEmptyTemplate' && !this.canManageNewsList;
+      return this.selectedViewExtension?.id === 'NewsEmptyTemplate' && !this.canManageNewsList && !this.canCreateNews;
     },
     newsListViewClass() {
       let newsListViewClass = 'list-view-card';
@@ -213,8 +213,17 @@ export default {
     canManageNewsList() {
       return this.$root.canManageNewsList || this.$root.canPublishNews;
     },
-    canManageNewsTarget() {
-      return this.$root.canManageNewsTarget || false;
+    canCreateNews() {
+      return this.$root.canCreateNews;
+    },
+    canCreateNewsTarget() {
+      return this.$root.canCreateNewsTarget;
+    },
+    articlesSourceOption() {
+      return this.$root.articlesSourceOption;
+    },
+    selectedArticleIds() {
+      return this.$root.selectedArticleIds.split(',');
     }
   },
   watch: {
@@ -223,37 +232,39 @@ export default {
     },
   },
   created() {
-    this.$root.$on('saved-news-settings', (newsTarget, selectedOptions) => {
-      this.seeAllUrl = selectedOptions.seeAllUrl;
-      this.showSeeAll = selectedOptions.showSeeAll;
-      this.showHeader = selectedOptions.showHeader;
-      this.newsTarget = newsTarget;
-      this.limit = this.$root.limit;
-      this.retrieveNewsList();
-    });
-    this.seeAllUrl = this.$root.seeAllUrl;
-    this.showSeeAll = this.$root.showSeeAll;
-    this.showHeader = this.$root.showHeader;
-    this.newsTarget = this.$root.newsTarget;
-    this.limit = this.$root.limit;
-    if (this.newsTarget) {
-      this.retrieveNewsList().finally(() => this.$root.$applicationLoaded());
-    }
+    this.$root.$on('saved-news-settings', this.handleSaveSettingsEvent);
+    this.initFromRoot();
+    this.retrieveNewsList().finally(() => this.$root.$applicationLoaded());
     document.addEventListener(`component-${this.extensionApp}-${this.extensionType}-updated`, this.refreshViewExtensions);
     this.refreshViewExtensions();
   },
   beforeDestroy() {
     document.removeEventListener(`component-${this.extensionApp}-${this.extensionType}-updated`, this.refreshViewExtensions);
+    this.$root.$off('saved-news-settings', this.handleSaveSettingsEvent);
   },
   methods: {
-    retrieveNewsList() {
+    async retrieveNewsList() {
       this.loading = true;
-      return this.$newsListService.getNewsList(this.newsTarget, this.offset, this.limit, true)
-        .then(newsList => {
-          this.newsList = newsList.news.filter(news => !!news) || [];
-          this.hasMore = this.newsList.length > this.limit;
-        })
-        .finally(() => this.loading = false);
+      let newsList = [];
+      switch (this.articlesSourceOption) {
+      case 'posted':
+        newsList = await this.$newsListService.getPostedNews(this.offset, this.limit, true);
+        this.newsList = newsList?.news?.filter(news => !!news) || [];
+        break;
+      case 'target':
+        newsList = await this.$newsListService.getNewsListByTarget(this.newsTarget, this.offset, this.limit, true);
+        this.newsList = newsList?.news?.filter(news => !!news) || [];
+        break;
+      case 'selectedList':
+        newsList = await this.$newsListService.getSelectedNewsList(this.selectedArticleIds, this.language);
+        newsList.sort((a, b) => {
+          return this.selectedArticleIds.indexOf(a.id) - this.selectedArticleIds.indexOf(b.id);
+        });
+        this.newsList = newsList || [];
+        this.$root.newsList = this.newsList;
+      }
+      this.hasMore = this.newsList.length > this.limit;
+      this.loading = false;
     },
     refreshViewExtensions() {
       const extensions = extensionRegistry.loadComponents(this.extensionApp)
@@ -264,6 +275,39 @@ export default {
           this.$set(this.viewExtensions, extension.id, extension);
         }
       });
+    },
+    initFromRoot() {
+      this.seeAllUrl = this.$root.seeAllUrl;
+      this.showSeeAll = this.$root.showSeeAll;
+      this.showHeader = this.$root.showHeader;
+      this.newsTarget = this.$root.newsTarget;
+      this.limit = this.$root.limit;
+    },
+    async handleSaveSettingsEvent(newlySelectedArticleIds) {
+      this.initFromRoot();
+      await this.retrieveNewsList();
+      const newlySelectedArticles = this.newsList.filter(article => newlySelectedArticleIds?.includes(article.id)) || [];
+      this.sendSelectStatistics(newlySelectedArticles);
+    },
+    sendSelectStatistics(newlySelectedArticles) {
+      if (newlySelectedArticles?.length) {
+        newlySelectedArticles.forEach((article) => {
+          document.dispatchEvent(new CustomEvent('exo-statistic-message', {
+            detail: {
+              module: 'Content',
+              userId: eXo.env.portal.userIdentityId,
+              userName: eXo.env.portal.userName,
+              operation: 'Select content',
+              parameters: {
+                contentTitle: article?.title,
+                contentType: 'News',
+              },
+              spaceId: article?.spaceId,
+              timestamp: Date.now()
+            }
+          }));
+        });
+      }
     },
   },
 };
