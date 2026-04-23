@@ -369,7 +369,7 @@ export default {
           this.displayMessage({message: successMessage, type: 'success'});
           history.replaceState({}, article.url);
           this.localNews = { ...article };
-          await this.executePublishExtensions(extensionsCallback, article.id);
+          await this.executePublishExtensions(extensionsCallback, article);
         }).catch(() => {
           this.displayMessage({message: errorMessage, type: 'error'});
         }).finally(() => {
@@ -378,9 +378,9 @@ export default {
         });
       }
     },
-    async executePublishExtensions(extensionsCallback, articleId) {
-      const metadata = await extensionsCallback.executeExtensions();
-      const parameters = await this.$newsServices.updateArticleMetadataProperties(articleId, metadata);
+    async executePublishExtensions(extensionsCallback, article) {
+      const metadata = await extensionsCallback.executeExtensions(article);
+      const parameters = await this.$newsServices.updateArticleMetadataProperties(article.id, metadata);
       const cleanParameters = Object.fromEntries(
         Object.entries(parameters).filter(([, v]) => v != null)
       );

@@ -24,23 +24,23 @@ function publishNote(event) {
   const {editPublication, article, scheduleSettings, extensionsCallback} = event.detail;
   if (editPublication) {
     publishService.updateNotePublication(scheduleSettings, article, spaceId).then(async () => {
-      await executePublishExtensions(extensionsCallback, article.id);
+      await executePublishExtensions(extensionsCallback, article);
       emitNotePublished(true);
       updateSavedPublicationSettings(article.id);
     });
   } else {
     checkInsertTocNavigationTemplate(article);
     publishService.saveNoteArticle(article, spaceId).then(async (article) => {
-      await executePublishExtensions(extensionsCallback, article.id);
+      await executePublishExtensions(extensionsCallback, article);
       emitNotePublished(false, !!article?.schedulePostDate, article?.url);
       updateSavedPublicationSettings(article.id);
     });
   }
 }
 
-async function executePublishExtensions(extensionsCallback, articleId) {
-  const metadata = await extensionsCallback.executeExtensions();
-  await publishService.updatePublishedNoteMetadata(articleId, metadata);
+async function executePublishExtensions(extensionsCallback, article) {
+  const metadata = await extensionsCallback.executeExtensions(article);
+  await publishService.updatePublishedNoteMetadata(article.id, metadata);
 }
 
 function checkInsertTocNavigationTemplate(article) {
