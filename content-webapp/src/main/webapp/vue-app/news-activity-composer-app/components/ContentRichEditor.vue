@@ -539,7 +539,7 @@ export default {
             alertLink: scheduleArticle.url
           });
           this.enableClickOnce();
-          await this.executePublishExtensions(extensionsCallback, scheduleArticle.id);
+          await this.executePublishExtensions(extensionsCallback, scheduleArticle);
         }).finally(() => this.draftSavingStatus = '');
       } else {
         this.$newsServices.saveNews(article).then(async (createdArticle) => {
@@ -560,16 +560,16 @@ export default {
             alertLink: this.isSpaceMember ? `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/activity?id=${createdArticle.activityId}` : `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news-detail?newsId=${createdArticle.id}`
           });
           this.enableClickOnce();
-          await this.executePublishExtensions(extensionsCallback, createdArticle.id);
+          await this.executePublishExtensions(extensionsCallback, createdArticle);
         }).catch(error => {
           this.displayAlert({type: 'error', message: this.$t('news.save.error.message', error.message)});
           this.enableClickOnce();
         }).finally(() => this.draftSavingStatus = '');
       }
     },
-    async executePublishExtensions(extensionsCallback, articleId) {
-      const metadata = await extensionsCallback.executeExtensions();
-      await this.$newsServices.updateArticleMetadataProperties(articleId, metadata);
+    async executePublishExtensions(extensionsCallback, article) {
+      const metadata = await extensionsCallback.executeExtensions(article);
+      await this.$newsServices.updateArticleMetadataProperties(article.id, metadata);
     },
     updateUrl(){
       const url = new URL(window.location.href);
