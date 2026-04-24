@@ -161,7 +161,8 @@ export default {
       iframelyOriginRegex: /^https?:\/\/if-cdn.com/,
       isPublishing: false,
       allowedTargets: [],
-      articlePage: null
+      articlePage: null,
+      deleteInterceptors: []
     };
   },
   computed: {
@@ -216,6 +217,14 @@ export default {
     news() {
       this.localNews = { ...this.news };
     }
+  },
+  provide() {
+    return {
+      registerDeleteInterceptor: (interceptor) => this.deleteInterceptors.push(interceptor),
+      unregisterDeleteInterceptor: (interceptor) => {
+        this.deleteInterceptors = this.deleteInterceptors.filter((i) => i !== interceptor);
+      },
+    };
   },
   methods: {
     moveArticlePage(page, newParentPage) {
@@ -286,7 +295,16 @@ export default {
       }
       window.open(editUrl, '_target');
     },
-    deleteConfirmDialog() {
+    async deleteConfirmDialog() {
+      const shouldContinue = await this.deleteInterceptors.reduce(
+        (promise, interceptor) => promise.then(
+          (canContinue) => (canContinue ? interceptor({ content: this.localNews }) : false)
+        ),
+        Promise.resolve(true)
+      );
+      if (shouldContinue === false) {
+        return;
+      }
       this.$refs.deleteConfirmDialog.open();
     },
     deleteNews() {
