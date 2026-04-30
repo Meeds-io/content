@@ -1,0 +1,123 @@
+{
+  "tools": [
+    {
+      "name": "create_news",
+      "title": "Create an article",
+      "description": "Create a news (Article) in the specified space.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string" },
+          "summary": { "type": "string" },
+          "html_content": { "type": "string" },
+          "target_space_id": { "type": "integer" }
+        },
+        "required": ["title", "html_content", "target_space_id"]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      },
+      "require_approval": true
+    },
+    {
+      "name": "publish_news_in_activity_stream",
+      "title": "Publish an article",
+      "description": "Posts a news in the activity space of its target space.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "news_id": { "type": "integer" }
+        },
+        "required": ["news_id"]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      },
+      "require_approval": true
+    },
+    {
+      "name": "delete_news",
+      "title": "Delete an article",
+      "description": "Delete a news entry by its ID.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "news_id": { "type": "integer" }
+        },
+        "required": ["news_id"]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false
+      },
+      "require_approval": true
+    },
+    {
+      "name": "get_news_list",
+      "title": "Get articles by space",
+      "description": "Retrieve a paginated list of news for a space.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "target_space_id": { "type": "integer" },
+          "offset": { "type": "integer" },
+          "limit": { "type": "integer" }
+        },
+        "required": ["target_space_id"]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "search_news",
+      "title": "Search for articles",
+      "description": "Search news by a term within a space.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": { "type": "string" },
+          "target_space_id": { "type": "integer" },
+          "offset": { "type": "integer" },
+          "limit": { "type": "integer" }
+        },
+        "required": ["query"]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "get_news_by_id",
+      "title": "Get an article",
+      "description": "Get a single news entry by its ID.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "news_id": { "type": "integer" }
+        },
+        "required": ["news_id"]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    }
+  ]
+}
