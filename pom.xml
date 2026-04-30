@@ -38,7 +38,6 @@
   </modules>
 
   <properties>
-<<<<<<< HEAD
     <addon.meeds.notes.version>7.2.x-exo-SNAPSHOT</addon.meeds.notes.version>
     <addon.meeds.layout.version>7.2.x-exo-SNAPSHOT</addon.meeds.layout.version>
     <addon.meeds.mcp-server.version>7.2.x-exo-SNAPSHOT</addon.meeds.mcp-server.version>
