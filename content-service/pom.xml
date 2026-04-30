@@ -69,6 +69,10 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
+      <groupId>io.meeds.mcp-server</groupId>
+      <artifactId>mcp-server-tools</artifactId>
+    </dependency>
+    <dependency>
       <groupId>io.meeds.social</groupId>
       <artifactId>social-component-core</artifactId>
       <type>test-jar</type>
@@ -101,6 +105,15 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
           <runOrder>alphabetical</runOrder>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <compilerArgs>
+            <arg>-parameters</arg>
+          </compilerArgs>
         </configuration>
       </plugin>
     </plugins>

@@ -38,8 +38,10 @@
   </modules>
 
   <properties>
+<<<<<<< HEAD
     <addon.meeds.notes.version>7.2.x-exo-SNAPSHOT</addon.meeds.notes.version>
     <addon.meeds.layout.version>7.2.x-exo-SNAPSHOT</addon.meeds.layout.version>
+    <addon.meeds.mcp-server.version>7.2.x-exo-SNAPSHOT</addon.meeds.mcp-server.version>
 
     <!-- Sonar properties -->
     <sonar.organization>meeds-io</sonar.organization>
@@ -47,7 +49,14 @@
 
   <dependencyManagement>
     <dependencies>
-      <!-- Import versions from notes project -->
+      <!-- Import versions from other projects -->
+      <dependency>
+        <groupId>io.meeds.mcp-server</groupId>
+        <artifactId>mcp-server</artifactId>
+        <version>${addon.meeds.mcp-server.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
       <dependency>
         <groupId>io.meeds.notes</groupId>
         <artifactId>notes</artifactId>
