@@ -35,7 +35,8 @@ export async function getSavedNotePublicationSettings(id, lang) {
       schedulePostDate: article.schedulePostDate,
       scheduleUnpublishDate: article.scheduleUnpublishDate,
       fromExternalPage: article.fromExternalPage,
-      properties: article.properties ?? {}
+      properties: article.properties ?? {},
+      parameters: article?.parameters
     };
   } catch (error) {
     console.error(error);
@@ -86,6 +87,10 @@ export function updateNotePublication(scheduleSettings, article, spaceId) {
     article.publicationState = 'posted';
     return newsService.updateNews(article, article.activityPosted, 'article', 'POSTING_AND_PUBLISHING');
   }
+}
+
+export function updatePublishedNoteMetadata(articleId, metadata) {
+  return newsService.updateArticleMetadataProperties(articleId, metadata);
 }
 
 function noteToArticle(note, spaceId) {

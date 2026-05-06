@@ -321,3 +321,19 @@ export function getPageByTypeOwnerAndName(type, owner, name) {
 export function updateArticlePage(page) {
   return Vue.prototype.$notesService.updateNoteById(page);
 }
+
+export function updateArticleMetadataProperties(articleId, properties) {
+  return fetch(`${newsConstants.CONTENT_API}/contents/metadata/${articleId}`, {
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    credentials: 'include',
+    method: 'PUT',
+    body: JSON.stringify(properties)
+  }).then((resp) => {
+    if (resp?.ok) {
+      return resp.json();
+    }
+    throw new Error(`Error when updating metadata properties for article with id ${articleId}`);
+  });
+}

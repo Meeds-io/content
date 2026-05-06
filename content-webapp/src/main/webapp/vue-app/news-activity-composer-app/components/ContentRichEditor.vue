@@ -481,15 +481,15 @@ export default {
         this.draftSavingStatus = '';
       }
     },
-    doPostArticle(schedulePostDate) {
+    doPostArticle(schedulePostDate, extensionsCallback) {
       if (this.savingDraft) {
         this.$on('draftCreated', this.saveArticle);
         this.$on('draftUpdated', this.saveArticle);
       } else {
-        this.saveArticle(schedulePostDate);
+        this.saveArticle(schedulePostDate, extensionsCallback);
       }
     },
-    saveArticle(schedulePostDate) {
+    saveArticle(schedulePostDate, extensionsCallback) {
       clearTimeout(this.saveDraft);
       this.$off('draftCreated', this.saveNews);
       this.$off('draftUpdated', this.saveNews);
@@ -523,7 +523,7 @@ export default {
         article.timeZoneId = new window.Intl.DateTimeFormat().resolvedOptions().timeZone;
       }
       if (article.publicationState ==='staged') {
-        this.$newsServices.scheduleNews(article, this.articleType).then((scheduleArticle) => {
+        this.$newsServices.scheduleNews(article, this.articleType).then(async (scheduleArticle) => {
           this.articleType = 'latest_draft';
           this.fillArticle(scheduleArticle.id, false, null).then(() => {
             this.updateUrl();
@@ -541,13 +541,16 @@ export default {
             alertLink: scheduleArticle.url
           });
           this.enableClickOnce();
+          await this.executePublishExtensions(extensionsCallback, scheduleArticle);
         }).finally(() => this.draftSavingStatus = '');
       } else {
-        this.$newsServices.saveNews(article).then((createdArticle) => {
+        this.$newsServices.saveNews(article).then(async (createdArticle) => {
           this.articleType = 'latest_draft';
-          document.dispatchEvent(new CustomEvent('update-processed-image-url', {detail: {
-            content: createdArticle.body
-          }}));
+          document.dispatchEvent(new CustomEvent('update-processed-image-url', {
+            detail: {
+              content: createdArticle.body
+            }
+          }));
           this.fillArticle(createdArticle.id, false, createdArticle.lang || this.selectedLanguage).then(() => {
             this.updateUrl();
             this.initDataPropertiesFromUrl();
@@ -559,11 +562,16 @@ export default {
             alertLink: this.isSpaceMember ? `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/activity?id=${createdArticle.activityId}` : `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news-detail?newsId=${createdArticle.id}`
           });
           this.enableClickOnce();
+          await this.executePublishExtensions(extensionsCallback, createdArticle);
         }).catch(error => {
           this.displayAlert({type: 'error', message: this.$t('news.save.error.message', error.message)});
           this.enableClickOnce();
         }).finally(() => this.draftSavingStatus = '');
       }
+    },
+    async executePublishExtensions(extensionsCallback, article) {
+      const metadata = await extensionsCallback.executeExtensions(article);
+      await this.$newsServices.updateArticleMetadataProperties(article.id, metadata);
     },
     updateUrl(){
       const url = new URL(window.location.href);
@@ -592,7 +600,7 @@ export default {
       window.history.pushState('news', '', `${url.origin}${url.pathname}?${params.toString()}`);
 
     },
-    postAndPublish(publicationSettings) {
+    postAndPublish(publicationSettings, extensionsCallback) {
       this.article.activityPosted = publicationSettings?.post;
       this.article.published = publicationSettings?.publish;
       this.article.targets = publicationSettings?.selectedTargets;
@@ -606,7 +614,7 @@ export default {
       const scheduleSettings = publicationSettings?.scheduleSettings;
       const schedulePostDate = scheduleSettings?.postDate;
       this.article.scheduleUnpublishDate = scheduleSettings?.unpublishDate;
-      this.doPostArticle(schedulePostDate);
+      this.doPostArticle(schedulePostDate, extensionsCallback);
     },
     updateArticleData(article) {
       if (this.initDone && this.currentArticleInitDone) {
