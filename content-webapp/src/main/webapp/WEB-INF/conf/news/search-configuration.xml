@@ -37,6 +37,9 @@
             <field name="name">
               <string>news</string>
             </field>
+            <field name="contentType">
+              <string>news</string>
+            </field>
             <field name="uri">
               <string><![CDATA[/content/rest/contents/search?query={keyword}&limit={limit}]]></string>
             </field>
