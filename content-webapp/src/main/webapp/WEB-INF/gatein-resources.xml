@@ -215,6 +215,7 @@
   <portlet>
     <name>NewsListView</name>
     <module>
+      <load-group>contentGRP</load-group>
       <script>
         <minify>false</minify>
         <path>/js/newsListView.bundle.js</path>
