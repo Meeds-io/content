@@ -19,20 +19,34 @@
 
 -->
 <template>
-  <a
-    class="card card-border-radius"
+  <v-card
+    class="position-relative z-index-zero border-box-sizing overflow-hidden me-2 d-block card card-border-radius elevation-1"
     ref="newsCard"
     :href="articleUrl"
     target="_self"
     :class="{ 'keyboard-slide': slideActive }"
+    height="275"
+    width="240"
     @keydown.esc="blurContentHover($event)"
-    tabindex="0">
-    <div class="imgContainer">
+    @mouseover="showDetails = true"
+    @mouseleave="showDetails = false">
+    <v-sheet
+      class="position-relative overflow-hidden flex-shrink-0"
+      width="240"
+      height="135">
       <img
         :src="articleImage"
         :alt="featuredImageAltText"
-        class="article-illustration-img">
-    </div>
+        class="object-fit-cover d-block full-width full-height">
+      <extension-registry-components
+        :params="{
+          parameters: item?.parameters
+        }"
+        name="ContentList"
+        type="content-card-event-date-chip"
+        element="span"
+        class="mt-n12" />
+    </v-sheet>
     <div
       :class="{ 'is-article-link-focused': isArticleLinkFocused }"
       class="text-area articleLinkDetails"
@@ -44,52 +58,70 @@
       @keydown.enter.prevent="openArticle">
       <div
         :class="isArticleLinkFocused ? 'border-color-black' : ''"
-        class="upper-row">
+        class="upper-row pa-2 pt-1">
         <div
           v-if="!isHiddenSpace && showArticleSpace"
           :id="`space-link-${item.activityId}`"
-          class="space-link"
+          class="space-link d-flex align-center gap-1 overflow-hidden border-radius
+          position-relative d-flex width-fit-content text-decoration-none"
           :aria-label="$t('news.space.icon.title', { 0: item.spaceDisplayName })">
-          <div class="article-space">
-            <img
-              class="space-icon"
+          <div class="d-flex pt-1 align-center mb-2">
+            <v-img
+              class="me-2 my-auto rounded flex-shrink-0"
               :src="item.spaceAvatarUrl"
-              alt="">
-            <div class="space-name text-subtitle">
+              width="21"
+              height="21"
+              alt="" />
+            <div class="space-name text-subtitle text-truncate">
               {{ item.spaceDisplayName }}
             </div>
           </div>
         </div>
         <div class="articleLink">
-          <div v-if="showArticleTitle" class="article-title text-body">
+          <div v-if="showArticleTitle" class="mb-3 overflow-hidden text-body text-truncate-2">
             {{ item.title }}
           </div>
           <div class="d-flex text-no-wrap text-truncate text-subtitle">
-            <div v-if="showArticleAuthor" class="author-name">
-              {{ item.authorDisplayName }}
-            </div>
-            <span v-if="showArticleAuthor && showArticleDate">, </span>
-            <div v-if="showArticleDate">
-              <date-format
-                :value="displayDate"
-                :format="dateFormat" />
+            <div
+              v-if="showArticleAuthor"
+              class="author-name d-flex align-center gap-2 overflow-hidden user-avatar-parent">
+              <v-avatar size="20" class="flex-shrink-0">
+                <img :src="item.authorAvatarUrl" :alt="item.authorDisplayName">
+              </v-avatar>
+              <span
+                class="text-subtitle text-truncate">
+                {{ item.authorDisplayName }}
+              </span>
             </div>
           </div>
-          <div
-            v-if="showArticleSummary"
-            class="d-flex mt-4 text-subtitle">
-            {{ item?.properties?.summary }}
-          </div>
-          <div
-            class="mt-2 align-self-center text-subtitle font-weight-bold primary--text">
-            {{ $t('news.cards.readMore') }}
+          <div v-if="showDetails">
+            <extension-registry-components
+              :params="{
+                parameters: item?.parameters
+              }"
+              :class="{
+                'mb-n2': hasSummary
+              }"
+              name="ContentList"
+              type="content-card-event-date-chip"
+              element="span"
+              class="mt-2 mb-2" />
+            <div
+              v-if="showArticleSummary && hasSummary"
+              class="text-truncate-3 mt-4 text-subtitle">
+              {{ item?.properties?.summary }}
+            </div>
+            <div
+              class="mt-2 align-self-center text-subtitle font-weight-bold primary--text">
+              {{ $t('news.cards.readMore') }}
+            </div>
           </div>
         </div>
       </div>
     </div>
     <div
       v-if="showArticleReactions"
-      class="bottom-row border-top-color pa-2 width-full b-0 position-absolute white-background text-subtitle">
+      class="news-card-reactions position-absolute full-width b-0 l-0 t-0 d-flex z-index-two align-end flex-shrink-0 px-2 py-1 border-top-color text-subtitle">
       <div class="d-flex text-truncate text-no-wrap">
         <div class="width-fit-content">
           <div class="d-flex text-truncate text-subtitle">
@@ -97,34 +129,34 @@
             <span class="screen-reader-only">
               {{ $t('news.app.number.likes') }}
             </span>
-            <div class="likes-count ms-1">
+            <div class="likes-count my-auto me-0 ms-1">
               {{ item.likesCount }}
             </div>
-            <v-icon class="counters-icons mt-1 ml-2" size="14">
+            <v-icon class="counters-icons my-auto ms-3" size="14">
               mdi-comment
             </v-icon>
             <span class="screen-reader-only">
               {{ $t('news.app.number.comments') }}
             </span>
-            <div class="comments-count ms-1">
+            <div class="comments-count my-auto me-0 ms-1">
               {{ item.commentsCount }}
             </div>
           </div>
         </div>
         <div class="articleLink">
-          <div class="views">
-            <v-icon class="counters-icons" size="16">mdi-eye</v-icon>
+          <div class="views ms-3">
+            <v-icon class="counters-icons my-auto" size="16">mdi-eye</v-icon>
             <span class="screen-reader-only">
               {{ $t('news.app.number.views') }}
             </span>
-            <div class="views-count ms-1">
+            <div class="views-count my-auto ms-1">
               {{ item.viewsCount }}
             </div>
           </div>
         </div>
       </div>
     </div>
-  </a>
+  </v-card>
 </template>
 
 <script>
@@ -149,8 +181,12 @@ export default {
     },
     slideActive: false,
     isArticleLinkFocused: false,
+    showDetails: false
   }),
   computed: {
+    hasSummary() {
+      return this.item?.properties?.summary?.length;
+    },
     displayDate() {
       return this.item.publishDate && new Date(this.item.publishDate);
     },
