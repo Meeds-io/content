@@ -152,4 +152,5 @@ export function init(params) {
       i18n,
     }, `#${appId}`, `News List View - ${viewTemplate}`);
   });
+  Vue.prototype.$utils.includeExtensions('ContentListExtensions');
 }

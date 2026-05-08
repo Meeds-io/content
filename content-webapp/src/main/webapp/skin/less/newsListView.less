@@ -1134,17 +1134,8 @@ p.caption-title:after {
   line-height: 18px;
 
   .card {
-    display: block;
-    position: relative;
-    border-radius: 5px;
-    background: white;
     transition: 0.3s;
-    height: 300px;
-    width: 235px;
-    overflow: hidden;
     margin: 0 10px 0 0;
-    box-shadow: 0 1px 3px 0 rgba(35, 44, 48, 0.24);
-    box-sizing: border-box;
     &:hover {
       cursor: pointer;
 
@@ -1188,7 +1179,6 @@ p.caption-title:after {
     position: relative;
     height: 160px;
     bottom: 4px;
-    background: white;
   }
 
   .text-area:focus {
@@ -1204,8 +1194,6 @@ p.caption-title:after {
     height: 241px;
     width: 100%;
     box-sizing: border-box;
-    padding: 10px;
-
     transform: translateY(142px);
     transition: transform 0.3s;
     background: white;
@@ -1214,29 +1202,16 @@ p.caption-title:after {
   .article-space {
     display: flex;
     max-width: 216px;
-    margin-bottom: 5px;
   }
 
   .space-link {
-    display: flex;
-    position: relative;
-    width: fit-content;
     padding-right: 5px;
-    text-decoration: none;
 
     &:hover {
       .space-name {
         color: @primaryColor;
       }
     }
-  }
-
-  .space-icon {
-    width: 21px;
-    height: 21px;
-    border-radius: 50%;
-    margin-top: -2px;
-    margin-right: 5px;
   }
 
   .space-name {
@@ -1253,7 +1228,6 @@ p.caption-title:after {
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 3;
-    overflow: hidden;
     margin-bottom: 5px;
 
     &:hover {
