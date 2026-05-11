@@ -20,7 +20,7 @@
 -->
 <template>
   <v-card
-    class="position-relative z-index-zero border-box-sizing overflow-hidden me-2 d-block card card-border-radius elevation-1"
+    class="position-relative application-border application-border-radius z-index-zero border-box-sizing overflow-hidden me-2 d-block card elevation-1"
     ref="newsCard"
     :href="articleUrl"
     target="_self"
