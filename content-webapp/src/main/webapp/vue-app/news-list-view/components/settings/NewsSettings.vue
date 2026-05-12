@@ -55,7 +55,9 @@
         </span>
       </v-btn>
     </div>
-    <div :class="[showHeader && headerTitle ? 'd-flex flex-column' : 'd-flex flex-column']">
+    <div
+      :class="[showHeader && headerTitle ? 'd-flex flex-column' : 'd-flex flex-column']"
+      class="my-auto">
       <v-btn
         v-if="$root.canManageNewsList && showSettingsIcon"
         :class="classButtonOpenSettings"
