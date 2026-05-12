@@ -1136,7 +1136,8 @@ p.caption-title:after {
   .card {
     transition: 0.3s;
     margin: 0 10px 0 0;
-    &:hover {
+    &:hover,
+    &:focus-within {
       cursor: pointer;
 
       .articleLinkDetails:not(.is-article-link-focused) .upper-row {
@@ -1181,20 +1182,16 @@ p.caption-title:after {
     bottom: 4px;
   }
 
-  .text-area:focus {
-  height: 30px;
-  }
-
   .upper-row {
     display: flex;
     flex-flow: column;
     position: absolute;
     left: 0;
-    bottom: 49px;
-    height: 241px;
+    bottom: 20px;
+    height: 270px;
     width: 100%;
     box-sizing: border-box;
-    transform: translateY(142px);
+    transform: translateY(calc(100% - 50px));
     transition: transform 0.3s;
     background: white;
   }

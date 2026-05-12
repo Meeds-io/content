@@ -24,10 +24,12 @@
     ref="newsCard"
     :href="articleUrl"
     target="_self"
-    :class="{ 'keyboard-slide': slideActive }"
+    :class="{ 'keyboard-slide': slideActive, 'border-color-black' : isArticleLinkFocused }"
     height="275"
     width="240"
     @keydown.esc="blurContentHover($event)"
+    @focus="isArticleLinkFocused = true; showDetails = true"
+    @blur="isArticleLinkFocused = false; showDetails = false"
     @mouseover="showDetails = true"
     @mouseleave="showDetails = false">
     <v-sheet
@@ -48,16 +50,11 @@
         class="mt-n12" />
     </v-sheet>
     <div
-      :class="{ 'is-article-link-focused': isArticleLinkFocused }"
       class="text-area articleLinkDetails"
-      tabindex="0"
       role="link"
       :aria-label="$t('news.illustration.link.title', {0: item.title})"
-      @focus="isArticleLinkFocused=true"
-      @blur="isArticleLinkFocused=false"
       @keydown.enter.prevent="openArticle">
       <div
-        :class="isArticleLinkFocused ? 'border-color-black' : ''"
         class="upper-row pa-2 pt-1">
         <div
           v-if="!isHiddenSpace && showArticleSpace"
