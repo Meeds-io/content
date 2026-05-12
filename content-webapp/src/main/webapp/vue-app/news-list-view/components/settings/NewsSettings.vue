@@ -19,7 +19,10 @@
 
 -->
 <template>
-  <div v-if="showSettingsContainer" class="settings-container d-flex flex-row px-2 pt-2 pb-1">
+  <v-sheet 
+    v-if="showSettingsContainer"
+    height="42"
+    class="settings-container d-flex flex-row px-2 pt-2 pb-1">
     <div class="d-flex latestNewsTitleContainer flex-column flex-grow-1 my-1 text-truncate">
       <span
         v-if="showHeader"
@@ -27,16 +30,19 @@
         :title="headerTitle">{{ headerTitle }}</span>
     </div>
     <div :class="[showHeader && headerTitle ? 'd-flex flex-column me-2 mt-1' : 'd-flex flex-column me-2']">
-      <v-icon
+      <v-btn
         v-if="$root.canManageNewsList && showSettingsIcon"
         :class="classButtonOpenSettings"
         :title="$t('news.list.openSettings.title')"
         :aria-label="$t('news.latest.openSettings')"
-        size="24"
         icon
         @click="openDrawer">
-        mdi-cog
-      </v-icon>
+        <v-icon
+          size="20"
+          icon>
+          fas fa-cog
+        </v-icon>
+      </v-btn>
     </div>
     <div v-if="showSeeAll && !hideSeeAllButton" class="d-flex flex-column my-auto me-2">
       <v-btn
@@ -47,7 +53,7 @@
         {{ $t('news.published.seeAll') }}
       </v-btn>
     </div>
-  </div>
+  </v-sheet>
 </template>
 <script>
 export default {
