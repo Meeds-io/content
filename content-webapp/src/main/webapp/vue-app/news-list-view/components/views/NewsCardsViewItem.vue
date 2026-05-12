@@ -20,14 +20,18 @@
 -->
 <template>
   <v-card
-    class="position-relative application-border application-border-radius z-index-zero border-box-sizing overflow-hidden me-2 d-block card elevation-1"
+    class="position-relative application-border
+    application-border-radius z-index-zero border-box-sizing overflow-hidden me-2 d-block card elevation-1"
     ref="newsCard"
     :href="articleUrl"
     target="_self"
-    :class="{ 'keyboard-slide': slideActive }"
+    :class="{ 'keyboard-slide': slideActive, 'border-color-black' : isCardFocused || isArticleLinkFocused}"
     height="275"
     width="240"
+    tabindex="0"
     @keydown.esc="blurContentHover($event)"
+    @focus="isCardFocused = true;"
+    @blur="isCardFocused = false;"
     @mouseover="showDetails = true"
     @mouseleave="showDetails = false">
     <v-sheet
@@ -48,16 +52,14 @@
         class="mt-n12" />
     </v-sheet>
     <div
-      :class="{ 'is-article-link-focused': isArticleLinkFocused }"
       class="text-area articleLinkDetails"
-      tabindex="0"
       role="link"
+      tabindex="0"
       :aria-label="$t('news.illustration.link.title', {0: item.title})"
-      @focus="isArticleLinkFocused=true"
-      @blur="isArticleLinkFocused=false"
+      @focus="isArticleLinkFocused = true; showDetails = true"
+      @blur="isArticleLinkFocused = false; showDetails =false"
       @keydown.enter.prevent="openArticle">
       <div
-        :class="isArticleLinkFocused ? 'border-color-black' : ''"
         class="upper-row pa-2 pt-1">
         <div
           v-if="!isHiddenSpace && showArticleSpace"
@@ -181,6 +183,7 @@ export default {
     },
     slideActive: false,
     isArticleLinkFocused: false,
+    isCardFocused: false,
     showDetails: false
   }),
   computed: {
