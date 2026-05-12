@@ -29,28 +29,46 @@
         class="widget-text-header text-truncate"
         :title="headerTitle">{{ headerTitle }}</span>
     </div>
-    <div :class="[showHeader && headerTitle ? 'd-flex flex-column me-2 mt-1' : 'd-flex flex-column me-2']">
+    <div v-if="showSeeAll && !hideSeeAllButton" class="d-flex flex-column my-auto me-2">
+      <v-btn
+        v-if="$root.canManageNewsList && isHovering"
+        class="primary--text my-auto"
+        icon
+        small
+        @click="seeAllNews">
+        <v-icon
+          size="18"
+          icon>
+          fas fa-external-link-alt
+        </v-icon>
+      </v-btn>
+      <v-btn
+        v-else-if="!isHovering || !$root.canManageNewsList"
+        color="primary"
+        class="pa-0 text-font-size"
+        small
+        text
+        link
+        @click="seeAllNews">
+        <span class="primary--text text-none">
+          {{ $t('news.published.seeAll') }}
+        </span>
+      </v-btn>
+    </div>
+    <div :class="[showHeader && headerTitle ? 'd-flex flex-column mt-1' : 'd-flex flex-column']">
       <v-btn
         v-if="$root.canManageNewsList && showSettingsIcon"
         :class="classButtonOpenSettings"
         :title="$t('news.list.openSettings.title')"
         :aria-label="$t('news.latest.openSettings')"
         icon
+        small
         @click="openDrawer">
         <v-icon
-          size="20"
+          size="18"
           icon>
           fas fa-cog
         </v-icon>
-      </v-btn>
-    </div>
-    <div v-if="showSeeAll && !hideSeeAllButton" class="d-flex flex-column my-auto me-2">
-      <v-btn
-        depressed
-        small
-        class="button-see-all-news caption text-uppercase text-light-color my-auto me-2"
-        @click="seeAllNews">
-        {{ $t('news.published.seeAll') }}
       </v-btn>
     </div>
   </v-sheet>
