@@ -21,11 +21,11 @@
 <template>
   <div
     id="article-list-view"
-    class="py-0"
+    class="pa-0"
     ref="articleListView">
-    <v-row>
+    <v-row class="mx-0">
       <v-col
-        class="flex-grow-0"
+        class="flex-grow-0 px-2"
         :cols="numberOfColumns"
         v-for="(item, index) of newsInfo"
         :key="item">
