@@ -30,11 +30,9 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
-import jakarta.persistence.SequenceGenerator;
+import io.meeds.common.persistence.PortableSequence;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -50,8 +48,7 @@ public class LinkSettingEntity implements Serializable {
   private static final long serialVersionUID = -3658613044697163309L;
 
   @Id
-  @SequenceGenerator(name = "SEQ_SOC_LINK_SETTINGS_ID", sequenceName = "SEQ_SOC_LINK_SETTINGS_ID", allocationSize = 1)
-  @GeneratedValue(strategy = GenerationType.AUTO, generator = "SEQ_SOC_LINK_SETTINGS_ID")
+  @PortableSequence(name = "SEQ_SOC_LINK_SETTINGS_ID")
   @Column(name = "LINK_SETTING_ID")
   private Long              id;
 
