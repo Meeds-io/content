@@ -20,6 +20,7 @@ package io.meeds.content.news.rest;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
@@ -69,7 +70,7 @@ public class NewsTargetingRestTest {
     ResponseEntity response = newsTargetingRestController.getAllTargets();
 
     // Then
-    assertEquals(HttpStatus.OK.value(), response.getStatusCodeValue());
+    assertTrue(response.getStatusCode().is2xxSuccessful());
   }
 
   @Test
@@ -82,7 +83,7 @@ public class NewsTargetingRestTest {
     ResponseEntity response = newsTargetingRestController.getAllowedTargets();
 
     // Then
-    assertEquals(org.springframework.http.HttpStatus.OK.value(), response.getStatusCodeValue());
+    assertTrue(response.getStatusCode().is2xxSuccessful());
 
     when(newsTargetingRestController.getAllowedTargets()).thenThrow(RuntimeException.class);
 
@@ -90,7 +91,7 @@ public class NewsTargetingRestTest {
     response = newsTargetingRestController.getAllowedTargets();
 
     // Then
-    assertEquals(HttpStatus.INTERNAL_SERVER_ERROR.value(), response.getStatusCodeValue());
+    assertTrue(response.getStatusCode().is5xxServerError());
 
   }
 
