@@ -28,7 +28,7 @@ import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import org.exoplatform.commons.exception.ObjectNotFoundException;
@@ -49,16 +49,16 @@ public class ImageAttachmentPluginTest {
 
   private static final String   CMS_SETTING_NAME = "cmsSettingName";
 
-  @MockBean
+  @MockitoBean
   private CMSService            cmsService;
 
-  @MockBean
+  @MockitoBean
   private IdentityManager       identityManager;
 
-  @MockBean
+  @MockitoBean
   private SpaceService          spaceService;
 
-  @MockBean
+  @MockitoBean
   private AttachmentService     attachmentService;
 
   @Autowired
