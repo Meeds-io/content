@@ -122,9 +122,10 @@
       </div>
     </div>
     <div
-      v-if="showArticleReactions"
       class="news-card-reactions position-absolute full-width b-0 l-0 t-0 d-flex z-index-two align-end flex-shrink-0 px-2 py-1 border-top-color text-subtitle">
-      <div class="d-flex text-truncate text-no-wrap">
+      <div
+        v-if="showArticleReactions"
+        class="d-flex text-truncate text-no-wrap">
         <div class="width-fit-content">
           <div class="d-flex text-truncate text-subtitle">
             <v-icon size="14">mdi-thumb-up</v-icon>
@@ -156,6 +157,13 @@
             </div>
           </div>
         </div>
+      </div>
+      <div 
+        v-if="showArticleDate" 
+        class="text-subtitle ms-auto mt-auto">
+        <date-format
+          :value="displayDate"
+          :format="dateFormat" />
       </div>
     </div>
   </v-card>
@@ -191,7 +199,7 @@ export default {
       return this.item?.properties?.summary?.length;
     },
     displayDate() {
-      return this.item.publishDate && new Date(this.item.publishDate);
+      return this.item?.publicationDate && new Date(this.item.publicationDate);
     },
     showArticleAuthor() {
       return this.selectedOption && this.selectedOption.showArticleAuthor && this.item && !this.item.properties.hideAuthor;
