@@ -19,55 +19,144 @@
 
 -->
 <template>
-  <a
-    class="articleLink"
-    target="_self"
-    :href="articleUrl"
-    :arial-label="$t('news.space.icon.title',{ 0:item.spaceDisplayName })">
-    <div class="articleImage" v-if="showImage">
-      <img 
-        :src="articleImg"
-        :alt="featuredImageAltText"
-        class="card-border-radius">
-    </div>
-    <div class="articleInfos">
-      <div class="articleSpace text-subtitle" v-if="!isHiddenSpace && showArticleSpace">
+  <v-hover v-slot="{ hover }">
+    <a
+      :class="{
+        'flex-column': !isMobile && index === 0,
+        'background-grey-primary': hover && (index > 0 || isMobile)
+      }"
+      class="articleLink"
+      target="_self"
+      :href="articleUrl"
+      :aria-label="$t('news.space.icon.title',{ 0:item.spaceDisplayName })">
+      <v-sheet
+        v-if="showImage"
+        v-bind="isMobile ? { minWidth: 80, height: 80 }
+          : !isMobile && !index ? {height: 'calc(100% - 80px)'}: {}"
+        class="articleImage line-height-normal d-flex background-transparent">
+        <v-img
+          v-if="isMobile"
+          :src="articleImg"
+          :alt="featuredImageAltText"
+          height="80"
+          width="80"
+          class="application-border-radius" />
         <img
-          class="spaceImage"
-          :src="item.spaceAvatarUrl"
-          alt="">
-        <span class="spaceName">{{ item.spaceDisplayName }}</span>
-      </div>
-      <span v-if="showArticleTitle" class="articleTitle text-color text-body">{{ item.title }}</span>
-      <div class="articlePostTitle">
-        <div class="reactions text-subtitle">
-          <v-icon
-            v-if="showArticleDate"
-            class="reactionIconStyle me-1"
-            size="12">mdi-clock</v-icon>
-          <div v-if="showArticleDate" class="postDate flex-column me-2 my-auto">
-            <date-format
-              :value="displayDate"
-              :format="dateFormat" />
+          v-else
+          :src="articleImg"
+          :alt="featuredImageAltText"
+          class="application-border-radius">
+        <extension-registry-components
+          v-if="!index && !isMobile"
+          :params="{
+            parameters: item?.parameters
+          }"
+          name="ContentList"
+          type="content-card-event-date-chip"
+          element="span"
+          class="mt-auto" />
+        <extension-registry-components
+          v-else  
+          :params="{
+            parameters: item?.parameters,
+            chipSize: 32,
+            chipArrowSize: 8,
+            chipExtraClass: 'text-subtitle-font-size line-height-1 pa-1',
+            parentExtraClass: 'application-border-radius no-border-top-left-radius no-border-top-right-radius no-border-bottom-right-radius overflow-hidden'
+          }"
+          name="ContentList"
+          type="content-card-event-date-chip"
+          element="span"
+          class="position-absolute b-0" />
+      </v-sheet>
+      <v-sheet
+        height="80"
+        :class="{
+          'mb-n2 d-flex flex-column position-absolute b-0 r-0 l-0': !isMobile && index === 0,
+          'px-2': index === 0 && !isMobile,
+          'ps-3 d-flex flex-column': index === 0 && isMobile
+        }"
+        class="articleInfos no-min-width full-width background-transparent">
+        <div v-if="showArticleDate" class="postDate text-subtitle line-height-1 flex-column mb-1 mt-0 my-auto">
+          <date-format
+            :value="displayDate"
+            :format="dateFormat" />
+        </div>
+        <span
+          v-if="showArticleTitle"
+          :class="{
+            'text-truncate': (index === 0 && !isMobile) || (index > 0 && hasSummary),
+            'text-truncate-1': index > 0 && !hasSummary
+          }"
+          class="articleTitle text-color text-body line-height-normal">
+          {{ item.title }}
+        </span>
+        <span
+          v-if="showSummary"
+          class="text-subtitle text-truncate">
+          {{ item?.properties?.summary }}
+        </span>
+        <div
+          :class="{
+            'mt-4': index === 0 && !isMobile,
+            'mt-auto': index > 0 || isMobile
+          }"
+          class="articlePostTitle">
+          <div  
+            v-if="!isHiddenSpace && showArticleSpace"
+            class="articleSpace align-stretch text-subtitle d-flex flex-grow-1 no-min-width my-auto rounded flex-grow-0">
+            <v-img
+              v-if="showArticleSpace"
+              class="my-auto rounded flex-grow-0"
+              :src="item.spaceAvatarUrl"
+              width="20"
+              height="20"
+              alt="" />
+            <v-icon
+              v-if="showArticleSpace && showArticleAuthor"
+              class="mx-1"
+              small>
+              mdi-chevron-right
+            </v-icon>
+            <span
+              v-if="showArticleAuthor"
+              :class="{
+                'flex-shrink-1': truncateAuthorName,
+                'flex-shrink-0' : !truncateAuthorName
+              }"
+              class="text-truncate flex-grow-1 flex-shrink-1 my-auto">
+              <v-avatar 
+                size="20" 
+                class="flex-shrink-0 my-auto me-2">
+                <img 
+                  :src="item.authorAvatarUrl" 
+                  :alt="item.authorDisplayName">
+              </v-avatar>
+              <span>
+                {{ item.authorDisplayName }}
+              </span>
+            </span>
           </div>
-          <div v-if="showArticleReactions" class="d-flex">
-            <v-icon class="reactionIconStyle me-1" size="12">
-              mdi-thumb-up
-            </v-icon>
-            <div class="likesCount me-2">{{ item.likesCount }}</div>
-            <v-icon class="reactionIconStyle commentStyle me-1" size="12">
-              mdi-comment
-            </v-icon>
-            <div class="commentsCount me-2">{{ item.commentsCount }}</div>
-            <v-icon class="reactionIconStyle me-1" size="12">
-              mdi-eye
-            </v-icon>
-            <div class="viewCount">{{ item.viewsCount }}</div>
+          <div class="reactions flex-shrink-0 text-subtitle">
+            <div v-if="showArticleReactions" class="d-flex">
+              <v-icon class="reactionIconStyle me-1" size="12">
+                mdi-thumb-up
+              </v-icon>
+              <div class="likesCount me-2">{{ item.likesCount }}</div>
+              <v-icon class="reactionIconStyle commentStyle me-1" size="12">
+                mdi-comment
+              </v-icon>
+              <div class="commentsCount me-2">{{ item.commentsCount }}</div>
+              <v-icon class="reactionIconStyle me-1" size="12">
+                mdi-eye
+              </v-icon>
+              <div class="viewCount">{{ item.viewsCount }}</div>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
-  </a>
+      </v-sheet>
+    </a>
+  </v-hover>
 </template>
 <script>
 export default {
@@ -100,14 +189,26 @@ export default {
       day: 'numeric',
     },
     showArticleTitle: true,
-    showArticleSummary: false,
+    showArticleSummary: true,
     showArticleImage: true,
-    showArticleAuthor: false,
+    showArticleAuthor: true,
     showArticleSpace: true,
     showArticleDate: true,
     showArticleReactions: true,
   }),
   computed: {
+    hasSummary() {
+      return !!this.item?.properties?.summary;
+    },
+    showSummary() {
+      return this.showArticleSummary && this.hasSummary && (this.index > 0 || this.isMobile);
+    },
+    isMobile() {
+      return this.$vuetify.breakpoint.name === 'sm';
+    },
+    truncateAuthorName() {
+      return this.item?.authorDisplayName?.length > 15;
+    },
     articleImg(){
       return this.showImage && this.img ;
     },
@@ -121,7 +222,7 @@ export default {
       return this.illustrationURL() || '/content/images/news.png';
     },
     displayDate() {
-      return this.item.publishDate && new Date(this.item.publishDate);
+      return this.item?.publicationDate && new Date(this.item.publicationDate);
     },
     isHiddenSpace() {
       return this.item && !this.item.spaceMember && this.item.hiddenSpace;
@@ -156,7 +257,7 @@ export default {
         if (this.index === 0){
           return this.item.illustrationURL?.concat('&size=700x344').toString();
         } else {
-          return this.item.illustrationURL?.concat('&size=107x107').toString();
+          return this.item.illustrationURL?.concat('&size=80x80').toString();
         }
       } else {
         return this.item.illustrationURL?.concat('&size=1410x344').toString();
