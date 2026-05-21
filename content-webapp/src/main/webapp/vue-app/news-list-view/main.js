@@ -69,9 +69,9 @@ export function init(params) {
   const showHeader = viewTemplate === 'NewsSlider' ? false: params.showHeader === 'true';
   const showSeeAll = params.showSeeAll === 'true' && !!params.seeAllUrl?.length;
   const showArticleTitle = params.showArticleTitle === '' ? true : params.showArticleTitle === 'true';
-  const showArticleSummary = viewTemplate === 'NewsLatest' ? false: params.showArticleSummary === 'true';
+  const showArticleSummary = params.showArticleSummary === '' ? true : params.showArticleSummary === 'true';
   const showArticleImage = params.showArticleImage === '' ? true : params.showArticleImage === 'true';
-  const showArticleAuthor = viewTemplate === 'NewsLatest' ? false: params.showArticleAuthor === 'true';
+  const showArticleAuthor = params.showArticleAuthor === '' ? true: params.showArticleAuthor === 'true';
   const showArticleSpace = params.showArticleSpace === '' ? true : params.showArticleSpace === 'true';
   const showArticleReactions = params.showArticleReactions === '' ? true : params.showArticleReactions === 'true';
   const showArticleDate  = params.showArticleDate === '' ? true : params.showArticleDate === 'true';
