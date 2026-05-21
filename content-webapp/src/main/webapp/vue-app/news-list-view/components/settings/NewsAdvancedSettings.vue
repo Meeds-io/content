@@ -121,7 +121,7 @@
         <v-switch
           v-model="showArticleSummary"
           dense
-          :disabled="displayLatestButton || displayAlertsButtons || displayMosaicButtons || displayStoriesButtons"
+          :disabled="displayAlertsButtons || displayMosaicButtons || displayStoriesButtons"
           @change="selectedOption('showArticleSummary', showArticleSummary)"
           class="my-auto" />
       </v-list-item-action>
@@ -153,7 +153,7 @@
         <v-switch
           v-model="showArticleAuthor"
           dense
-          :disabled="displayLatestButton || displayAlertsButtons"
+          :disabled="displayAlertsButtons"
           @change="selectedOption('showArticleAuthor', showArticleAuthor)"
           class="my-auto" />
       </v-list-item-action>
@@ -254,9 +254,6 @@ export default {
     displaySliderButton() {
       return this.viewTemplate === 'NewsSlider';
     },
-    displayLatestButton() {
-      return this.viewTemplate === 'NewsLatest';
-    },
     displayAlertsButtons() {
       return this.viewTemplate === 'NewsAlert';
     },
@@ -294,7 +291,7 @@ export default {
       this.showArticleTitle = this.$root.showArticleTitle;
       this.showArticleImage = this.viewTemplate === 'NewsAlert' ? false : this.$root.showArticleImage;
       this.showArticleSummary = this.viewTemplate === 'NewsLatest' || this.viewTemplate === 'NewsAlert' || this.viewTemplate === 'NewsMosaic' || this.viewTemplate === 'NewsStories' ? false : this.$root.showArticleSummary;
-      this.showArticleAuthor = this.viewTemplate === 'NewsLatest' || this.viewTemplate === 'NewsAlert' ? false : this.$root.showArticleAuthor;
+      this.showArticleAuthor = this.viewTemplate === 'NewsAlert' ? false : this.$root.showArticleAuthor;
       this.showArticleSpace = this.viewTemplate === 'NewsStories' ? false : this.$root.showArticleSpace;
       this.showArticleDate = this.$root.showArticleDate;
       this.showArticleReactions = this.viewTemplate === 'NewsAlert' ? false : this.$root.showArticleReactions;
