@@ -250,6 +250,15 @@ export default {
       required: value => value == null || !!(value?.length),
     },
   }),
+  watch: {
+    viewTemplate(_, oldTemplate) {
+      if (this.viewTemplate === 'NewsMosaic' && this.limit > 3) {
+        this.setLimit(3);
+      } else if (this.limit === 3 && oldTemplate === 'NewsMosaic') {
+        this.setLimit(4);
+      }
+    }
+  },
   computed: {
     displaySliderButton() {
       return this.viewTemplate === 'NewsSlider';
@@ -285,7 +294,7 @@ export default {
       this.viewExtensions = this.$root.viewExtensions;
       this.newsTarget = this.$root.newsTarget;
       this.newsHeader = this.$root.header;
-      this.limit = this.$root.limit;
+      this.limit = this.viewTemplate === 'NewsMosaic' && this.limit> 3 ? 3 : this.$root.limit;
       this.showHeader = this.viewTemplate === 'NewsSlider' || this.viewTemplate === 'NewsMosaic' || this.viewTemplate === 'NewsStories' ? false : this.$root.showHeader;
       this.showSeeAll = this.$root.showSeeAll;
       this.showArticleTitle = this.$root.showArticleTitle;

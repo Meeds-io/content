@@ -87,22 +87,9 @@
             class="text-truncate flex-grow-1 flex-shrink-1 my-auto">
             {{ item.authorDisplayName }}
           </span>
-          <div class="text-no-wrap text-truncate d-flex flex-shrink-0 text-subtitle">
-            <div v-if="showArticleReactions" class="reactions">
-              <v-icon class="me-1 my-auto" size="12">
-                mdi-thumb-up
-              </v-icon>
-              <div class="likes-count me-2 my-auto">{{ item.likesCount }}</div>
-              <v-icon class="me-1" size="12">
-                mdi-comment
-              </v-icon>
-              <div class="comments-count my-auto me-2">{{ item.commentsCount }}</div>
-              <v-icon class="me-1" size="12">
-                mdi-eye
-              </v-icon>
-              <div class="viewCount my-auto">{{ item.viewsCount }}</div>
-            </div>
-          </div>
+          <news-template-view-item-reactions
+            :item="item"
+            :show-article-reactions="showArticleReactions" />
         </div>
       </div>
     </a>

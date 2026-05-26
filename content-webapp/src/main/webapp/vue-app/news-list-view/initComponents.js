@@ -30,6 +30,7 @@ import NewsAlertView from './components/views/NewsAlertView.vue';
 import NewsListTemplateView from './components/views/NewsListTemplateView.vue';
 import NewsListTemplateViewItem from './components/views/NewsListTemplateViewItem.vue';
 import NewsMosaicView from './components/views/NewsMosaicView.vue';
+import NewsMosaicTemplateViewItem from './components/views/NewsMosaicTemplateViewItem.vue';
 import NewsStoriesView from './components/views/NewsStoriesView.vue';
 import NewsStoriesViewItem from './components/views/NewsStoriesViewItem.vue';
 import NewsCardsView from './components/views/NewsCardsView.vue';
@@ -37,6 +38,7 @@ import NewsCardsViewItem from './components/views/NewsCardsViewItem.vue';
 import NewsTargetSuggester from './components/settings/NewsTargetSuggester.vue';
 import NewsSourceSettings from './components/settings/NewsSourceSettings.vue';
 import NewsListSelector from './components/settings/NewsListSelector.vue';
+import NewsTemplateViewItemReactions from './components/views/NewsTemplateViewItemReactions.vue';
 
 
 const components = {
@@ -53,13 +55,15 @@ const components = {
   'news-list-template-view': NewsListTemplateView,
   'news-list-template-view-item': NewsListTemplateViewItem,
   'news-mosaic-view': NewsMosaicView,
+  'news-mosaic-template-view-item': NewsMosaicTemplateViewItem,
   'news-stories-view': NewsStoriesView,
   'news-stories-view-item': NewsStoriesViewItem,
   'news-cards-view': NewsCardsView,
   'news-cards-view-item': NewsCardsViewItem,
   'news-target-suggester': NewsTargetSuggester,
   'news-source-settings': NewsSourceSettings,
-  'news-list-selector': NewsListSelector
+  'news-list-selector': NewsListSelector,
+  'news-template-view-item-reactions': NewsTemplateViewItemReactions
 };
 
 for (const key in components) {
