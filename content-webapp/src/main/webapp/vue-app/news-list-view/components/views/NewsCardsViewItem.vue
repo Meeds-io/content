@@ -123,41 +123,9 @@
     </div>
     <div
       class="news-card-reactions position-absolute full-width b-0 l-0 t-0 d-flex z-index-two align-end flex-shrink-0 px-2 py-1 border-top-color text-subtitle">
-      <div
-        v-if="showArticleReactions"
-        class="d-flex text-truncate text-no-wrap">
-        <div class="width-fit-content">
-          <div class="d-flex text-truncate text-subtitle">
-            <v-icon size="14">mdi-thumb-up</v-icon>
-            <span class="screen-reader-only">
-              {{ $t('news.app.number.likes') }}
-            </span>
-            <div class="likes-count my-auto me-0 ms-1">
-              {{ item.likesCount }}
-            </div>
-            <v-icon class="counters-icons my-auto ms-3" size="14">
-              mdi-comment
-            </v-icon>
-            <span class="screen-reader-only">
-              {{ $t('news.app.number.comments') }}
-            </span>
-            <div class="comments-count my-auto me-0 ms-1">
-              {{ item.commentsCount }}
-            </div>
-          </div>
-        </div>
-        <div class="articleLink">
-          <div class="views ms-3">
-            <v-icon class="counters-icons my-auto" size="16">mdi-eye</v-icon>
-            <span class="screen-reader-only">
-              {{ $t('news.app.number.views') }}
-            </span>
-            <div class="views-count my-auto ms-1">
-              {{ item.viewsCount }}
-            </div>
-          </div>
-        </div>
-      </div>
+      <news-template-view-item-reactions
+        :item="item"
+        :show-article-reactions="showArticleReactions" />
       <div 
         v-if="showArticleDate" 
         class="text-subtitle ms-auto mt-auto">

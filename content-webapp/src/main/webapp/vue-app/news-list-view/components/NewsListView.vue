@@ -130,7 +130,7 @@ export default {
             this.viewTemplate !== 'NewsSlider' && 
             this.viewTemplate !== 'NewsAlert' && 
             this.viewTemplate !== 'NewsStories' && 
-            (this.viewTemplate !== 'NewsMosaic' || this.isMobile);
+            (this.viewTemplate !== 'NewsMosaic');
     },
     selectedViewExtension() {
       if (this.viewTemplate) {
