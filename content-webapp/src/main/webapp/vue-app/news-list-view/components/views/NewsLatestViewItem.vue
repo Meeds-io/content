@@ -137,22 +137,9 @@
               </span>
             </span>
           </div>
-          <div class="reactions flex-shrink-0 text-subtitle">
-            <div v-if="showArticleReactions" class="d-flex">
-              <v-icon class="reactionIconStyle me-1" size="12">
-                mdi-thumb-up
-              </v-icon>
-              <div class="likesCount me-2">{{ item.likesCount }}</div>
-              <v-icon class="reactionIconStyle commentStyle me-1" size="12">
-                mdi-comment
-              </v-icon>
-              <div class="commentsCount me-2">{{ item.commentsCount }}</div>
-              <v-icon class="reactionIconStyle me-1" size="12">
-                mdi-eye
-              </v-icon>
-              <div class="viewCount">{{ item.viewsCount }}</div>
-            </div>
-          </div>
+          <news-template-view-item-reactions
+            :item="item"
+            :show-article-reactions="showArticleReactions" />
         </div>
       </v-sheet>
     </a>

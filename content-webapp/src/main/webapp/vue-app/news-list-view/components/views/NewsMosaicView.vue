@@ -26,35 +26,21 @@
         v-if="!isSmallBreakpoint"
         :class="isMobile ? '' : 'settingNewsContainer'"
         class="mt-3 mr-1" />
-      <div :class="`mosaic-container ${smallHeightClass}`">
-        <div
+      <div :class="`application-border-radius mosaic-container ${smallHeightClass}`">
+        <news-mosaic-template-view-item
           v-for="(item, index) of news"
           :key="index"
-          :class="isSmallWidth ? 'articleSmallWidth' : 'article'"
-          :id="`articleItem-${index}`"
-          class="card-border-radius">
-          <a
-            class="articleLink d-block"
-            target="_self"
-            :href="articleUrl(item)">
-            <img
-              :src="showArticleImage && item.illustrationURL !== null ? illustrationURL(item,index) : '/content/images/news.png'"
-              :alt="item?.properties?.featuredImage?.altText || ''"
-              class="card-border-radius">
-            <div class="titleArea">
-              <div v-if="showArticleDate" class="articleDate">
-                <date-format
-                  :value="new Date(item?.publishDate)"
-                  :format="dateFormat" />
-              </div>
-              <div
-                v-if="showArticleTitle"
-                :class="styleArticleTitle()">
-                {{ item.title }}
-              </div>
-            </div>
-          </a>
-        </div>
+          :item="item"
+          :index="index"
+          :is-small-width="isSmallWidth"
+          :total-count="news.length"
+          :show-article-title="showArticleTitle"
+          :show-article-image="showArticleImage"
+          :show-article-date="showArticleDate"
+          :show-article-summary="showArticleSummary"
+          :show-article-author="showArticleAuthor"
+          :show-article-space="showArticleSpace"
+          :show-article-reactions="showArticleReactions" />
       </div>
     </div>
   </v-hover>
@@ -65,79 +51,60 @@ export default {
   props: {
     newsList: {
       type: Array,
-      default: () => {
-        return [];
-      }
+      default: () => []
     },
     selectedOption: {
       type: Object,
-      default: () => {
-        return {};
-      }
+      default: () => ({})
     },
   },
-  data () {
+  data() {
     return {
-      dateFormat: {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      },
-      isSmallWidth: false
+      isSmallWidth: false,
+      showArticleTitle: true,
+      showArticleImage: true,
+      showArticleDate: true,
+      showArticleSummary: true,
+      showArticleAuthor: true,
+      showArticleSpace: true,
+      showArticleReactions: true,
+      seeAllUrl: null,
     };
   },
-  mounted() {
-    this.isSmallWidth =  this.$refs?.['top-news-mosaic']?.clientWidth < 600;
-    window.addEventListener('resize', () => {
-      this.isSmallWidth = this.$refs?.['top-news-mosaic']?.clientWidth < 600;
-    });
-  },
   computed: {
-    showArticleTitle() {
-      return this.selectedOption.showArticleTitle;
-    },
-    showArticleImage() {
-      return this.selectedOption.showArticleImage;
-    },
-    showArticleDate() {
-      return this.selectedOption.showArticleDate;
+    news() {
+      return this.newsList?.filter(news => !!news) || [];
     },
     isMobile() {
-      return this.$vuetify.breakpoint.name === 'xs' || this.$vuetify.breakpoint.name === 'sm' || this.$vuetify.breakpoint.name === 'md';
+      return ['xs', 'sm', 'md'].includes(this.$vuetify.breakpoint.name);
     },
     isSmallBreakpoint() {
       return this.$vuetify.breakpoint.width < 651;
     },
     smallHeightClass() {
-      return this.isMobile && this.news && this.news.length === 1 && 'small-mosaic-container';
-    },
-    articleUrl() {
-      return (item) => {
-        return eXo.env.portal.userName !== '' ? item.url : `${eXo.env.portal.context}/${eXo.env.portal.portalName}/news-detail?newsId=${item.id}&type=article`;
-      };
-    },
-    news(){
-      return this.newsList && this.newsList.filter(news => !!news);
+      return this.isMobile && this.news.length === 1 ? 'small-mosaic-container' : '';
     },
   },
+  created() {
+    this.init();
+  },
+  mounted() {
+    this.isSmallWidth = this.$refs?.['top-news-mosaic']?.clientWidth < 600;
+    window.addEventListener('resize', () => {
+      this.isSmallWidth = this.$refs?.['top-news-mosaic']?.clientWidth < 600;
+    });
+  },
   methods: {
-    minLength(lengthNews){
-      return lengthNews < 5 && lengthNews > 0 ? 100 / lengthNews : 25;
+    init() {
+      this.showArticleTitle = this.$root.showArticleTitle;
+      this.showArticleImage = this.$root.showArticleImage;
+      this.showArticleSummary = this.$root.showArticleSummary;
+      this.showArticleAuthor = this.$root.showArticleAuthor;
+      this.showArticleSpace = this.$root.showArticleSpace;
+      this.showArticleDate = this.$root.showArticleDate;
+      this.showArticleReactions = this.$root.showArticleReactions;
+      this.seeAllUrl = this.$root.seeAllUrl;
     },
-    styleArticleTitle(){
-      return  (this.isSmallWidth ? 'articleTitle ' : '').concat(this.isSmallBreakpoint ? 'text-truncate' : 'articleTitleTruncate');
-    },
-    illustrationURL(item,index){
-      if (this.news.length > 1) {
-        if (index === 0){
-          return item.illustrationURL.concat('&size=712x404').toString();
-        } else {
-          return item.illustrationURL.concat('&size=712x201').toString();
-        }
-      } else {
-        return item.illustrationURL.concat('&size=1426x404').toString();
-      }
-    }
-  }
+  },
 };
 </script>
