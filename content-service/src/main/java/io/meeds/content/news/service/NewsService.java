@@ -1581,7 +1581,8 @@ public class NewsService {
     }
     newsPageProperties.put(EXTERNAL_PAGE, String.valueOf(externalPage));
     newsPageProperties.put(NEWS_ACTIVITY_POSTED, String.valueOf(article.isActivityPosted()));
-    if (article.getSchedulePostDate() != null && CollectionUtils.isNotEmpty(article.getCategories())) {
+    if ((article.getSchedulePostDate() != null || POSTED.equals(article.getPublicationState()))
+        && CollectionUtils.isNotEmpty(article.getCategories())) {
       String categories = article.getCategories().stream().map(String::valueOf).collect(Collectors.joining(";"));
       newsPageProperties.put(NEWS_ACTIVITY_CATEGORIES, categories);
     }
@@ -2277,8 +2278,8 @@ public class NewsService {
         }
         referOrDeReferArticlePage(news, existingPage, newsPageProperties);
         newsPageProperties.put(NEWS_ACTIVITY_POSTED, String.valueOf(news.isActivityPosted()));
-        if (newsUpdateType.equalsIgnoreCase(NewsUtils.NewsUpdateType.SCHEDULE.name())
-            && CollectionUtils.isNotEmpty(news.getCategories())) {
+        if ((newsUpdateType.equalsIgnoreCase(NewsUtils.NewsUpdateType.SCHEDULE.name())
+            || POSTED.equals(news.getPublicationState())) && CollectionUtils.isNotEmpty(news.getCategories())) {
           String categories = news.getCategories().stream().map(String::valueOf).collect(Collectors.joining(";"));
           newsPageProperties.put(NEWS_ACTIVITY_CATEGORIES, categories);
         }
