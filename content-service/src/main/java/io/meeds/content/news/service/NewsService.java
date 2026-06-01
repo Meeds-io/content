@@ -402,7 +402,7 @@ public class NewsService {
     }
     if (!news.getPublicationState().isEmpty() && !DRAFT.equals(news.getPublicationState())) {
       if (post != null) {
-        updateNewsActivity(news, post, originalNews.isActivityPosted());
+        updateNewsActivity(news, post, originalNews.isActivityPosted(), true);
       }
       NewsUtils.broadcastEvent(NewsUtils.UPDATE_NEWS, updater, news);
       NewsUtils.broadcastEvent(NewsUtils.UPDATE_PUBLISH_CONTENT, updater, new ContentPublishEvent(originalNews, news));
@@ -1430,7 +1430,7 @@ public class NewsService {
       mergedProperties.putAll(properties);
       existingItem.setProperties(mergedProperties);
       metadataService.updateMetadataItem(existingItem, updater, false);
-      updateNewsActivity(article, false, article.isActivityPosted());
+      updateNewsActivity(article, false, article.isActivityPosted(), false);
       article.setParameters(mergedProperties);
       NewsUtils.broadcastEvent(NewsUtils.UPDATE_NEWS, updater, article);
       return mergedProperties;
@@ -2115,7 +2115,7 @@ public class NewsService {
     }
   }
 
-  private void updateNewsActivity(News news, boolean post, boolean isPosted) {
+  private void updateNewsActivity(News news, boolean post, boolean isPosted, boolean linkCategories) {
     ExoSocialActivity activity = activityManager.getActivity(news.getActivityId());
     if (activity != null) {
       if (post && !isPosted) {
@@ -2128,7 +2128,9 @@ public class NewsService {
       activity.setMetadataObjectId(news.getId());
       activity.setMetadataObjectType(NewsUtils.NEWS_METADATA_OBJECT_TYPE);
       activityManager.updateActivity(activity, false);
-      linkActivityCategories(activity, news.getCategories());
+      if (linkCategories) {
+        linkActivityCategories(activity, news.getCategories());
+      }
     }
   }
 
