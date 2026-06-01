@@ -47,7 +47,7 @@
         <div v-if="!showAdvancedSettings" class="d-flex flex-column flex-grow-1">
           <div class="d-flex flex-column">
             <label for="headerName" class="text-header me-1 my-4">
-              {{ $t('news.list.settings.header') }}:
+              {{ $t('news.list.settings.header') }}
             </label>
             <translation-text-field
               ref="headerNameInput"
@@ -70,7 +70,7 @@
             @update-source-option="updateArticlesSourceOption" />
           <div class="flex-column">
             <label for="viewTemplate" class="text-header my-4">
-              {{ $t('news.list.settings.blockDisplay') }}:
+              {{ $t('news.list.settings.blockDisplay') }}
             </label>
             <v-select
               id="viewTemplate"
