@@ -382,7 +382,7 @@ export default {
       } else {
         const successMessage = this.$t('notes.publication.settings.update.success');
         const errorMessage = this.$t('notes.publication.settings.update.error');
-
+        document.dispatchEvent(new Event('closeDisplayedDrawer'));
         this.publish(editScheduleAction, scheduleSettings).then(async (article) => {
           this.displayMessage({message: successMessage, type: 'success'});
           history.replaceState({}, article.url);
@@ -391,7 +391,6 @@ export default {
         }).catch(() => {
           this.displayMessage({message: errorMessage, type: 'error'});
         }).finally(() => {
-          this.$refs?.publicationDrawer?.close?.();
           this.isPublishing = false;
         });
       }
