@@ -121,7 +121,7 @@
         <v-switch
           v-model="showArticleSummary"
           dense
-          :disabled="displayAlertsButtons || displayMosaicButtons || displayStoriesButtons"
+          :disabled="displayAlertsButtons || displayMosaicButtons || displayStoriesButtons || displaySliderButton"
           @change="selectedOption('showArticleSummary', showArticleSummary)"
           class="my-auto" />
       </v-list-item-action>
@@ -153,7 +153,7 @@
         <v-switch
           v-model="showArticleAuthor"
           dense
-          :disabled="displayAlertsButtons"
+          :disabled="displayAlertsButtons || displaySliderButton"
           @change="selectedOption('showArticleAuthor', showArticleAuthor)"
           class="my-auto" />
       </v-list-item-action>
@@ -184,7 +184,7 @@
         <v-switch
           v-model="showArticleSpace"
           dense
-          :disabled="displayStoriesButtons"
+          :disabled="displayStoriesButtons || displaySliderButton"
           @change="selectedOption('showArticleSpace',showArticleSpace)"
           class="my-auto" />
       </v-list-item-action>
@@ -199,7 +199,7 @@
       <v-list-item-action>
         <v-switch
           v-model="showArticleReactions"
-          :disabled="displayAlertsButtons"
+          :disabled="displayAlertsButtons || displaySliderButton"
           dense
           @change="selectedOption('showArticleReactions', showArticleReactions)"
           class="my-auto" />
@@ -299,11 +299,11 @@ export default {
       this.showSeeAll = this.$root.showSeeAll;
       this.showArticleTitle = this.$root.showArticleTitle;
       this.showArticleImage = this.viewTemplate === 'NewsAlert' ? false : this.$root.showArticleImage;
-      this.showArticleSummary = this.viewTemplate === 'NewsLatest' || this.viewTemplate === 'NewsAlert' || this.viewTemplate === 'NewsMosaic' || this.viewTemplate === 'NewsStories' ? false : this.$root.showArticleSummary;
-      this.showArticleAuthor = this.viewTemplate === 'NewsAlert' ? false : this.$root.showArticleAuthor;
-      this.showArticleSpace = this.viewTemplate === 'NewsStories' ? false : this.$root.showArticleSpace;
-      this.showArticleDate = this.$root.showArticleDate;
-      this.showArticleReactions = this.viewTemplate === 'NewsAlert' ? false : this.$root.showArticleReactions;
+      this.showArticleSummary = this.viewTemplate === 'NewsSlider' || this.viewTemplate === 'NewsLatest' || this.viewTemplate === 'NewsAlert' || this.viewTemplate === 'NewsMosaic' || this.viewTemplate === 'NewsStories' ? false : this.$root.showArticleSummary;
+      this.showArticleAuthor = this.viewTemplate === 'NewsSlider' ||this.viewTemplate === 'NewsAlert' ? false : this.$root.showArticleAuthor;
+      this.showArticleSpace = this.viewTemplate === 'NewsSlider' || this.viewTemplate === 'NewsStories' ? false : this.$root.showArticleSpace;
+      this.showArticleDate = this.viewTemplate === 'NewsSlider' || this.$root.showArticleDate;
+      this.showArticleReactions =this.viewTemplate === 'NewsSlider' ||  this.viewTemplate === 'NewsAlert' ? false : this.$root.showArticleReactions;
       this.seeAllUrl = this.$root.seeAllUrl || '';
     },
     setLimit(limit) {
