@@ -22,26 +22,28 @@
   <v-hover v-slot="{ hover }">
     <div class="newsSlider">
       <v-carousel
-        cycle
-        show-arrows-on-hover
+        :show-arrows="news?.length > 1"
+        :show-arrows-on-hover="news?.length > 1"
         interval="10000"
         height="220"
-        hide-delimiter-background
-        class="sliderNewsItems fill-height">
+        class="fill-height"
+        cycle
+        hide-delimiter-background>
         <v-carousel-item
           v-for="(item,i) in news"
           :key="i"
           class="carouselItem"
           eager
           dark>
-          <img
-            :src="showArticleImage && item.illustrationURL !== null
+          <v-img
+            :src="showArticleImage && !!item.illustrationURL
               ? item.illustrationURL.concat('&size=1420x222')
               : '/content/images/news.png'"
             :alt="item?.properties?.featuredImage?.altText || ''"
-            class="articleImage object-fit-cover width-full full-height">
-          <v-container class="slide-text-container align-center full-width full-height d-flex text-center">
-            <div class="flex d-flex mx-10 flex-column carouselNewsInfo">
+            :aspect-ratio="8"
+            class="articleImage object-fit-cover full-height width-full" />
+          <v-container class="position-absolute pa-0 t-0 l-0 r-0 align-center full-width full-height d-flex text-center">
+            <div class="flex d-flex px-10 flex-column mb-n16">
               <div
                 :class="$vuetify.rtl && 'l-0' || 'r-0'"
                 class="flex flex-row t-0 position-absolute">
@@ -50,38 +52,29 @@
                   :aria-label="$t('news.latest.openSettings')"
                   icon
                   @click="openDrawer"
-                  class="float-right settingNewsButton">
-                  <v-icon>mdi-cog</v-icon>
+                  class="float-right mt-1 me-1">
+                  <v-icon size="18">
+                    fas fa-cog
+                  </v-icon>
                 </v-btn>
               </div>
-              <a
+              <extension-registry-components
+                :params="{
+                  parameters: item?.parameters
+                }"
+                name="ContentList"
+                type="content-card-event-date-chip"
+                element="span"
+                class="position-absolute l-0 b-0 line-height-normal" />
+              <v-card
                 v-if="showArticleTitle"
                 :href="articleUrl(item)"
-                class="flex flex-row flex-grow-1 align-center justify-center headLinesTruncate">
-                <span class="text-h4 font-weight-medium white--text text-truncate-2">
+                height="24"
+                class="elevation-0 primary-background-opacity-8 mt-8 text-body mx-auto font-weight-bold application-border-radius pa-1 d-flex align-center width-fit-content">
+                <span class="text-font-size white--text text-truncate">
                   {{ item.title }}
                 </span>
-              </a>
-              <div class="flex flex-row flex-grow-1 align-center mx-4 my-2">
-                <span v-if="showArticleSummary" class="white--text articleSummary"> {{ item?.properties?.summary }}</span>
-                <news-slider-view-item
-                  :author="item.author"
-                  :author-display-name="item.authorDisplayName"
-                  :properties="item.properties"
-                  :space-display-name="item.spaceDisplayName"
-                  :space-url="item.spaceUrl"
-                  :space-avatar-url="item.spaceAvatarUrl"
-                  :publish-date="item.publishDate"
-                  :author-avatar-url="item.authorAvatarUrl"
-                  :activity-id="item.activityId"
-                  :likes-count="item.likesCount"
-                  :comments-count="item.commentsCount"
-                  :views-count="item.viewsCount"
-                  :hidden-space="item.hiddenSpace"
-                  :space-member="item.spaceMember"
-                  :selected-option="selectedOption"
-                  class="d-flex flex-row newsSliderItem align-center justify-center pa-2 ms-2" />
-              </div>
+              </v-card>
             </div>
           </v-container>
         </v-carousel-item>
