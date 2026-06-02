@@ -69,12 +69,12 @@ export function init(params) {
   const showHeader = viewTemplate === 'NewsSlider' ? false: params.showHeader === 'true';
   const showSeeAll = params.showSeeAll === 'true' && !!params.seeAllUrl?.length;
   const showArticleTitle = params.showArticleTitle === '' ? true : params.showArticleTitle === 'true';
-  const showArticleSummary = params.showArticleSummary === '' ? true : params.showArticleSummary === 'true';
+  const showArticleSummary = viewTemplate === 'NewsSlider' ? false : params.showArticleSummary === 'true';
   const showArticleImage = params.showArticleImage === '' ? true : params.showArticleImage === 'true';
-  const showArticleAuthor = params.showArticleAuthor === '' ? true: params.showArticleAuthor === 'true';
-  const showArticleSpace = params.showArticleSpace === '' ? true : params.showArticleSpace === 'true';
-  const showArticleReactions = params.showArticleReactions === '' ? true : params.showArticleReactions === 'true';
-  const showArticleDate  = params.showArticleDate === '' ? true : params.showArticleDate === 'true';
+  const showArticleAuthor = viewTemplate === 'NewsSlider' ? false: params.showArticleAuthor === 'true';
+  const showArticleSpace = viewTemplate === 'NewsSlider' ? false : params.showArticleSpace === 'true';
+  const showArticleReactions = viewTemplate === 'NewsSlider' ? false : params.showArticleReactions === 'true';
+  const showArticleDate  = viewTemplate === 'NewsSlider' ? false : params.showArticleDate === 'true';
   const seeAllUrl = params.seeAllUrl;
   const canEditNewsList = params.canEdit;
   const canManageNewsTarget = params.canManageNewsPublishTargets;
