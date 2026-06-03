@@ -631,7 +631,7 @@ public class NewsRestTest {
     lenient().when(spaceService.isSuperManager(eq(JOHN))).thenReturn(true);
 
     // When
-    ResponseEntity response = newsRestController.getNews(JOHN, "1", "drafts", "", 0, 10, false, request);
+    ResponseEntity response = newsRestController.getNews(JOHN, "1", "drafts", "", 0, 10, false, null, request);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatusCode().value());
@@ -658,7 +658,7 @@ public class NewsRestTest {
     lenient().when(spaceService.isSuperManager(eq(JOHN))).thenReturn(false);
 
     // When
-    ResponseEntity response = newsRestController.getNews(JOHN, "1", "draft", null, 0, 10, false, request);
+    ResponseEntity response = newsRestController.getNews(JOHN, "1", "draft", null, 0, 10, false, null, request);
     // Then
     assertEquals(Response.Status.UNAUTHORIZED.getStatusCode(), response.getStatusCode().value());
   }
@@ -684,7 +684,7 @@ public class NewsRestTest {
     lenient().when(spaceService.isMember(any(Space.class), any())).thenReturn(true);
 
     // When
-    ResponseEntity response = newsRestController.getNews("mike", "1", "draft", null, 0, 10, false, request);
+    ResponseEntity response = newsRestController.getNews("mike", "1", "draft", null, 0, 10, false, null, request);
 
     // Then
     assertEquals(Response.Status.UNAUTHORIZED.getStatusCode(), response.getStatusCode().value());
@@ -804,7 +804,7 @@ public class NewsRestTest {
     lenient().when(spaceService.getSpaceById(anyString())).thenReturn(new Space());
 
     // When
-    ResponseEntity response = newsRestController.getNews(JOHN, null, "", null, 0, 10, false, request);
+    ResponseEntity response = newsRestController.getNews(JOHN, null, "", null, 0, 10, false, null, request);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatusCode().value());
@@ -824,7 +824,7 @@ public class NewsRestTest {
     lenient().when(newsService.getNews(newsFilter, currentIdentity)).thenReturn(null);
 
     // When
-    ResponseEntity response = newsRestController.getNews(JOHN, null, null, null, 0, 10, false, request);
+    ResponseEntity response = newsRestController.getNews(JOHN, null, null, null, 0, 10, false, null, request);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatusCode().value());
@@ -904,7 +904,7 @@ public class NewsRestTest {
     lenient().when(newsService.getNewsCount(any())).thenReturn(allNews.size());
 
     // When
-    ResponseEntity response = newsRestController.getNews(JOHN, null, "pinned", null, 0, 10, true, request);
+    ResponseEntity response = newsRestController.getNews(JOHN, null, "pinned", null, 0, 10, true, null, request);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatusCode().value());
@@ -957,7 +957,7 @@ public class NewsRestTest {
     lenient().when(spaceService.getSpaceById(anyString())).thenReturn(new Space());
 
     // When
-    ResponseEntity response = newsRestController.getNews(JOHN, spacesIds, "", text, 0, 5, false, request);
+    ResponseEntity response = newsRestController.getNews(JOHN, spacesIds, "", text, 0, 5, false, null, request);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatusCode().value());
@@ -1010,7 +1010,7 @@ public class NewsRestTest {
     lenient().when(spaceService.isMember(any(Space.class), any())).thenReturn(true);
     lenient().when(spaceService.getSpaceById(anyString())).thenReturn(new Space());
     // When
-    ResponseEntity response = newsRestController.getNews(JOHN, spaceId, "", text, 0, 10, false, request);
+    ResponseEntity response = newsRestController.getNews(JOHN, spaceId, "", text, 0, 10, false, null, request);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatusCode().value());
@@ -1057,7 +1057,7 @@ public class NewsRestTest {
     lenient().when(spaceService.isMember(any(Space.class), any())).thenReturn(true);
     lenient().when(spaceService.getSpaceById(anyString())).thenReturn(new Space());
     // When
-    ResponseEntity response = newsRestController.getNews(JOHN, spaceId, "", tagText, 0, 10, false, request);
+    ResponseEntity response = newsRestController.getNews(JOHN, spaceId, "", tagText, 0, 10, false, null, request);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatusCode().value());
@@ -1108,7 +1108,7 @@ public class NewsRestTest {
     lenient().when(spaceService.getSpaceById(anyString())).thenReturn(new Space());
 
     // When
-    ResponseEntity response = newsRestController.getNews(JOHN, spacesIds, "pinned", text, 0, 10, false, request);
+    ResponseEntity response = newsRestController.getNews(JOHN, spacesIds, "pinned", text, 0, 10, false, null, request);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatusCode().value());
@@ -1149,7 +1149,7 @@ public class NewsRestTest {
     lenient().when(spaceService.getSpaceById(anyString())).thenReturn(new Space());
 
     // When
-    ResponseEntity response = newsRestController.getNews(JOHN, spacesIds, "pinned", text, 0, 10, false, request);
+    ResponseEntity response = newsRestController.getNews(JOHN, spacesIds, "pinned", text, 0, 10, false, null, request);
 
     // Then
     assertEquals(Response.Status.UNAUTHORIZED.getStatusCode(), response.getStatusCode().value());
@@ -1188,7 +1188,7 @@ public class NewsRestTest {
     lenient().when(spaceService.getSpaceById(anyString())).thenReturn(new Space());
 
     // When
-    ResponseEntity response = newsRestController.getNews(JOHN, null, filter, null, 0, 10, false, request);
+    ResponseEntity response = newsRestController.getNews(JOHN, null, filter, null, 0, 10, false, null, request);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatusCode().value());
@@ -1236,7 +1236,7 @@ public class NewsRestTest {
     lenient().when(spaceService.getSpaceById(anyString())).thenReturn(new Space());
 
     // When
-    ResponseEntity response = newsRestController.getNews(JOHN, spacesIds, filter, null, 0, 10, false, request);
+    ResponseEntity response = newsRestController.getNews(JOHN, spacesIds, filter, null, 0, 10, false, null, request);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatusCode().value());
@@ -1287,7 +1287,7 @@ public class NewsRestTest {
     lenient().when(spaceService.getSpaceById(anyString())).thenReturn(new Space());
 
     // When
-    ResponseEntity response = newsRestController.getNews(JOHN, spacesIds, filter, text, 0, 10, false, request);
+    ResponseEntity response = newsRestController.getNews(JOHN, spacesIds, filter, text, 0, 10, false, null, request);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatusCode().value());
@@ -1322,7 +1322,7 @@ public class NewsRestTest {
     lenient().when(spaceService.getSpaceById(anyString())).thenReturn(new Space());
 
     // When
-    ResponseEntity response = newsRestController.getNews(JOHN, null, null, null, 0, 10, false, request);
+    ResponseEntity response = newsRestController.getNews(JOHN, null, null, null, 0, 10, false, null, request);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatusCode().value());
