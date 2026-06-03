@@ -33,7 +33,9 @@
         <v-carousel-item
           v-for="(item,i) in news"
           :key="i"
+          :href="articleUrl(item)"
           class="carouselItem"
+          link
           eager
           dark>
           <v-img
