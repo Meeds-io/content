@@ -26,7 +26,10 @@ if (!Vue.prototype.$newsServices) {
     value: newsServices,
   });
 }
+const lang = eXo.env.portal.language || 'en';
+const url = `/content/i18n/locale.portlet.news.StreamExtension?lang=${lang}`;
 
-export function init() {
+export async function init() {
+  await exoi18n.loadLanguageAsync(lang, url);
   initExtensions();
 }
