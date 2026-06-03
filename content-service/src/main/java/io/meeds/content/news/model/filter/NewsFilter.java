@@ -53,4 +53,6 @@ public class NewsFilter {
 
   private String       sortDirection;
 
+  private String       expand;
+
 }

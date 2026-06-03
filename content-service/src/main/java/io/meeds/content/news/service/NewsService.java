@@ -1387,12 +1387,12 @@ public class NewsService {
     return noteService.getPageAvailableTranslationLanguages(Long.parseLong(articleId), withDrafts);
   }
   
-  public List<News> getNewsByIds(List<Long> ids, Identity currentUser, String lang) {
+  public List<News> getNewsByIds(List<Long> ids, Identity currentUser, String lang, String expand) {
     if (CollectionUtils.isEmpty(ids)) {
       return Collections.emptyList();
     }
     return ids.stream()
-              .map(id -> buildArticle(String.valueOf(id), currentUser, lang, true))
+              .map(id -> buildArticleWithExpand(String.valueOf(id), currentUser, lang, true, expand))
               .filter(news -> news != null && canViewNews(news, currentUser.getUserId()))
               .toList();
   }
@@ -1852,7 +1852,7 @@ public class NewsService {
   }
 
   private List<News> getPostedArticles(NewsFilter filter, Identity currentIdentity) throws Exception {
-    MetadataFilter metadataFilter = new MetadataFilter();
+                MetadataFilter metadataFilter = new MetadataFilter();
     metadataFilter.setMetadataName(NEWS_METADATA_NAME);
     metadataFilter.setMetadataTypeName(NEWS_METADATA_TYPE.getName());
     metadataFilter.setMetadataObjectTypes(List.of(NEWS_METADATA_PAGE_OBJECT_TYPE));
@@ -1871,7 +1871,11 @@ public class NewsService {
                           .stream()
                           .map(article -> {
                             try {
-                              return buildArticle(article.getObjectId(), currentIdentity, filter.getLang(), true);
+                              return buildArticleWithExpand(article.getObjectId(),
+                                                            currentIdentity,
+                                                            filter.getLang(),
+                                                            true,
+                                                            filter.getExpand());
                             } catch (Exception e) {
                               LOG.error("Error while building news article", e);
                               return null;
@@ -2330,6 +2334,36 @@ public class NewsService {
       return news;
     }
     return null;
+  }
+
+  private News buildArticleWithExpand(String newsId,
+                                      Identity currentIdentity,
+                                      String lang,
+                                      boolean fetchOriginal,
+                                      String expand) {
+    News article = buildArticle(newsId, currentIdentity, lang, fetchOriginal);
+    if (article == null) {
+      return null;
+    }
+    if (expand != null && StringUtils.isNotBlank(article.getActivityId())) {
+      List<String> expandFields = Arrays.asList(expand.split(","));
+      if (expandFields.contains("activityReactions")) {
+        ExoSocialActivity activity = null;
+        try {
+          activity = activityManager.getActivity(article.getActivityId());
+        } catch (Exception e) {
+          LOG.debug("Error getting activity of News with id {}", article.getActivityId(), e);
+        }
+        if (activity != null) {
+          RealtimeListAccess<ExoSocialActivity> listAccess =
+              activityManager.getCommentsWithListAccess(activity, true);
+          article.setCommentsCount(listAccess.getSize());
+          article.setLikesCount(activity.getLikeIdentityIds() == null ? 0 : activity.getLikeIdentityIds().length);
+          article.setCategories(activity.getCategoryIds());
+        }
+      }
+    }
+    return article;
   }
 
   private News buildArticle(String newsId, Identity currentIdentity, String lang, boolean fetchOriginal) {

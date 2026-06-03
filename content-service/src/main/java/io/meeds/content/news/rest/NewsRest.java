@@ -472,6 +472,9 @@ public class NewsRest {
                                             @Parameter(description = "News total size")
                                             @RequestParam(name = "returnSize", defaultValue = "false", required = false)
                                             boolean returnSize,
+                                            @Parameter(description = "expand")
+                                            @RequestParam(name = "expand", required = false)
+                                            String expand,
                                             HttpServletRequest request) {
     try {// TODO Move to service layer
       String authenticatedUser = ConversationState.getCurrent().getIdentity().getUserId();
@@ -504,6 +507,7 @@ public class NewsRest {
       NewsFilter newsFilter = buildFilter(spacesList, filter, text, author, limit, offset);
       String lang = request.getLocale().getLanguage();
       newsFilter.setLang(lang);
+      newsFilter.setExpand(expand);
       List<News> news;
       org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
       // Set text to search news with
@@ -958,9 +962,12 @@ public class NewsRest {
                                            List<Long> newsIds,
                                            @Parameter(description = "Language used to fetch the news")
                                            @RequestParam(name = "lang")
-                                           String lang) {
+                                           String lang,
+                                           @Parameter(description = "expand")
+                                           @RequestParam(name = "expand")
+                                           String expand) {
     org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
-    return newsService.getNewsByIds(newsIds, currentIdentity, lang);
+    return newsService.getNewsByIds(newsIds, currentIdentity, lang, expand);
   }
 
 
