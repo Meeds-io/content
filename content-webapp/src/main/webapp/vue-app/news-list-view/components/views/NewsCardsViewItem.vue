@@ -154,7 +154,7 @@ export default {
   data: ()=> ({
     dateFormat: {
       year: 'numeric',
-      month: 'long',
+      month: 'short',
       day: 'numeric',
     },
     slideActive: false,
