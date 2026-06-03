@@ -35,7 +35,7 @@ export function getNewsListByTarget(targetName, offset, limit, returnSize) {
 }
 
 export function getPostedNews(offset, limit, returnSize) {
-  let url = `${newsConstants.CONTENT_API}/contents?author=${newsConstants.userName}&filter=all`;
+  let url = `${newsConstants.CONTENT_API}/contents?author=${newsConstants.userName}&filter=all&expand=activityReactions`;
   if (newsConstants.SPACE_ID) {
     url += `&spaces=${newsConstants.SPACE_ID}`;
   }
@@ -84,6 +84,7 @@ export function getSelectedNewsList(newsIds, lang) {
   if (lang) {
     formData.append('lang', lang);
   }
+  formData.append('expand', 'activityReactions');
   const urlParams = new URLSearchParams(formData).toString();
   const url = `${newsConstants.CONTENT_API}/contents/list?${urlParams}`;
   return fetch(url, {
