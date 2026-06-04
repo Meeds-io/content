@@ -17,11 +17,9 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
-
 const lang = eXo.env.portal.language || 'en';
 const url = `/content/i18n/locale.portlet.news.News?lang=${lang}`;
-
-const i18nPromise = exoi18n.loadLanguageAsync(lang, url).then(i18n => new Vue({i18n}));
+const i18nPromise = exoi18n.loadLanguageAsync(lang, url);
 
 const newsActivityTypeExtensionOptions = {
   name: 'News',
@@ -104,34 +102,31 @@ const newsActivityTypeExtensionOptions = {
   reactionEnabled: (activity) => !activity?.news?.properties?.hideReaction
 };
 
-export function initExtensions() {
+export async function initExtensions() {
+  await i18nPromise;
   extensionRegistry.registerExtension('activity', 'type', {
     type: 'news',
     options: newsActivityTypeExtensionOptions,
   });
-  if (eXo.env.portal.spaceId) {
-    Vue.prototype.$newsServices.canUserCreateNews(eXo.env.portal.spaceId).then(canCreateNews => {
-      if (canCreateNews) {
-        return i18nPromise.then(() => {
-          extensionRegistry.registerComponent('ActivityComposerAction', 'activity-composer-action', {
-            id: 'switchNewsButton',
-            vueComponent: Vue.options.components['activity-switch-to-news'],
-            rank: 10,
-          });
-          extensionRegistry.registerComponent('ActivityComposerFooterAction', 'activity-composer-footer-action', {
-            id: 'writeNewsButton',
-            vueComponent: Vue.options.components['activity-write-news-composer'],
-            rank: 30,
-          });
-          extensionRegistry.registerComponent('ActivityToolbarAction', 'activity-toolbar-action', {
-            id: 'writeNewsToolbarButton',
-            vueComponent: Vue.options.components['activity-write-news-toolbar-action'],
-            rank: 30,
-          });
-        });
-      }
-    });
-  }
+  extensionRegistry.registerComponent('ActivityComposerAction', 'activity-composer-action', {
+    id: 'switchNewsButton',
+    vueComponent: Vue.options.components['activity-switch-to-news'],
+    rank: 10,
+    isEnabled: () => !!eXo?.env?.portal?.spaceId
+  });
+  extensionRegistry.registerComponent('ActivityComposerFooterAction', 'activity-composer-footer-action', {
+    id: 'writeNewsButton',
+    vueComponent: Vue.options.components['activity-write-news-composer'],
+    rank: 30,
+    isEnabled: () => !!eXo?.env?.portal?.spaceId
+  });
+  extensionRegistry.registerComponent('ActivityToolbarAction', 'activity-toolbar-action', {
+    id: 'writeNewsToolbarButton',
+    vueComponent: Vue.options.components['activity-write-news-toolbar-action'],
+    rank: 30,
+    isEnabled: () => !!eXo?.env?.portal?.spaceId
+  });
+
 }
 function newsViews(news) {
   if (news?.viewsCount < 1000) {
