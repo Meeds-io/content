@@ -491,9 +491,6 @@
     <depends>
       <module>commonVueComponents</module>
     </depends>
-    <depends>
-      <module>newsDetails</module>
-    </depends>
   </module>
 
   <module>
@@ -665,6 +662,18 @@
     </depends>
     <depends>
       <module>commonVueComponents</module>
+    </depends>
+  </module>
+
+  <module>
+    <name>NewsDetailsActivityStreamExtensions</name>
+    <load-group>ActivityStreamGRP</load-group>
+    <script>
+      <minify>false</minify>
+      <path>/js/newsActivityStreamExtensions.bundle.js</path>
+    </script>
+    <depends>
+      <module>newsDetails</module>
     </depends>
   </module>
 

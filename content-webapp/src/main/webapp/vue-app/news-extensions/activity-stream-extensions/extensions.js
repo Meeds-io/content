@@ -18,6 +18,8 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 const lang = eXo.env.portal.language || 'en';
+const url = `/content/i18n/locale.portlet.news.News?lang=${lang}`;
+const i18nPromise = exoi18n.loadLanguageAsync(lang, url);
 
 const newsActivityTypeExtensionOptions = {
   name: 'News',
@@ -100,7 +102,8 @@ const newsActivityTypeExtensionOptions = {
   reactionEnabled: (activity) => !activity?.news?.properties?.hideReaction
 };
 
-export function initExtensions() {
+export async function initExtensions() {
+  await i18nPromise;
   extensionRegistry.registerExtension('activity', 'type', {
     type: 'news',
     options: newsActivityTypeExtensionOptions,
