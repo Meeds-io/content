@@ -27,6 +27,8 @@ if (!Vue.prototype.$newsServices) {
   });
 }
 
-export function init() {
-  initExtensions();
+
+
+export async function init() {
+  await initExtensions();
 }
