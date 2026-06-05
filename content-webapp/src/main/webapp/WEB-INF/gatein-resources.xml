@@ -675,6 +675,9 @@
     <depends>
       <module>newsDetails</module>
     </depends>
+    <depends>
+      <module>eXoVueI18n</module>
+    </depends>
   </module>
 
 </gatein-resources>
