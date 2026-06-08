@@ -78,15 +78,16 @@
             small>
             mdi-chevron-right
           </v-icon>
-          <span
-            v-if="showArticleAuthor"
+          <div
             :class="{
               'flex-shrink-1': truncateAuthorName,
               'flex-shrink-0' : !truncateAuthorName
             }"
             class="text-truncate flex-grow-1 flex-shrink-1 my-auto">
-            {{ item.authorDisplayName }}
-          </span>
+            <span v-if="showArticleAuthor">
+              {{ item.authorDisplayName }}
+            </span>
+          </div>
           <news-template-view-item-reactions
             :item="item"
             :show-article-reactions="showArticleReactions" />

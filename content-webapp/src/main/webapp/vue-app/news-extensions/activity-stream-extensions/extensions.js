@@ -70,7 +70,8 @@ const newsActivityTypeExtensionOptions = {
       height: '124px',
       width: '220px',
       noBorder: true,
-    };},
+    };
+  },
   isUseSameViewForMobile: (activity) => !activity?.news?.illustrationURL,
   getTitle: (activity) => {
     const news = activity?.news;
