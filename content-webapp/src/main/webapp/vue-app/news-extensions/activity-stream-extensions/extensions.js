@@ -63,12 +63,14 @@ const newsActivityTypeExtensionOptions = {
   summaryLinesToDisplay: 2,
   windowTitlePrefixKey: 'news.window.title',
   addMargin: true,
+  showFooter: true,
   getThumbnail: (activity) => activity?.news?.illustrationURL && `${activity?.news?.illustrationURL}&size=305x285` || '/content/images/news.webp',
-  getThumbnailProperties: (activity) => !(activity?.news?.illustrationURL) && {
-    height: '120px',
-    width: '150px',
-    noBorder: true,
-  } || null,
+  getThumbnailProperties: () => {
+    return {
+      height: '124px',
+      width: '220px',
+      noBorder: true,
+    };},
   isUseSameViewForMobile: (activity) => !activity?.news?.illustrationURL,
   getTitle: (activity) => {
     const news = activity?.news;
