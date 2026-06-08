@@ -63,7 +63,7 @@
                   v-if="$root.canManageNewsList && hover"
                   :aria-label="$t('news.latest.openSettings')"
                   icon
-                  @click="openDrawer"
+                  @click.stop.prevent="openDrawer"
                   class="float-right mt-1 me-1">
                   <v-icon size="18">
                     fas fa-cog
