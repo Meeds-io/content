@@ -21,7 +21,7 @@
 <template>
   <div class="d-flex position-relative overflow-hidden text-no-wrap text-truncate flex-shrink-0 text-subtitle">
     <div
-      v-if="showArticleReactions"
+      v-if="showReactions"
       class="d-flex">
       <v-icon 
         class="icon-default-color my-auto  me-1"
@@ -63,5 +63,10 @@ export default {
       default: false
     },
   },
+  computed: {
+    showReactions () {
+      return !this.item?.properties?.hideReaction && this.showArticleReactions;
+    }
+  }
 };
 </script>
