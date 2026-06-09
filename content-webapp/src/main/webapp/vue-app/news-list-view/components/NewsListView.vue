@@ -198,7 +198,7 @@ export default {
       const displayPadding = this.viewTemplate && !['NewsStories', 'NewsSlider', 'NewsAlert', 'NewsMosaic'].includes(this.viewTemplate) || this.selectedViewExtension?.id === 'NewsEmptyTemplate';
       const backgroundTransparent = this.viewTemplate === 'NewsStories' && this.selectedViewExtension?.id !== 'NewsEmptyTemplate';
       if (displayPadding) {
-        newsListViewClass = `${newsListViewClass} border-box-sizing pa-4`;
+        newsListViewClass = `${newsListViewClass} border-box-sizing px-4 py-5`;
       }
       if (backgroundTransparent) {
         newsListViewClass = `${newsListViewClass} background-transparent`;
