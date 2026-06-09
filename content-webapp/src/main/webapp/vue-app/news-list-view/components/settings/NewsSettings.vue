@@ -21,8 +21,8 @@
 <template>
   <v-sheet 
     v-if="showSettingsContainer"
-    height="42"
-    class="background-transparent settings-container d-flex flex-row px-2 pt-2 pb-1">
+    height="30"
+    class="background-transparent d-flex flex-row px-2">
     <div class="d-flex latestNewsTitleContainer flex-column flex-grow-1 my-1 text-truncate">
       <span
         v-if="showHeader"
