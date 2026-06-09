@@ -2275,6 +2275,9 @@ public class NewsService {
                                                            .orElse(null);
       if (existingPageMetadataItem != null) {
         Map<String, String> newsPageProperties = existingPageMetadataItem.getProperties();
+        if (MapUtils.isNotEmpty(news.getParameters())) {
+          newsPageProperties.putAll(news.getParameters());
+        }
         if (StringUtils.isNotEmpty(news.getAudience())) {
           newsPageProperties.put(NEWS_AUDIENCE, news.getAudience());
         }
@@ -2295,9 +2298,6 @@ public class NewsService {
           org.exoplatform.social.core.identity.model.Identity publisherIdentity =
                                                                                 identityManager.getOrCreateUserIdentity(updater.getUserId());
           newsPageProperties.put(PUBLISHER, publisherIdentity.getProfile().getFullName());
-        }
-        if (MapUtils.isNotEmpty(news.getParameters())) {
-          newsPageProperties.putAll(news.getParameters());
         }
         existingPageMetadataItem.setProperties(newsPageProperties);
         Date updateDate = Calendar.getInstance().getTime();
