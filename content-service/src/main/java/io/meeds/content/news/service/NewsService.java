@@ -2293,9 +2293,6 @@ public class NewsService {
                                                                                 identityManager.getOrCreateUserIdentity(updater.getUserId());
           newsPageProperties.put(PUBLISHER, publisherIdentity.getProfile().getFullName());
         }
-        if (MapUtils.isNotEmpty(news.getParameters())) {
-          newsPageProperties.putAll(news.getParameters());
-        }
         existingPageMetadataItem.setProperties(newsPageProperties);
         Date updateDate = Calendar.getInstance().getTime();
         existingPageMetadataItem.setUpdatedDate(updateDate.getTime());
