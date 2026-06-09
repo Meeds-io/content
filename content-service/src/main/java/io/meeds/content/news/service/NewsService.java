@@ -920,6 +920,9 @@ public class NewsService {
                                  currentIdentity.getUserId(),
                                  new ContentPublishEvent(originalArticle, news));
       }
+      if (originalArticle != null && news.getSchedulePostDate() == null) {
+        postNews(originalArticle, originalArticle.getAuthor());
+      }
       return news;
     }
     return null;
@@ -2275,9 +2278,6 @@ public class NewsService {
         if (StringUtils.isNotEmpty(news.getAudience())) {
           newsPageProperties.put(NEWS_AUDIENCE, news.getAudience());
         }
-
-        setScheduleProperties(news, newsPageProperties);
-
         if (StringUtils.isNotEmpty(news.getPublicationState())) {
           newsPageProperties.put(NEWS_PUBLICATION_STATE, news.getPublicationState());
         }
@@ -2296,6 +2296,7 @@ public class NewsService {
         if (MapUtils.isNotEmpty(news.getParameters())) {
           newsPageProperties.putAll(news.getParameters());
         }
+        setScheduleProperties(news, newsPageProperties);
         existingPageMetadataItem.setProperties(newsPageProperties);
         Date updateDate = Calendar.getInstance().getTime();
         existingPageMetadataItem.setUpdatedDate(updateDate.getTime());
