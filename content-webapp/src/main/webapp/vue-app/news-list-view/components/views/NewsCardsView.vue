@@ -19,7 +19,7 @@
 
 -->
 <template>
-  <div id="cards-slider-large" class="ma-3">
+  <div id="cards-slider-large" class="ma-2">
     <card-carousel v-if="news.length">
       <news-cards-view-item
         v-for="(item, index) in news"
