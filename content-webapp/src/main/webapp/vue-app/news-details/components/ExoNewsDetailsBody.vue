@@ -42,7 +42,10 @@
             </span>
             <v-tooltip bottom>
               <template #activator="{ on, attrs }">
-                <span v-on="on" v-bind="attrs">
+                <span
+                  v-on="on"
+                  v-bind="attrs"
+                  class="text-no-wrap">
                   <v-icon
                     size="20"
                     class="ms-3 icon-default-color">
