@@ -920,6 +920,9 @@ public class NewsService {
                                  currentIdentity.getUserId(),
                                  new ContentPublishEvent(originalArticle, news));
       }
+      if (originalArticle != null && originalArticle.getPublicationState().equalsIgnoreCase(STAGED) && news.getSchedulePostDate() == null) {
+        postNews(originalArticle, originalArticle.getAuthor());
+      }
       return news;
     }
     return null;

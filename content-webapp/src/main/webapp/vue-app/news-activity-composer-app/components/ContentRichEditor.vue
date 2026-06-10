@@ -25,6 +25,7 @@
       :draft-saving-status="draftSavingStatus"
       :note-id-param="activityId"
       :post-key="postKey"
+      :edit-mode="editMode"
       :body-placeholder="contentFormContentPlaceholder"
       :title-placeholder="contentFormTitlePlaceholder"
       :form-title="contentFormTitle"
