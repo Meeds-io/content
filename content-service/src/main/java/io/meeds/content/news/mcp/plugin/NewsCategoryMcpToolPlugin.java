@@ -20,6 +20,7 @@ package io.meeds.content.news.mcp.plugin;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import org.exoplatform.commons.ObjectAlreadyExistsException;
@@ -36,6 +37,7 @@ import io.meeds.social.category.model.CategoryObject;
 import io.meeds.social.category.service.CategoryLinkService;
 
 @Service
+@Profile("mcp-server")
 public class NewsCategoryMcpToolPlugin implements CategoryMcpToolPlugin {
 
   @Autowired
