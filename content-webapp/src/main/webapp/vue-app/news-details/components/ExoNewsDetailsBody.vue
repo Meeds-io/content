@@ -131,8 +131,8 @@
                 :value="updatedDate"
                 :format="dateFormat"
                 class="text-caption" />
-              <span 
-                v-if="articlePublisher" 
+              <span
+                v-if="articlePublisher && !hideAuthor"
                 class="text-caption">
                 {{ $t('article.published.by.label') }} {{ articlePublisher }}
               </span>
