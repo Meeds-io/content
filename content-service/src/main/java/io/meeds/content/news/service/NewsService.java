@@ -46,7 +46,6 @@ import java.util.stream.Stream;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
-import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.LocaleUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,7 +58,6 @@ import org.exoplatform.commons.notification.impl.NotificationContextImpl;
 import org.exoplatform.commons.search.index.IndexingService;
 import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.commons.utils.HTMLSanitizer;
-import org.exoplatform.container.PortalContainer;
 import org.exoplatform.portal.application.localization.LocalizationFilter;
 import org.exoplatform.portal.config.UserACL;
 import org.exoplatform.services.log.ExoLogger;
@@ -119,7 +117,6 @@ import io.meeds.content.news.utils.NewsUtils.NewsObjectType;
 import io.meeds.notes.model.NotePageProperties;
 import io.meeds.social.category.model.CategoryObject;
 import io.meeds.social.category.service.CategoryLinkService;
-import io.meeds.social.category.service.CategoryService;
 import lombok.SneakyThrows;
 
 @Service
@@ -920,7 +917,8 @@ public class NewsService {
                                  currentIdentity.getUserId(),
                                  new ContentPublishEvent(originalArticle, news));
       }
-      if (originalArticle != null && originalArticle.getPublicationState().equalsIgnoreCase(STAGED) && news.getSchedulePostDate() == null) {
+      if (originalArticle != null && originalArticle.getPublicationState().equalsIgnoreCase(STAGED)
+          && news.getSchedulePostDate() == null) {
         postNews(originalArticle, originalArticle.getAuthor());
       }
       return news;
@@ -1389,7 +1387,7 @@ public class NewsService {
   public List<String> getArticleLanguages(String articleId, boolean withDrafts) {
     return noteService.getPageAvailableTranslationLanguages(Long.parseLong(articleId), withDrafts);
   }
-  
+
   public List<News> getNewsByIds(List<Long> ids, Identity currentUser, String lang, String expand) {
     if (CollectionUtils.isEmpty(ids)) {
       return Collections.emptyList();
@@ -1418,8 +1416,9 @@ public class NewsService {
     metadataService.updateMetadataItem(metadataItem, updater, false);
   }
 
-  public Map<String, String> updateMetadataProperties(String articleId, Map<String, String> properties, Long updater)
-      throws ObjectNotFoundException {
+  public Map<String, String> updateMetadataProperties(String articleId,
+                                                      Map<String, String> properties,
+                                                      Long updater) throws ObjectNotFoundException {
 
     News article = getNewsArticleById(articleId);
     if (article == null) {
@@ -1443,9 +1442,10 @@ public class NewsService {
   }
 
   private MetadataItem getArticlePageMetadataItem(News article) {
-    NewsPageObject newsPageObject = new NewsPageObject(
-        NEWS_METADATA_PAGE_OBJECT_TYPE, article.getId(), null, Long.parseLong(article.getSpaceId())
-    );
+    NewsPageObject newsPageObject = new NewsPageObject(NEWS_METADATA_PAGE_OBJECT_TYPE,
+                                                       article.getId(),
+                                                       null,
+                                                       Long.parseLong(article.getSpaceId()));
 
     return metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY, newsPageObject)
                           .stream()
@@ -1855,7 +1855,7 @@ public class NewsService {
   }
 
   private List<News> getPostedArticles(NewsFilter filter, Identity currentIdentity) throws Exception {
-                MetadataFilter metadataFilter = new MetadataFilter();
+    MetadataFilter metadataFilter = new MetadataFilter();
     metadataFilter.setMetadataName(NEWS_METADATA_NAME);
     metadataFilter.setMetadataTypeName(NEWS_METADATA_TYPE.getName());
     metadataFilter.setMetadataObjectTypes(List.of(NEWS_METADATA_PAGE_OBJECT_TYPE));
@@ -2289,7 +2289,12 @@ public class NewsService {
         if (newsUpdateType.equalsIgnoreCase(NewsUtils.NewsUpdateType.SCHEDULE.name())
             && CollectionUtils.isNotEmpty(news.getCategories())) {
           String categories = news.getCategories().stream().map(String::valueOf).collect(Collectors.joining(";"));
-          newsPageProperties.put(NEWS_ACTIVITY_CATEGORIES, categories);
+          if (news.getActivityId() == null) {
+            newsPageProperties.put(NEWS_ACTIVITY_CATEGORIES, categories);
+          } else {
+            ExoSocialActivity activity = activityManager.getActivity(news.getActivityId());
+            linkActivityCategories(activity, news.getCategories());
+          }
         }
         if (newsUpdateType.equalsIgnoreCase(POSTING_AND_PUBLISHING.name())) {
           org.exoplatform.social.core.identity.model.Identity publisherIdentity =
@@ -2355,8 +2360,7 @@ public class NewsService {
           LOG.debug("Error getting activity of News with id {}", article.getActivityId(), e);
         }
         if (activity != null) {
-          RealtimeListAccess<ExoSocialActivity> listAccess =
-              activityManager.getCommentsWithListAccess(activity, true);
+          RealtimeListAccess<ExoSocialActivity> listAccess = activityManager.getCommentsWithListAccess(activity, true);
           article.setCommentsCount(listAccess.getSize());
           article.setLikesCount(activity.getLikeIdentityIds() == null ? 0 : activity.getLikeIdentityIds().length);
           article.setCategories(activity.getCategoryIds());
