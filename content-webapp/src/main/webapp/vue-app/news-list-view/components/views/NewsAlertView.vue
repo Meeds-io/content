@@ -21,62 +21,90 @@
 <template>
   <v-hover v-slot="{ hover }">
     <div
-      class="card-border-radius"
-      id="critical-alerts-slider"
+      class="d-flex application-layout-style"
+      id="alerts-slider"
       v-show="!emptyTemplate">
-      <div class="alerts-header white--text z-index-one fill-height align-center d-flex text-header">
-        <div class="px-3">
-          <v-icon color="white">warning</v-icon>
+      <v-sheet
+        max-width="9.375rem"
+        class="error-color-background flex-shrink-0 no-min-width full-height white--text z-index-one fill-height align-center d-flex text-header">
+        <div class="px-3 py-2">
+          <v-icon
+            size="20"  
+            color="white">
+            fas fa-exclamation-triangle
+          </v-icon>
         </div>
-        <span class="d-none d-md-block ms-n1 pe-4 font-weight-bold" v-if="showHeader">{{ headerTitle }}</span>
-      </div>
+        <span
+          v-if="showHeader"
+          class="d-none my-auto no-min-width text-truncate d-md-block pe-4 font-weight-bold">
+          {{ headerTitle }}
+        </span>
+      </v-sheet>
 
-      <div class="alerts-viewer ps-5 flex-grow-1">
+      <div class="alerts-viewer no-min-width ps-4 primary flex-grow-1">
         <v-carousel
           v-model="slider"
           hide-delimiters
           cycle
           :show-arrows="false"
           interval="10000"
-          height="20">
+          height="38"
+          min-height="38">
           <v-carousel-item
             v-for="(item,i) in news"
             :key="i">
-            <a :href="articleUrl(item)" class="article-link flex-grow-1">
-              <div class="alerts-article d-flex text-body white--text">
-                <span v-if="showArticleDate" class="text-no-wrap text-capitalize">
+            <a :href="articleUrl(item)" class="article-link d-flex align-center full-height flex-grow-1 no-min-width">
+              <div class="alerts-article d-flex text-body white--text no-min-width">
+                <span v-if="showArticleDate" class="text-no-wrap text-capitalize flex-shrink-0">
                   <date-format
                     :value="new Date(item?.publishDate)"
                     :format="dateFormat" />
                 </span>
-                <span v-if="showArticleDate && showArticleTitle" class="mx-2">|</span>
-                <span v-if="showArticleTitle" class="text-truncate text-no-wrap overflow-hidden">{{ item.title }}</span>
+                <span 
+                  v-if="showArticleDate && showArticleTitle && !!item?.publishDate" 
+                  class="mx-2 flex-shrink-0 line-height-1">.</span>
+                <span v-if="showArticleTitle" class="font-weight-bold text-truncate">{{ item.title }}</span>
               </div>
             </a>
           </v-carousel-item>
         </v-carousel>
       </div>
-
-      <div class="slider-buttons d-flex pe-2">
-        <v-btn
-          :aria-label="$t('news.alertView.leftArrowButtonTitle')"
-          @click="slider--"
-          icon>
-          <v-icon>chevron_left</v-icon>
-        </v-btn>
-        <v-btn
-          :aria-label="$t('news.alertView.rightArrowButtonTitle')"
-          @click="slider++"
-          icon>
-          <v-icon>chevron_right</v-icon>
-        </v-btn>
+      <div class="slider-buttons primary d-flex pe-2">
         <v-btn
           v-if="$root.canManageNewsList && hover"
           :aria-label="$t('news.latest.openSettings')"
           icon
           @click="openDrawer">
-          <v-icon>mdi-cog</v-icon>
+          <v-icon
+            class="white--text"
+            size="16">
+            fas fa-cog
+          </v-icon>
         </v-btn>
+        <div
+          class="d-flex"
+          v-if="news?.length > 1">
+          <v-btn
+            :aria-label="$t('news.alertView.leftArrowButtonTitle')"
+            @click="slider--"
+            icon>
+            <v-icon
+              size="16"
+              class="white--text">
+              fas fa-chevron-left
+            </v-icon>
+          </v-btn>
+          <v-btn
+            :aria-label="$t('news.alertView.rightArrowButtonTitle')"
+            @click="slider++"
+            icon>
+            <v-icon
+              size="16"
+              class="white--text">
+              fas fa-chevron-right
+            </v-icon>
+          </v-btn>
+        </div>
       </div>
     </div>
   </v-hover>
