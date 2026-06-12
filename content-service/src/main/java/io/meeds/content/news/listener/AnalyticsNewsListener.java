@@ -53,7 +53,7 @@ import jakarta.annotation.PostConstruct;
 @Asynchronous
 @Component
 @Profile("analytics")
-public class AnalyticsNewsListener extends Listener<String, News> {
+public class AnalyticsNewsListener extends Listener<Object, News> {
 
   private static final String   CREATE_CONTENT_OPERATION_NAME  = "createContent";
 
@@ -89,12 +89,25 @@ public class AnalyticsNewsListener extends Listener<String, News> {
   }
 
   @Override
-  public void onEvent(Event<String, News> event) throws Exception {
+  public void onEvent(Event<Object, News> event) throws Exception {
     News news = event.getData();
-    String updater = event.getSource();
+    Object updaterId = event.getSource();
+    String username = null;
+    if (updaterId instanceof String s) {
+      username = s;
+    } else if (updaterId instanceof Long l) {
+      Identity identity = identityManager.getIdentity(l);
+      if (identity != null && identity.isUser()) {
+        username = identity.getRemoteId();
+      }
+    }
+    if (username == null) {
+      return;
+    }
+
     String operation = mapEventNameToOperation(event.getEventName());
     long userId = 0;
-    Identity identity = getIdentityManager().getOrCreateUserIdentity(event.getSource());
+    Identity identity = getIdentityManager().getOrCreateUserIdentity(username);
     if (identity != null) {
       userId = Long.parseLong(identity.getId());
     }
@@ -111,7 +124,7 @@ public class AnalyticsNewsListener extends Listener<String, News> {
       statisticData.addParameter("contentLanguage", news.getLang() != null ? news.getLang() : "originalVersion");
     }
     statisticData.addParameter("contentCreator", news.getOwner());
-    statisticData.addParameter("contentLastModifier", updater);
+    statisticData.addParameter("contentLastModifier", username);
     statisticData.addParameter("contentType", "News");
     statisticData.addParameter("contentUpdatedDate", news.getUpdateDate());
     statisticData.addParameter("contentCreationDate", news.getCreationDate());
