@@ -32,6 +32,7 @@ import org.exoplatform.commons.search.index.IndexingService;
 import org.exoplatform.services.listener.Event;
 import org.exoplatform.services.listener.Listener;
 import org.exoplatform.services.listener.ListenerService;
+import org.exoplatform.social.core.identity.model.Identity;
 import org.exoplatform.social.core.manager.IdentityManager;
 import org.exoplatform.social.core.space.model.Space;
 import org.exoplatform.social.core.space.spi.SpaceService;
@@ -46,7 +47,7 @@ import io.meeds.content.news.utils.NewsUtils;
 import jakarta.annotation.PostConstruct;
 
 @Component
-public class NewsMetadataListener extends Listener<String, News> {
+public class NewsMetadataListener extends Listener<Object, News> {
 
   @Autowired
   private IndexingService indexingService;
@@ -72,11 +73,22 @@ public class NewsMetadataListener extends Listener<String, News> {
     }
   }
   @Override
-  public void onEvent(Event<String, News> event) throws Exception {
+  public void onEvent(Event<Object, News> event) throws Exception {
     News news = event.getData();
-    String username = event.getSource();
+    Object userId = event.getSource();
+    String username = null;
+    if (userId instanceof String s) {
+      username = s;
+    } else if (userId instanceof Long l) {
+      Identity identity = identityManager.getIdentity(l);
+      if (identity != null && identity.isUser()) {
+        username = identity.getRemoteId();
+      }
+    }
 
-    saveTags(news, username);
+    if (username != null) {
+      saveTags(news, username);
+    }
 
     indexingService.reindex(NewsIndexingServiceConnector.TYPE, news.getId());
   }
