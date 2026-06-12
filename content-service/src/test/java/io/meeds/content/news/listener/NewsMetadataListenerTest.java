@@ -78,7 +78,7 @@ public class NewsMetadataListenerTest {
     when(news.getSpaceId()).thenReturn(spaceId);
     when(news.getBody()).thenReturn(content);
 
-    Event<String, News> event = mock(Event.class);
+    Event<Object, News> event = mock(Event.class);
     when(event.getData()).thenReturn(news);
     when(event.getSource()).thenReturn(USERNAME);
 
