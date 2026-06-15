@@ -73,8 +73,8 @@ export function init(params) {
   const showArticleImage = params.showArticleImage === '' ? true : params.showArticleImage === 'true';
   const showArticleAuthor = viewTemplate === 'NewsSlider' ? false: params.showArticleAuthor === 'true';
   const showArticleSpace = viewTemplate === 'NewsSlider' ? false : params.showArticleSpace === 'true';
-  const showArticleReactions = viewTemplate === 'NewsSlider' ? false : params.showArticleReactions === 'true';
-  const showArticleDate  = viewTemplate === 'NewsSlider' ? false : params.showArticleDate === 'true';
+  const showArticleReactions = ['NewsSlider', 'NewsStories'].includes(viewTemplate) ? false : params.showArticleReactions === 'true';
+  const showArticleDate  = ['NewsSlider', 'NewsStories'].includes(viewTemplate) ? false : params.showArticleDate === 'true';
   const seeAllUrl = params.seeAllUrl;
   const canEditNewsList = params.canEdit;
   const canManageNewsTarget = params.canManageNewsPublishTargets;

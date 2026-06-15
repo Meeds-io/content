@@ -19,42 +19,45 @@
 
 -->
 <template>
-  <div id="top-news-stories">
-    <card-carousel v-if="news.length">
+  <div
+    id="top-news-stories"
+    class="d-flex flex-column">
+    <card-carousel
+      v-if="news.length"
+      class="align-left d-flex">
       <news-stories-view-item
         v-for="(item, index) in news"
         :key="index"
         :item="item"
-        :last-item="news.length-1 == index"
+        :last-item="news.length - 1 === index"
         :selected-option="selectedOption" />
       <v-hover v-slot="{ hover }">
         <div 
-          v-if="showSeeAll"
-          class="card">
+          v-if="showSeeAll">
           <news-settings 
             :hide-see-all-button="true"
-            :is-hovering="hover" />
+            :is-hovering="hover"
+            class="position-absolute r-0 z-index-modal mt-1" />
           <a
             class="see-all-link"
             target="_self"
             :href="seeAllUrl">
-            <div class="card" id="see-all">
-              <div class="see-all-icon">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  xmlns:xlink="http://www.w3.org/1999/xlink"
-                  version="1.1"
-                  id="Layer_1"
-                  x="0px"
-                  y="0px"
-                  viewBox="0 0 330 330"
-                  style="enable-background:new 0 0 330 330;"
-                  xml:space="preserve">
-                  <path d="M165,0C74.019,0,0,74.019,0,165s74.019,165,165,165s165-74.019,165-165S255.981,0,165,0z M85,190  c-13.785,0-25-11.215-25-25s11.215-25,25-25s25,11.215,25,25S98.785,190,85,190z M165,190c-13.785,0-25-11.215-25-25  s11.215-25,25-25s25,11.215,25,25S178.785,190,165,190z M245,190c-13.785,0-25-11.215-25-25s11.215-25,25-25  c13.785,0,25,11.215,25,25S258.785,190,245,190z"></path>
-                </svg>
+            <v-card
+              height="210"
+              width="140"
+              class="elevation-0 d-flex align-center justify-center flex-column">
+              <v-btn
+                class="grey-lighten1-background"
+                icon>
+                <v-icon
+                  class="white--text">
+                  fas fa-ellipsis-h
+                </v-icon>
+              </v-btn>
+              <div class="text-sub-title mt-2">
+                {{ $t('news.published.seeAll') }}
               </div>
-              <div class="see-all-text"> {{ $t('news.published.seeAll') }} </div>
-            </div>
+            </v-card>
           </a>
         </div>
       </v-hover>
