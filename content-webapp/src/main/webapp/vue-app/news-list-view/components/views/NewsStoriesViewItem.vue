@@ -20,59 +20,48 @@
 -->
 <template>
   <v-hover v-slot="{ hover }">
-    <div class="card">
+    <v-card
+      height="210"
+      width="140"
+      class="me-2 white card-border-radius overflow-hidden elevation-0 py-0 position-relative border-box-sizing">
       <news-settings
         v-if="!showSeeAll && lastItem && hover"
-        hide-see-all-button
-        class-button-open-settings="settingNewsButton" />
+        class="position-absolute r-0 z-index-modal mt-2"
+        class-button-open-settings="white-background"
+        setting-button-size="24"
+        hide-see-all-button />
       <a
         class="articleLink"
         target="_self"
         :href="articleUrl">
-        <img
-          class="article-img"
+        <v-img
+          class="position-absolute border-box-sizing full-height full-width"
           :src="articleImage"
+          :aspect-ratio="2/3"
           :alt="featuredImageAltText">
-        <div class="author-date-container">
-          <img
-            v-if="showArticleAuthor"
-            class="author-photo"
-            :src="item.authorAvatarUrl"
-            alt="">
-          <div v-if="showArticleDate" class="author-date">
-            <date-format
-              :value="displayDate"
-              :format="dateFormat" />
+          <div class="absolute-full-size linear-gradient-black-overlay-background"></div>
+          <div class="text-subtitle-font-size position-absolute mt-2 ms-2">
+            <v-img
+              v-if="showArticleAuthor"
+              :src="item.authorAvatarUrl"
+              width="30px"
+              height="30px"
+              class="ma-auto border-radius-circle"
+              alt="" />
           </div>
-        </div>
-      </a>
+        </v-img></a>
       <a
-        class="articleLink"
         target="_self"
         :href="articleUrl">
-        <div class="title-container">
-          <div v-if="showArticleTitle" class="article-title">{{ item.title }}</div>
-          <div v-if="showArticleReactions" class="article-counters d-flex">
-            <div class="likes-container mb-1">
-              <v-icon class="counters-icons" size="14">mdi-thumb-up</v-icon>
-              <span class="counterStyle ml-1">{{ item.likesCount }}</span>
-            </div>
-            <div class="comments-container ml-2">
-              <v-icon
-                class="counters-icons mt-1"
-                size="14">
-                mdi-comment
-              </v-icon>
-              <span class="counterStyle ml-1">{{ item.commentsCount }}</span>
-            </div>
-            <div class="views-container ml-2">
-              <v-icon class="counters-icons" size="16">mdi-eye</v-icon>
-              <span class="counterStyle">{{ item.viewsCount }}</span>
-            </div>
+        <div class="d-flex flex-column justify-end position-absolute px-1 pb-1 b-0">
+          <div 
+            v-if="showArticleTitle" 
+            class="text-font-size white--text text-truncate-2">
+            {{ item.title }}
           </div>
         </div>
       </a>
-    </div>
+    </v-card>
   </v-hover>
 </template>
 
