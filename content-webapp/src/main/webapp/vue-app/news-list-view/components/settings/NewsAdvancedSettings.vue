@@ -168,6 +168,7 @@
       <v-list-item-action>
         <v-switch
           v-model="showArticleDate"
+          :disabled="displayStoriesButtons"
           dense
           @change="selectedOption('showArticleDate', showArticleDate)"
           class="my-auto" />
@@ -199,7 +200,7 @@
       <v-list-item-action>
         <v-switch
           v-model="showArticleReactions"
-          :disabled="displayAlertsButtons || displaySliderButton"
+          :disabled="displayAlertsButtons || displaySliderButton || displayStoriesButtons"
           dense
           @change="selectedOption('showArticleReactions', showArticleReactions)"
           class="my-auto" />
