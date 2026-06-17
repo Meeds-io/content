@@ -1,16 +1,16 @@
 const path = require('path');
 const ESLintPlugin = require('eslint-webpack-plugin');
-const { VueLoaderPlugin } = require('vue-loader')
+const { VueLoaderPlugin } = require('vue-loader');
 
-let config = {
+const config = {
   context: path.resolve(__dirname, '.'),
   // set the entry point of the application
   // can use multiple entry
   entry: {
-    newsActivityComposer :'./src/main/webapp/vue-app/news-activity-composer-app/main.js',
-    newsDetails :'./src/main/webapp/vue-app/news-details/main.js',
-    latestNews:'./src/main/webapp/vue-app/latest-news/main.js',
-    news :'./src/main/webapp/vue-app/news/main.js',
+    newsActivityComposer: './src/main/webapp/vue-app/news-activity-composer-app/main.js',
+    newsDetails: './src/main/webapp/vue-app/news-details/main.js',
+    latestNews: './src/main/webapp/vue-app/latest-news/main.js',
+    news: './src/main/webapp/vue-app/news/main.js',
     newsSearchCard: './src/main/webapp/vue-app/news-search/main.js',
     newsDetailsApp: './src/main/webapp/vue-app/news-details-app/main.js',
     newsListView: './src/main/webapp/vue-app/news-list-view/main.js',
