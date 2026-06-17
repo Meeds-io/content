@@ -61,11 +61,14 @@
       <v-btn
         v-if="$root.canManageNewsList && showSettingsIcon"
         :class="classButtonOpenSettings"
-        class="icon-default-color"
+        class="icon-default-color white-background"
         :title="$t('news.list.openSettings.title')"
         :aria-label="$t('news.latest.openSettings')"
+        :width="settingButtonSize"
+        :height="settingButtonSize"
+        :min-width="settingButtonSize"
+        :small="!settingButtonSize"
         icon
-        small
         @click="openDrawer">
         <v-icon
           size="18"
@@ -79,6 +82,10 @@
 <script>
 export default {
   props: {
+    settingButtonSize: {
+      type: Number,
+      default: null
+    },
     isHovering: {
       type: Boolean,
       required: false,

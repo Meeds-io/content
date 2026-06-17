@@ -24,27 +24,36 @@
       v-if="showReactions"
       class="d-flex">
       <v-icon 
-        class="icon-default-color my-auto  me-1"
+        :class="iconColorClass"  
+        class="my-auto  me-1"
         size="12">
         fas fa-thumbs-up
       </v-icon>
-      <div class="me-2 my-auto ">
+      <div
+        :class="textColorClass"
+        class="me-2 my-auto ">
         {{ item.likesCount }}
       </div>
-      <v-icon 
-        class="icon-default-color my-auto me-1"
+      <v-icon
+        :class="iconColorClass"
+        class="my-auto me-1"
         size="12">
         fas fa-comment
       </v-icon>
-      <div class="me-2 my-auto">
+      <div
+        :class="textColorClass"
+        class="me-2 my-auto">
         {{ item.commentsCount }}
       </div>
       <v-icon
-        class="icon-default-color my-auto me-1"
+        :class="iconColorClass"
+        class="my-auto me-1"
         size="12">
         fas fa-eye
       </v-icon>
-      <div class="my-auto">
+      <div
+        :class="textColorClass"
+        class="my-auto">
         {{ item.viewsCount }}
       </div>
     </div>
@@ -54,6 +63,14 @@
 <script>
 export default {
   props: {
+    textColorClass: {
+      type: String,
+      default: ''
+    },
+    iconColorClass: {
+      type: String,
+      default: 'icon-default-color'
+    },
     item: {
       type: Object,
       default: () => ({})
