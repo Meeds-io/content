@@ -51,6 +51,7 @@
         canSchedule: true,
         allowedTargets: allowedTargets
       }"
+      :can-redact="canRedact"
       :images-download-folder="'DRIVE_ROOT_NODE/News/images'"
       @editor-closed="editorClosed"
       @open-treeview="openTreeView"
@@ -130,7 +131,8 @@ export default {
       editorExtensions: null,
       draftObjectType: 'wikiDraft',
       autosaveProcessedFromEditorExtension: false,
-      allowedTargets: []
+      allowedTargets: [],
+      canRedact: null,
     };
   },
   watch: {
@@ -202,9 +204,6 @@ export default {
     this.$root.$on('lang-translation-changed', this.changeTranslation);
     this.$root.$on('delete-lang-translation', this.deleteTranslation);
     this.contentFormTitle = this.articleId && this.$t('news.editor.label.edit') || this.$t('news.editor.label.create');
-  },
-  mounted() {
-    this.initEditor();
   },
   methods: {
     processAutoSaveFromEditorExtension(event) {
@@ -668,6 +667,7 @@ export default {
       this.loading = true;
       const space = await this.$newsServices.getSpaceById(this.spaceId);
       this.currentSpace = space;
+      this.canRedact = this.currentSpace?.canRedactOnSpace;
       this.spaceDisplayName = space.displayName;
       this.isSpaceMember = space.isMember;
       this.spaceUrl = this.currentSpace?.prettyName;
@@ -698,6 +698,11 @@ export default {
       this.canPublishArticle = await this.$newsServices.canPublishNews(this.currentSpace.id);
       this.initDone = true;
       this.loading = false;
+      if (this.canRedact) {
+        this.$nextTick(() => {
+          this.initEditor();
+        });
+      }
     },
     async replaceSuggestedUsers(message, mentionedUsers) {
       if (!mentionedUsers) {
