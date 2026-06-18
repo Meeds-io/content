@@ -30,6 +30,11 @@ import javax.portlet.PortletPreferences;
 import javax.portlet.RenderRequest;
 import javax.portlet.RenderResponse;
 
+import io.meeds.social.translation.model.TranslationField;
+import io.meeds.social.translation.service.TranslationService;
+import io.meeds.social.util.JsonUtils;
+import lombok.SneakyThrows;
+import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import org.exoplatform.commons.api.settings.SettingService;
@@ -47,10 +52,27 @@ public class NewsListViewPortlet extends CMSPortlet {
 
   private SettingService settingService;
 
+  private TranslationService translationService;
+
   @Override
   public void init(PortletConfig config) throws PortletException {
     super.init(config);
     this.contentType = OBJECT_TYPE;
+  }
+
+  @Override
+  @SneakyThrows
+  protected void postSettingInit(PortletPreferences preferences, String name) {
+    String data = preferences.getValue(DATA_INIT_PREFERENCE_NAME, null);
+    String applicationId = getOrCreateApplicationId(preferences);
+    if (StringUtils.isNotBlank(data)) {
+      TranslationField translationField = JsonUtils.fromJsonString(data, TranslationField.class);
+      if (translationField != null && MapUtils.isNotEmpty(translationField.getLabels())) {
+        getTranslationService().saveTranslationLabels(translationField.getObjectType(), applicationId, translationField.getFieldName(), translationField.getLabels(), false);
+      }
+      savePreference(DATA_INIT_PREFERENCE_NAME, null);
+    }
+    initNewsListHeaderTranslationSettings(applicationId, name);
   }
 
   @Override
@@ -70,10 +92,9 @@ public class NewsListViewPortlet extends CMSPortlet {
 
   @Override
   public void doView(RenderRequest request, RenderResponse response) throws PortletException, IOException {
-    super.doView(request, response);
     String applicationId = getOrCreateApplicationId(request.getPreferences());
-    request.setAttribute(APPLICATION_ID, applicationId);
-    initNewsListHeaderTranslationSettings(request);
+    request.getPreferences().setValue(APPLICATION_ID, applicationId);
+    super.doView(request, response);
   }
 
   private String getOrCreateApplicationId(PortletPreferences preferences) {
@@ -86,9 +107,7 @@ public class NewsListViewPortlet extends CMSPortlet {
     return applicationId;
   }
 
-  private void initNewsListHeaderTranslationSettings(RenderRequest request) {
-    String applicationId = request.getAttribute(APPLICATION_ID).toString();
-    String settingName = request.getAttribute("settingName").toString();
+  private void initNewsListHeaderTranslationSettings(String applicationId, String settingName) {
     SettingValue<?> storedSettingNameValue = getSettingService().get(NewsUtils.NEWS_LIST_VIEW_CONTEXT,
                                                                      NewsUtils.NEWS_LIST_VIEW_SCOPE,
                                                                      applicationId);
@@ -106,5 +125,12 @@ public class NewsListViewPortlet extends CMSPortlet {
       settingService = ExoContainerContext.getService(SettingService.class);
     }
     return settingService;
+  }
+
+  private TranslationService getTranslationService() {
+    if (translationService == null) {
+      translationService = ExoContainerContext.getService(TranslationService.class);
+    }
+    return translationService;
   }
 }
