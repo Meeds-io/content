@@ -160,7 +160,7 @@
             type="content-event-detail"
             parent-element="div"
             element="div"
-            class="position-sticky d-flex mt-8 ms-auto" />
+            class="position-sticky t-1 d-flex mt-8 ms-auto" />
         </div>
         <extension-registry-components
           name="NewsDetailsFooter"
