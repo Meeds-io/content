@@ -277,7 +277,7 @@ export default {
       return this.viewTemplate === 'NewsSlider' || this.viewTemplate === 'NewsAlert';
     },
     disableMaxArticle() {
-      return this.articlesSourceOption === 'selectedList';
+      return this.articlesSourceOption === 'selectedList' || this.viewTemplate === 'NewsMosaic';
     }
   },
   created() {
