@@ -2530,7 +2530,7 @@ public class NewsService {
       return parentArticle;
     }
     News draftArticle = buildDraftArticle(latestDraft.getId(), currentIdentity);
-
+    draftArticle.setActivityId(parentArticle.getActivityId());   
     draftArticle.setReferred(parentArticle.isReferred());
     draftArticle.setFromExternalPage(parentArticle.isFromExternalPage());
     draftArticle.setOwner(parentArticle.getOwner());
