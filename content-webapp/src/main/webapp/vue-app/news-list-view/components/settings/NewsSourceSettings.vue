@@ -103,7 +103,8 @@ export default {
     choice: 'posted',
     selectedNewsTarget: null,
     selectedArticles: [],
-    defaultLimit: 4
+    defaultLimit: 4,
+    initialized: false
   }),
   computed: {
     isTargetChoice() {
@@ -118,6 +119,9 @@ export default {
   },
   watch: {
     choice() {
+      if (!this.initialized) {
+        return;
+      }
       switch (this.choice) {
       case 'posted':
         this.selectedNewsTarget = null;
@@ -161,6 +165,7 @@ export default {
     if (radiogroup) {
       radiogroup.setAttribute('aria-labelledby', 'news-source-group-label');
     }
+    this.initialized = true;
   },
   methods: {
     createNewTarget() {
