@@ -117,17 +117,17 @@ public class AnalyticsNewsListener extends Listener<Object, News> {
     statisticData.setSubModule("contents");
     statisticData.setOperation(operation);
     statisticData.setUserId(userId);
-    statisticData.addParameter("contentId", news.getId());
-    statisticData.addParameter("contentTitle", news.getTitle());
+    statisticData.addKeyword("contentId", news.getId());
+    statisticData.addKeyword("contentTitle", news.getTitle());
     if (operation.equals(VIEW_CONTENT_OPERATION_NAME) || operation.equals(UPDATE_CONTENT_OPERATION_NAME)
         || operation.equals(DELETE_CONTENT_OPERATION_NAME)) {
-      statisticData.addParameter("contentLanguage", news.getLang() != null ? news.getLang() : "originalVersion");
+      statisticData.addKeyword("contentLanguage", news.getLang() != null ? news.getLang() : "originalVersion");
     }
-    statisticData.addParameter("contentCreator", news.getOwner());
-    statisticData.addParameter("contentLastModifier", username);
-    statisticData.addParameter("contentType", "News");
-    statisticData.addParameter("contentUpdatedDate", news.getUpdateDate());
-    statisticData.addParameter("contentCreationDate", news.getCreationDate());
+    statisticData.addKeyword("contentCreator", news.getOwner());
+    statisticData.addKeyword("contentLastModifier", username);
+    statisticData.addKeyword("contentType", "News");
+    statisticData.addDate("contentUpdatedDate", news.getUpdateDate());
+    statisticData.addDate("contentCreationDate", news.getCreationDate());
     Space space = getSpaceService().getSpaceById(news.getSpaceId());
     if (space != null) {
       addSpaceStatistics(statisticData, space);
