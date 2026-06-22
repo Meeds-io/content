@@ -108,23 +108,25 @@ public class ContentPublishListener extends Listener<String, ContentPublishEvent
     statisticData.setSubModule("contents");
     statisticData.setOperation("publishContent");
     statisticData.setUserId(userId);
-    statisticData.addParameter("contentId", news.getId());
-    statisticData.addParameter("contentTitle", news.getTitle());
-    statisticData.addParameter("contentType", "News");
-    statisticData.addParameter("contentCreator", news.getAuthor());
+    statisticData.addKeyword("contentId", news.getId());
+    statisticData.addKeyword("contentTitle", news.getTitle());
+    statisticData.addKeyword("contentType", "News");
+    statisticData.addKeyword("contentCreator", news.getAuthor());
     List<String> targets = toTargetNames(news);
     if (!targets.isEmpty()) {
-      statisticData.addParameter("contentPublishingTargets", toTargetNames(news));
+      statisticData.addKeyword("contentPublishingTargets", toTargetNames(news));
     }
-    statisticData.addParameter("contentFeedPublishing", news.isActivityPosted() ? "YES" : null);
+    if (news.isActivityPosted()) {
+      statisticData.addKeyword("contentFeedPublishing", "YES");
+    }
     String scheduleDates = toScheduleDates(news);
     if (StringUtils.isNotBlank(scheduleDates)) {
-      statisticData.addParameter("contentScheduling", scheduleDates);
+      statisticData.addDates("contentScheduling", List.of(news.getSchedulePostDate(), news.getScheduleUnpublishDate()));
     }
-    statisticData.addParameter("contentHideAuthor", news.getProperties().isHideAuthor() ? "YES" : "NO");
-    statisticData.addParameter("contentHideReaction", news.getProperties().isHideReaction() ? "YES" : "NO");
-    statisticData.addParameter("contentUpdatedDate",
-                               news.getUpdateDate() != null ? news.getUpdateDate() : news.getCreationDate());
+    statisticData.addKeyword("contentHideAuthor", news.getProperties().isHideAuthor() ? "YES" : "NO");
+    statisticData.addKeyword("contentHideReaction", news.getProperties().isHideReaction() ? "YES" : "NO");
+    statisticData.addDate("contentUpdatedDate",
+                          news.getUpdateDate() != null ? news.getUpdateDate() : news.getCreationDate());
     processSpaceStatistics(statisticData, news);
 
     AnalyticsUtils.addStatisticData(statisticData);
