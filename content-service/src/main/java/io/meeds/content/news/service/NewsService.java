@@ -60,6 +60,7 @@ import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.commons.utils.HTMLSanitizer;
 import org.exoplatform.portal.application.localization.LocalizationFilter;
 import org.exoplatform.portal.config.UserACL;
+import org.exoplatform.portal.config.model.PortalConfig;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
 import org.exoplatform.services.security.ConversationState;
@@ -2376,7 +2377,6 @@ public class NewsService {
       Identity userIdentity = currentIdentity != null ? currentIdentity : getCurrentIdentity();
       String currentUsername = userIdentity == null ? null : userIdentity.getUserId();
       if (articlePage != null) {
-        Space space = spaceService.getSpaceByGroupId(articlePage.getWikiOwner());
         // fetch the last version of the given lang
         PageVersion pageVersion = noteService.getPublishedVersionByPageIdAndLang(Long.parseLong(articlePage.getId()), lang);
         if (pageVersion == null && fetchOriginal) {
@@ -2388,16 +2388,23 @@ public class NewsService {
         news.setAuthor(pageVersion != null ? pageVersion.getAuthor() : articlePage.getAuthor());
         news.setUpdater(pageVersion != null ? pageVersion.getAuthor() : articlePage.getAuthor());
         news.setOwner(articlePage.getOwner());
-        news.setSpaceId(space.getId());
-        news.setSpaceAvatarUrl(space.getAvatarUrl());
-        news.setSpaceDisplayName(space.getDisplayName());
-        boolean hiddenSpace = space.getVisibility().equals(Space.HIDDEN) && !spaceService.canViewSpace(space, currentUsername);
-        news.setHiddenSpace(hiddenSpace);
-        news.setSpaceMember(spaceService.isMember(space, currentUsername));
-        if (StringUtils.isNotEmpty(space.getGroupId())) {
-          news.setSpaceUrl(NewsUtils.buildSpaceUrl(space.getId()));
+        long spaceId = 0;
+        if (PortalConfig.GROUP_TYPE.equals(articlePage.getWikiType())) {
+          Space space = spaceService.getSpaceByGroupId(articlePage.getWikiOwner());
+          if (space != null) {
+            spaceId = space.getSpaceId();
+            news.setSpaceId(space.getId());
+            news.setSpaceAvatarUrl(space.getAvatarUrl());
+            news.setSpaceDisplayName(space.getDisplayName());
+            boolean hiddenSpace = space.getVisibility().equals(Space.HIDDEN)
+                                  && !spaceService.canViewSpace(space, currentUsername);
+            news.setHiddenSpace(hiddenSpace);
+            news.setSpaceMember(spaceService.isMember(space, currentUsername));
+            if (StringUtils.isNotEmpty(space.getGroupId())) {
+              news.setSpaceUrl(NewsUtils.buildSpaceUrl(space.getId()));
+            }
+          }
         }
-
         org.exoplatform.social.core.identity.model.Identity identity =
                                                                      identityManager.getOrCreateIdentity(OrganizationIdentityProvider.NAME,
                                                                                                          news.getAuthor());
@@ -2410,7 +2417,7 @@ public class NewsService {
         NewsPageObject newsPageObject = new NewsPageObject(NEWS_METADATA_PAGE_OBJECT_TYPE,
                                                            articlePage.getId(),
                                                            null,
-                                                           Long.parseLong(space.getId()));
+                                                           spaceId);
         List<MetadataItem> metadataItems = metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY, newsPageObject);
 
         if (metadataItems.isEmpty()) {
