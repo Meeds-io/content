@@ -74,6 +74,7 @@ import org.exoplatform.commons.search.index.IndexingService;
 import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.container.PortalContainer;
 import org.exoplatform.portal.config.UserACL;
+import org.exoplatform.portal.config.model.PortalConfig;
 import org.exoplatform.services.security.ConversationState;
 import org.exoplatform.services.security.Identity;
 import org.exoplatform.social.core.manager.ActivityManager;
@@ -611,6 +612,7 @@ public class NewsServiceTest {
     when(noteService.getNoteById(anyString())).thenReturn(existingPage);
     when(existingPage.getId()).thenReturn("1");
     when(existingPage.getWikiOwner()).thenReturn("/space/groupId");
+    when(existingPage.getWikiType()).thenReturn(PortalConfig.GROUP_TYPE);
 
     MetadataItem metadataItem = mock(MetadataItem.class);
     List<MetadataItem> metadataItems = new ArrayList<>();
@@ -781,6 +783,7 @@ public class NewsServiceTest {
     when(noteService.getNoteById(anyString())).thenReturn(existingPage);
     when(existingPage.getId()).thenReturn("1");
     when(existingPage.getWikiOwner()).thenReturn("/space/groupId");
+    when(existingPage.getWikiType()).thenReturn(PortalConfig.GROUP_TYPE);
 
     MetadataItem metadataItem = mock(MetadataItem.class);
     List<MetadataItem> metadataItems = new ArrayList<>();
@@ -1181,6 +1184,7 @@ public class NewsServiceTest {
     Page existingPage = mock(Page.class);
     when(existingPage.getId()).thenReturn("1");
     when(existingPage.getWikiOwner()).thenReturn("/space/groupId");
+    when(existingPage.getWikiType()).thenReturn(PortalConfig.GROUP_TYPE);
     when(existingPage.getAuthor()).thenReturn("john");
     when(noteService.getNoteById(eq("1"))).thenReturn(existingPage);
 
@@ -1243,6 +1247,7 @@ public class NewsServiceTest {
     Page existingPage = mock(Page.class);
     when(existingPage.getId()).thenReturn("1");
     when(existingPage.getWikiOwner()).thenReturn("/space/groupId");
+    when(existingPage.getWikiType()).thenReturn(PortalConfig.GROUP_TYPE);
     when(existingPage.getAuthor()).thenReturn("john");
     when(noteService.getNoteById(eq("1"))).thenReturn(existingPage);
     when(spaceService.getSpaceByGroupId(anyString())).thenReturn(mock(Space.class));
