@@ -49,13 +49,13 @@ export default {
   }),
   computed: {
     contentTitle() {
-      return this.content?.title;
+      return this.content?.title || this.value;
     },
     contentUrl() {
       return this.content?.url;
     },
     isDeleted() {
-      return this.content?.deleted;
+      return this.content?.deleted || (!this.loading && !this.content) || !this.contentUrl;
     }
   },
   created() {
