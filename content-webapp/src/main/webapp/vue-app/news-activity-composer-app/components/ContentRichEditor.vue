@@ -52,6 +52,7 @@
         allowedTargets: allowedTargets
       }"
       :can-redact="canRedact"
+      :is-posting="postingNews"
       :images-download-folder="'DRIVE_ROOT_NODE/News/images'"
       @editor-closed="editorClosed"
       @open-treeview="openTreeView"
@@ -379,11 +380,9 @@ export default {
           alertLinkText: this.$t('news.view.label'),
           alertLink: createdArticle.url
         });
-      }).then(() => {
-        this.draftSavingStatus = '';
-        this.enableClickOnce();
       }).catch((error) => {
         this.displayAlert({type: 'error', message: this.$t('news.save.error.message', error?.message)});
+      }).finally(() => {
         this.enableClickOnce();
         this.draftSavingStatus = '';
       });
