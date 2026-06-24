@@ -655,6 +655,10 @@ export default {
 
       originalImages.each(function(index, element) {
         const originalImageURL = $(element).attr('src');
+        const updatedElement = updatedImages[index];
+        if (!updatedElement) {
+          return;
+        }
         const updatedImageURL = $(updatedImages[index]).attr('src');
         if (updatedImageURL !== originalImageURL) {
           imagesURLs.set(originalImageURL, updatedImageURL);
