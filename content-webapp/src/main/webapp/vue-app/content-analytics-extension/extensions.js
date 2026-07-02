@@ -79,17 +79,19 @@ extensionRegistry.registerExtension('AnalyticsChart', 'FieldValueName', {
   match: (fieldName) => fieldName === 'contentId',
   getLabel: async (fieldName, fieldValue) => {
     const articleUrl = `/content/rest/contents/${fieldValue}?editMode=false&type=article&lang=${eXo.env.portal.language}`;
-    const pageUrl = `/portal/rest/notes/note/${fieldValue}`;
+    const pageUrl = `/portal/rest/notes/note/${fieldValue}?includeDeleted=true`;
     try {
       const article = await fetchData(articleUrl);
-      return `${article?.title} (${fieldValue})`;
-    } catch (e) {
-      try {
-        const page = await fetchData(pageUrl);
-        return `${page?.title} (${fieldValue})`;
-      } catch (err) {
-        return exoi18n.i18n.t('analytics.deletedContent');
+      if (article?.title) {
+        return `${article.title} (${fieldValue})`;
       }
+      const page = await fetchData(pageUrl);
+      if (page?.title && !page?.deleted) {
+        return `${page.title} (${fieldValue})`;
+      }
+      return exoi18n.i18n.t('analytics.deletedContent');
+    } catch (e) {
+      return exoi18n.i18n.t('analytics.deletedContent');
     }
   }
 });

@@ -24,7 +24,9 @@
     size="24"
     color="primary"
     indeterminate />
-  <div v-else-if="!isDeleted"><a :href="contentUrl">{{ contentTitle }}</a></div>
+  <div v-else-if="!isDeleted">
+    <a :href="contentUrl">{{ contentTitle }}</a>
+  </div>
   <div v-else>
     <span class="text-no-wrap text-sub-title my-auto">
       {{ contentTitle }} ({{ $t('analytics.deleted') }})
@@ -40,7 +42,11 @@ export default {
       default: function () {
         return null;
       },
-    }
+    },
+    rowItem: {
+      type: Object,
+      default: () => null,
+    },
   },
   data: () => ({
     loading: true,
@@ -56,19 +62,23 @@ export default {
     },
     isDeleted() {
       return this.content?.deleted || (!this.loading && !this.content) || !this.contentUrl;
-    }
+    },
+    isArticle() {
+      return this.rowItem?.column1?.value.includes('News');
+    },
   },
   created() {
     if (this.value) {
       this.loading = true;
-      this.$newsServices.getNewsById(this.value, false, 'article', this.lang).then(content => {
-        this.content = content;
-        if (!this.content) {
-          this.getArticlePage(this.value).then(page => {
-            this.content = page;
-          });
-        }
-      }).finally(() => this.loading = false);
+      if (this.isArticle) {
+        this.$newsServices.getNewsById(this.value, false, 'article', this.lang)
+          .then(content => this.content = content)
+          .finally(() => this.loading = false);
+      } else {
+        this.getArticlePage(this.value)
+          .then(page => this.content = page)
+          .finally(() => this.loading = false);
+      }
     }
   },
   methods: {
@@ -79,12 +89,13 @@ export default {
           credentials: 'include',
         });
         if (!resp.ok) {
-          return ;
+          return null;
         }
-        return await resp.json();
+        const data = await resp.json();
+        return data?.deleted ? null : data;
       } catch (error) {
         console.error('Error fetching article:', error);
-        throw error;
+        return null;
       }
     }
   }
