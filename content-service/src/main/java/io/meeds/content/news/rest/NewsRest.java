@@ -343,7 +343,7 @@ public class NewsRest {
     @ApiResponse(responseCode = "401", description = "User not authorized to get the news"),
     @ApiResponse(responseCode = "404", description = "News not found"),
     @ApiResponse(responseCode = "500", description = "Internal server error") })
-  public ResponseEntity<News> getNewsById(@PathVariable("id")
+  public ResponseEntity<?> getNewsById(@PathVariable("id")
   String id,
                                           @Parameter(description = "fields")
                                           @RequestParam(name = "fields", required = false)
@@ -356,7 +356,9 @@ public class NewsRest {
                                           boolean editMode,
                                           @Parameter(description = "article translation")
                                           @RequestParam(name = "lang", required = false)
-                                          String lang) {
+                                          String lang,
+                                         @Parameter(description = "Return 200 with notFound/deleted flag instead of 404")
+                                         @RequestParam(name = "returnNotFound", defaultValue = "false", required = false) boolean returnNotFound) {
     String authenticatedUser = ConversationState.getCurrent().getIdentity().getUserId();
     try {
       if (StringUtils.isBlank(id)) {
@@ -369,6 +371,11 @@ public class NewsRest {
                                                  newsObjectType,
                                                  StringUtils.isBlank(lang) ? null : lang);
       if (news == null || news.isDeleted()) {
+        if (returnNotFound) {
+          Map<String, Boolean> result = new HashMap<>();
+          result.put(news == null ? "notFound" : "deleted", true);
+          return ResponseEntity.ok(result);
+        }
         return ResponseEntity.notFound().build();
       }
       Locale userLocale = lang == null ? LocalizationFilter.getCurrentLocale() : LocaleUtils.toLocale(news.getLang());

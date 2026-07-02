@@ -61,30 +61,38 @@ export default {
   created() {
     if (this.value) {
       this.loading = true;
-      this.$newsServices.getNewsById(this.value, false, 'article', this.lang).then(content => {
-        this.content = content;
-        if (!this.content) {
-          this.getArticlePage(this.value).then(page => {
-            this.content = page;
-          });
-        }
-      }).finally(() => this.loading = false);
+      this.$newsServices.getNewsById(this.value, false, 'article', this.lang, true)
+        .then(content => {
+          if (content?.deleted) {
+            this.content = { deleted: true };
+          } else if (content?.notFound) {
+            return this.getArticlePage(this.value).then(page => {
+              this.content = page;
+            });
+          } else {
+            this.content = content;
+          }
+        }).finally(() => this.loading = false);
     }
   },
   methods: {
     async getArticlePage(id) {
       try {
-        const resp = await fetch(`/portal/rest/notes/note/${id}?includeDeleted=true`, {
+        const resp = await fetch(`/portal/rest/notes/note/${id}?includeDeleted=true&returnNotFound=true`, {
           method: 'GET',
           credentials: 'include',
         });
         if (!resp.ok) {
-          return ;
+          return null;
         }
-        return await resp.json();
+        const data = await resp.json();
+        if (data?.notFound) {
+          return null;
+        }
+        return data;
       } catch (error) {
         console.error('Error fetching article:', error);
-        throw error;
+        return null;
       }
     }
   }

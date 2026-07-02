@@ -78,18 +78,23 @@ extensionRegistry.registerExtension('AnalyticsChart', 'FieldValueName', {
   type: 'contentIdChart',
   match: (fieldName) => fieldName === 'contentId',
   getLabel: async (fieldName, fieldValue) => {
-    const articleUrl = `/content/rest/contents/${fieldValue}?editMode=false&type=article&lang=${eXo.env.portal.language}`;
-    const pageUrl = `/portal/rest/notes/note/${fieldValue}`;
+    const articleUrl = `/content/rest/contents/${fieldValue}?editMode=false&type=article&lang=${eXo.env.portal.language}&returnNotFound=true`;
+    const pageUrl = `/portal/rest/notes/note/${fieldValue}?returnNotFound=true`;
     try {
       const article = await fetchData(articleUrl);
-      return `${article?.title} (${fieldValue})`;
-    } catch (e) {
-      try {
-        const page = await fetchData(pageUrl);
-        return `${page?.title} (${fieldValue})`;
-      } catch (err) {
+      if (article?.deleted) {
         return exoi18n.i18n.t('analytics.deletedContent');
       }
+      if (!article?.notFound && article?.title) {
+        return `${article.title} (${fieldValue})`;
+      }
+      const page = await fetchData(pageUrl);
+      if (!page?.notFound && page?.title) {
+        return `${page.title} (${fieldValue})`;
+      }
+      return exoi18n.i18n.t('analytics.deletedContent');
+    } catch (e) {
+      return exoi18n.i18n.t('analytics.deletedContent');
     }
   }
 });
@@ -99,5 +104,8 @@ async function fetchData(url) {
     method: 'GET',
     credentials: 'include',
   });
-  return await response?.json?.();
+  if (!response?.ok) {
+    return null;
+  }
+  return await response.json();
 }

@@ -42,12 +42,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
 
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.RuntimeDelegate;
@@ -158,7 +153,7 @@ public class NewsRestTest {
     lenient().when(spaceService.isSuperManager(eq(JOHN))).thenReturn(false);
 
     // When
-    ResponseEntity response = newsRestController.getNewsById("1", null, null, false, null);
+    ResponseEntity response = newsRestController.getNewsById("1", null, null, false, null, false);
 
     // Then
     assertEquals(200, response.getStatusCodeValue());
@@ -297,7 +292,7 @@ public class NewsRestTest {
     lenient().when(spaceService.isSuperManager(eq(JOHN))).thenReturn(true);
 
     // When
-    ResponseEntity response = newsRestController.getNewsById("1", null, null, false, null);
+    ResponseEntity response = newsRestController.getNewsById("1", null, null, false, null, false);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatusCode().value());
@@ -314,7 +309,7 @@ public class NewsRestTest {
     lenient().when(spaceService.isSuperManager(eq(JOHN))).thenReturn(true);
 
     // When
-    ResponseEntity response = newsRestController.getNewsById("1", null, null, false, null);
+    ResponseEntity response = newsRestController.getNewsById("1", null, null, false, null, false);
 
     // Then
     assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatusCode().value());
@@ -343,7 +338,7 @@ public class NewsRestTest {
     lenient().when(spaceService.isSuperManager(eq(JOHN))).thenReturn(false);
 
     // When
-    ResponseEntity response = newsRestController.getNewsById("1", "spaces", null, false, null);
+    ResponseEntity response = newsRestController.getNewsById("1", "spaces", null, false, null, false);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatusCode().value());
@@ -565,7 +560,7 @@ public class NewsRestTest {
     when(newsService.getNewsByIdAndLang(anyString(), any(), anyBoolean(), nullable(String.class), nullable(String.class))).thenReturn(news);
 
     // When
-    ResponseEntity response = newsRestController.getNewsById("1", null, null, false, null);
+    ResponseEntity response = newsRestController.getNewsById("1", null, null, false, null, false);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatusCode().value());
@@ -583,10 +578,45 @@ public class NewsRestTest {
     lenient().when(spaceService.isSuperManager(eq(JOHN))).thenReturn(true);
 
     // When
-    ResponseEntity response = newsRestController.getNewsById("1", null, null, false, null);
+    ResponseEntity response = newsRestController.getNewsById("1", null, null, false, null, false);
 
     // Then
     assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatusCode().value());
+  }
+
+
+  @Test
+  public void shouldReturn200WithNotFoundFlagWhenNewsNotExistsAndReturnNotFoundEnabled() throws Exception {
+    // Given
+    Identity currentIdentity = new Identity(JOHN);
+    ConversationState.setCurrent(new ConversationState(currentIdentity));
+    lenient().when(newsService.getNewsByIdAndLang(anyString(), any(), anyBoolean(), anyString(), nullable(String.class))).thenReturn(null);
+
+    // When
+    ResponseEntity response = newsRestController.getNewsById("1", null, "article", false, null, true);
+
+    // Then
+    assertEquals(Response.Status.OK.getStatusCode(), response.getStatusCode().value());
+    Map<String, Boolean> body = (Map<String, Boolean>) response.getBody();
+    assertTrue(body.get("notFound"));
+  }
+
+  @Test
+  public void shouldReturn200WithDeletedFlagWhenNewsIsDeletedAndReturnNotFoundEnabled() throws Exception {
+    // Given
+    Identity currentIdentity = new Identity(JOHN);
+    ConversationState.setCurrent(new ConversationState(currentIdentity));
+    News deletedNews = new News();
+    deletedNews.setDeleted(true);
+    lenient().when(newsService.getNewsByIdAndLang(anyString(), any(), anyBoolean(), anyString(), nullable(String.class))).thenReturn(deletedNews);
+
+    // When
+    ResponseEntity response = newsRestController.getNewsById("1", null, "article", false, null, true);
+
+    // Then
+    assertEquals(Response.Status.OK.getStatusCode(), response.getStatusCode().value());
+    Map<String, Boolean> body = (Map<String, Boolean>) response.getBody();
+    assertTrue(body.get("deleted"));
   }
 
   @Test
@@ -600,7 +630,7 @@ public class NewsRestTest {
     lenient().when(spaceService.isSuperManager(eq(JOHN))).thenReturn(true);
 
     // When
-    ResponseEntity response = newsRestController.getNewsById(null, null, null, false, null);
+    ResponseEntity response = newsRestController.getNewsById(null, null, null, false, null, false);
 
     // Then
     assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatusCode().value());
@@ -853,7 +883,7 @@ public class NewsRestTest {
     lenient().when(spaceService.isSuperManager(eq(JOHN))).thenReturn(false);
 
     // When
-    ResponseEntity response = newsRestController.getNewsById("1", null, null, false, null);
+    ResponseEntity response = newsRestController.getNewsById("1", null, null, false, null, false);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatusCode().value());
@@ -870,7 +900,7 @@ public class NewsRestTest {
 
     lenient().when(newsService.getNewsById("1", currentIdentity, false, null)).thenReturn(news);
     // When
-    ResponseEntity response = newsRestController.getNewsById("2", null, null, false, null);
+    ResponseEntity response = newsRestController.getNewsById("2", null, null, false, null, false);
     ;
 
     // Then

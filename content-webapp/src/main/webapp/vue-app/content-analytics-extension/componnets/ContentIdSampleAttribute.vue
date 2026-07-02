@@ -55,14 +55,18 @@ export default {
   created() {
     if (this.attrValue) {
       this.loading = true;
-      this.$newsServices.getNewsById(this.attrValue, false, 'article', this.lang).then(content => {
-        this.content = content;
-        if (!this.content) {
-          this.$newsServices.getArticlePage(this.attrValue).then(page => {
-            this.content = page;
-          });
-        }
-      }).finally(() => this.loading = false);
+      this.$newsServices.getNewsById(this.attrValue, false, 'article', this.lang, true)
+        .then(content => {
+          if (content?.deleted) {
+            // Nothing
+          } else if (content?.notFound) {
+            return this.$newsServices.getArticlePage(this.attrValue).then(page => {
+              this.content = page;
+            });
+          } else {
+            this.content = content;
+          }
+        }).finally(() => this.loading = false);
     }
   },
 };
