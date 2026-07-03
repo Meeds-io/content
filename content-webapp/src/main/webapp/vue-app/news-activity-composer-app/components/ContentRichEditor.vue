@@ -636,10 +636,22 @@ export default {
     replaceImagesURLs: function(content) {
       let updatedContent = content;
       const specialCharactersRegex = /[-/\\^$*+?.()|[\]{}]/g;
-      this.imagesURLs.forEach(function(value, key) {
-        const escapedKey = key.replace(specialCharactersRegex, '\\$&');
-        const regex = new RegExp(`src="${escapedKey}"`);
-        updatedContent = updatedContent.replace(regex, `src="${value}"`);
+      if (!this.imagesURLs) {
+        return updatedContent;
+      }
+      this.imagesURLs.forEach(diff => {
+        const { old, new: newURL } = diff;
+        if (old && newURL) {
+          const escapedOld = old.replace(specialCharactersRegex, '\\$&');
+          const regex = new RegExp(`src="${escapedOld}"`, 'g');
+          updatedContent = updatedContent.replace(regex, `src="${newURL}"`);
+        } else if (old && !newURL) {
+          const escapedOld = old.replace(specialCharactersRegex, '\\$&');
+          const regex = new RegExp(`<img[^>]*src="${escapedOld}"[^>]*>`, 'g');
+          updatedContent = updatedContent.replace(regex, '');
+        } else if (!old && newURL) {
+          updatedContent += `<img src="${newURL}">`;
+        }
       });
       return updatedContent;
     },
@@ -651,13 +663,27 @@ export default {
       const originalImages = originalHTML.find('img');
       const updatedImages = updatedHTML.find('img');
 
-      originalImages.each(function(index, element) {
-        const originalImageURL = $(element).attr('src');
-        const updatedImageURL = $(updatedImages[index]).attr('src');
-        if (updatedImageURL !== originalImageURL) {
-          imagesURLs.set(originalImageURL, updatedImageURL);
+      const originalSet = new Set(originalImages.map((_, el) => $(el).attr('src')).get());
+      const updatedSet = new Set(updatedImages.map((_, el) => $(el).attr('src')).get());
+
+      originalSet.forEach(src => {
+        if (!updatedSet.has(src)) {
+          imagesURLs.set(src, null);
         }
       });
+      updatedSet.forEach(src => {
+        if (!originalSet.has(src)) {
+          imagesURLs.set(null, src);
+        }
+      });
+      const minLength = Math.min(originalImages.length, updatedImages.length);
+      for (let i = 0; i < minLength; i++) {
+        const oldSrc = $(originalImages[i]).attr('src');
+        const newSrc = $(updatedImages[i]).attr('src');
+        if (oldSrc && newSrc && oldSrc !== newSrc) {
+          imagesURLs.set(oldSrc, newSrc);
+        }
+      }
       return imagesURLs;
     },
     async getArticle() {
