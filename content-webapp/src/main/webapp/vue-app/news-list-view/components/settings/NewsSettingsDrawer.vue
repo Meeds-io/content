@@ -209,8 +209,19 @@ export default {
     isSelectedListSourceOption() {
       return this.articlesSourceOption === 'selectedList';
     },
+    maxArticlesLimit() {
+      if (this.viewTemplate === 'NewsMosaic') {
+        return 3;
+      } else if (this.viewTemplate === 'NewsLatest') {
+        return 4;
+      }
+      return null;
+    },
+    limitExceeded() {
+      return this.maxArticlesLimit !== null && Number(this.limit) > this.maxArticlesLimit;
+    },
     disabled() {
-      return (this.showSeeAll && !this.isValidSeeAllUrl) || (this.isTargetSourceOption && !this.newsTarget) || (this.isSelectedListSourceOption && !this.selectedArticles?.length);
+      return (this.showSeeAll && !this.isValidSeeAllUrl) || (this.isTargetSourceOption && !this.newsTarget) || (this.isSelectedListSourceOption && !this.selectedArticles?.length) || this.limitExceeded;
     },
     previewTemplate() {
       if ( this.viewTemplate === 'NewsLatest') {
@@ -299,7 +310,7 @@ export default {
       this.newsHeader = ((Object.keys(this.savedHeaderTranslations || {})?.length && this.savedHeaderTranslations
                                                        || {[this.$root.defaultLanguage]: this.$root.headerTitle}))
                                                        || this.$root.headerTitle;
-      this.limit = this.$root.limit;
+      this.limit = this.maxArticlesLimit !== null && Number(this.$root.limit) > this.maxArticlesLimit ? this.maxArticlesLimit : this.$root.limit;
       this.showHeader = this.viewTemplate === 'NewsSlider' || this.viewTemplate === 'NewsMosaic' || this.viewTemplate === 'NewsStories' ? false : this.$root.showHeader;
       this.showSeeAll = this.$root.showSeeAll;
       this.showArticleTitle = this.$root.showArticleTitle;

@@ -34,11 +34,22 @@
           v-model="limit"
           :disabled="disableMaxArticle"
           type="number"
+          min="1"
+          :max="maxLimit"
           id="maxArticle"
           name="maxArticle"
+          @input="emitLimitChange"
           @change="emitLimitChange"
           class="maxArticle input-block-level ignore-vuetify-classes">
       </v-list-item-action>
+    </v-list-item>
+
+    <v-list-item v-if="limitExceeded" class="pt-0">
+      <v-list-item-content class="py-0">
+        <v-list-item-subtitle class="error--text text-wrap">
+          {{ $t('news.list.settings.drawer.advancedSettings.maxArticleError') }}
+        </v-list-item-subtitle>
+      </v-list-item-content>
     </v-list-item>
 
     <v-list-item>
@@ -252,15 +263,24 @@ export default {
     },
   }),
   watch: {
-    viewTemplate(_, oldTemplate) {
-      if (this.viewTemplate === 'NewsMosaic' && this.limit > 3) {
-        this.setLimit(3);
-      } else if (this.limit === 3 && oldTemplate === 'NewsMosaic') {
-        this.setLimit(4);
+    viewTemplate() {
+      if (this.maxLimit !== null && Number(this.limit) > this.maxLimit) {
+        this.setLimit(this.maxLimit);
       }
     }
   },
   computed: {
+    maxLimit() {
+      if (this.viewTemplate === 'NewsMosaic') {
+        return 3;
+      } else if (this.viewTemplate === 'NewsLatest') {
+        return 4;
+      }
+      return null;
+    },
+    limitExceeded() {
+      return this.maxLimit !== null && Number(this.limit) > this.maxLimit;
+    },
     displaySliderButton() {
       return this.viewTemplate === 'NewsSlider';
     },
@@ -277,7 +297,7 @@ export default {
       return this.viewTemplate === 'NewsSlider' || this.viewTemplate === 'NewsAlert';
     },
     disableMaxArticle() {
-      return this.articlesSourceOption === 'selectedList' || this.viewTemplate === 'NewsMosaic';
+      return this.articlesSourceOption === 'selectedList';
     }
   },
   created() {
@@ -295,7 +315,7 @@ export default {
       this.viewExtensions = this.$root.viewExtensions;
       this.newsTarget = this.$root.newsTarget;
       this.newsHeader = this.$root.header;
-      this.limit = this.viewTemplate === 'NewsMosaic' && this.limit> 3 ? 3 : this.$root.limit;
+      this.limit = this.maxLimit !== null && Number(this.$root.limit) > this.maxLimit ? this.maxLimit : this.$root.limit;
       this.showHeader = this.viewTemplate === 'NewsSlider' || this.viewTemplate === 'NewsMosaic' || this.viewTemplate === 'NewsStories' ? false : this.$root.showHeader;
       this.showSeeAll = this.$root.showSeeAll;
       this.showArticleTitle = this.$root.showArticleTitle;
