@@ -28,6 +28,11 @@ const config = {
   },
   output: {
     filename: 'js/[name].bundle.js',
+    // Fixed (empty) publicPath so webpack 5 does NOT emit the
+    // document.currentScript-based auto publicPath runtime, which throws
+    // "Automatic publicPath is not supported in this browser" when the
+    // bundle is executed inside eXo's AMD (eXo.define) loader.
+    publicPath: '',
     libraryTarget: 'amd'
   },
   plugins: [
