@@ -293,8 +293,31 @@ export default {
       if (!properties) {
         return;
       }
-      this.$newsServices.updateArticleMetadataProperties(this.localNews.id, properties)
+      // A published article's id IS its backing note page id; a draft points at targetPageId.
+      // The cover + summary live in that backing note's metadata, so we persist them there,
+      // exactly like the notes "View Properties" flow (NotePage.saveMetadata): send the note
+      // with unchanged title/content so the backend routes into its EDIT_PAGE_PROPERTIES branch,
+      // which writes the featured image + summary honoring lang. The former flat
+      // updateArticleMetadataProperties endpoint expects a Map<String,String> and cannot
+      // deserialize the drawer's nested featuredImage object (HTTP 400), nor does it persist
+      // the cover.
+      const isDraft = !!this.localNews.targetPageId;
+      const pageId = isDraft ? this.localNews.targetPageId : this.localNews.id;
+      properties.noteId = pageId;
+      properties.draft = isDraft;
+      const notePayload = {
+        id: pageId,
+        title: this.localNews.title,
+        content: this.localNews.body,
+        lang: this.localNews.lang,
+        properties
+      };
+      this.$notesService.updateNoteById(notePayload)
         .then(() => this.getNewsById(this.localNews?.id || this.newsId))
+        .then(() => this.displayMessage({
+          message: this.$t('news.details.header.menu.properties.success'),
+          type: 'success'
+        }))
         .catch(() => this.displayMessage({
           message: this.$t('news.details.header.menu.properties.error'),
           type: 'error'
