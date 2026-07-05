@@ -118,6 +118,73 @@
         "idempotentHint": true,
         "openWorldHint": false
       }
+    },
+    {
+      "name": "update_news",
+      "title": "Update an article",
+      "description": "Update the title, summary and/or HTML content of an existing news (Article). Only the provided fields are changed.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "news_id": { "type": "integer" },
+          "title": { "type": "string" },
+          "summary": { "type": "string" },
+          "html_content": { "type": "string" }
+        },
+        "required": ["news_id"]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      },
+      "require_approval": true
+    },
+    {
+      "name": "set_news_illustration",
+      "title": "Set an article cover image",
+      "description": "Set the cover (illustration) image of a news (Article) from exactly one of: a public image URL, a base64-encoded image, or a reference to a file already attached to a platform object (attachment_object_type + attachment_object_id).",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "news_id": { "type": "integer" },
+          "image_url": { "type": "string" },
+          "image_base64": { "type": "string" },
+          "attachment_object_type": { "type": "string" },
+          "attachment_object_id": { "type": "string" },
+          "alt_text": { "type": "string" },
+          "language": { "type": "string" }
+        },
+        "required": ["news_id"]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      },
+      "require_approval": true
+    },
+    {
+      "name": "remove_news_illustration",
+      "title": "Remove an article cover image",
+      "description": "Remove the cover (illustration) image of a news (Article).",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "news_id": { "type": "integer" },
+          "language": { "type": "string" }
+        },
+        "required": ["news_id"]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false
+      },
+      "require_approval": true
     }
   ]
 }

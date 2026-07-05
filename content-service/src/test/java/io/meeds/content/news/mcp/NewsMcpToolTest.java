@@ -21,6 +21,7 @@ package io.meeds.content.news.mcp;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
@@ -43,18 +44,22 @@ import org.mockito.MockedStatic;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import org.exoplatform.commons.exception.ObjectNotFoundException;
+import org.exoplatform.commons.file.services.FileService;
 import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.container.PortalContainer;
 import org.exoplatform.portal.config.UserACL;
 import org.exoplatform.portal.config.UserPortalConfigService;
 import org.exoplatform.portal.config.model.PortalConfig;
 import org.exoplatform.services.security.Identity;
+import org.exoplatform.social.attachment.AttachmentService;
 import org.exoplatform.social.core.manager.ActivityManager;
 import org.exoplatform.social.core.manager.IdentityManager;
 import org.exoplatform.social.core.processor.I18NActivityProcessor;
 import org.exoplatform.social.core.profileproperty.ProfilePropertyService;
 import org.exoplatform.social.core.space.model.Space;
 import org.exoplatform.social.core.space.spi.SpaceService;
+import org.exoplatform.upload.UploadService;
+import org.exoplatform.wiki.service.NoteService;
 
 import io.meeds.content.news.mcp.model.NewsModel;
 import io.meeds.content.news.model.News;
@@ -64,8 +69,10 @@ import io.meeds.content.news.utils.NewsUtils.NewsObjectType;
 import io.meeds.mcp.server.tool.model.SpaceModel;
 import io.meeds.mcp.server.tool.model.UserModel;
 import io.meeds.mcp.server.tool.util.SpaceToolUtils;
+import io.meeds.mcp.server.tool.util.UploadToolUtils;
 import io.meeds.mcp.server.tool.util.UserToolUtils;
 import io.meeds.mcp.server.util.McpToolUtils;
+import io.meeds.notes.model.NoteFeaturedImage;
 import io.meeds.notes.model.NotePageProperties;
 import io.meeds.portal.permlink.service.PermanentLinkService;
 import io.meeds.social.translation.service.TranslationService;
@@ -119,6 +126,18 @@ public class NewsMcpToolTest {
   private UserPortalConfigService portalConfigService;
 
   @Mock
+  private NoteService             noteService;
+
+  @Mock
+  private UploadService           uploadService;
+
+  @Mock
+  private AttachmentService       attachmentService;
+
+  @Mock
+  private FileService             fileService;
+
+  @Mock
   private Identity                currentIdentity;
 
   private NewsMcpTool             tool;
@@ -135,6 +154,10 @@ public class NewsMcpToolTest {
     when(container.getComponentInstanceOfType(ProfilePropertyService.class)).thenReturn(profilePropertyService);
     when(container.getComponentInstanceOfType(TranslationService.class)).thenReturn(translationService);
     when(container.getComponentInstanceOfType(UserPortalConfigService.class)).thenReturn(portalConfigService);
+    when(container.getComponentInstanceOfType(NoteService.class)).thenReturn(noteService);
+    when(container.getComponentInstanceOfType(UploadService.class)).thenReturn(uploadService);
+    when(container.getComponentInstanceOfType(AttachmentService.class)).thenReturn(attachmentService);
+    when(container.getComponentInstanceOfType(FileService.class)).thenReturn(fileService);
 
     lenient().when(currentIdentity.getUserId()).thenReturn(USER);
     lenient().when(userAcl.getUserIdentity(USER)).thenReturn(currentIdentity);
@@ -380,6 +403,119 @@ public class NewsMcpToolTest {
     verify(newsService).postNews(article, USER);
   }
 
+  @Test
+  public void updateNewsShouldSetSummaryOnProperties() throws Exception { // NOSONAR
+    News news = mockNews();
+    Space space = mockSpace();
+    NotePageProperties properties = news.getProperties();
+
+    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)), eq(currentIdentity), eq(false), anyString()))
+                                                                                                           .thenReturn(news);
+    when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
+    when(newsService.canEditNews(news, USER)).thenReturn(true);
+    when(newsService.updateNews(eq(news), eq(USER), eq(false), anyBoolean(), anyString(), anyString()))
+                                                                                                       .thenReturn(news);
+
+    runWithStaticMocks(() -> tool.updateNews(NEWS_ID, null, "New summary", null));
+
+    assertEquals("New summary", properties.getSummary());
+  }
+
+  @Test
+  public void getNewsByIdShouldExposeIllustrationUrl() throws Exception { // NOSONAR
+    News news = mockNews();
+    Space space = mockSpace();
+
+    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)), eq(currentIdentity), eq(false), anyString()))
+                                                                                                           .thenReturn(news);
+    when(newsService.canViewNews(news, USER)).thenReturn(true);
+    when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
+
+    NewsModel result = runWithStaticMocks(() -> tool.getNewsById(NEWS_ID));
+
+    assertEquals("/portal/rest/notes/illustration/" + NEWS_ID, result.illustrationUrl());
+  }
+
+  @Test(expected = IllegalAccessException.class)
+  public void setNewsIllustrationWhenUserCannotEditShouldThrowException() throws Exception { // NOSONAR
+    News news = mockNews();
+    Space space = mockSpace();
+
+    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)), eq(currentIdentity), eq(false), anyString()))
+                                                                                                           .thenReturn(news);
+    when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
+    when(newsService.canEditNews(news, USER)).thenReturn(false);
+
+    tool.setNewsIllustration(NEWS_ID, "https://meeds.test/cover.png", null, null, null, "alt", "en");
+  }
+
+  @Test
+  public void setNewsIllustrationShouldSaveMetadataAndRefresh() throws Exception { // NOSONAR
+    News news = mockNews();
+    Space space = mockSpace();
+    mockUserIdentity();
+
+    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)), eq(currentIdentity), eq(false), anyString()))
+                                                                                                           .thenReturn(news);
+    when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
+    when(newsService.canEditNews(news, USER)).thenReturn(true);
+    when(newsService.updateNews(eq(news), eq(USER), eq(false), anyBoolean(), anyString(), anyString()))
+                                                                                                       .thenReturn(news);
+
+    NewsModel result = runWithUploadMocks(() -> tool.setNewsIllustration(NEWS_ID,
+                                                                         "https://meeds.test/cover.png",
+                                                                         null,
+                                                                         null,
+                                                                         null,
+                                                                         "alt",
+                                                                         "en"));
+
+    assertEquals(NEWS_ID, result.id());
+    verify(noteService).saveNoteMetadata(any(NotePageProperties.class), eq("en"), eq(1L));
+    verify(newsService).updateNews(eq(news), eq(USER), eq(false), anyBoolean(), anyString(), anyString());
+  }
+
+  @Test(expected = ObjectNotFoundException.class)
+  public void removeNewsIllustrationWhenNoCoverShouldThrowException() throws Exception { // NOSONAR
+    News news = mockNews();
+    Space space = mockSpace();
+
+    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)), eq(currentIdentity), eq(false), anyString()))
+                                                                                                           .thenReturn(news);
+    when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
+    when(newsService.canEditNews(news, USER)).thenReturn(true);
+
+    tool.removeNewsIllustration(NEWS_ID, "en");
+  }
+
+  @Test
+  public void removeNewsIllustrationShouldRemoveFeaturedImageAndRefresh() throws Exception { // NOSONAR
+    News news = mockNews();
+    news.getProperties().setFeaturedImage(new NoteFeaturedImage(500L, null, null, 0L, 0L, null, null));
+    Space space = mockSpace();
+    mockUserIdentity();
+
+    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)), eq(currentIdentity), eq(false), anyString()))
+                                                                                                           .thenReturn(news);
+    when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
+    when(newsService.canEditNews(news, USER)).thenReturn(true);
+    when(newsService.updateNews(eq(news), eq(USER), eq(false), anyBoolean(), anyString(), anyString()))
+                                                                                                       .thenReturn(news);
+
+    NewsModel result = runWithStaticMocks(() -> tool.removeNewsIllustration(NEWS_ID, "en"));
+
+    assertEquals(NEWS_ID, result.id());
+    verify(noteService).removeNoteFeaturedImage(eq(NEWS_ID), eq(500L), eq("en"), eq(false), eq(1L));
+    verify(newsService).updateNews(eq(news), eq(USER), eq(false), anyBoolean(), anyString(), anyString());
+  }
+
+  private void mockUserIdentity() {
+    org.exoplatform.social.core.identity.model.Identity socialIdentity =
+                                                                       mock(org.exoplatform.social.core.identity.model.Identity.class);
+    lenient().when(socialIdentity.getId()).thenReturn("1");
+    when(identityManager.getOrCreateUserIdentity(USER)).thenReturn(socialIdentity);
+  }
+
   private News mockNews() {
     return mockNews(String.valueOf(NEWS_ID), SPACE_ID, TITLE);
   }
@@ -403,6 +539,7 @@ public class NewsMcpToolTest {
     lenient().when(news.getViewsCount()).thenReturn(3L);
     lenient().when(news.getCommentsCount()).thenReturn(1);
     lenient().when(news.getLikesCount()).thenReturn(2);
+    lenient().when(news.getIllustrationURL()).thenReturn("/portal/rest/notes/illustration/" + id);
     return news;
   }
 
@@ -457,6 +594,23 @@ public class NewsMcpToolTest {
             .thenReturn(spaceModel);
 
       return supplier.get();
+    }
+  }
+
+  private <T> T runWithUploadMocks(CheckedSupplier<T> supplier) throws Exception { // NOSONAR
+    try (MockedStatic<UploadToolUtils> upload = mockStatic(UploadToolUtils.class)) {
+      UploadToolUtils.FetchedImage image = new UploadToolUtils.FetchedImage(new byte[] { 1, 2, 3 }, "image/png", "image.png");
+      upload.when(() -> UploadToolUtils.resolveImage(any(),
+                                                     any(),
+                                                     any(),
+                                                     any(),
+                                                     any(),
+                                                     any(),
+                                                     any(),
+                                                     anyLong()))
+            .thenReturn(image);
+      upload.when(() -> UploadToolUtils.materialize(any(), any(), anyString(), anyString())).thenReturn("upload-1");
+      return runWithStaticMocks(supplier);
     }
   }
 

@@ -29,16 +29,20 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import org.exoplatform.commons.exception.ObjectNotFoundException;
+import org.exoplatform.commons.file.services.FileService;
 import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.container.PortalContainer;
 import org.exoplatform.portal.config.UserACL;
 import org.exoplatform.portal.config.UserPortalConfigService;
+import org.exoplatform.social.attachment.AttachmentService;
 import org.exoplatform.social.core.manager.ActivityManager;
 import org.exoplatform.social.core.manager.IdentityManager;
 import org.exoplatform.social.core.processor.I18NActivityProcessor;
 import org.exoplatform.social.core.profileproperty.ProfilePropertyService;
 import org.exoplatform.social.core.space.model.Space;
 import org.exoplatform.social.core.space.spi.SpaceService;
+import org.exoplatform.upload.UploadService;
+import org.exoplatform.wiki.service.NoteService;
 
 import io.meeds.content.news.mcp.model.NewsModel;
 import io.meeds.content.news.model.News;
@@ -53,7 +57,9 @@ import io.meeds.mcp.server.tool.model.SpaceModel;
 import io.meeds.mcp.server.tool.model.UserModel;
 import io.meeds.mcp.server.tool.util.ActivityToolUtils;
 import io.meeds.mcp.server.tool.util.SpaceToolUtils;
+import io.meeds.mcp.server.tool.util.UploadToolUtils;
 import io.meeds.mcp.server.tool.util.UserToolUtils;
+import io.meeds.notes.model.NoteFeaturedImage;
 import io.meeds.notes.model.NotePageProperties;
 import io.meeds.portal.permlink.service.PermanentLinkService;
 import io.meeds.social.translation.service.TranslationService;
@@ -86,6 +92,14 @@ public class NewsMcpTool implements McpToolPlugin {
 
   private UserPortalConfigService portalConfigService;
 
+  private NoteService             noteService;
+
+  private UploadService           uploadService;
+
+  private AttachmentService       attachmentService;
+
+  private FileService             fileService;
+
   public NewsMcpTool(PortalContainer container) {
     this.spaceService = container.getComponentInstanceOfType(SpaceService.class);
     this.activityManager = container.getComponentInstanceOfType(ActivityManager.class);
@@ -97,6 +111,10 @@ public class NewsMcpTool implements McpToolPlugin {
     this.profilePropertyService = container.getComponentInstanceOfType(ProfilePropertyService.class);
     this.translationService = container.getComponentInstanceOfType(TranslationService.class);
     this.portalConfigService = container.getComponentInstanceOfType(UserPortalConfigService.class);
+    this.noteService = container.getComponentInstanceOfType(NoteService.class);
+    this.uploadService = container.getComponentInstanceOfType(UploadService.class);
+    this.attachmentService = container.getComponentInstanceOfType(AttachmentService.class);
+    this.fileService = container.getComponentInstanceOfType(FileService.class);
   }
 
   @SneakyThrows
@@ -348,6 +366,147 @@ public class NewsMcpTool implements McpToolPlugin {
     return toNewsModel(news, space);
   }
 
+  // Sets a news (article) cover / illustration from exactly one of a public
+  // http(s) URL, base64 bytes, or an ACL-checked reference to an existing
+  // platform attachment. The cover is shared with the backing note's featured
+  // image, so it is written onto the article note's metadata and then the news
+  // lifecycle is refreshed (search re-index + linked activity thumbnail).
+  @SneakyThrows
+  public NewsModel setNewsIllustration(long newsId,
+                                       String imageUrl,
+                                       String imageBase64,
+                                       String attachmentObjectType,
+                                       String attachmentObjectId,
+                                       String altText,
+                                       String language) {
+    checkNewsId(newsId);
+    String currentUsername = getCurrentUserName();
+    org.exoplatform.services.security.Identity currentIdentity = userAcl.getUserIdentity(currentUsername);
+    News news = newsService.getNewsById(String.valueOf(newsId),
+                                        currentIdentity,
+                                        false,
+                                        NewsObjectType.ARTICLE.name().toLowerCase());
+    if (news == null) {
+      throw new ObjectNotFoundException("""
+          News with id '%s' wasn't found.
+          Use 'search_news' Tool to find News details by a search term.
+          """.formatted(newsId));
+    }
+    Space space = spaceService.getSpaceById(news.getSpaceId());
+    if (space == null) {
+      throw new ObjectNotFoundException("""
+          News with id '%s' doesn't have an associated space.
+          """.formatted(newsId));
+    }
+    if (!newsService.canEditNews(news, currentUsername)) {
+      throw new IllegalAccessException("""
+          The current user doesn't have priviledges to update the news with id '%s'.
+          """.formatted(newsId));
+    }
+    UploadToolUtils.FetchedImage image = UploadToolUtils.resolveImage(attachmentService,
+                                                                      fileService,
+                                                                      getCurrentUserAclIdentity(),
+                                                                      imageUrl,
+                                                                      imageBase64,
+                                                                      attachmentObjectType,
+                                                                      attachmentObjectId,
+                                                                      UploadToolUtils.DEFAULT_MAX_BYTES);
+    String uploadId = UploadToolUtils.materialize(uploadService, image.bytes(), image.fileName(), image.mimeType());
+    // for a published article news_id == the note page id; a draft/staged article
+    // points at its target page id
+    long pageId = news.getTargetPageId() != null ? Long.parseLong(news.getTargetPageId()) : newsId;
+    boolean isDraft = news.getTargetPageId() != null;
+    try {
+      NotePageProperties properties = news.getProperties() != null ? news.getProperties() : new NotePageProperties();
+      NoteFeaturedImage featuredImage = new NoteFeaturedImage();
+      NoteFeaturedImage existing = properties.getFeaturedImage();
+      if (existing != null && existing.getId() != null && existing.getId() > 0) {
+        featuredImage.setId(existing.getId()); // update the existing cover file in place
+      }
+      featuredImage.setUploadId(uploadId);
+      featuredImage.setMimeType(image.mimeType());
+      featuredImage.setFileName(image.fileName());
+      featuredImage.setAltText(altText);
+      properties.setNoteId(pageId);
+      properties.setDraft(isDraft);
+      properties.setFeaturedImage(featuredImage);
+      String lang = StringUtils.isBlank(language) ? news.getLang() : language;
+      noteService.saveNoteMetadata(properties, lang, getUserIdentityId(currentUsername));
+    } catch (Exception e) {
+      UploadToolUtils.release(uploadService, uploadId);
+      throw new IllegalStateException("Could not set the news cover image: " + e.getMessage());
+    }
+    return refreshAndModel(newsId, currentIdentity, space);
+  }
+
+  // Removes a news (article) cover / illustration. Mirrors the note featured
+  // image removal, then refreshes the news lifecycle.
+  @SneakyThrows
+  public NewsModel removeNewsIllustration(long newsId, String language) {
+    checkNewsId(newsId);
+    String currentUsername = getCurrentUserName();
+    org.exoplatform.services.security.Identity currentIdentity = userAcl.getUserIdentity(currentUsername);
+    News news = newsService.getNewsById(String.valueOf(newsId),
+                                        currentIdentity,
+                                        false,
+                                        NewsObjectType.ARTICLE.name().toLowerCase());
+    if (news == null) {
+      throw new ObjectNotFoundException("""
+          News with id '%s' wasn't found.
+          Use 'search_news' Tool to find News details by a search term.
+          """.formatted(newsId));
+    }
+    Space space = spaceService.getSpaceById(news.getSpaceId());
+    if (space == null) {
+      throw new ObjectNotFoundException("""
+          News with id '%s' doesn't have an associated space.
+          """.formatted(newsId));
+    }
+    if (!newsService.canEditNews(news, currentUsername)) {
+      throw new IllegalAccessException("""
+          The current user doesn't have priviledges to update the news with id '%s'.
+          """.formatted(newsId));
+    }
+    NotePageProperties properties = news.getProperties();
+    NoteFeaturedImage existing = properties == null ? null : properties.getFeaturedImage();
+    if (existing == null || existing.getId() == null || existing.getId() <= 0) {
+      throw new ObjectNotFoundException("News with id '%s' has no cover image to remove.".formatted(newsId));
+    }
+    long pageId = news.getTargetPageId() != null ? Long.parseLong(news.getTargetPageId()) : newsId;
+    boolean isDraft = news.getTargetPageId() != null;
+    try {
+      String lang = StringUtils.isBlank(language) ? news.getLang() : language;
+      noteService.removeNoteFeaturedImage(pageId, existing.getId(), lang, isDraft, getUserIdentityId(currentUsername));
+    } catch (Exception e) {
+      throw new IllegalStateException("Could not remove the news cover image: " + e.getMessage());
+    }
+    return refreshAndModel(newsId, currentIdentity, space);
+  }
+
+  // Refreshes the news lifecycle after a cover metadata change (re-index +
+  // linked activity thumbnail + illustrationURL recompute) by going through the
+  // same NewsService#updateNews path the native editor uses, then returns the
+  // up-to-date model.
+  private NewsModel refreshAndModel(long newsId,
+                                    org.exoplatform.services.security.Identity currentIdentity,
+                                    Space space) throws Exception {
+    News refreshed = newsService.getNewsById(String.valueOf(newsId),
+                                             currentIdentity,
+                                             false,
+                                             NewsObjectType.ARTICLE.name().toLowerCase());
+    News updated = newsService.updateNews(refreshed,
+                                          currentIdentity.getUserId(),
+                                          false,
+                                          refreshed.isPublished(),
+                                          NewsObjectType.ARTICLE.name().toLowerCase(),
+                                          NewsUpdateType.CONTENT_AND_TITLE.name());
+    return toNewsModel(updated, space);
+  }
+
+  private long getUserIdentityId(String username) {
+    return Long.parseLong(identityManager.getOrCreateUserIdentity(username).getId());
+  }
+
   private void checkNewsId(long newsId) {
     if (newsId <= 0) {
       throw new IllegalArgumentException("""
@@ -394,7 +553,8 @@ public class NewsMcpTool implements McpToolPlugin {
                          news.isActivityPosted(),
                          getActivityId(news),
                          publisherUser,
-                         targetSpace);
+                         targetSpace,
+                         news.getIllustrationURL());
   }
 
   private long getActivityId(News news) {
