@@ -21,6 +21,7 @@
 <template>
   <div v-if="news">
     <div
+      ref="pdfContent"
       class="newsDetails-description">
       <div
         class="newsDetails-header">
@@ -143,6 +144,7 @@
           :class="{ 'd-flex align-start': !mdAndDown }">
           <extension-registry-components
             v-if="mdAndDown"
+            v-show="!hideElementsForSavingPDF"
             :params="contentDetailsExtensionsParams"
             name="ContentDetails"
             type="content-event-detail"
@@ -155,6 +157,7 @@
           </div>
           <extension-registry-components
             v-if="!mdAndDown"
+            v-show="!hideElementsForSavingPDF"
             :params="contentDetailsExtensionsParams"
             name="ContentDetails"
             type="content-event-detail"
@@ -163,6 +166,7 @@
             class="position-sticky t-1 d-flex mt-8 ms-auto" />
         </div>
         <extension-registry-components
+          v-show="!hideElementsForSavingPDF"
           name="NewsDetailsFooter"
           type="content-details-extension"
           :params="{
@@ -178,6 +182,9 @@
 </template>
 
 <script>
+import html2canvas from 'html2canvas';
+import JSPDF from 'jspdf';
+
 export default {
   props: {
     news: {
@@ -216,6 +223,7 @@ export default {
     newsTitleContent: null,
     newsSummaryContent: null,
     newsBodyContent: null,
+    hideElementsForSavingPDF: false,
   }),
   created() {
     this.setNewsTitle(this.news?.title);
@@ -327,6 +335,63 @@ export default {
     },
     setNewsContent(translation) {
       this.newsBodyContent = translation;
+    },
+    // NOTE: This client-side PDF export intentionally duplicates the notes
+    // webapp logic (NotePage.vue createPDF). It cannot be shared today: the
+    // only light notes shared modules newsDetails depends on (NotesTreeview /
+    // NotesPublication) are side-effect component-registration AMD modules
+    // that export nothing, so exposing a shared createPdfFromElement() helper
+    // would require restructuring + rebuilding + redeploying the shipped notes
+    // webapp (out of scope here). Unify into a shared util when such a helper
+    // becomes importable by both webapps. See EXO-88356.
+    createPDF() {
+      // Hide the extension-registry columns/footer so html2canvas captures
+      // only the cover banner + title + article body (matching the note PDF).
+      this.hideElementsForSavingPDF = true;
+      window.setTimeout(() => {
+        this.$nextTick(() => {
+          const element = this.$refs.pdfContent;
+          if (!element) {
+            this.hideElementsForSavingPDF = false;
+            return;
+          }
+          const title = this.newsTitle || this.news?.title || 'article';
+          html2canvas(element, {
+            useCORS: true
+          }).then(canvas => {
+            const pdf = new JSPDF('p', 'mm', 'a4');
+            const ctx = canvas.getContext('2d');
+            const a4w = 170;
+            const a4h = 257;
+            const imgHeight = Math.floor(a4h * canvas.width / a4w);
+            let renderedHeight = 0;
+
+            while (renderedHeight < canvas.height) {
+              const page = document.createElement('canvas');
+              page.width = canvas.width;
+              page.height = Math.min(imgHeight, canvas.height - renderedHeight);
+
+              page.getContext('2d').putImageData(ctx.getImageData(0, renderedHeight, canvas.width, Math.min(imgHeight, canvas.height - renderedHeight)), 0, 0);
+              pdf.addImage(page.toDataURL('image/jpeg', 1.0), 'JPEG', 10, 10, a4w, Math.min(a4h, a4w * page.height / page.width));
+              renderedHeight += imgHeight;
+              if (renderedHeight < canvas.height) {
+                pdf.addPage();
+              }
+            }
+            pdf.save(`${title}.pdf`);
+          }).catch(e => {
+            document.dispatchEvent(new CustomEvent('alert-message', {
+              detail: {
+                alertType: 'error',
+                alertMessage: this.$t('news.details.header.menu.exportPdf.error')
+              }
+            }));
+            console.error('Error when exporting article to PDF: ', e);
+          }).finally(() => {
+            this.hideElementsForSavingPDF = false;
+          });
+        });
+      }, 200);
     },
   }
 };
