@@ -40,6 +40,7 @@
         @export-pdf="createPDF"
         @open-publication-drawer="openPublicationDrawer" />
       <exo-news-details-body
+        ref="newsBody"
         :current-user="currentUser"
         :news="localNews"
         :translations="translations"
@@ -81,8 +82,6 @@
   </div>
 </template>
 <script>
-import html2canvas from 'html2canvas';
-import JSPDF from 'jspdf';
 
 const USER_TIMEZONE_ID = new window.Intl.DateTimeFormat().resolvedOptions().timeZone;
 export default {
@@ -277,41 +276,9 @@ export default {
       this.$refs?.publicationDrawer?.open(this.localNews);
     },
     createPDF() {
-      const element = this.$el.querySelector('.rich-editor-content');
-      if (!element) {
-        return;
-      }
-      const title = this.localNews?.title || 'article';
-      html2canvas(element, {
-        useCORS: true
-      }).then(function (canvas) {
-        const pdf = new JSPDF('p', 'mm', 'a4');
-        const ctx = canvas.getContext('2d');
-        const a4w = 170;
-        const a4h = 257;
-        const imgHeight = Math.floor(a4h * canvas.width / a4w);
-        let renderedHeight = 0;
-
-        while (renderedHeight < canvas.height) {
-          const page = document.createElement('canvas');
-          page.width = canvas.width;
-          page.height = Math.min(imgHeight, canvas.height - renderedHeight);
-
-          page.getContext('2d').putImageData(ctx.getImageData(0, renderedHeight, canvas.width, Math.min(imgHeight, canvas.height - renderedHeight)), 0, 0);
-          pdf.addImage(page.toDataURL('image/jpeg', 1.0), 'JPEG', 10, 10, a4w, Math.min(a4h, a4w * page.height / page.width));
-          renderedHeight += imgHeight;
-          if (renderedHeight < canvas.height) {
-            pdf.addPage();
-          }
-        }
-        pdf.save(`${title}.pdf`);
-      }).catch(e => {
-        this.displayMessage({
-          type: 'error',
-          message: this.$t('news.details.header.menu.exportPdf.error')
-        });
-        console.error('Error when exporting article: ', e);
-      });
+      // The capture target (cover + title + body) is owned by the body
+      // component, so the export lives there; just delegate to it.
+      this.$refs.newsBody?.createPDF();
     },
     getArticlePage() {
       return this.$newsServices.getArticlePage(this.localNews?.id || this.newsId).then((page) => {
