@@ -371,6 +371,9 @@
       <path>/js/newsDetails.bundle.js</path>
     </script>
     <depends>
+      <module>NotesRichEditor</module>
+    </depends>
+    <depends>
       <module>NotesPublication</module>
     </depends>
     <depends>

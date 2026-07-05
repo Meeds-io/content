@@ -38,6 +38,7 @@
         @delete-article="deleteConfirmDialog"
         @edit-article="editLink"
         @export-pdf="createPDF"
+        @open-properties="openProperties"
         @open-publication-drawer="openPublicationDrawer" />
       <exo-news-details-body
         ref="newsBody"
@@ -70,7 +71,12 @@
       :news="localNews"
       @edit-article="editLink"
       @export-pdf="createPDF"
+      @open-properties="openProperties"
       @delete-article="deleteConfirmDialog" />
+    <note-editor-metadata-drawer
+      ref="metadataDrawer"
+      :has-featured-image="!!localNews?.illustrationURL"
+      @metadata-updated="saveMetadata" />
     <note-treeview-drawer
       :settings="{
         saveButtonLabel: $t('content.article.refer.label'),
@@ -279,6 +285,20 @@ export default {
       // The capture target (cover + title + body) is owned by the body
       // component, so the export lives there; just delegate to it.
       this.$refs.newsBody?.createPDF();
+    },
+    openProperties() {
+      this.$refs.metadataDrawer.open(this.localNews);
+    },
+    saveMetadata(properties) {
+      if (!properties) {
+        return;
+      }
+      this.$newsServices.updateArticleMetadataProperties(this.localNews.id, properties)
+        .then(() => this.getNewsById(this.localNews?.id || this.newsId))
+        .catch(() => this.displayMessage({
+          message: this.$t('news.details.header.menu.properties.error'),
+          type: 'error'
+        }));
     },
     getArticlePage() {
       return this.$newsServices.getArticlePage(this.localNews?.id || this.newsId).then((page) => {
