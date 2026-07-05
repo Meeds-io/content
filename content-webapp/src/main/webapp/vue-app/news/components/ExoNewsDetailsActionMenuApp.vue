@@ -53,6 +53,7 @@
       :show-share-button="showShareButton"
       :show-refer-button="showReferButton"
       @copy-link="copyLink"
+      @export-pdf="$emit('export-pdf')"
       @edit-article="$emit('edit-article', news)"
       @delete-article="$emit('delete-article')" />
   </v-menu>

@@ -43,6 +43,7 @@
       :show-copy-link-button="showCopyLinkButton"
       :show-refer-button="showReferButton"
       @delete-article="$emit('delete-article')"
+      @export-pdf="$emit('export-pdf')"
       @edit-article="$emit('edit-article')" />
     <v-btn
       v-if="publicationState === 'staged'"

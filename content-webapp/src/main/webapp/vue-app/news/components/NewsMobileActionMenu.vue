@@ -35,6 +35,7 @@
         :show-share-button="showShareButton"
         :show-refer-button="showReferButton"
         @copy-link="copyLink"
+        @export-pdf="exportPdf"
         @edit-article="$emit('edit-article', news)"
         @delete-article="$emit('delete-article', news)" />
     </template>
@@ -83,6 +84,10 @@ export default {
     },
     close() {
       this.$refs.newsMobileActionMenu.close();
+    },
+    exportPdf() {
+      this.close();
+      this.$emit('export-pdf');
     },
     copyLink() {
       const portalName = eXo.env.portal.metaPortalName;
