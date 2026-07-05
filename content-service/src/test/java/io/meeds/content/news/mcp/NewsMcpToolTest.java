@@ -24,6 +24,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -220,7 +221,7 @@ public class NewsMcpToolTest {
 
   @Test(expected = IllegalArgumentException.class)
   public void updateNewsWhenNewsIdInvalidShouldThrowException() throws Exception { // NOSONAR
-    tool.updateNews(0, TITLE, SUMMARY, CONTENT);
+    tool.updateNews(0, TITLE, SUMMARY, CONTENT, "en");
   }
 
   @Test(expected = ObjectNotFoundException.class)
@@ -228,10 +229,10 @@ public class NewsMcpToolTest {
     when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)),
                                  eq(currentIdentity),
                                  eq(false),
-                                 eq(NewsObjectType.LATEST_DRAFT.name().toLowerCase())))
-                                                                                       .thenReturn(null);
+                                 eq(NewsObjectType.ARTICLE.name().toLowerCase())))
+                                                                                  .thenReturn(null);
 
-    tool.updateNews(NEWS_ID, TITLE, SUMMARY, CONTENT);
+    tool.updateNews(NEWS_ID, TITLE, SUMMARY, CONTENT, "en");
   }
 
   @Test(expected = IllegalAccessException.class)
@@ -244,13 +245,14 @@ public class NewsMcpToolTest {
     when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
     when(newsService.canEditNews(news, USER)).thenReturn(false);
 
-    tool.updateNews(NEWS_ID, TITLE, SUMMARY, CONTENT);
+    tool.updateNews(NEWS_ID, TITLE, SUMMARY, CONTENT, "en");
   }
 
   @Test
   public void updateNewsShouldUpdateTitleSummaryAndContent() throws Exception { // NOSONAR
     News news = mockNews();
     Space space = mockSpace();
+    mockUserIdentity();
 
     when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)), eq(currentIdentity), eq(false), anyString()))
                                                                                                            .thenReturn(news);
@@ -259,12 +261,16 @@ public class NewsMcpToolTest {
     when(newsService.updateNews(eq(news), eq(USER), eq(false), anyBoolean(), anyString(), anyString()))
                                                                                                        .thenReturn(news);
 
-    NewsModel result = runWithStaticMocks(() -> tool.updateNews(NEWS_ID, "Updated", "Updated summary", "Updated content"));
+    NewsModel result = runWithStaticMocks(() -> tool.updateNews(NEWS_ID, "Updated", "Updated summary", "Updated content", "en"));
 
     assertEquals(NEWS_ID, result.id());
     verify(news).setTitle("Updated");
     verify(news).setBody("<p>Updated content</p>");
-    verify(newsService).updateNews(eq(news), eq(USER), eq(false), anyBoolean(), anyString(), anyString());
+    // title/body persisted via CONTENT_AND_TITLE, then the article is refreshed
+    verify(newsService, atLeastOnce()).updateNews(eq(news), eq(USER), eq(false), anyBoolean(), anyString(), anyString());
+    // summary persisted as note metadata (not via CONTENT_AND_TITLE)
+    verify(noteService).saveNoteMetadata(any(NotePageProperties.class), eq("en"), eq(1L));
+    assertEquals("Updated summary", news.getProperties().getSummary());
   }
 
   @Test(expected = ObjectNotFoundException.class)
@@ -407,6 +413,7 @@ public class NewsMcpToolTest {
   public void updateNewsShouldSetSummaryOnProperties() throws Exception { // NOSONAR
     News news = mockNews();
     Space space = mockSpace();
+    mockUserIdentity();
     NotePageProperties properties = news.getProperties();
 
     when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)), eq(currentIdentity), eq(false), anyString()))
@@ -416,9 +423,54 @@ public class NewsMcpToolTest {
     when(newsService.updateNews(eq(news), eq(USER), eq(false), anyBoolean(), anyString(), anyString()))
                                                                                                        .thenReturn(news);
 
-    runWithStaticMocks(() -> tool.updateNews(NEWS_ID, null, "New summary", null));
+    runWithStaticMocks(() -> tool.updateNews(NEWS_ID, null, "New summary", null, "en"));
 
     assertEquals("New summary", properties.getSummary());
+    // summary persisted via the metadata-aware path, not CONTENT_AND_TITLE
+    verify(noteService).saveNoteMetadata(eq(properties), eq("en"), eq(1L));
+  }
+
+  @Test
+  public void updateNewsShouldPreserveFeaturedImageWhenUpdatingSummary() throws Exception { // NOSONAR
+    News news = mockNews();
+    Space space = mockSpace();
+    mockUserIdentity();
+    NotePageProperties properties = news.getProperties();
+    NoteFeaturedImage cover = new NoteFeaturedImage(500L, null, null, 0L, 0L, null, null);
+    properties.setFeaturedImage(cover);
+
+    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)), eq(currentIdentity), eq(false), anyString()))
+                                                                                                           .thenReturn(news);
+    when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
+    when(newsService.canEditNews(news, USER)).thenReturn(true);
+    when(newsService.updateNews(eq(news), eq(USER), eq(false), anyBoolean(), anyString(), anyString()))
+                                                                                                       .thenReturn(news);
+
+    runWithStaticMocks(() -> tool.updateNews(NEWS_ID, null, "New summary", null, "en"));
+
+    // the cover image is not wiped when only the summary is updated
+    assertEquals(cover, properties.getFeaturedImage());
+    verify(noteService).saveNoteMetadata(eq(properties), eq("en"), eq(1L));
+  }
+
+  @Test
+  public void updateNewsShouldUseArticleLanguageWhenLanguageBlank() throws Exception { // NOSONAR
+    News news = mockNews();
+    Space space = mockSpace();
+    mockUserIdentity();
+    lenient().when(news.getLang()).thenReturn("fr");
+
+    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)), eq(currentIdentity), eq(false), anyString()))
+                                                                                                           .thenReturn(news);
+    when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
+    when(newsService.canEditNews(news, USER)).thenReturn(true);
+    when(newsService.updateNews(eq(news), eq(USER), eq(false), anyBoolean(), anyString(), anyString()))
+                                                                                                       .thenReturn(news);
+
+    runWithStaticMocks(() -> tool.updateNews(NEWS_ID, null, "New summary", null, null));
+
+    // blank language falls back to the article's default language
+    verify(noteService).saveNoteMetadata(any(NotePageProperties.class), eq("fr"), eq(1L));
   }
 
   @Test

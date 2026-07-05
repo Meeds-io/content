@@ -122,14 +122,15 @@
     {
       "name": "update_news",
       "title": "Update an article",
-      "description": "Update the title, summary and/or HTML content of an existing news (Article). Only the provided fields are changed.",
+      "description": "Update the title, summary and/or HTML content of an existing news (Article). Only the provided fields are changed. The optional 'language' targets the summary translation to update (defaults to the article's default language).",
       "input_schema": {
         "type": "object",
         "properties": {
           "news_id": { "type": "integer" },
           "title": { "type": "string" },
           "summary": { "type": "string" },
-          "html_content": { "type": "string" }
+          "html_content": { "type": "string" },
+          "language": { "type": "string" }
         },
         "required": ["news_id"]
       },

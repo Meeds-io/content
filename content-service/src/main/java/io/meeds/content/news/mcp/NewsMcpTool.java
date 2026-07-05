@@ -225,19 +225,26 @@ public class NewsMcpTool implements McpToolPlugin {
     return toNewsModel(news, space);
   }
 
+  // Updates a news (article) title, body and/or summary. Only the provided
+  // fields are changed. Title/body go through NewsService#updateNews
+  // (CONTENT_AND_TITLE) as before; the summary lives in the note metadata, so it
+  // is persisted the same way as the cover image (NoteService#saveNoteMetadata,
+  // language-aware), based on the loaded properties so the existing featured
+  // image (cover) is preserved. The article is then refreshed (re-index +
+  // recompute) so the new summary lands on the live article.
   @SneakyThrows
   public NewsModel updateNews(long newsId,
                               String title,
                               String summary,
-                              String htmlContent) {
+                              String htmlContent,
+                              String language) {
     checkNewsId(newsId);
     String currentUsername = getCurrentUserName();
     org.exoplatform.services.security.Identity currentIdentity = userAcl.getUserIdentity(currentUsername);
     News news = newsService.getNewsById(String.valueOf(newsId),
                                         currentIdentity,
                                         false,
-                                        NewsObjectType.LATEST_DRAFT.name()
-                                                                   .toLowerCase());
+                                        NewsObjectType.ARTICLE.name().toLowerCase());
     if (news == null) {
       throw new ObjectNotFoundException("""
           News with id '%s' doesn't exist. Use 'search_news' to search for a news bi title, summary or content.
@@ -254,22 +261,44 @@ public class NewsMcpTool implements McpToolPlugin {
           The current user doesn't have priviledges to update the news with id '%s'.
           """.formatted(space.getDisplayName(), space.getSpaceId()));
     }
+    boolean titleOrContentChanged = false;
     if (StringUtils.isNotBlank(title)) {
       news.setTitle(title);
+      titleOrContentChanged = true;
     }
     if (StringUtils.isNotBlank(htmlContent)) {
       news.setBody(markdownToHtml(htmlContent));
+      titleOrContentChanged = true;
     }
+    // Persist title/body first (CONTENT_AND_TITLE ignores metadata, so it never
+    // touches the summary).
+    if (titleOrContentChanged) {
+      newsService.updateNews(news,
+                             currentIdentity.getUserId(),
+                             false,
+                             news.isPublished(),
+                             NewsObjectType.ARTICLE.name().toLowerCase(),
+                             NewsUpdateType.CONTENT_AND_TITLE.name());
+    }
+    // The summary is stored in the note metadata, which NewsUpdateType.* never
+    // writes; persist it the same way the cover image is persisted, basing the
+    // write on the loaded properties so the current featured image is preserved.
     if (StringUtils.isNotBlank(summary)) {
-      news.getProperties().setSummary(summary);
+      NotePageProperties properties = news.getProperties() != null ? news.getProperties() : new NotePageProperties();
+      properties.setSummary(summary);
+      // for a published article news_id == the note page id; a draft/staged
+      // article points at its target page id
+      long pageId = news.getTargetPageId() != null ? Long.parseLong(news.getTargetPageId()) : newsId;
+      boolean isDraft = news.getTargetPageId() != null;
+      properties.setNoteId(pageId);
+      properties.setDraft(isDraft);
+      String lang = StringUtils.isBlank(language) ? news.getLang() : language;
+      noteService.saveNoteMetadata(properties, lang, getUserIdentityId(currentUsername));
     }
-    News updatedNews = newsService.updateNews(news,
-                                              currentIdentity.getUserId(),
-                                              false,
-                                              news.isPublished(),
-                                              NewsObjectType.LATEST_DRAFT.name().toLowerCase(),
-                                              NewsUpdateType.CONTENT_AND_TITLE.name());
-    return toNewsModel(updatedNews, space);
+    // Refresh the news lifecycle (re-index + recompute) so the metadata summary
+    // lands on the live article; CONTENT_AND_TITLE ignores metadata, so the
+    // just-saved summary is not reverted.
+    return refreshAndModel(newsId, currentIdentity, space);
   }
 
   @SneakyThrows
