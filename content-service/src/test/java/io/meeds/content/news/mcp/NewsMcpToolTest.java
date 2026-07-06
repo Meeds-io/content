@@ -19,8 +19,11 @@
 package io.meeds.content.news.mcp;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -28,6 +31,7 @@ import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -35,6 +39,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.TimeZone;
 
 import org.junit.Before;
@@ -63,9 +68,12 @@ import org.exoplatform.upload.UploadService;
 import org.exoplatform.wiki.service.NoteService;
 
 import io.meeds.content.news.mcp.model.NewsModel;
+import io.meeds.content.news.mcp.model.NewsTargetModel;
 import io.meeds.content.news.model.News;
 import io.meeds.content.news.model.filter.NewsFilter;
+import io.meeds.content.news.rest.model.NewsTargetingEntity;
 import io.meeds.content.news.service.NewsService;
+import io.meeds.content.news.service.NewsTargetingService;
 import io.meeds.content.news.utils.NewsUtils.NewsObjectType;
 import io.meeds.mcp.server.tool.model.SpaceModel;
 import io.meeds.mcp.server.tool.model.UserModel;
@@ -139,6 +147,9 @@ public class NewsMcpToolTest {
   private FileService             fileService;
 
   @Mock
+  private NewsTargetingService    newsTargetingService;
+
+  @Mock
   private Identity                currentIdentity;
 
   private NewsMcpTool             tool;
@@ -159,6 +170,7 @@ public class NewsMcpToolTest {
     when(container.getComponentInstanceOfType(UploadService.class)).thenReturn(uploadService);
     when(container.getComponentInstanceOfType(AttachmentService.class)).thenReturn(attachmentService);
     when(container.getComponentInstanceOfType(FileService.class)).thenReturn(fileService);
+    when(container.getComponentInstanceOfType(NewsTargetingService.class)).thenReturn(newsTargetingService);
 
     lenient().when(currentIdentity.getUserId()).thenReturn(USER);
     lenient().when(userAcl.getUserIdentity(USER)).thenReturn(currentIdentity);
@@ -407,6 +419,171 @@ public class NewsMcpToolTest {
     verify(article).setPublisher(USER);
     verify(article).setTitle("Draft title");
     verify(newsService).postNews(article, USER);
+  }
+
+  @Test
+  public void listNewsTargetsShouldReturnTargetsWithCanPublishFlag() throws Exception { // NOSONAR
+    NewsTargetingEntity slider = mockTarget("slider", "Homepage slider");
+    NewsTargetingEntity latest = mockTarget("latestNews", "Latest news");
+
+    when(newsTargetingService.getAllTargets()).thenReturn(List.of(slider, latest));
+    when(newsTargetingService.getAllowedTargets(currentIdentity)).thenReturn(List.of(slider));
+
+    List<NewsTargetModel> result = tool.listNewsTargets();
+
+    assertEquals(2, result.size());
+    NewsTargetModel sliderModel = result.stream().filter(t -> "slider".equals(t.name())).findFirst().orElseThrow();
+    NewsTargetModel latestModel = result.stream().filter(t -> "latestNews".equals(t.name())).findFirst().orElseThrow();
+    assertEquals("Homepage slider", sliderModel.label());
+    assertTrue(sliderModel.canPublish());
+    assertFalse(latestModel.canPublish());
+  }
+
+  @Test(expected = IllegalAccessException.class)
+  public void publishNewsWhenUserCannotPublishShouldThrowAccessException() throws Exception { // NOSONAR
+    News news = mockNews();
+    Space space = mockSpace();
+
+    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)),
+                                 eq(currentIdentity),
+                                 eq(false),
+                                 eq(NewsObjectType.ARTICLE.name().toLowerCase()))).thenReturn(news);
+    when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
+    when(spaceService.canPublishOnSpace(space, USER)).thenReturn(false);
+
+    tool.publishNews(NEWS_ID, List.of("slider"));
+  }
+
+  @Test
+  public void publishNewsWithTargetsShouldCallSaveNewsTarget() throws Exception { // NOSONAR
+    News news = mockNews();
+    Space space = mockSpace();
+
+    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)),
+                                 eq(currentIdentity),
+                                 eq(false),
+                                 eq(NewsObjectType.ARTICLE.name().toLowerCase()))).thenReturn(news);
+    when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
+    when(spaceService.canPublishOnSpace(space, USER)).thenReturn(true);
+
+    List<String> targets = List.of("slider", "latestNews");
+    NewsModel result = runWithStaticMocks(() -> tool.publishNews(NEWS_ID, targets));
+
+    assertEquals(NEWS_ID, result.id());
+    verify(newsTargetingService).saveNewsTarget(news, true, targets, USER);
+    verify(newsService, never()).postNews(any(News.class), anyString());
+  }
+
+  @Test
+  public void publishNewsWithEmptyTargetsShouldFallBackToStreamPublish() throws Exception { // NOSONAR
+    News article = mockNews();
+    Space space = mockSpace();
+
+    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)),
+                                 eq(currentIdentity),
+                                 eq(false),
+                                 eq(NewsObjectType.ARTICLE.name().toLowerCase()))).thenReturn(article);
+    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)),
+                                 eq(currentIdentity),
+                                 eq(false),
+                                 eq(NewsObjectType.LATEST_DRAFT.name().toLowerCase()))).thenReturn(null);
+    when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
+    when(spaceService.canPublishOnSpace(space, USER)).thenReturn(true);
+    when(newsService.updateNews(eq(article), eq(USER), eq(true), anyBoolean(), anyString(), anyString()))
+                                                                                                         .thenReturn(article);
+
+    runWithStaticMocks(() -> tool.publishNews(NEWS_ID, Collections.emptyList()));
+
+    verify(newsService).postNews(article, USER);
+    verify(newsTargetingService, never()).saveNewsTarget(any(News.class), anyBoolean(), anyList(), anyString());
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void scheduleNewsWhenPublishDateBlankShouldThrowException() throws Exception { // NOSONAR
+    tool.scheduleNews(NEWS_ID, " ", null);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void scheduleNewsWhenPublishDateInvalidShouldThrowException() throws Exception { // NOSONAR
+    tool.scheduleNews(NEWS_ID, "not-a-date", null);
+  }
+
+  @Test
+  public void scheduleNewsShouldSetScheduleDateAndCallService() throws Exception { // NOSONAR
+    News news = mockNews();
+    Space space = mockSpace();
+
+    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)),
+                                 eq(currentIdentity),
+                                 eq(false),
+                                 eq(NewsObjectType.ARTICLE.name().toLowerCase()))).thenReturn(news);
+    when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
+    when(newsService.canScheduleNews(String.valueOf(SPACE_ID), currentIdentity, news)).thenReturn(true);
+    when(newsService.scheduleNews(eq(news), eq(currentIdentity), eq(NewsObjectType.ARTICLE.name()))).thenReturn(news);
+
+    List<String> targets = List.of("slider");
+    NewsModel result = runWithStaticMocks(() -> tool.scheduleNews(NEWS_ID, "2026-07-10T09:00:00Z", targets));
+
+    assertEquals(NEWS_ID, result.id());
+    verify(news).setSchedulePostDate("2026-07-10T09:00:00Z");
+    verify(news).setPublicationState(NewsService.STAGED);
+    verify(newsService).scheduleNews(news, currentIdentity, NewsObjectType.ARTICLE.name());
+    verify(newsTargetingService).saveNewsTarget(news, false, targets, USER);
+  }
+
+  @Test(expected = IllegalAccessException.class)
+  public void scheduleNewsWhenUserCannotScheduleShouldThrowException() throws Exception { // NOSONAR
+    News news = mockNews();
+    Space space = mockSpace();
+
+    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)),
+                                 eq(currentIdentity),
+                                 eq(false),
+                                 eq(NewsObjectType.ARTICLE.name().toLowerCase()))).thenReturn(news);
+    when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
+    when(newsService.canScheduleNews(String.valueOf(SPACE_ID), currentIdentity, news)).thenReturn(false);
+
+    tool.scheduleNews(NEWS_ID, "2026-07-10T09:00:00Z", null);
+  }
+
+  @Test
+  public void unpublishNewsShouldCallService() throws Exception { // NOSONAR
+    News news = mockNews();
+    Space space = mockSpace();
+
+    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)),
+                                 eq(currentIdentity),
+                                 eq(false),
+                                 eq(NewsObjectType.ARTICLE.name().toLowerCase()))).thenReturn(news);
+    when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
+    when(spaceService.canPublishOnSpace(space, USER)).thenReturn(true);
+
+    NewsModel result = runWithStaticMocks(() -> tool.unpublishNews(NEWS_ID));
+
+    assertEquals(NEWS_ID, result.id());
+    verify(newsService).unpublishNews(String.valueOf(NEWS_ID), USER, false);
+  }
+
+  @Test(expected = IllegalAccessException.class)
+  public void unpublishNewsWhenUserCannotPublishShouldThrowException() throws Exception { // NOSONAR
+    News news = mockNews();
+    Space space = mockSpace();
+
+    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)),
+                                 eq(currentIdentity),
+                                 eq(false),
+                                 eq(NewsObjectType.ARTICLE.name().toLowerCase()))).thenReturn(news);
+    when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
+    when(spaceService.canPublishOnSpace(space, USER)).thenReturn(false);
+
+    tool.unpublishNews(NEWS_ID);
+  }
+
+  private NewsTargetingEntity mockTarget(String name, String label) {
+    NewsTargetingEntity target = new NewsTargetingEntity();
+    target.setName(name);
+    target.setProperties(Map.of("label", label));
+    return target;
   }
 
   @Test
