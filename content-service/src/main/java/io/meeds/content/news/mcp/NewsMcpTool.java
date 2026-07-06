@@ -22,8 +22,13 @@ import static io.meeds.mcp.server.tool.util.McpToolPluginUtils.getInteger;
 import static io.meeds.mcp.server.util.McpToolUtils.formatDate;
 import static io.meeds.mcp.server.util.McpToolUtils.markdownToHtml;
 
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
@@ -45,9 +50,12 @@ import org.exoplatform.upload.UploadService;
 import org.exoplatform.wiki.service.NoteService;
 
 import io.meeds.content.news.mcp.model.NewsModel;
+import io.meeds.content.news.mcp.model.NewsTargetModel;
 import io.meeds.content.news.model.News;
 import io.meeds.content.news.model.filter.NewsFilter;
+import io.meeds.content.news.rest.model.NewsTargetingEntity;
 import io.meeds.content.news.service.NewsService;
+import io.meeds.content.news.service.NewsTargetingService;
 import io.meeds.content.news.utils.NewsUtils;
 import io.meeds.content.news.utils.NewsUtils.NewsObjectType;
 import io.meeds.content.news.utils.NewsUtils.NewsUpdateType;
@@ -100,6 +108,8 @@ public class NewsMcpTool implements McpToolPlugin {
 
   private FileService             fileService;
 
+  private NewsTargetingService    newsTargetingService;
+
   public NewsMcpTool(PortalContainer container) {
     this.spaceService = container.getComponentInstanceOfType(SpaceService.class);
     this.activityManager = container.getComponentInstanceOfType(ActivityManager.class);
@@ -115,6 +125,7 @@ public class NewsMcpTool implements McpToolPlugin {
     this.uploadService = container.getComponentInstanceOfType(UploadService.class);
     this.attachmentService = container.getComponentInstanceOfType(AttachmentService.class);
     this.fileService = container.getComponentInstanceOfType(FileService.class);
+    this.newsTargetingService = container.getComponentInstanceOfType(NewsTargetingService.class);
   }
 
   @SneakyThrows
@@ -171,6 +182,155 @@ public class NewsMcpTool implements McpToolPlugin {
                                    false,
                                    NewsObjectType.ARTICLE.name().toLowerCase());
     return toActivityModel(news.getActivityId());
+  }
+
+  // Lists the instance's publication targets (homepage slider / editorial
+  // sections) with a per-user 'can_publish' hint. can_publish is true when the
+  // target is part of NewsTargetingService#getAllowedTargets for the current
+  // user (space-scoped canPublishNews / group-scoped publisher membership).
+  @SneakyThrows
+  public List<NewsTargetModel> listNewsTargets() {
+    String currentUsername = getCurrentUserName();
+    org.exoplatform.services.security.Identity currentIdentity = userAcl.getUserIdentity(currentUsername);
+    List<NewsTargetingEntity> allTargets = newsTargetingService.getAllTargets();
+    Set<String> allowedTargetNames = newsTargetingService.getAllowedTargets(currentIdentity)
+                                                         .stream()
+                                                         .map(NewsTargetingEntity::getName)
+                                                         .collect(Collectors.toSet());
+    return allTargets.stream()
+                     .map(target -> new NewsTargetModel(target.getName(),
+                                                        target.getProperties() == null ? null
+                                                                                       : target.getProperties().get("label"),
+                                                        allowedTargetNames.contains(target.getName())))
+                     .toList();
+  }
+
+  // Publishes an article to the activity stream AND/OR the given publication
+  // targets. When 'targets' is empty it falls back to the plain activity-stream
+  // publish (same path as publish_news_in_activity_stream); otherwise it routes
+  // the article to the given targets via NewsTargetingService#saveNewsTarget.
+  @SneakyThrows
+  public NewsModel publishNews(long newsId, List<String> targets) {
+    checkNewsId(newsId);
+    String currentUsername = getCurrentUserName();
+    org.exoplatform.services.security.Identity currentIdentity = userAcl.getUserIdentity(currentUsername);
+    News news = newsService.getNewsById(String.valueOf(newsId),
+                                        currentIdentity,
+                                        false,
+                                        NewsObjectType.ARTICLE.name().toLowerCase());
+    if (news == null) {
+      throw new ObjectNotFoundException("""
+          News with id '%s' doesn't exist. Use 'search_news' to search for a news by title, summary or content.
+          """.formatted(newsId));
+    }
+    Space space = spaceService.getSpaceById(news.getSpaceId());
+    if (space == null) {
+      throw new ObjectNotFoundException("""
+          News with id '%s' doesn't have an associated space to publish into.
+          """.formatted(newsId));
+    }
+    if (!spaceService.canPublishOnSpace(space, currentUsername)) {
+      throw new IllegalAccessException("""
+          The current user can't publish the news '%s' on the space '%s' with id '%s'.
+          Use 'list_news_targets' to see the targets the user is allowed to publish to.
+          """.formatted(newsId, space.getDisplayName(), space.getSpaceId()));
+    }
+    if (CollectionUtils.isEmpty(targets)) {
+      // no explicit target: fall back to plain activity-stream publish
+      publishNewsInActivityStream(newsId);
+    } else {
+      newsTargetingService.saveNewsTarget(news, true, targets, currentUsername);
+    }
+    news = newsService.getNewsById(String.valueOf(newsId),
+                                   currentIdentity,
+                                   false,
+                                   NewsObjectType.ARTICLE.name().toLowerCase());
+    return toNewsModel(news, space);
+  }
+
+  // Schedules an article to be published later at 'publishDate' (ISO-8601 with a
+  // zone/offset, e.g. 2026-07-10T09:00:00Z). Optionally stages the given
+  // publication targets. Wraps NewsService#scheduleNews.
+  @SneakyThrows
+  public NewsModel scheduleNews(long newsId, String publishDate, List<String> targets) {
+    checkNewsId(newsId);
+    if (StringUtils.isBlank(publishDate)) {
+      throw new IllegalArgumentException("""
+          The 'publish_date' is mandatory. Provide an ISO-8601 date-time with a zone or offset, e.g. '2026-07-10T09:00:00Z'.
+          """);
+    }
+    try {
+      ZonedDateTime.parse(publishDate);
+    } catch (DateTimeParseException e) {
+      throw new IllegalArgumentException("""
+          The 'publish_date' value '%s' is not a valid ISO-8601 date-time with a zone or offset.
+          Provide something like '2026-07-10T09:00:00Z' or '2026-07-10T11:00:00+02:00'.
+          """.formatted(publishDate));
+    }
+    String currentUsername = getCurrentUserName();
+    org.exoplatform.services.security.Identity currentIdentity = userAcl.getUserIdentity(currentUsername);
+    News news = newsService.getNewsById(String.valueOf(newsId),
+                                        currentIdentity,
+                                        false,
+                                        NewsObjectType.ARTICLE.name().toLowerCase());
+    if (news == null) {
+      throw new ObjectNotFoundException("""
+          News with id '%s' doesn't exist. Use 'search_news' to search for a news by title, summary or content.
+          """.formatted(newsId));
+    }
+    Space space = spaceService.getSpaceById(news.getSpaceId());
+    if (space == null) {
+      throw new ObjectNotFoundException("""
+          News with id '%s' doesn't have an associated space.
+          """.formatted(newsId));
+    }
+    if (!newsService.canScheduleNews(news.getSpaceId(), currentIdentity, news)) {
+      throw new IllegalAccessException("""
+          The current user isn't allowed to schedule the news '%s' on the space '%s' with id '%s'.
+          """.formatted(newsId, space.getDisplayName(), space.getSpaceId()));
+    }
+    news.setSchedulePostDate(publishDate);
+    news.setPublicationState(NewsService.STAGED);
+    News scheduled = newsService.scheduleNews(news, currentIdentity, NewsObjectType.ARTICLE.name());
+    if (CollectionUtils.isNotEmpty(targets)) {
+      newsTargetingService.saveNewsTarget(scheduled, false, targets, currentUsername);
+    }
+    return toNewsModel(scheduled, space);
+  }
+
+  // Unpublishes an article (removes it from the activity stream / targets)
+  // without deleting it. Wraps NewsService#unpublishNews.
+  @SneakyThrows
+  public NewsModel unpublishNews(long newsId) {
+    checkNewsId(newsId);
+    String currentUsername = getCurrentUserName();
+    org.exoplatform.services.security.Identity currentIdentity = userAcl.getUserIdentity(currentUsername);
+    News news = newsService.getNewsById(String.valueOf(newsId),
+                                        currentIdentity,
+                                        false,
+                                        NewsObjectType.ARTICLE.name().toLowerCase());
+    if (news == null) {
+      throw new ObjectNotFoundException("""
+          News with id '%s' doesn't exist. Use 'search_news' to search for a news by title, summary or content.
+          """.formatted(newsId));
+    }
+    Space space = spaceService.getSpaceById(news.getSpaceId());
+    if (space == null) {
+      throw new ObjectNotFoundException("""
+          News with id '%s' doesn't have an associated space.
+          """.formatted(newsId));
+    }
+    if (!spaceService.canPublishOnSpace(space, currentUsername)) {
+      throw new IllegalAccessException("""
+          The current user can't unpublish the news '%s' on the space '%s' with id '%s'.
+          """.formatted(newsId, space.getDisplayName(), space.getSpaceId()));
+    }
+    newsService.unpublishNews(news.getId(), currentUsername, false);
+    news = newsService.getNewsById(String.valueOf(newsId),
+                                   currentIdentity,
+                                   false,
+                                   NewsObjectType.ARTICLE.name().toLowerCase());
+    return toNewsModel(news, space);
   }
 
   @SneakyThrows
