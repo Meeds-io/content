@@ -47,6 +47,7 @@ import org.exoplatform.social.core.profileproperty.ProfilePropertyService;
 import org.exoplatform.social.core.space.model.Space;
 import org.exoplatform.social.core.space.spi.SpaceService;
 import org.exoplatform.upload.UploadService;
+import org.exoplatform.wiki.model.Page;
 import org.exoplatform.wiki.service.NoteService;
 
 import io.meeds.content.news.mcp.model.NewsModel;
@@ -444,12 +445,15 @@ public class NewsMcpTool implements McpToolPlugin {
     // writes; persist it the same way the cover image is persisted, basing the
     // write on the loaded properties so the current featured image is preserved.
     if (StringUtils.isNotBlank(summary)) {
-      NotePageProperties properties = news.getProperties() != null ? news.getProperties() : new NotePageProperties();
-      properties.setSummary(summary);
       // for a published article news_id == the note page id; a draft/staged
       // article points at its target page id
       long pageId = news.getTargetPageId() != null ? Long.parseLong(news.getTargetPageId()) : newsId;
       boolean isDraft = news.getTargetPageId() != null;
+      // base the write on the target language's own metadata so the current
+      // featured image (cover) of that translation is preserved, not clobbered
+      // with the default's
+      NotePageProperties properties = resolveBaseProperties(news, pageId, language, currentIdentity);
+      properties.setSummary(summary);
       properties.setNoteId(pageId);
       properties.setDraft(isDraft);
       String lang = StringUtils.isBlank(language) ? news.getLang() : language;
@@ -606,7 +610,7 @@ public class NewsMcpTool implements McpToolPlugin {
     long pageId = news.getTargetPageId() != null ? Long.parseLong(news.getTargetPageId()) : newsId;
     boolean isDraft = news.getTargetPageId() != null;
     try {
-      NotePageProperties properties = news.getProperties() != null ? news.getProperties() : new NotePageProperties();
+      NotePageProperties properties = resolveBaseProperties(news, pageId, language, currentIdentity);
       NoteFeaturedImage featuredImage = new NoteFeaturedImage();
       NoteFeaturedImage existing = properties.getFeaturedImage();
       if (existing != null && existing.getId() != null && existing.getId() > 0) {
@@ -656,13 +660,15 @@ public class NewsMcpTool implements McpToolPlugin {
           The current user doesn't have priviledges to update the news with id '%s'.
           """.formatted(newsId));
     }
-    NotePageProperties properties = news.getProperties();
-    NoteFeaturedImage existing = properties == null ? null : properties.getFeaturedImage();
+    long pageId = news.getTargetPageId() != null ? Long.parseLong(news.getTargetPageId()) : newsId;
+    boolean isDraft = news.getTargetPageId() != null;
+    // resolve the existing cover from the target language's own metadata, so a
+    // translation's own cover is removed rather than the default's
+    NotePageProperties properties = resolveBaseProperties(news, pageId, language, currentIdentity);
+    NoteFeaturedImage existing = properties.getFeaturedImage();
     if (existing == null || existing.getId() == null || existing.getId() <= 0) {
       throw new ObjectNotFoundException("News with id '%s' has no cover image to remove.".formatted(newsId));
     }
-    long pageId = news.getTargetPageId() != null ? Long.parseLong(news.getTargetPageId()) : newsId;
-    boolean isDraft = news.getTargetPageId() != null;
     try {
       String lang = StringUtils.isBlank(language) ? news.getLang() : language;
       noteService.removeNoteFeaturedImage(pageId, existing.getId(), lang, isDraft, getUserIdentityId(currentUsername));
@@ -690,6 +696,33 @@ public class NewsMcpTool implements McpToolPlugin {
                                           NewsObjectType.ARTICLE.name().toLowerCase(),
                                           NewsUpdateType.CONTENT_AND_TITLE.name());
     return toNewsModel(updated, space);
+  }
+
+  // When a language is provided, the base metadata (summary + cover) must come
+  // from THAT language's backing note, not the default article's: covers and
+  // summaries are stored per language, so carrying the default's properties into
+  // an EXISTING translation would clobber the translation's own distinct
+  // cover/summary with the default's. A brand-new translation (no per-language
+  // metadata yet) still inherits the default article's properties. The
+  // default-language path (blank language) keeps using the loaded article's
+  // properties.
+  private NotePageProperties resolveBaseProperties(News news,
+                                                   long pageId,
+                                                   String language,
+                                                   org.exoplatform.services.security.Identity currentIdentity) {
+    NotePageProperties defaultProperties = news.getProperties() != null ? news.getProperties() : new NotePageProperties();
+    if (StringUtils.isBlank(language)) {
+      return defaultProperties;
+    }
+    try {
+      Page langNote = noteService.getNoteByIdAndLang(pageId, currentIdentity, null, language);
+      if (langNote != null && langNote.getProperties() != null) {
+        return langNote.getProperties();
+      }
+    } catch (Exception e) {
+      // fall back to the default article's properties (new-translation inheritance)
+    }
+    return defaultProperties;
   }
 
   private long getUserIdentityId(String username) {

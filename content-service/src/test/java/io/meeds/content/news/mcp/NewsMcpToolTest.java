@@ -45,6 +45,7 @@ import java.util.TimeZone;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.MockitoJUnitRunner;
@@ -65,6 +66,7 @@ import org.exoplatform.social.core.profileproperty.ProfilePropertyService;
 import org.exoplatform.social.core.space.model.Space;
 import org.exoplatform.social.core.space.spi.SpaceService;
 import org.exoplatform.upload.UploadService;
+import org.exoplatform.wiki.model.Page;
 import org.exoplatform.wiki.service.NoteService;
 
 import io.meeds.content.news.mcp.model.NewsModel;
@@ -628,6 +630,70 @@ public class NewsMcpToolTest {
     // the cover image is not wiped when only the summary is updated
     assertEquals(cover, properties.getFeaturedImage());
     verify(noteService).saveNoteMetadata(eq(properties), eq("en"), eq(1L));
+  }
+
+  // Regression for EXO-88373: editing a translation's summary must not clobber
+  // that translation's OWN cover with the default article's. The "fr" backing
+  // note already has its own distinct featured image (600); updating the "fr"
+  // summary must keep 600, never copy the default's (500).
+  @Test
+  public void updateNewsInLanguageShouldPreserveExistingTranslationCover() throws Exception { // NOSONAR
+    News news = mockNews();
+    Space space = mockSpace();
+    mockUserIdentity();
+    news.getProperties().setFeaturedImage(new NoteFeaturedImage(500L, null, null, 0L, 0L, null, null));
+
+    Page frNote = mock(Page.class);
+    NotePageProperties frProperties = new NotePageProperties();
+    frProperties.setSummary("fr summary");
+    frProperties.setFeaturedImage(new NoteFeaturedImage(600L, null, null, 0L, 0L, null, null));
+    lenient().when(frNote.getProperties()).thenReturn(frProperties);
+
+    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)), eq(currentIdentity), eq(false), anyString()))
+                                                                                                           .thenReturn(news);
+    when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
+    when(newsService.canEditNews(news, USER)).thenReturn(true);
+    when(newsService.updateNews(eq(news), eq(USER), eq(false), anyBoolean(), anyString(), anyString()))
+                                                                                                       .thenReturn(news);
+    when(noteService.getNoteByIdAndLang(eq(NEWS_ID), eq(currentIdentity), eq(null), eq("fr"))).thenReturn(frNote);
+
+    ArgumentCaptor<NotePageProperties> captor = ArgumentCaptor.forClass(NotePageProperties.class);
+
+    runWithStaticMocks(() -> tool.updateNews(NEWS_ID, null, "New fr summary", null, "fr"));
+
+    verify(noteService).saveNoteMetadata(captor.capture(), eq("fr"), eq(1L));
+    // the write carries the translation's OWN cover (600), not the default's (500)
+    assertEquals(Long.valueOf(600L), captor.getValue().getFeaturedImage().getId());
+    assertEquals("New fr summary", captor.getValue().getSummary());
+  }
+
+  // A brand-new translation (no per-language backing-note metadata yet) still
+  // inherits the default article's cover (500).
+  @Test
+  public void updateNewsNewTranslationShouldInheritDefaultCover() throws Exception { // NOSONAR
+    News news = mockNews();
+    Space space = mockSpace();
+    mockUserIdentity();
+    news.getProperties().setFeaturedImage(new NoteFeaturedImage(500L, null, null, 0L, 0L, null, null));
+
+    Page frNote = mock(Page.class);
+    lenient().when(frNote.getProperties()).thenReturn(null);
+
+    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)), eq(currentIdentity), eq(false), anyString()))
+                                                                                                           .thenReturn(news);
+    when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
+    when(newsService.canEditNews(news, USER)).thenReturn(true);
+    when(newsService.updateNews(eq(news), eq(USER), eq(false), anyBoolean(), anyString(), anyString()))
+                                                                                                       .thenReturn(news);
+    lenient().when(noteService.getNoteByIdAndLang(eq(NEWS_ID), eq(currentIdentity), eq(null), eq("fr"))).thenReturn(frNote);
+
+    ArgumentCaptor<NotePageProperties> captor = ArgumentCaptor.forClass(NotePageProperties.class);
+
+    runWithStaticMocks(() -> tool.updateNews(NEWS_ID, null, "New summary", null, "fr"));
+
+    verify(noteService).saveNoteMetadata(captor.capture(), eq("fr"), eq(1L));
+    // a brand-new translation inherits the default article's cover (500)
+    assertEquals(Long.valueOf(500L), captor.getValue().getFeaturedImage().getId());
   }
 
   @Test
