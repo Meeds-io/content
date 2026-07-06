@@ -23,13 +23,13 @@
     class="newsAdvancedSettings"
     subheader
     two-line>
-    <v-list-item>
+    <v-list-item class="maxArticleItem">
       <v-list-item-content>
         <v-list-item-title class="advancedSettingsLabel font-weight-regular">
           {{ $t('news.list.settings.drawer.advancedSettings.maxArticle') }}
         </v-list-item-title>
       </v-list-item-content>
-      <v-list-item-action>
+      <v-list-item-action class="maxArticleAction my-0">
         <input
           v-model="limit"
           :disabled="disableMaxArticle"
@@ -41,15 +41,12 @@
           @input="emitLimitChange"
           @change="emitLimitChange"
           class="maxArticle input-block-level ignore-vuetify-classes">
-      </v-list-item-action>
-    </v-list-item>
-
-    <v-list-item v-if="limitExceeded" class="pt-0">
-      <v-list-item-content class="py-0">
-        <v-list-item-subtitle class="error--text text-wrap">
+        <span
+          v-if="limitExceeded"
+          class="maxArticleError error--text text-caption">
           {{ $t('news.list.settings.drawer.advancedSettings.maxArticleError') }}
-        </v-list-item-subtitle>
-      </v-list-item-content>
+        </span>
+      </v-list-item-action>
     </v-list-item>
 
     <v-list-item>
