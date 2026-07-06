@@ -42,6 +42,87 @@
       "require_approval": true
     },
     {
+      "name": "list_news_targets",
+      "title": "List publication targets",
+      "description": "List the instance's news publication targets (homepage slider, editorial sections). Each target carries a 'can_publish' flag telling whether the current user is allowed to publish to it. Use the returned 'name' values as the 'targets' input of 'publish_news' or 'schedule_news'.",
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "publish_news",
+      "title": "Publish an article to targets",
+      "description": "Publish a news (Article) to the given publication targets (homepage slider / editorial sections) and/or its space activity stream. Pass the target 'name' values from 'list_news_targets' in 'targets'. When 'targets' is empty, the article is simply published to its space activity stream.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "news_id": { "type": "integer" },
+          "targets": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "required": ["news_id"]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      },
+      "require_approval": true
+    },
+    {
+      "name": "schedule_news",
+      "title": "Schedule an article",
+      "description": "Schedule a news (Article) to be published later at 'publish_date' (ISO-8601 date-time with a zone or offset, e.g. '2026-07-10T09:00:00Z'). Optionally stages the given publication targets from 'list_news_targets'.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "news_id": { "type": "integer" },
+          "publish_date": { "type": "string" },
+          "targets": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "required": ["news_id", "publish_date"]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      },
+      "require_approval": true
+    },
+    {
+      "name": "unpublish_news",
+      "title": "Unpublish an article",
+      "description": "Unpublish a news (Article), removing it from the activity stream and publication targets without deleting it.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "news_id": { "type": "integer" }
+        },
+        "required": ["news_id"]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      },
+      "require_approval": true
+    },
+    {
       "name": "delete_news",
       "title": "Delete an article",
       "description": "Delete a news entry by its ID.",
