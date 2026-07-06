@@ -29,18 +29,25 @@
           {{ $t('news.list.settings.drawer.advancedSettings.maxArticle') }}
         </v-list-item-title>
       </v-list-item-content>
-      <v-list-item-action>
+      <v-list-item-action class="maxArticleAction my-0">
         <input
           v-model="limit"
           :disabled="disableMaxArticle"
+          :max="maxLimit"
           type="number"
+          min="1"
           id="maxArticle"
           name="maxArticle"
           @change="emitLimitChange"
+          @input="emitLimitChange"
           class="maxArticle input-block-level ignore-vuetify-classes">
+        <span
+          v-if="limitExceeded"
+          class="position-absolute b-0 me-6 text-subtitle error--text text-caption">
+          {{ $t('news.list.settings.drawer.advancedSettings.maxArticleError') }}
+        </span>
       </v-list-item-action>
     </v-list-item>
-
     <v-list-item>
       <v-list-item-content>
         <v-list-item-title class="advancedSettingsLabel font-weight-regular">
@@ -252,15 +259,24 @@ export default {
     },
   }),
   watch: {
-    viewTemplate(_, oldTemplate) {
-      if (this.viewTemplate === 'NewsMosaic' && this.limit > 3) {
-        this.setLimit(3);
-      } else if (this.limit === 3 && oldTemplate === 'NewsMosaic') {
-        this.setLimit(4);
+    viewTemplate() {
+      if (this.maxLimit !== null && Number(this.limit) > this.maxLimit) {
+        this.setLimit(this.maxLimit);
       }
     }
   },
   computed: {
+    maxLimit() {
+      if (this.viewTemplate === 'NewsMosaic') {
+        return 3;
+      } else if (this.viewTemplate === 'NewsLatest') {
+        return 4;
+      }
+      return null;
+    },
+    limitExceeded() {
+      return this.maxLimit !== null && Number(this.limit) > this.maxLimit;
+    },
     displaySliderButton() {
       return this.viewTemplate === 'NewsSlider';
     },
@@ -277,7 +293,7 @@ export default {
       return this.viewTemplate === 'NewsSlider' || this.viewTemplate === 'NewsAlert';
     },
     disableMaxArticle() {
-      return this.articlesSourceOption === 'selectedList' || this.viewTemplate === 'NewsMosaic';
+      return this.articlesSourceOption === 'selectedList';
     }
   },
   created() {
@@ -295,7 +311,7 @@ export default {
       this.viewExtensions = this.$root.viewExtensions;
       this.newsTarget = this.$root.newsTarget;
       this.newsHeader = this.$root.header;
-      this.limit = this.viewTemplate === 'NewsMosaic' && this.limit> 3 ? 3 : this.$root.limit;
+      this.limit = this.maxLimit !== null && Number(this.$root.limit) > this.maxLimit ? this.maxLimit : this.$root.limit;
       this.showHeader = this.viewTemplate === 'NewsSlider' || this.viewTemplate === 'NewsMosaic' || this.viewTemplate === 'NewsStories' ? false : this.$root.showHeader;
       this.showSeeAll = this.$root.showSeeAll;
       this.showArticleTitle = this.$root.showArticleTitle;
