@@ -43,7 +43,7 @@
           class="maxArticle input-block-level ignore-vuetify-classes">
         <span
           v-if="limitExceeded"
-          class="position-absolute b-0 me-6 text-subtitle error--text text-caption">
+          class="position-absolute b-0 l-0 ms-4 text-subtitle error--text text-caption">
           {{ $t('news.list.settings.drawer.advancedSettings.maxArticleError') }}
         </span>
       </v-list-item-action>
