@@ -34,9 +34,11 @@
         :show-resume-button="showResumeButton"
         :show-share-button="showShareButton"
         :show-refer-button="showReferButton"
+        :show-categories-button="showCategoriesButton"
         @copy-link="copyLink"
         @edit-article="$emit('edit-article', news)"
-        @delete-article="$emit('delete-article', news)" />
+        @delete-article="$emit('delete-article', news)"
+        @manage-categories="$emit('manage-categories', news)" />
     </template>
   </exo-drawer>
 </template>
@@ -53,7 +55,8 @@ export default {
       showPublishButton: false,
       currentApp: null,
       showCopyLinkButton: false,
-      showReferButton: false
+      showReferButton: false,
+      showCategoriesButton: false
     };
   },
   computed: {
@@ -78,6 +81,7 @@ export default {
       this.showPublishButton = config.showPublishButton;
       this.showCopyLinkButton = config.showCopyLinkButton;
       this.showReferButton = config.showReferButton;
+      this.showCategoriesButton = config.showCategoriesButton;
       this.currentApp = config.currentApp;
       this.$refs.newsMobileActionMenu.open();
     },
