@@ -59,6 +59,19 @@
       </span>
     </v-list-item>
     <v-list-item
+      v-if="showPropertiesButton"
+      class="ps-2 pe-4 action-menu-item d-flex align-center"
+      @click="$emit('open-properties', news)">
+      <v-icon
+        size="16"
+        class="clickable icon-menu">
+        fas fa-info-circle
+      </v-icon>
+      <span class="pt-1 text-color">
+        {{ $t('news.details.header.menu.properties') }}
+      </span>
+    </v-list-item>
+    <v-list-item
       v-if="showShareButton && news.activityId"
       class="ps-2 pe-4 action-menu-item d-flex align-center"
       @click="$root.$emit('activity-share-drawer-open', news.activityId, currentApp)">
@@ -160,6 +173,11 @@ export default {
       default: false
     },
     showEditButton: {
+      type: Boolean,
+      required: false,
+      default: false
+    },
+    showPropertiesButton: {
       type: Boolean,
       required: false,
       default: false
