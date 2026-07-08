@@ -20,6 +20,7 @@ package io.meeds.content.news.service;
 
 import static io.meeds.content.news.utils.NewsUtils.NewsObjectType.ARTICLE;
 import static io.meeds.content.news.utils.NewsUtils.NewsObjectType.LATEST_DRAFT;
+import static io.meeds.content.news.utils.NewsUtils.NewsUpdateType.CATEGORIES;
 import static io.meeds.content.news.utils.NewsUtils.NewsUpdateType.CONTENT_AND_TITLE;
 import static io.meeds.content.news.utils.NewsUtils.NewsUpdateType.PAGE_REFERENCE;
 import static io.meeds.content.news.utils.NewsUtils.NewsUpdateType.POSTING_AND_PUBLISHING;
@@ -341,6 +342,9 @@ public class NewsService {
     }
     if (PAGE_REFERENCE.name().equalsIgnoreCase(newsUpdateType) && !canReferToNote(news, updaterIdentity)) {
       throw new IllegalAccessException("User " + updater + " is not authorized to refer or derefer news");
+    }
+    if (CATEGORIES.name().equalsIgnoreCase(newsUpdateType) && !canEditNews(news, updater)) {
+      throw new IllegalAccessException("User " + updater + " is not authorized to update news categories");
     }
 
     String newsId = news.getTargetPageId() != null ? news.getTargetPageId() : news.getId();
