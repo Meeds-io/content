@@ -34,12 +34,14 @@
         :show-publish-button="showPublishButton"
         :show-copy-link-button="showCopyLinkButton"
         :show-refer-button="showReferButton"
+        :show-categories-button="showEditButton"
         :article-page-url="articlePage?.url"
         @delete-article="deleteConfirmDialog"
         @edit-article="editLink"
         @export-pdf="createPDF"
         @open-properties="openProperties"
-        @open-publication-drawer="openPublicationDrawer" />
+        @open-publication-drawer="openPublicationDrawer"
+        @manage-categories="openCategoriesDrawer" />
       <exo-news-details-body
         ref="newsBody"
         :current-user="currentUser"
@@ -72,7 +74,8 @@
       @edit-article="editLink"
       @export-pdf="createPDF"
       @open-properties="openProperties"
-      @delete-article="deleteConfirmDialog" />
+      @delete-article="deleteConfirmDialog"
+      @manage-categories="openCategoriesDrawer" />
     <note-editor-metadata-drawer
       ref="metadataDrawer"
       :has-featured-image="!!localNews?.illustrationURL"
@@ -80,6 +83,10 @@
     <note-editor-featured-image-drawer
       :note="localNews"
       :has-featured-image="!!localNews?.illustrationURL" />
+    <category-input-drawer
+      ref="categoriesDrawer"
+      :value="localNews.categories"
+      @input="updateCategories" />
     <note-treeview-drawer
       :settings="{
         saveButtonLabel: $t('content.article.refer.label'),
@@ -329,6 +336,19 @@ export default {
           message: this.$t('news.details.header.menu.properties.error'),
           type: 'error'
         }));
+    },
+    openCategoriesDrawer() {
+      this.$refs?.categoriesDrawer?.openDrawer();
+    },
+    updateCategories(categoryIds) {
+      const updatedNews = {...this.localNews, categories: categoryIds};
+      return this.$newsServices.updateNews(updatedNews, this.localNews.activityPosted, this.$newsConstants.newsObjectType.ARTICLE,
+        this.$newsConstants.newsUpdateType.CATEGORIES).then((article) => {
+        this.localNews = {...this.localNews, categories: article.categories};
+        this.displayMessage({message: this.$t('news.details.header.menu.manageCategories.success'), type: 'success'});
+      }).catch(() => {
+        this.displayMessage({message: this.$t('news.details.header.menu.manageCategories.error'), type: 'error'});
+      });
     },
     getArticlePage() {
       return this.$newsServices.getArticlePage(this.localNews?.id || this.newsId).then((page) => {

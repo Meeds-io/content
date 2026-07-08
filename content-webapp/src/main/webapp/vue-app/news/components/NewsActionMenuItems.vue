@@ -47,6 +47,19 @@
       </span>
     </v-list-item>
     <v-list-item
+      v-if="showCategoriesButton"
+      class="ps-2 pe-4 action-menu-item d-flex align-center"
+      @click="$emit('manage-categories', news)">
+      <v-icon
+        size="16"
+        class="clickable icon-menu">
+        fa-th-large
+      </v-icon>
+      <span class="pt-1 text-color">
+        {{ $t('news.details.header.menu.manageCategories') }}
+      </span>
+    </v-list-item>
+    <v-list-item
       v-if="showEditButton"
       class="ps-2 pe-4 action-menu-item d-flex align-center"
       @click="$emit('edit-article', news)">
@@ -213,6 +226,11 @@ export default {
     },
     showReferButton: {
       type: Boolean,
+      default: false
+    },
+    showCategoriesButton: {
+      type: Boolean,
+      required: false,
       default: false
     }
   },

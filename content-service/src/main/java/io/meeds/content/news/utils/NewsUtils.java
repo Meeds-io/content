@@ -124,7 +124,7 @@ public class NewsUtils {
   }
 
   public enum NewsUpdateType {
-    CONTENT_AND_TITLE, SCHEDULE, POSTING_AND_PUBLISHING, PAGE_REFERENCE
+    CONTENT_AND_TITLE, SCHEDULE, POSTING_AND_PUBLISHING, PAGE_REFERENCE, CATEGORIES
   }
 
   public static void broadcastEvent(String eventName, Object source, Object data) {

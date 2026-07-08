@@ -33,7 +33,7 @@
       </v-icon>
     </v-btn>
     <exo-news-details-action-menu-app
-      v-if="(showEditButton || showDeleteButton || showPublishButton || showCopyLinkButton)"
+      v-if="(showEditButton || showDeleteButton || showPublishButton || showCopyLinkButton || showCategoriesButton)"
       class="pull-right"
       :news="news"
       :current-app="currentApplication"
@@ -44,10 +44,12 @@
       :show-refer-button="showReferButton"
       :show-properties-button="showEditButton"
       :show-export-pdf-button="true"
+      :show-categories-button="showCategoriesButton"
       @delete-article="$emit('delete-article')"
       @export-pdf="$emit('export-pdf')"
       @edit-article="$emit('edit-article')"
-      @open-properties="$emit('open-properties', $event)" />
+      @open-properties="$emit('open-properties', $event)"
+      @manage-categories="$emit('manage-categories')" />
     <v-btn
       v-if="publicationState === 'staged'"
       class="btn btn-primary pull-right me-3"
@@ -94,6 +96,31 @@
       </template>
       {{ $t('content.article.open.in.notes') }}
     </v-tooltip>
+    <div
+      v-if="categoriesCount"
+      class="d-flex align-center flex-wrap pull-right mt-2 me-2">
+      <category-chip
+        v-for="category in displayedCategories"
+        :key="category.id"
+        :category="category"
+        chip-class="me-2"
+        small />
+      <v-btn
+        v-if="remainingCategoriesCount > 0"
+        :title="$t('categories.remainingCount', {0: remainingCategoriesCount})"
+        class="flex-shrink-0 px-0 me-2"
+        height="24"
+        width="24"
+        icon
+        @click="openCategoriesListDrawer">
+        <span class="primary--text text-subtitle-font-size">
+          {{ $t('categories.remainingCount', {0: remainingCategoriesCount}) }}
+        </span>
+      </v-btn>
+    </div>
+    <categories-list-drawer
+      v-if="categoriesListDrawerOpened"
+      ref="categoriesListDrawer" />
   </div>
 </template>
 
@@ -144,6 +171,11 @@ export default {
       type: Boolean,
       default: false
     },
+    showCategoriesButton: {
+      type: Boolean,
+      required: false,
+      default: false
+    },
     articlePageUrl: {
       type: String,
       default: null
@@ -164,9 +196,20 @@ export default {
         hour: '2-digit',
         minute: '2-digit',
       },
+      categories: [],
+      categoriesListDrawerOpened: false,
     };
   },
   computed: {
+    displayedCategories() {
+      return this.categories?.slice(0, 2) || [];
+    },
+    categoriesCount() {
+      return this.categories?.length || 0;
+    },
+    remainingCategoriesCount() {
+      return this.categoriesCount - 2;
+    },
     historyClearedBackUrl() {
       return this.news && this.news.spaceMember ? this.news.spaceUrl : `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}`;
     },
@@ -188,7 +231,28 @@ export default {
       };
     },
   },
+  watch: {
+    'news.categories': {
+      immediate: true,
+      handler() {
+        this.refreshCategories();
+      },
+    },
+  },
   methods: {
+    async refreshCategories() {
+      if (this.news?.categories?.length) {
+        const categories = await Promise.all(this.news.categories.map(id => this.$categoryService.getCategory(id).catch(() => null)));
+        this.categories = categories.filter(category => category);
+      } else {
+        this.categories = [];
+      }
+    },
+    async openCategoriesListDrawer() {
+      this.categoriesListDrawerOpened = true;
+      await this.$nextTick();
+      this.$refs.categoriesListDrawer.open(this.categories);
+    },
     goBack() {
       if (this.lastVisitedPage) {
         history.back();
