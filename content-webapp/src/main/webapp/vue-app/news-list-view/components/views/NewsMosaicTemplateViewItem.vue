@@ -59,12 +59,20 @@
         </v-img>
         <div
           class="article-item-content position-absolute mb-1 b-0 full-width d-flex flex-column align-stretch flex-grow-1 no-min-width ms-0 px-2">
-          <div 
+          <div
             v-if="showArticleDate && !(index && isSmallWidth)"
-            class="text-subtitle mt-1 line-height-normal mb-1">
+            class="d-flex align-center text-subtitle mt-1 line-height-normal mb-1">
             <date-format
               :value="displayDate"
               :format="dateFormat" />
+            <v-spacer v-if="firstCategory" />
+            <div
+              v-if="firstCategory"
+              class="white rounded-pill mt-n6">
+              <category-chip
+                :category="firstCategory"
+                small />
+            </div>
           </div>
           <span
             v-if="showArticleTitle"
@@ -170,9 +178,27 @@ export default {
         month: 'long',
         day: 'numeric',
       },
+      firstCategory: null,
     };
   },
+  watch: {
+    firstCategoryId: {
+      immediate: true,
+      handler() {
+        if (this.firstCategoryId) {
+          this.$categoryService.getCategory(this.firstCategoryId)
+            .then(category => this.firstCategory = category)
+            .catch(() => this.firstCategory = null);
+        } else {
+          this.firstCategory = null;
+        }
+      },
+    },
+  },
   computed: {
+    firstCategoryId() {
+      return this.item?.categories?.[0];
+    },
     articleUrl() {
       return eXo.env.portal.userName !== ''
         ? this.item.url
