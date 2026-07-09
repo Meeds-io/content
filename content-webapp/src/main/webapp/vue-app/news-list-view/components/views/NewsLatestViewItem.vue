@@ -32,7 +32,9 @@
       <v-sheet
         v-if="showImage"
         v-bind="isMobile ? { minWidth: 80, height: 80 }
-          : !isMobile && !index ? {height: 'calc(100% - 80px)'}: {}"
+          : isSingleArticle ? {}
+            : !isMobile && !index ? {height: 'calc(100% - 80px)'}: {}"
+        :class="{ 'position-relative': isSingleArticle }"
         class="articleImage line-height-normal d-flex background-transparent">
         <v-img
           v-if="isMobile"
@@ -45,20 +47,25 @@
           v-else
           :src="articleImg"
           :alt="featuredImageAltText"
-          v-bind="!index ? {
+          v-bind="isSingleArticle ? {
+            aspectRatio: 3/2
+          } : !index ? {
             height: 'calc(100% - 80px)',
             aspectRatio: 16/9
           }: {}"
-          class="application-border-radius full-width position-absolute l-0 b-0 t-0 r-0" />
+          :class="{
+            'application-border-radius full-width': isSingleArticle,
+            'application-border-radius full-width position-absolute l-0 b-0 t-0 r-0': !isSingleArticle
+          }" />
         <extension-registry-components
           v-if="!index && !isMobile"
           :params="{
             parameters: item?.parameters
           }"
+          :class="isSingleArticle ? 'position-absolute b-0' : 'mt-auto'"
           name="ContentList"
           type="content-card-event-date-chip"
-          element="span"
-          class="mt-auto" />
+          element="span" />
         <extension-registry-components
           v-else  
           :params="{
@@ -76,12 +83,18 @@
       <v-sheet
         height="80"
         :class="{
-          'mb-n2 d-flex flex-column pb-2 position-absolute b-0 r-0 l-0': !isMobile && index === 0,
+          'mb-n2 d-flex flex-column pb-2 position-absolute b-0 r-0 l-0': !isMobile && index === 0 && !isSingleArticle,
+          'd-flex flex-column pb-2': !isMobile && isSingleArticle,
           'px-2': index === 0 && !isMobile,
           'ps-3 d-flex flex-column': index === 0 && isMobile
         }"
         class="articleInfos no-min-width full-width background-transparent">
-        <div v-if="showArticleDate" class="postDate text-subtitle line-height-1 flex-column mb-1 mt-0 my-auto">
+        <div
+          v-if="showArticleDate" 
+          :class="{
+            'mt-2': isSingleArticle,
+            'mt-0': !isSingleArticle}"
+          class="postDate text-subtitle line-height-1 flex-column mb-1 my-auto">
           <date-format
             :value="displayDate"
             :format="dateFormat" />
@@ -168,6 +181,10 @@ export default {
       required: false,
       default: null
     },
+    hasSmallWidthContainer: {
+      type: Boolean,
+      default: false
+    },
   },
   data: ()=> ({
     dateFormat: {
@@ -184,6 +201,9 @@ export default {
     showArticleReactions: true,
   }),
   computed: {
+    isSingleArticle() {
+      return this.news?.length === 1 && !this.isMobile && !this.hasSmallWidthContainer;
+    },
     hasSummary() {
       return !!this.item?.properties?.summary;
     },
