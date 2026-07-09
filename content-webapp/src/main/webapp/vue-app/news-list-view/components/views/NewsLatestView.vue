@@ -24,7 +24,7 @@
     ref="news-latest-view"
     class="px-2 py-2"
     :class="extraClass">
-    <div :class="hasSmallWidthContainer ? 'article-small-container':'article-container'">
+    <div :class="containerClass">
       <v-progress-circular
         v-if="loading"
         :size="50"
@@ -41,6 +41,7 @@
           :item="item"
           :selected-option="selectedOption"
           :index="index"
+          :has-small-width-container="hasSmallWidthContainer"
           :key="index" />
       </div>
     </div>
@@ -74,6 +75,16 @@ export default {
   computed: {
     newsInfo() {
       return this.newsList && this.newsList.filter(news => !!news);
+    },
+    isSingleArticle() {
+      return this.newsInfo && this.newsInfo.length === 1;
+    },
+    containerClass() {
+      if (this.hasSmallWidthContainer) {
+        return 'article-small-container';
+      }
+      // d-block collapses the two-column grid so a lone article flows full width
+      return this.isSingleArticle ? 'article-container single-article-container d-block' : 'article-container';
     },
     extraClass() {
       return (!this.selectedOption.showHeader && !this.selectedOption.showSeeAll && !this.canPublishNews ) && 'mt-5' || ' ';

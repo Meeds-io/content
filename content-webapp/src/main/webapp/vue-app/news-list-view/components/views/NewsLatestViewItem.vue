@@ -32,7 +32,9 @@
       <v-sheet
         v-if="showImage"
         v-bind="isMobile ? { minWidth: 80, height: 80 }
-          : !isMobile && !index ? {height: 'calc(100% - 80px)'}: {}"
+          : isSingleArticle ? {}
+            : !isMobile && !index ? {height: 'calc(100% - 80px)'}: {}"
+        :class="{ 'position-relative': isSingleArticle }"
         class="articleImage line-height-normal d-flex background-transparent">
         <v-img
           v-if="isMobile"
@@ -45,11 +47,15 @@
           v-else
           :src="articleImg"
           :alt="featuredImageAltText"
-          v-bind="!index ? {
+          v-bind="isSingleArticle ? {
+            aspectRatio: 3/2
+          } : !index ? {
             height: 'calc(100% - 80px)',
             aspectRatio: 16/9
           }: {}"
-          class="application-border-radius full-width position-absolute l-0 b-0 t-0 r-0" />
+          :class="isSingleArticle
+            ? 'application-border-radius full-width'
+            : 'application-border-radius full-width position-absolute l-0 b-0 t-0 r-0'" />
         <extension-registry-components
           v-if="!index && !isMobile"
           :params="{
@@ -58,7 +64,7 @@
           name="ContentList"
           type="content-card-event-date-chip"
           element="span"
-          class="mt-auto" />
+          :class="isSingleArticle ? 'position-absolute b-0' : 'mt-auto'" />
         <extension-registry-components
           v-else  
           :params="{
@@ -76,7 +82,8 @@
       <v-sheet
         height="80"
         :class="{
-          'mb-n2 d-flex flex-column pb-2 position-absolute b-0 r-0 l-0': !isMobile && index === 0,
+          'mb-n2 d-flex flex-column pb-2 position-absolute b-0 r-0 l-0': !isMobile && index === 0 && !isSingleArticle,
+          'd-flex flex-column pb-2': !isMobile && isSingleArticle,
           'px-2': index === 0 && !isMobile,
           'ps-3 d-flex flex-column': index === 0 && isMobile
         }"
@@ -168,6 +175,11 @@ export default {
       required: false,
       default: null
     },
+    hasSmallWidthContainer: {
+      type: Boolean,
+      required: false,
+      default: false
+    },
   },
   data: ()=> ({
     dateFormat: {
@@ -184,6 +196,9 @@ export default {
     showArticleReactions: true,
   }),
   computed: {
+    isSingleArticle() {
+      return this.news && this.news.length === 1 && !this.isMobile && !this.hasSmallWidthContainer;
+    },
     hasSummary() {
       return !!this.item?.properties?.summary;
     },

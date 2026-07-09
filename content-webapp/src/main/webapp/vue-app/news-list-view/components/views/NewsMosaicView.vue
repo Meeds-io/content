@@ -24,7 +24,7 @@
       <news-settings
         :is-hovering="hover"
         class="mt-3 me-1 position-absolute r-0 z-index-two" />
-      <div :class="`application-border-radius mosaic-container ${smallHeightClass}`">
+      <div :class="`application-border-radius mosaic-container ${smallHeightClass} ${singleArticleClass}`">
         <news-mosaic-template-view-item
           v-for="(item, index) of news"
           :key="index"
@@ -81,6 +81,13 @@ export default {
     },
     smallHeightClass() {
       return this.isMobile && this.news.length === 1 ? 'small-mosaic-container' : '';
+    },
+    isSingleArticle() {
+      return this.news.length === 1;
+    },
+    singleArticleClass() {
+      // collapse the two-column grid to a single full-width block so a lone article fills the row
+      return this.isSingleArticle ? 'd-block' : '';
     },
   },
   created() {
