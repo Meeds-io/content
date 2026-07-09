@@ -94,7 +94,7 @@
     </v-tooltip>
     <div
       v-if="categoriesCount"
-      class="d-flex align-center flex-wrap pull-right mt-1 me-2">
+      class="d-flex align-center flex-wrap pull-right mt-2 me-2">
       <category-chip
         v-for="category in displayedCategories"
         :key="category.id"
