@@ -405,6 +405,12 @@
     <depends>
       <module>contentTranslationMenu</module>
     </depends>
+    <depends>
+      <module>jspdf</module>
+    </depends>
+    <depends>
+      <module>html2canvas</module>
+    </depends>
   </module>
 
   <module>

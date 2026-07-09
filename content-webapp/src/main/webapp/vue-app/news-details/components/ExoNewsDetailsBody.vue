@@ -183,7 +183,7 @@
 
 <script>
 import html2canvas from 'html2canvas';
-import JSPDF from 'jspdf';
+import { jsPDF as JSPDF } from 'jspdf';
 
 export default {
   props: {
