@@ -90,14 +90,28 @@
         }"
         class="articleInfos no-min-width full-width background-transparent">
         <div
-          v-if="showArticleDate" 
-          :class="{
-            'mt-2': isSingleArticle,
-            'mt-0': !isSingleArticle}"
-          class="postDate text-subtitle line-height-1 flex-column mb-1 my-auto">
-          <date-format
-            :value="displayDate"
-            :format="dateFormat" />
+          v-if="firstCategory && index === 0"
+          class="position-absolute t-0 r-0 mt-n5 me-2 mb-2 white rounded-pill">
+          <category-chip
+            :category="firstCategory"
+            small />
+        </div>
+        <div class="d-flex align-center mb-1">
+          <div
+            v-if="showArticleDate"
+            :class="{
+              'mt-2': isSingleArticle,
+              'mt-0': !isSingleArticle}"
+            class="postDate text-subtitle line-height-1 flex-column my-auto">
+            <date-format
+              :value="displayDate"
+              :format="dateFormat" />
+          </div>
+          <v-spacer v-if="firstCategory && index > 0" />
+          <category-chip
+            v-if="firstCategory && index > 0"
+            :category="firstCategory"
+            small />
         </div>
         <span
           v-if="showArticleTitle"
@@ -199,10 +213,14 @@ export default {
     showArticleSpace: true,
     showArticleDate: true,
     showArticleReactions: true,
+    firstCategory: null,
   }),
   computed: {
     isSingleArticle() {
       return this.news?.length === 1 && !this.isMobile && !this.hasSmallWidthContainer;
+    },
+    firstCategoryId() {
+      return this.item?.categories?.[0];
     },
     hasSummary() {
       return !!this.item?.properties?.summary;
@@ -237,6 +255,20 @@ export default {
     articleUrl() {
       return eXo.env.portal.userName !== '' ? this.item.url : `${eXo.env.portal.context}/${eXo.env.portal.portalName}/news-detail?newsId=${this.item.id}&type=article`;
     }
+  },
+  watch: {
+    firstCategoryId: {
+      immediate: true,
+      handler() {
+        if (this.firstCategoryId) {
+          this.$categoryService.getCategory(this.firstCategoryId)
+            .then(category => this.firstCategory = category)
+            .catch(() => this.firstCategory = null);
+        } else {
+          this.firstCategory = null;
+        }
+      },
+    },
   },
   created() {
     this.reset();
