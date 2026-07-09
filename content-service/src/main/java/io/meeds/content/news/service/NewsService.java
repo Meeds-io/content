@@ -699,6 +699,16 @@ public class NewsService {
       news.setCanPublish(NewsUtils.canPublishNews(news.getSpaceId(), currentIdentity));
       news.setCanRefer(canReferToNote(news, currentIdentity));
       news.setCanSchedule(canScheduleNews(news.getSpaceId(), currentIdentity, news));
+      if (StringUtils.isNotBlank(news.getActivityId())) {
+        try {
+          ExoSocialActivity activity = activityManager.getActivity(news.getActivityId());
+          if (activity != null) {
+            news.setCategories(activity.getCategoryIds());
+          }
+        } catch (Exception e) {
+          LOG.debug("Error getting activity of News with id {}", news.getActivityId(), e);
+        }
+      }
     });
     return newsList;
   }
