@@ -49,10 +49,15 @@
       </div>
       <div
         class="article-item-content d-flex flex-column align-stretch flex-grow-1 no-min-width ms-0 px-2">
-        <div v-if="showArticleDate" class="text-subtitle mb-1">
+        <div v-if="showArticleDate" class="d-flex align-center text-subtitle mb-1">
           <date-format
             :value="displayDate"
             :format="dateFormat" />
+          <v-spacer v-if="firstCategory" />
+          <category-chip
+            v-if="firstCategory"
+            :category="firstCategory"
+            small />
         </div>
         <span
           v-if="showArticleTitle"
@@ -117,8 +122,26 @@ export default {
       month: 'long',
       day: 'numeric',
     },
+    firstCategory: null,
   }),
+  watch: {
+    firstCategoryId: {
+      immediate: true,
+      handler() {
+        if (this.firstCategoryId) {
+          this.$categoryService.getCategory(this.firstCategoryId)
+            .then(category => this.firstCategory = category)
+            .catch(() => this.firstCategory = null);
+        } else {
+          this.firstCategory = null;
+        }
+      },
+    },
+  },
   computed: {
+    firstCategoryId() {
+      return this.item?.categories?.[0];
+    },
     hasSummary() {
       return !!this.item?.properties?.summary;
     },

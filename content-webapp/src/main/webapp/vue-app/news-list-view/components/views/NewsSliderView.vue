@@ -55,6 +55,13 @@
               type="content-card-event-date-chip"
               element="span"
               class="position-absolute b-0 line-height-normal" />
+            <div
+              v-if="firstCategory(item)"
+              class="position-absolute b-0 r-0 ma-2 white rounded-pill">
+              <category-chip
+                :category="firstCategory(item)"
+                small />
+            </div>
             <div class="px-10 mt-auto pb-13 no-min-width full-width flex-column">
               <div
                 :class="$vuetify.rtl && 'l-0' || 'r-0'"
@@ -101,6 +108,9 @@ export default {
       }
     },
   },
+  data: () => ({
+    firstCategories: {},
+  }),
   computed: {
     news(){
       return this.newsList && this.newsList.filter(news => !!news);
@@ -120,9 +130,30 @@ export default {
       return this.selectedOption.showArticleSummary;
     },
   },
+  watch: {
+    news: {
+      immediate: true,
+      handler() {
+        this.refreshCategories();
+      },
+    },
+  },
   methods: {
     openDrawer() {
       this.$root.$emit('news-settings-drawer-open');
+    },
+    refreshCategories() {
+      (this.news || []).forEach(item => {
+        const categoryId = item?.categories?.[0];
+        if (categoryId && !this.firstCategories[item.id]) {
+          this.$categoryService.getCategory(categoryId)
+            .then(category => this.firstCategories = {...this.firstCategories, [item.id]: category})
+            .catch(() => null);
+        }
+      });
+    },
+    firstCategory(item) {
+      return this.firstCategories[item.id];
     },
   }
 };
