@@ -62,13 +62,14 @@ const config = {
       }
     ]
   },
-  // html2canvas + jspdf are provided by the Social webapp as shared AMD modules
-  // (see social WEB-INF/gatein-resources.xml); do NOT bundle them via npm. They
-  // resolve to those platform-provided modules at runtime and are declared as
-  // <depends> on the newsDetails module in gatein-resources.xml.
+  // html2canvas + jspdf are provided by the Social webapp; do NOT bundle them via
+  // npm. The <depends> on the newsDetails module (gatein-resources.xml) loads
+  // Social's scripts, which set the window.jspdf / window.html2canvas globals.
+  // Social's html2canvas module has no adapter, so its AMD module value is
+  // undefined - map the imports to the window globals instead.
   externals: {
-    jspdf: 'jspdf',
-    html2canvas: 'html2canvas',
+    jspdf: 'window jspdf',
+    html2canvas: 'window html2canvas',
   },
 };
 
