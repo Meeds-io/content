@@ -33,7 +33,9 @@
         <v-img
           :src="imgSrc"
           :alt="featuredImageAltText"
-          v-bind="!index? {
+          v-bind="isSingleArticle ? {
+            aspectRatio: 3/2
+          } : !index? {
             height: 'calc(100% - 80px)',
             aspectRatio: 3/2
           }: {
@@ -41,7 +43,8 @@
             aspectRatio: 16/9
           }"
           :class="{
-            'full-width position-absolute l-0 b-0 t-0 r-0': index
+            'full-width position-absolute l-0 b-0 t-0 r-0': index,
+            'full-width': isSingleArticle
           }">
           <extension-registry-components
             :params="index ? {
@@ -57,11 +60,17 @@
             element="span"
             class="d-flex position-absolute b-0 line-height-normal" />
         </v-img>
-        <div
-          class="article-item-content position-absolute mb-1 b-0 full-width d-flex flex-column align-stretch flex-grow-1 no-min-width ms-0 px-2">
+        <component
+          :is="isSingleArticle ? 'v-sheet' : 'div'"
+          v-bind="isSingleArticle ? { height: 80 } : {}"
+          :class="isSingleArticle ? 'background-transparent' : 'position-absolute mb-1 b-0'"
+          class="article-item-content full-width d-flex flex-column align-stretch flex-grow-1 no-min-width ms-0 px-2">
           <div 
             v-if="showArticleDate && !(index && isSmallWidth)"
-            class="text-subtitle mt-1 line-height-normal mb-1">
+            :class="{
+              'mt-2': isSingleArticle,
+              'mt-1': !isSingleArticle}"
+            class="text-subtitle line-height-normal mb-1">
             <date-format
               :value="displayDate"
               :format="dateFormat" />
@@ -109,7 +118,7 @@
               :show-article-reactions="showArticleReactions"
               class="mt-2" />
           </div>
-        </div>
+        </component>
       </a>
     </div>
   </v-hover>
@@ -173,6 +182,9 @@ export default {
     };
   },
   computed: {
+    isSingleArticle() {
+      return this.totalCount === 1;
+    },
     articleUrl() {
       return eXo.env.portal.userName !== ''
         ? this.item.url

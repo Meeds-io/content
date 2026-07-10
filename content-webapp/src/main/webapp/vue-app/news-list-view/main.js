@@ -65,7 +65,7 @@ export function init(params) {
   const viewTemplate = params.viewTemplate || 'NewsCards';
   const saveSettingsURL = params.saveSettingsURL;
   const newsTarget = params.newsTarget === 'null' ? null : params.newsTarget;
-  const limit = viewTemplate === 'NewsMosaic' ? 3 : params.limit === '' ? '4' : params.limit;
+  const limit = params.limit === '' ? (viewTemplate === 'NewsMosaic' ? '3' : '4') : params.limit;
   const showHeader = viewTemplate === 'NewsSlider' ? false: params.showHeader === 'true';
   const showSeeAll = params.showSeeAll === 'true' && !!params.seeAllUrl?.length;
   const showArticleTitle = params.showArticleTitle === '' ? true : params.showArticleTitle === 'true';
