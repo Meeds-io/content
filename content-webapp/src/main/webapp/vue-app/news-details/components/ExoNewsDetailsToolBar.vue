@@ -100,7 +100,8 @@
         :key="category.id"
         :category="category"
         chip-class="me-2"
-        small />
+        small
+        @select="openEntryListDrawer" />
       <v-btn
         v-if="remainingCategoriesCount > 0"
         :title="$t('categories.remainingCount', {0: remainingCategoriesCount})"
@@ -116,7 +117,9 @@
     </div>
     <categories-list-drawer
       v-if="categoriesListDrawerOpened"
-      ref="categoriesListDrawer" />
+      ref="categoriesListDrawer"
+      @select="openEntryListDrawer" />
+    <category-entry-drawer ref="entryListDrawer" />
   </div>
 </template>
 
@@ -248,6 +251,9 @@ export default {
       this.categoriesListDrawerOpened = true;
       await this.$nextTick();
       this.$refs.categoriesListDrawer.open(this.categories);
+    },
+    openEntryListDrawer(category) {
+      this.$refs.entryListDrawer.open(category.id, ['news', 'notes']);
     },
     goBack() {
       if (this.lastVisitedPage) {
