@@ -55,6 +55,7 @@
         class="position-absolute b-0 r-0 ma-2 white rounded-pill">
         <category-chip
           :category="firstCategory"
+          tabindex="-1"
           small />
       </div>
     </v-sheet>
@@ -120,6 +121,7 @@
               class="d-flex justify-end mt-2 mb-2">
               <category-chip
                 :category="firstCategory"
+                tabindex="-1"
                 small />
             </div>
             <div

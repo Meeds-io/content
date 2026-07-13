@@ -80,6 +80,7 @@
               class="white rounded-pill mt-n6">
               <category-chip
                 :category="firstCategory"
+                tabindex="-1"
                 small />
             </div>
           </div>

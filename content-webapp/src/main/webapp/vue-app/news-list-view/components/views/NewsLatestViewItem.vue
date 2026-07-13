@@ -94,6 +94,7 @@
           class="position-absolute t-0 r-0 mt-n5 me-2 mb-2 white rounded-pill">
           <category-chip
             :category="firstCategory"
+            tabindex="-1"
             small />
         </div>
         <div class="d-flex align-center mb-1">
