@@ -108,6 +108,7 @@ import io.meeds.content.news.notification.plugin.PostNewsNotificationPlugin;
 import io.meeds.content.news.notification.plugin.PublishNewsNotificationPlugin;
 import io.meeds.content.news.notification.utils.NotificationConstants;
 import io.meeds.content.news.notification.utils.NotificationUtils;
+import io.meeds.content.news.plugin.NewsCategoryPlugin;
 import io.meeds.content.news.plugin.NewsPageAttachmentPlugin;
 import io.meeds.content.news.rest.model.NewsSearchResultEntity;
 import io.meeds.content.news.search.NewsESSearchResult;
@@ -2175,6 +2176,8 @@ public class NewsService {
       if (linkCategories) {
         linkActivityCategories(activity, news.getCategories());
       }
+    } else if (linkCategories) {
+      linkNewsCategories(news);
     }
   }
 
@@ -2224,6 +2227,13 @@ public class NewsService {
     if (activityId != null && !StringUtils.isEmpty(news.getId())) {
       Page newsPage = noteService.getNoteById(news.getId());
       if (newsPage != null) {
+        if (!activityId.equals(newsPage.getActivityId())) {
+          // Persist the activity id on the underlying page so that later lookups
+          // (e.g. category resolution) can resolve the news metadata object type
+          // instead of falling back to the plain note object type.
+          newsPage.setActivityId(activityId);
+          noteService.updateNote(newsPage);
+        }
         NewsPageObject newsPageObject = new NewsPageObject(NEWS_METADATA_PAGE_OBJECT_TYPE,
                                                            newsPage.getId(),
                                                            null,
@@ -2757,6 +2767,26 @@ public class NewsService {
     for (Long categoryId : newCategories) {
       if (!currentCategories.contains(categoryId)) {
         categoryLinkService.link(categoryId, activityCategoryObject);
+      }
+    }
+  }
+
+  private void linkNewsCategories(News news) {
+    CategoryObject newsCategoryObject = NewsCategoryPlugin.toCategoryObject(news);
+    if (newsCategoryObject == null) {
+      return;
+    }
+    CategoryLinkService categoryLinkService = CommonsUtils.getService(CategoryLinkService.class);
+    Set<Long> currentCategories = new HashSet<>(categoryLinkService.getLinkedIds(newsCategoryObject));
+    Set<Long> newCategories = news.getCategories() != null ? new HashSet<>(news.getCategories()) : Collections.emptySet();
+    for (Long categoryId : currentCategories) {
+      if (!newCategories.contains(categoryId)) {
+        categoryLinkService.unlink(categoryId, newsCategoryObject);
+      }
+    }
+    for (Long categoryId : newCategories) {
+      if (!currentCategories.contains(categoryId)) {
+        categoryLinkService.link(categoryId, newsCategoryObject);
       }
     }
   }
