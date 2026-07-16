@@ -55,5 +55,7 @@ public record NewsModel(
                         long activityId,
                         UserModel publisher,
                         @JsonProperty("target_space")
-                        SpaceModel targetSpace) {
+                        SpaceModel targetSpace,
+                        @JsonProperty("illustration_url")
+                        String illustrationUrl) {
 }
