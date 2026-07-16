@@ -528,6 +528,69 @@ public class NewsServiceTest {
   }
 
   @Test
+  public void testGetDraftArticlesWithOrphanedMetadata() throws Exception {
+
+    // Given
+    DraftPage draftPage1 = new DraftPage();
+    draftPage1.setContent("draft body 1");
+    draftPage1.setTitle("draft article 1");
+    draftPage1.setId("1");
+    draftPage1.setOwner("john");
+    draftPage1.setWikiOwner("/space/groupId");
+
+    DraftPage draftPage2 = new DraftPage();
+    draftPage2.setContent("draft body 2");
+    draftPage2.setTitle("draft article 2");
+    draftPage2.setId("2");
+    draftPage2.setOwner("john");
+    draftPage2.setWikiOwner("/space/groupId");
+
+    when(noteService.getDraftNoteById(eq("1"), anyString())).thenReturn(draftPage1);
+    when(noteService.getDraftNoteById(eq("2"), anyString())).thenReturn(draftPage2);
+    // "orphan" simulates a metadata row whose underlying draft note was deleted
+    // without cleaning up its metadata item
+    when(noteService.getDraftNoteById(eq("orphan"), anyString())).thenReturn(null);
+
+    Map<String, String> properties = new HashMap<>();
+    MetadataItem orphanMetadataItem = mock(MetadataItem.class);
+    when(orphanMetadataItem.getObjectId()).thenReturn("orphan");
+    when(orphanMetadataItem.getProperties()).thenReturn(properties);
+    MetadataItem metadataItem1 = mock(MetadataItem.class);
+    when(metadataItem1.getObjectId()).thenReturn("1");
+    when(metadataItem1.getProperties()).thenReturn(properties);
+    MetadataItem metadataItem2 = mock(MetadataItem.class);
+    when(metadataItem2.getObjectId()).thenReturn("2");
+    when(metadataItem2.getProperties()).thenReturn(properties);
+
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+                                                             any(MetadataObject.class))).thenReturn(List.of(metadataItem1));
+    Identity identity = mock(Identity.class);
+    when(identity.getUserId()).thenReturn("john");
+    Space space1 = mockSpace();
+    List<Space> myFilteredSpaces = Arrays.asList(space1);
+    NEWS_UTILS.when(() -> NewsUtils.getMyFilteredSpacesIds(identity, new ArrayList<>())).thenReturn(myFilteredSpaces);
+    // First page (offset=0, limit=2) returns the orphan alongside one real draft,
+    // so only 1 real draft is resolved out of a full page of 2 metadata rows.
+    when(metadataService.getMetadataItemsByFilter(any(), eq(0L), eq(2L)))
+                                                                          .thenReturn(List.of(orphanMetadataItem, metadataItem1));
+    // Second page (offset=2, limit=2) returns the remaining real draft.
+    when(metadataService.getMetadataItemsByFilter(any(), eq(2L), eq(2L))).thenReturn(List.of(metadataItem2));
+    when(spaceService.canRedactOnSpace(any(Space.class), any(Identity.class))).thenReturn(true);
+    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity(anyString())).thenReturn(identity);
+
+    // When
+    NewsFilter newsFilter = new NewsFilter();
+    newsFilter.setDraftNews(true);
+    newsFilter.setOffset(0);
+    newsFilter.setLimit(2);
+    List<News> newsList = newsService.getNews(newsFilter, identity);
+
+    // Then
+    assertNotNull(newsList);
+    assertEquals(newsList.size(), 2);
+  }
+
+  @Test
   public void testPostNews() throws Exception {
 
     // Given
