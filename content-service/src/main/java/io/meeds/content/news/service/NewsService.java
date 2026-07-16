@@ -2216,6 +2216,13 @@ public class NewsService {
     if (activityId != null && !StringUtils.isEmpty(news.getId())) {
       Page newsPage = noteService.getNoteById(news.getId());
       if (newsPage != null) {
+        if (!activityId.equals(newsPage.getActivityId())) {
+          // Persist the activity id on the underlying page so that later lookups
+          // (e.g. category resolution) can resolve the news metadata object type
+          // instead of falling back to the plain note object type.
+          newsPage.setActivityId(activityId);
+          noteService.updateNote(newsPage);
+        }
         NewsPageObject newsPageObject = new NewsPageObject(NEWS_METADATA_PAGE_OBJECT_TYPE,
                                                            newsPage.getId(),
                                                            null,
