@@ -1969,35 +1969,43 @@ public class NewsService {
     metadataFilter.setSortField(filter.getSortField());
     metadataFilter.setMetadataObjectTypes(List.of(NEWS_METADATA_DRAFT_OBJECT_TYPE, NEWS_METADATA_LATEST_DRAFT_OBJECT_TYPE));
     metadataFilter.setMetadataSpaceIds(NewsUtils.getMyFilteredSpacesIds(currentIdentity, filter.getSpaces()));
-    return metadataService.getMetadataItemsByFilter(metadataFilter, filter.getOffset(), filter.getLimit())
-                          .stream()
-                          .map(draftArticle -> {
-                            try {
-                              News draft = buildDraftArticle(draftArticle.getObjectId(), currentIdentity);
-                              if (draft != null && draftArticle.getParentObjectId() != null) {
-                                News parentArticle = buildArticle(draftArticle.getParentObjectId(),
-                                                                  currentIdentity,
-                                                                  draft.getLang(),
-                                                                  true);
-                                draft.setReferred(parentArticle.isReferred());
-                                draft.setFromExternalPage(parentArticle.isFromExternalPage());
-                                draft.setOwner(parentArticle.getOwner());
-                              }
-                              return draft;
-                            } catch (IllegalAccessException e) {
-                              return null;
-                            } catch (Exception e) {
-                              LOG.error("Error while building new draft article", e);
-                              return null;
-                            }
-                          })
-                          .filter(article -> {
-                            if (article != null) {
-                              return canEditNews(article, currentIdentity.getUserId());
-                            }
-                            return false;
-                          })
-                          .toList();
+
+    int limit = filter.getLimit();
+    int offset = filter.getOffset();
+    List<News> drafts = new ArrayList<>();
+    int fetchedCount;
+    do {
+      List<MetadataItem> metadataItems = metadataService.getMetadataItemsByFilter(metadataFilter, offset, limit);
+      fetchedCount = metadataItems.size();
+      offset += fetchedCount;
+      metadataItems.stream()
+                    .map(draftArticle -> buildDraftArticleOrNull(draftArticle, currentIdentity))
+                    .filter(article -> article != null && canEditNews(article, currentIdentity.getUserId()))
+                    .forEach(drafts::add);
+    } while (limit > 0 && drafts.size() < limit && fetchedCount == limit);
+
+    return limit > 0 && drafts.size() > limit ? drafts.subList(0, limit) : drafts;
+  }
+
+  private News buildDraftArticleOrNull(MetadataItem draftArticle, Identity currentIdentity) {
+    try {
+      News draft = buildDraftArticle(draftArticle.getObjectId(), currentIdentity);
+      if (draft != null && draftArticle.getParentObjectId() != null) {
+        News parentArticle = buildArticle(draftArticle.getParentObjectId(),
+                                          currentIdentity,
+                                          draft.getLang(),
+                                          true);
+        draft.setReferred(parentArticle.isReferred());
+        draft.setFromExternalPage(parentArticle.isFromExternalPage());
+        draft.setOwner(parentArticle.getOwner());
+      }
+      return draft;
+    } catch (IllegalAccessException e) {
+      return null;
+    } catch (Exception e) {
+      LOG.error("Error while building new draft article", e);
+      return null;
+    }
   }
 
   private boolean isArticleOwner(News article, String userName) {
