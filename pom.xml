@@ -40,7 +40,11 @@
   <properties>
     <addon.meeds.notes.version>7.3.x-ai-contribution-SNAPSHOT</addon.meeds.notes.version>
     <addon.meeds.layout.version>7.3.x-ai-contribution-SNAPSHOT</addon.meeds.layout.version>
-    <addon.meeds.mcp-server.version>7.3.x-SNAPSHOT</addon.meeds.mcp-server.version>
+    <!-- News cover MCP tools (set/remove illustration) use UploadToolUtils.resolveImage,
+         added in mcp-server PR #13 (branch feat/mcp-media-tools). Until #13 merges to
+         mcp-server's develop, this consumes the locally-installed ai-contribution SNAPSHOT.
+         Revert to 7.3.x-SNAPSHOT once #13 is released. -->
+    <addon.meeds.mcp-server.version>7.3.x-ai-contribution-SNAPSHOT</addon.meeds.mcp-server.version>
 
     <!-- Sonar properties -->
     <sonar.organization>meeds-io</sonar.organization>
