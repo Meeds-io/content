@@ -651,7 +651,7 @@ public class NewsMcpToolTest {
 
   private <T> T runWithUploadMocks(CheckedSupplier<T> supplier) throws Exception { // NOSONAR
     try (MockedStatic<UploadToolUtils> upload = mockStatic(UploadToolUtils.class)) {
-      UploadToolUtils.FetchedImage image = new UploadToolUtils.FetchedImage(new byte[] { 1, 2, 3 }, "image/png", "image.png");
+      UploadToolUtils.FetchedContent image = new UploadToolUtils.FetchedContent(new byte[] { 1, 2, 3 }, "image/png", "image.png");
       upload.when(() -> UploadToolUtils.resolveImage(any(),
                                                      any(),
                                                      any(),
