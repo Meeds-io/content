@@ -249,6 +249,26 @@
   </portlet>
 
   <portlet>
+    <name>ContentListView</name>
+    <module>
+      <load-group>contentGRP</load-group>
+      <script>
+        <minify>false</minify>
+        <path>/js/contentListView.bundle.js</path>
+      </script>
+      <depends>
+        <module>vue</module>
+      </depends>
+      <depends>
+        <module>eXoVueI18n</module>
+      </depends>
+      <depends>
+        <module>vuetify</module>
+      </depends>
+    </module>
+  </portlet>
+
+  <portlet>
     <name>newsPublishTargetsManagement</name>
     <module>
       <script>
