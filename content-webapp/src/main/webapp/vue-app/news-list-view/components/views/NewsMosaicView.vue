@@ -24,7 +24,7 @@
       <news-settings
         :is-hovering="hover"
         class="mt-3 me-1 position-absolute r-0 z-index-two" />
-      <div :class="`application-border-radius mosaic-container ${smallHeightClass}`">
+      <div :class="`application-border-radius mosaic-container ${smallHeightClass} ${singleArticleClass}`">
         <news-mosaic-template-view-item
           v-for="(item, index) of news"
           :key="index"
@@ -70,6 +70,12 @@ export default {
     };
   },
   computed: {
+    isSingleArticle() {
+      return this.news.length === 1;
+    },
+    singleArticleClass() {
+      return this.isSingleArticle ? 'd-block' : '';
+    },
     news() {
       return this.newsList?.filter(news => !!news) || [];
     },
