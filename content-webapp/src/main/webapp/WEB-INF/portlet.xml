@@ -127,6 +127,38 @@
   </portlet>
 
   <portlet>
+    <description>Lists content (articles and notes) in one single app and enables users to filter it.</description>
+    <portlet-name>ContentListView</portlet-name>
+    <display-name>Content List View</display-name>
+    <portlet-class>io.meeds.content.portlet.ContentListViewPortlet</portlet-class>
+    <init-param>
+      <name>portlet-view-dispatched-file-path</name>
+      <value>/WEB-INF/jsp/contentListView.jsp</value>
+    </init-param>
+    <init-param>
+      <name>preload.resource.bundles</name>
+      <value>locale.portlet.news.News</value>
+    </init-param>
+    <init-param>
+      <name>layout-content-editable</name>
+      <value>true</value>
+    </init-param>
+    <init-param>
+      <name>layout-css-class</name>
+      <value>no-layout-style</value>
+    </init-param>
+    <supports>
+      <mime-type>text/html</mime-type>
+      <portlet-mode>view</portlet-mode>
+    </supports>
+    <supported-locale>en</supported-locale>
+    <portlet-info>
+      <title>Content List View</title>
+      <keywords>Content List View</keywords>
+    </portlet-info>
+  </portlet>
+
+  <portlet>
     <portlet-name>newsPublishTargetsManagement</portlet-name>
     <display-name xml:lang="EN">Manage news publication targets</display-name>
     <portlet-class>org.exoplatform.commons.api.portlet.GenericDispatchedViewPortlet</portlet-class>
