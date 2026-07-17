@@ -14,6 +14,7 @@ const config = {
     newsSearchCard: './src/main/webapp/vue-app/news-search/main.js',
     newsDetailsApp: './src/main/webapp/vue-app/news-details-app/main.js',
     newsListView: './src/main/webapp/vue-app/news-list-view/main.js',
+    contentListView: './src/main/webapp/vue-app/content-list-view/main.js',
     newsPublishTargetsManagement: './src/main/webapp/vue-app/news-publish-targets-management/main.js',
     newsActivityStreamExtensions: './src/main/webapp/vue-app/news-extensions/activity-stream-extensions/main.js',
     newsFavoriteDrawerExtensions: './src/main/webapp/vue-app/news-extensions/favorite-drawer-extensions/main.js',
