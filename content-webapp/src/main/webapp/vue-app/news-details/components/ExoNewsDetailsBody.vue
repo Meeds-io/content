@@ -182,9 +182,6 @@
 </template>
 
 <script>
-import html2canvas from 'html2canvas';
-import { jsPDF as JSPDF } from 'jspdf';
-
 export default {
   props: {
     news: {
@@ -356,9 +353,10 @@ export default {
             return;
           }
           const title = this.newsTitle || this.news?.title || 'article';
-          html2canvas(element, {
+          window.html2canvas(element, {
             useCORS: true
           }).then(canvas => {
+            const JSPDF = window.jspdf.jsPDF;
             const pdf = new JSPDF('p', 'mm', 'a4');
             const ctx = canvas.getContext('2d');
             const a4w = 170;
