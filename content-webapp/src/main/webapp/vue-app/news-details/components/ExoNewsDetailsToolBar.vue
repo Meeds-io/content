@@ -42,6 +42,8 @@
       :show-publish-button="showPublishButton"
       :show-copy-link-button="showCopyLinkButton"
       :show-refer-button="showReferButton"
+      :show-properties-button="showEditButton"
+      :show-export-pdf-button="true"
       @delete-article="$emit('delete-article')"
       @export-pdf="$emit('export-pdf')"
       @edit-article="$emit('edit-article')"
