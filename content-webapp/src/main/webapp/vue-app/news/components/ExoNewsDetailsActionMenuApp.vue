@@ -47,13 +47,16 @@
       :show-copy-link-button="showCopyLinkButton"
       :show-delete-button="showDeleteButton"
       :show-edit-button="showEditButton"
+      :show-properties-button="showEditButton"
       :current-app="currentApp"
       :show-publish-button="showPublishButton"
       :show-resume-button="showResumeButton"
       :show-share-button="showShareButton"
       :show-refer-button="showReferButton"
       @copy-link="copyLink"
+      @export-pdf="$emit('export-pdf')"
       @edit-article="$emit('edit-article', news)"
+      @open-properties="$emit('open-properties', $event)"
       @delete-article="$emit('delete-article')" />
   </v-menu>
 </template>

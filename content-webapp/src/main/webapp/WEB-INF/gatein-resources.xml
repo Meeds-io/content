@@ -209,6 +209,12 @@
       <depends>
         <module>NewsActivityStreamExtensions</module>
       </depends>
+      <depends>
+        <module>html2canvas</module>
+      </depends>
+      <depends>
+        <module>jspdf</module>
+      </depends>
     </module>
   </portlet>
 
@@ -371,6 +377,9 @@
       <path>/js/newsDetails.bundle.js</path>
     </script>
     <depends>
+      <module>NotesRichEditor</module>
+    </depends>
+    <depends>
       <module>NotesPublication</module>
     </depends>
     <depends>
@@ -401,6 +410,12 @@
     </depends>
     <depends>
       <module>contentTranslationMenu</module>
+    </depends>
+    <depends>
+      <module>jspdf</module>
+    </depends>
+    <depends>
+      <module>html2canvas</module>
     </depends>
   </module>
 
