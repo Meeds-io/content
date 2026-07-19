@@ -37,8 +37,11 @@
         :article-page-url="articlePage?.url"
         @delete-article="deleteConfirmDialog"
         @edit-article="editLink"
+        @export-pdf="createPDF"
+        @open-properties="openProperties"
         @open-publication-drawer="openPublicationDrawer" />
       <exo-news-details-body
+        ref="newsBody"
         :current-user="currentUser"
         :news="localNews"
         :translations="translations"
@@ -67,7 +70,13 @@
     <news-mobile-action-menu
       :news="localNews"
       @edit-article="editLink"
+      @export-pdf="createPDF"
+      @open-properties="openProperties"
       @delete-article="deleteConfirmDialog" />
+    <note-editor-metadata-drawer
+      ref="metadataDrawer"
+      :has-featured-image="!!localNews?.illustrationURL"
+      @metadata-updated="saveMetadata" />
     <note-treeview-drawer
       :settings="{
         saveButtonLabel: $t('content.article.refer.label'),
@@ -271,6 +280,48 @@ export default {
     },
     openPublicationDrawer() {
       this.$refs?.publicationDrawer?.open(this.localNews);
+    },
+    createPDF() {
+      // The capture target (cover + title + body) is owned by the body
+      // component, so the export lives there; just delegate to it.
+      this.$refs.newsBody?.createPDF();
+    },
+    openProperties() {
+      this.$refs.metadataDrawer.open(this.localNews);
+    },
+    saveMetadata(properties) {
+      if (!properties) {
+        return;
+      }
+      // A published article's id IS its backing note page id; a draft points at targetPageId.
+      // The cover + summary live in that backing note's metadata, so we persist them there,
+      // exactly like the notes "View Properties" flow (NotePage.saveMetadata): send the note
+      // with unchanged title/content so the backend routes into its EDIT_PAGE_PROPERTIES branch,
+      // which writes the featured image + summary honoring lang. The former flat
+      // updateArticleMetadataProperties endpoint expects a Map<String,String> and cannot
+      // deserialize the drawer's nested featuredImage object (HTTP 400), nor does it persist
+      // the cover.
+      const isDraft = !!this.localNews.targetPageId;
+      const pageId = isDraft ? this.localNews.targetPageId : this.localNews.id;
+      properties.noteId = pageId;
+      properties.draft = isDraft;
+      const notePayload = {
+        id: pageId,
+        title: this.localNews.title,
+        content: this.localNews.body,
+        lang: this.localNews.lang,
+        properties
+      };
+      this.$notesService.updateNoteById(notePayload)
+        .then(() => this.getNewsById(this.localNews?.id || this.newsId))
+        .then(() => this.displayMessage({
+          message: this.$t('news.details.header.menu.properties.success'),
+          type: 'success'
+        }))
+        .catch(() => this.displayMessage({
+          message: this.$t('news.details.header.menu.properties.error'),
+          type: 'error'
+        }));
     },
     getArticlePage() {
       return this.$newsServices.getArticlePage(this.localNews?.id || this.newsId).then((page) => {

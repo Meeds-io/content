@@ -34,6 +34,18 @@
       </span>
     </v-list-item>
     <v-list-item
+      class="ps-2 pe-4 action-menu-item d-flex align-center exportPdfArticleOption"
+      @click="$emit('export-pdf')">
+      <v-icon
+        size="16"
+        class="clickable icon-menu">
+        fas fa-file-pdf
+      </v-icon>
+      <span class="pt-1 text-color">
+        {{ $t('news.details.header.menu.exportPdf') }}
+      </span>
+    </v-list-item>
+    <v-list-item
       v-if="showEditButton"
       class="ps-2 pe-4 action-menu-item d-flex align-center"
       @click="$emit('edit-article', news)">
@@ -44,6 +56,19 @@
       </v-icon>
       <span class="pt-1 text-color">
         {{ $t('news.details.header.menu.edit') }}
+      </span>
+    </v-list-item>
+    <v-list-item
+      v-if="showPropertiesButton"
+      class="ps-2 pe-4 action-menu-item d-flex align-center"
+      @click="$emit('open-properties', news)">
+      <v-icon
+        size="16"
+        class="clickable icon-menu">
+        fas fa-info-circle
+      </v-icon>
+      <span class="pt-1 text-color">
+        {{ $t('news.details.header.menu.properties') }}
       </span>
     </v-list-item>
     <v-list-item
@@ -148,6 +173,11 @@ export default {
       default: false
     },
     showEditButton: {
+      type: Boolean,
+      required: false,
+      default: false
+    },
+    showPropertiesButton: {
       type: Boolean,
       required: false,
       default: false

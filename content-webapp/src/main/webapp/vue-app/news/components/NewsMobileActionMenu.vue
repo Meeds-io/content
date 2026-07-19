@@ -29,13 +29,16 @@
         :show-copy-link-button="showCopyLinkButton"
         :show-delete-button="showDeleteButton"
         :show-edit-button="showEditButton"
+        :show-properties-button="showEditButton"
         :current-app="currentApp"
         :show-publish-button="showPublishButton"
         :show-resume-button="showResumeButton"
         :show-share-button="showShareButton"
         :show-refer-button="showReferButton"
         @copy-link="copyLink"
+        @export-pdf="exportPdf"
         @edit-article="$emit('edit-article', news)"
+        @open-properties="openProperties"
         @delete-article="$emit('delete-article', news)" />
     </template>
   </exo-drawer>
@@ -83,6 +86,14 @@ export default {
     },
     close() {
       this.$refs.newsMobileActionMenu.close();
+    },
+    exportPdf() {
+      this.close();
+      this.$emit('export-pdf');
+    },
+    openProperties() {
+      this.close();
+      this.$emit('open-properties', this.news);
     },
     copyLink() {
       const portalName = eXo.env.portal.metaPortalName;
