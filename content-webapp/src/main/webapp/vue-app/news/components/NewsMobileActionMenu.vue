@@ -29,7 +29,8 @@
         :show-copy-link-button="showCopyLinkButton"
         :show-delete-button="showDeleteButton"
         :show-edit-button="showEditButton"
-        :show-properties-button="showEditButton"
+        :show-properties-button="showPropertiesButton"
+        :show-export-pdf-button="showExportPdfButton"
         :current-app="currentApp"
         :show-publish-button="showPublishButton"
         :show-resume-button="showResumeButton"
@@ -56,7 +57,9 @@ export default {
       showPublishButton: false,
       currentApp: null,
       showCopyLinkButton: false,
-      showReferButton: false
+      showReferButton: false,
+      showPropertiesButton: false,
+      showExportPdfButton: false
     };
   },
   computed: {
@@ -81,6 +84,8 @@ export default {
       this.showPublishButton = config.showPublishButton;
       this.showCopyLinkButton = config.showCopyLinkButton;
       this.showReferButton = config.showReferButton;
+      this.showPropertiesButton = config.showPropertiesButton;
+      this.showExportPdfButton = config.showExportPdfButton;
       this.currentApp = config.currentApp;
       this.$refs.newsMobileActionMenu.open();
     },
