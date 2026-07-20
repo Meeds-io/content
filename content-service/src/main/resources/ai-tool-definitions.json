@@ -7,10 +7,10 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "title": { "type": "string" },
-          "summary": { "type": "string" },
-          "html_content": { "type": "string" },
-          "target_space_id": { "type": "integer" }
+          "title": { "type": "string", "description": "Article title." },
+          "summary": { "type": "string", "description": "Optional short summary/abstract shown above the article body. Stored as article metadata — this is NOT the body content." },
+          "html_content": { "type": "string", "description": "The article BODY content (markdown/HTML). This is the main content; do not put the summary here." },
+          "target_space_id": { "type": "integer", "description": "Id of the space to create the article in." }
         },
         "required": ["title", "html_content", "target_space_id"]
       },
@@ -126,11 +126,11 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "news_id": { "type": "integer" },
-          "title": { "type": "string" },
-          "summary": { "type": "string" },
-          "html_content": { "type": "string" },
-          "language": { "type": "string" }
+          "news_id": { "type": "integer", "description": "Id of the article (news) to update." },
+          "title": { "type": "string", "description": "New article title. Omit to leave the title unchanged." },
+          "summary": { "type": "string", "description": "New short summary/abstract shown above the article body. Stored as article metadata — setting it does NOT change the article body. Omit to leave the summary unchanged." },
+          "html_content": { "type": "string", "description": "New article BODY content (markdown/HTML). Use this ONLY to change the main body; never put a summary here. Omit to leave the body unchanged." },
+          "language": { "type": "string", "description": "Optional language code targeting the summary translation to update; defaults to the article's default language." }
         },
         "required": ["news_id"]
       },
@@ -149,13 +149,13 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "news_id": { "type": "integer" },
-          "image_url": { "type": "string" },
-          "image_base64": { "type": "string" },
-          "attachment_object_type": { "type": "string" },
-          "attachment_object_id": { "type": "string" },
-          "alt_text": { "type": "string" },
-          "language": { "type": "string" }
+          "news_id": { "type": "integer", "description": "Id of the article (news) whose cover/illustration image to set." },
+          "image_url": { "type": "string", "description": "Public URL of the image to use as the cover. Provide exactly ONE image source (image_url, image_base64, or attachment_object_type+attachment_object_id)." },
+          "image_base64": { "type": "string", "description": "Base64-encoded image bytes to use as the cover. Provide exactly ONE image source." },
+          "attachment_object_type": { "type": "string", "description": "Type of an existing platform object whose already-attached image to reuse as the cover (paired with attachment_object_id)." },
+          "attachment_object_id": { "type": "string", "description": "Id of the existing platform object whose already-attached image to reuse as the cover (paired with attachment_object_type)." },
+          "alt_text": { "type": "string", "description": "Alternative text describing the cover image, for accessibility." },
+          "language": { "type": "string", "description": "Optional language code; defaults to the article's default language." }
         },
         "required": ["news_id"]
       },
