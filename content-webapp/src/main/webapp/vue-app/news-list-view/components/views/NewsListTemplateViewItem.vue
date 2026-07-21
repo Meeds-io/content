@@ -57,8 +57,8 @@
           <category-chip
             v-if="firstCategory"
             :category="firstCategory"
-            tabindex="-1"
-            small />
+            small
+            @select="openContentListDrawer" />
         </div>
         <span
           v-if="showArticleTitle"
@@ -188,6 +188,11 @@ export default {
     articleUrl() {
       return eXo.env.portal.userName !== '' ? this.item.url : `${eXo.env.portal.context}/${eXo.env.portal.portalName}/news-detail?newsId=${this.item.id}&type=article`;
     }
+  },
+  methods: {
+    openContentListDrawer(category) {
+      this.$root.$emit('open-content-list-drawer', category.id);
+    },
   },
 };
 </script>
