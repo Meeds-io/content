@@ -20,9 +20,12 @@
 
 -->
 <template>
-  <v-app class="contentListView border-box-sizing" flat>
+  <v-app
+    class="contentListView border-box-sizing"
+    :class="{'contentListViewCompact': compact}"
+    flat>
     <v-main class="d-flex flex-column fill-height">
-      <div class="d-flex align-center pb-2">
+      <div v-if="!compact" class="d-flex align-center pb-2">
         <span class="text-header-title text-truncate">{{ $t('content.list.title') }}</span>
       </div>
       <div v-if="loading" class="d-flex flex-grow-1 align-center justify-center">
@@ -60,6 +63,14 @@ export default {
       type: String,
       default: null,
     },
+    compact: {
+      type: Boolean,
+      default: false,
+    },
+    categoryId: {
+      type: [String, Number],
+      default: null,
+    },
   },
   data: () => ({
     items: [],
@@ -76,7 +87,7 @@ export default {
     load() {
       this.loading = true;
       this.offset = 0;
-      return this.$contentListService.getContentList({offset: this.offset, limit: this.limit})
+      return this.$contentListService.getContentList({offset: this.offset, limit: this.limit, categoryId: this.categoryId})
         .then(data => {
           this.items = data?.items || [];
           this.hasMore = (data?.size || 0) >= this.limit;
@@ -86,7 +97,7 @@ export default {
     loadMore() {
       this.loadingMore = true;
       this.offset += this.limit;
-      return this.$contentListService.getContentList({offset: this.offset, limit: this.limit})
+      return this.$contentListService.getContentList({offset: this.offset, limit: this.limit, categoryId: this.categoryId})
         .then(data => {
           this.items = [...this.items, ...(data?.items || [])];
           this.hasMore = (data?.size || 0) >= this.limit;
