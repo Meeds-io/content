@@ -41,6 +41,7 @@
         :language="language"
         :application-id="applicationId" />
       <news-publish-targets-management-drawer v-if="canCreateNewsTarget" />
+      <content-list-drawer ref="contentListDrawer" />
     </v-app>
   </v-hover>
 </template>
@@ -233,6 +234,7 @@ export default {
   },
   created() {
     this.$root.$on('saved-news-settings', this.handleSaveSettingsEvent);
+    this.$root.$on('open-content-list-drawer', this.openContentListDrawer);
     this.initFromRoot();
     this.retrieveNewsList().finally(() => this.$root.$applicationLoaded());
     document.addEventListener(`component-${this.extensionApp}-${this.extensionType}-updated`, this.refreshViewExtensions);
@@ -241,8 +243,12 @@ export default {
   beforeDestroy() {
     document.removeEventListener(`component-${this.extensionApp}-${this.extensionType}-updated`, this.refreshViewExtensions);
     this.$root.$off('saved-news-settings', this.handleSaveSettingsEvent);
+    this.$root.$off('open-content-list-drawer', this.openContentListDrawer);
   },
   methods: {
+    openContentListDrawer(categoryId) {
+      this.$refs.contentListDrawer.open(categoryId);
+    },
     async retrieveNewsList() {
       this.loading = true;
       let newsList = [];
