@@ -22,8 +22,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
@@ -48,6 +52,8 @@ import io.meeds.content.news.model.News;
 import io.meeds.content.news.model.filter.NewsFilter;
 import io.meeds.content.news.service.NewsService;
 import io.meeds.content.utils.ContentUtils;
+import io.meeds.social.category.model.CategoryObject;
+import io.meeds.social.category.service.CategoryLinkService;
 
 /**
  * Merges content coming from several content-producing addons (News
@@ -60,31 +66,46 @@ import io.meeds.content.utils.ContentUtils;
 @Service
 public class ContentService {
 
-  @Autowired
-  private NewsService    newsService;
+  // Upper bound on how many objects linked to a category are considered when
+  // filtering the merged list by category. Combining a category filter with
+  // News/Notes' own independent pagination has no exact solution without a
+  // shared index (see the eXIP7.3.0.12 tech spec's Volume & Performance
+  // section); this cap keeps it correct for any reasonably-sized category.
+  private static final int CATEGORY_LINKS_FETCH_CAP = 500;
 
   @Autowired
-  private NoteService    noteService;
+  private NewsService         newsService;
 
   @Autowired
-  private SpaceService   spaceService;
+  private NoteService         noteService;
 
   @Autowired
-  private IdentityManager identityManager;
+  private SpaceService        spaceService;
+
+  @Autowired
+  private IdentityManager     identityManager;
+
+  @Autowired
+  private CategoryLinkService categoryLinkService;
 
   public List<ContentEntry> getContentList(ContentFilter filter, Identity currentIdentity) throws Exception {
     int offset = filter.getOffset();
     int limit = filter.getLimit();
-    // Each source is fetched from 0 up to (offset + limit) since neither
-    // source can be paginated against the other's results ahead of the merge.
-    int fetchLimit = offset + limit;
+    boolean byCategory = filter.getCategoryId() != null;
+    // Each source is fetched from 0 up to a bound since neither source can be
+    // paginated against the other's results ahead of the merge: when
+    // filtering by category, the bound is the category-links cap (so any
+    // in-category item can surface regardless of its date-sort position);
+    // otherwise it is simply (offset + limit).
+    int fetchLimit = byCategory ? CATEGORY_LINKS_FETCH_CAP : offset + limit;
+    Map<String, Set<String>> categoryLinkedIds = byCategory ? resolveCategoryLinkedIds(filter) : null;
 
     List<ContentEntry> entries = new ArrayList<>();
     if (filter.hasContentType(ContentUtils.CONTENT_TYPE_NEWS)) {
-      entries.addAll(getNewsEntries(filter, fetchLimit, currentIdentity));
+      entries.addAll(getNewsEntries(filter, fetchLimit, currentIdentity, categoryLinkedIds));
     }
     if (filter.hasContentType(ContentUtils.CONTENT_TYPE_NOTES)) {
-      entries.addAll(getNoteEntries(filter, fetchLimit, currentIdentity));
+      entries.addAll(getNoteEntries(filter, fetchLimit, currentIdentity, categoryLinkedIds));
     }
     // "event" content type has no backing service yet (content has no
     // dependency on agenda) - see ContentUtils.CONTENT_TYPE_EVENT.
@@ -93,7 +114,37 @@ public class ContentService {
     return entries.stream().skip(offset).limit(limit).collect(Collectors.toList());
   }
 
-  private List<ContentEntry> getNewsEntries(ContentFilter filter, int fetchLimit, Identity currentIdentity) throws Exception {
+  private Map<String, Set<String>> resolveCategoryLinkedIds(ContentFilter filter) {
+    List<String> types = new ArrayList<>();
+    if (filter.hasContentType(ContentUtils.CONTENT_TYPE_NEWS)) {
+      types.add(ContentUtils.CONTENT_TYPE_NEWS);
+    }
+    if (filter.hasContentType(ContentUtils.CONTENT_TYPE_NOTES)) {
+      types.add(ContentUtils.CONTENT_TYPE_NOTES);
+    }
+    if (types.isEmpty()) {
+      return Collections.emptyMap();
+    }
+    List<CategoryObject> linkedObjects = categoryLinkService.getLinkedObjects(filter.getCategoryId(),
+                                                                              types,
+                                                                              0,
+                                                                              CATEGORY_LINKS_FETCH_CAP);
+    Map<String, Set<String>> linkedIdsByType = new HashMap<>();
+    for (CategoryObject linkedObject : linkedObjects) {
+      linkedIdsByType.computeIfAbsent(linkedObject.getType(), key -> new HashSet<>()).add(linkedObject.getId());
+    }
+    return linkedIdsByType;
+  }
+
+  private List<ContentEntry> getNewsEntries(ContentFilter filter,
+                                            int fetchLimit,
+                                            Identity currentIdentity,
+                                            Map<String, Set<String>> categoryLinkedIds) throws Exception {
+    Set<String> allowedIds = categoryLinkedIds == null ? null : categoryLinkedIds.get(ContentUtils.CONTENT_TYPE_NEWS);
+    if (categoryLinkedIds != null && CollectionUtils.isEmpty(allowedIds)) {
+      return Collections.emptyList();
+    }
+
     NewsFilter newsFilter = toNewsFilter(filter, fetchLimit, currentIdentity.getUserId());
     List<News> newsList;
     if (StringUtils.isNotBlank(filter.getSearchText())) {
@@ -109,14 +160,22 @@ public class ContentService {
     }
     return newsList.stream()
                    .filter(Objects::nonNull)
+                   .filter(news -> allowedIds == null || allowedIds.contains(news.getId()))
                    .map(news -> toContentEntry(news, effectiveStatus(filter.getStatus())))
                    .collect(Collectors.toList());
   }
 
-  private List<ContentEntry> getNoteEntries(ContentFilter filter, int fetchLimit, Identity currentIdentity) throws Exception {
+  private List<ContentEntry> getNoteEntries(ContentFilter filter,
+                                            int fetchLimit,
+                                            Identity currentIdentity,
+                                            Map<String, Set<String>> categoryLinkedIds) throws Exception {
     String status = effectiveStatus(filter.getStatus());
     if (StringUtils.equals(status, ContentUtils.STATUS_SCHEDULED) || StringUtils.equals(status, ContentUtils.STATUS_DRAFT)) {
       // Regular notes have no publish workflow (no scheduled/draft state).
+      return Collections.emptyList();
+    }
+    Set<String> allowedIds = categoryLinkedIds == null ? null : categoryLinkedIds.get(ContentUtils.CONTENT_TYPE_NOTES);
+    if (categoryLinkedIds != null && CollectionUtils.isEmpty(allowedIds)) {
       return Collections.emptyList();
     }
 
@@ -142,8 +201,12 @@ public class ContentService {
     }
     List<ContentEntry> entries = new ArrayList<>();
     for (SearchResult result : results) {
+      String noteId = String.valueOf(result.getId());
+      if (allowedIds != null && !allowedIds.contains(noteId)) {
+        continue;
+      }
       try {
-        Page note = noteService.getNoteById(String.valueOf(result.getId()), currentIdentity);
+        Page note = noteService.getNoteById(noteId, currentIdentity);
         if (note != null) {
           entries.add(toContentEntry(note, currentIdentity));
         }
