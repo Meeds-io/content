@@ -107,6 +107,8 @@
   </v-app>
 </template>
 <script>
+import * as queryParamUtils from '../js/queryParamUtils.js';
+
 export default {
   props: {
     canEdit: {
@@ -166,9 +168,32 @@ export default {
     },
   },
   created() {
+    if (!this.compact) {
+      this.searchText = queryParamUtils.getQueryParam('text');
+      this.appliedSearchText = this.searchText;
+      const contentTypesParam = queryParamUtils.getQueryParam('contentTypes');
+      const spacesParam = queryParamUtils.getQueryParam('spaces');
+      this.advancedFilter = {
+        contentTypes: contentTypesParam ? contentTypesParam.split(',') : null,
+        status: queryParamUtils.getQueryParam('status') || 'published',
+        spaces: spacesParam ? spacesParam.split(',') : null,
+        selectedSpaces: [],
+      };
+      this.activeCategoryId = queryParamUtils.getQueryParam('categoryId') || this.categoryId;
+    }
     this.load();
   },
   methods: {
+    syncQueryParams() {
+      if (this.compact) {
+        return;
+      }
+      queryParamUtils.updateQueryParam('text', this.appliedSearchText);
+      queryParamUtils.updateQueryParam('contentTypes', this.advancedFilter.contentTypes?.join(','));
+      queryParamUtils.updateQueryParam('status', this.advancedFilter.status !== 'published' ? this.advancedFilter.status : null);
+      queryParamUtils.updateQueryParam('spaces', this.advancedFilter.spaces?.join(','));
+      queryParamUtils.updateQueryParam('categoryId', this.activeCategoryId);
+    },
     currentFilter() {
       return {
         offset: this.offset,
@@ -207,6 +232,7 @@ export default {
     load() {
       this.loading = true;
       this.offset = 0;
+      this.syncQueryParams();
       return this.$contentListService.getContentList(this.currentFilter())
         .then(data => {
           this.items = data?.items || [];
