@@ -19,10 +19,12 @@
  */
 import ContentListView from './components/ContentListView.vue';
 import ContentListItem from './components/ContentListItem.vue';
+import ContentListDrawer from './components/ContentListDrawer.vue';
 
 const components = {
   'content-list-view': ContentListView,
   'content-list-item': ContentListItem,
+  'content-list-drawer': ContentListDrawer,
 };
 
 for (const key in components) {
