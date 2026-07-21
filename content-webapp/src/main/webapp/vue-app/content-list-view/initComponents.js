@@ -22,6 +22,8 @@ import ContentListItem from './components/ContentListItem.vue';
 import ContentListDrawer from './components/ContentListDrawer.vue';
 import ContentActionMenuItems from './components/ContentActionMenuItems.vue';
 import ContentFilterDrawer from './components/ContentFilterDrawer.vue';
+import ContentListSettingsDrawer from './components/ContentListSettingsDrawer.vue';
+import ContentListCategoryPicker from './components/ContentListCategoryPicker.vue';
 
 const components = {
   'content-list-view': ContentListView,
@@ -29,6 +31,8 @@ const components = {
   'content-list-drawer': ContentListDrawer,
   'content-action-menu-items': ContentActionMenuItems,
   'content-filter-drawer': ContentFilterDrawer,
+  'content-list-settings-drawer': ContentListSettingsDrawer,
+  'content-list-category-picker': ContentListCategoryPicker,
 };
 
 for (const key in components) {

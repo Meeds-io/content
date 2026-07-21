@@ -19,6 +19,22 @@
  */
 const CONTENT_LIST_API = '/content/rest/contents/all';
 
+export function getContentTypes() {
+  return fetch(`${CONTENT_LIST_API}/types`, {
+    method: 'GET',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  }).then(resp => {
+    if (resp?.ok) {
+      return resp.json();
+    } else {
+      throw new Error('Error getting content types');
+    }
+  });
+}
+
 export function getContentList(filter) {
   const params = new URLSearchParams();
   if (filter?.contentTypes?.length) {
@@ -36,6 +52,12 @@ export function getContentList(filter) {
   if (filter?.text) {
     params.set('text', filter.text);
   }
+  if (filter?.includeCategoryIds?.length) {
+    params.set('includeCategoryIds', filter.includeCategoryIds.join(','));
+  }
+  if (filter?.excludeCategoryIds?.length) {
+    params.set('excludeCategoryIds', filter.excludeCategoryIds.join(','));
+  }
   params.set('offset', filter?.offset || 0);
   params.set('limit', filter?.limit || 20);
 
@@ -50,6 +72,25 @@ export function getContentList(filter) {
       return resp.json();
     } else {
       throw new Error('Error getting content list');
+    }
+  });
+}
+
+export function saveSettings(saveSettingsURL, settings) {
+  const formData = new FormData();
+  if (settings) {
+    Object.keys(settings).forEach(name => formData.append(name, settings[name]));
+  }
+  return fetch(saveSettingsURL.replaceAll('&amp;', '&'), {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams(formData).toString(),
+  }).then(resp => {
+    if (!resp?.ok) {
+      throw new Error('Error saving content list settings');
     }
   });
 }

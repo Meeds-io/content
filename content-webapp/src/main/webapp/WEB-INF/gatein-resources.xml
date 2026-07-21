@@ -66,13 +66,6 @@
 
   <portlet-skin>
     <application-name>content</application-name>
-    <portlet-name>ContentListView</portlet-name>
-    <skin-name>Enterprise</skin-name>
-    <css-path>/skin/css/contentListView.css</css-path>
-  </portlet-skin>
-
-  <portlet-skin>
-    <application-name>content</application-name>
     <portlet-name>newsPublishTargetsManagement</portlet-name>
     <skin-name>Enterprise</skin-name>
     <css-path>/skin/css/newsPublishTargetsManagement.css</css-path>
@@ -114,6 +107,41 @@
     <css-priority>1</css-priority>
     <additional-module>ImageCropper</additional-module>
   </portlet-skin>
+
+  <!--
+    Bare/shared alias of the ContentListView portlet's own module (below), so
+    other portlets (NewsListView, newsDetails) can depend on it too. A module
+    declared inside a <portlet> block is only resolvable while that specific
+    portlet is present on the page ("Can't find dependent resource
+    SHARED/ContentListView" otherwise) - this alias points at the identical
+    bundle but is registered at the shared/portal scope.
+  -->
+  <module>
+    <name>ContentListShared</name>
+    <load-group>contentGRP</load-group>
+    <script>
+      <minify>false</minify>
+      <path>/js/contentListView.bundle.js</path>
+    </script>
+    <depends>
+      <module>vue</module>
+    </depends>
+    <depends>
+      <module>eXoVueI18n</module>
+    </depends>
+    <depends>
+      <module>vuetify</module>
+    </depends>
+    <depends>
+      <module>commonVueComponents</module>
+    </depends>
+    <depends>
+      <module>categoryVueComponents</module>
+    </depends>
+    <depends>
+      <module>applicationToolbarComponent</module>
+    </depends>
+  </module>
 
   <portlet>
     <name>NewsComposer</name>
@@ -270,7 +298,7 @@
         <module>categoryVueComponents</module>
       </depends>
       <depends>
-        <module>ContentListView</module>
+        <module>ContentListShared</module>
       </depends>
       <depends>
         <module>translationField</module>
@@ -300,6 +328,9 @@
       </depends>
       <depends>
         <module>categoryVueComponents</module>
+      </depends>
+      <depends>
+        <module>applicationToolbarComponent</module>
       </depends>
     </module>
   </portlet>
@@ -455,7 +486,7 @@
       <module>categoryVueComponents</module>
     </depends>
     <depends>
-      <module>ContentListView</module>
+      <module>ContentListShared</module>
     </depends>
     <depends>
       <module>commons-editor</module>

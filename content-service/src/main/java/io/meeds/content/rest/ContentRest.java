@@ -39,6 +39,7 @@ import org.exoplatform.services.security.ConversationState;
 import org.exoplatform.services.security.Identity;
 
 import io.meeds.content.model.ContentEntry;
+import io.meeds.content.model.ContentType;
 import io.meeds.content.model.filter.ContentFilter;
 import io.meeds.content.rest.model.ContentEntryList;
 import io.meeds.content.service.ContentService;
@@ -57,6 +58,14 @@ public class ContentRest {
 
   @Autowired
   private ContentService   contentService;
+
+  @GetMapping(path = "types", produces = MediaType.APPLICATION_JSON_VALUE)
+  @Secured("users")
+  @Operation(summary = "Get registered content types", method = "GET", description = "This gets the list of content types registered by content-producing addons, for the Content List filter drawer.")
+  @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "Content types returned") })
+  public ResponseEntity<List<ContentType>> getContentTypes() {
+    return ResponseEntity.ok(contentService.getContentTypes());
+  }
 
   @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
   @Secured("users")
@@ -84,7 +93,13 @@ public class ContentRest {
                                                           int offset,
                                                           @Parameter(description = "Content pagination limit")
                                                           @RequestParam(name = "limit", defaultValue = "20", required = false)
-                                                          int limit) {
+                                                          int limit,
+                                                          @Parameter(description = "Admin-configured category ids to restrict the list to")
+                                                          @RequestParam(name = "includeCategoryIds", required = false)
+                                                          List<Long> includeCategoryIds,
+                                                          @Parameter(description = "Admin-configured category ids to always exclude from the list")
+                                                          @RequestParam(name = "excludeCategoryIds", required = false)
+                                                          List<Long> excludeCategoryIds) {
     Identity currentIdentity = ConversationState.getCurrent().getIdentity();
     try {
       ContentFilter filter = new ContentFilter();
@@ -95,6 +110,8 @@ public class ContentRest {
       filter.setSearchText(text);
       filter.setOffset(offset);
       filter.setLimit(limit);
+      filter.setIncludeCategoryIds(includeCategoryIds);
+      filter.setExcludeCategoryIds(excludeCategoryIds);
 
       List<ContentEntry> items = contentService.getContentList(filter, currentIdentity);
 

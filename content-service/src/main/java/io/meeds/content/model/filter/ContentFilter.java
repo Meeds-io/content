@@ -24,10 +24,10 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * A filter used to list content merged across several content types
- * (currently News articles and Notes; "event" is accepted as a content type
- * value but not yet resolved by any backing service since the content addon
- * has no dependency on Agenda).
+ * A filter used to list content merged across the content types registered
+ * via {@link io.meeds.content.plugin.ContentTypePlugin} (News articles and
+ * Notes today; a new content type only needs a new registered plugin, not a
+ * change here).
  */
 @Data
 @NoArgsConstructor
@@ -46,6 +46,19 @@ public class ContentFilter {
   private int            offset;
 
   private int            limit;
+
+  /**
+   * Admin-configured category restriction (portlet preferences, see task 10):
+   * when set, and no explicit {@link #categoryId} browse is active, only
+   * content linked to one of these categories is listed.
+   */
+  private List<Long>    includeCategoryIds;
+
+  /**
+   * Admin-configured category exclusion (portlet preferences): content
+   * linked to any of these categories is always dropped from the list.
+   */
+  private List<Long>    excludeCategoryIds;
 
   public boolean hasContentType(String contentType) {
     return contentTypes == null || contentTypes.isEmpty() || contentTypes.contains(contentType);
