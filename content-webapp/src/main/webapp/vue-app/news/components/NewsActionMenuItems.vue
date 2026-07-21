@@ -29,8 +29,21 @@
         class="clickable icon-menu">
         fas fa-link
       </v-icon>
-      <span class="pt-1 text-color">
+      <span class="text-color">
         {{ $t('news.details.header.menu.copy.link') }}
+      </span>
+    </v-list-item>
+    <v-list-item
+      v-if="showExportPdfButton"
+      class="ps-2 pe-4 action-menu-item d-flex align-center exportPdfArticleOption"
+      @click="$emit('export-pdf')">
+      <v-icon
+        size="16"
+        class="clickable icon-menu">
+        fas fa-file-pdf
+      </v-icon>
+      <span class="text-color">
+        {{ $t('news.details.header.menu.exportPdf') }}
       </span>
     </v-list-item>
     <v-list-item
@@ -42,8 +55,21 @@
         class="clickable icon-menu">
         fas fa-edit
       </v-icon>
-      <span class="pt-1 text-color">
+      <span class="text-color">
         {{ $t('news.details.header.menu.edit') }}
+      </span>
+    </v-list-item>
+    <v-list-item
+      v-if="showPropertiesButton"
+      class="ps-2 pe-4 action-menu-item d-flex align-center"
+      @click="$emit('open-properties', news)">
+      <v-icon
+        size="16"
+        class="clickable icon-menu">
+        fas fa-info-circle
+      </v-icon>
+      <span class="text-color">
+        {{ $t('news.details.header.menu.properties') }}
       </span>
     </v-list-item>
     <v-list-item
@@ -55,7 +81,7 @@
         class="clickable icon-menu">
         fa fa-share
       </v-icon>
-      <span class="pt-1 text-color">
+      <span class="text-color">
         {{ $t('news.details.header.menu.share') }}
       </span>
     </v-list-item>
@@ -68,33 +94,33 @@
         class="clickable icon-menu">
         fas fa-edit
       </v-icon>
-      <span class="pt-1 text-color">
+      <span class="text-color">
         {{ $t('news.details.header.menu.resume') }}
       </span>
     </v-list-item>
     <v-list-item
       v-if="showPublishButton"
-      class="ps-2 pe-4 action-menu-item"
+      class="ps-2 pe-4 action-menu-item d-flex align-center"
       @click="openPublicationDrawer">
       <v-icon
         size="16"
         class="clickable icon-menu">
         fa-solid fa-paper-plane
       </v-icon>
-      <span class="pt-1 text-color">
+      <span class="text-color">
         {{ $t('news.details.header.menu.publish') }}
       </span>
     </v-list-item>
     <v-list-item
       v-if="showReferButton"
-      class="ps-2 pe-4 action-menu-item"
+      class="ps-2 pe-4 action-menu-item d-flex align-center"
       @click="$root.$emit('refer-article-to-note')">
       <v-icon
         size="16"
         class="clickable icon-menu">
         {{ !news.referred && 'fas fa-sitemap' || 'fas fa-unlink' }}
       </v-icon>
-      <span class="pt-1 text-color">
+      <span class="text-color">
         {{ !news.referred && $t('content.article.refer.to.note')
           || $t('content.article.deRefer.label') }}
       </span>
@@ -112,9 +138,7 @@
           size="16">
           {{ extension.icon }}
         </v-icon>
-        <span
-          :class="extension.labelClass"
-          class="pt-1">
+        <span :class="extension.labelClass">
           {{ $t(extension.labelKey) }}
         </span>
       </v-list-item>
@@ -128,7 +152,7 @@
         class="clickable icon-menu deleteArticleIcon">
         fas fa-trash
       </v-icon>
-      <span class="pt-1 deleteArticleText">
+      <span class="deleteArticleText">
         {{ $t('news.details.header.menu.delete') }}
       </span>
     </v-list-item>
@@ -148,6 +172,16 @@ export default {
       default: false
     },
     showEditButton: {
+      type: Boolean,
+      required: false,
+      default: false
+    },
+    showPropertiesButton: {
+      type: Boolean,
+      required: false,
+      default: false
+    },
+    showExportPdfButton: {
       type: Boolean,
       required: false,
       default: false

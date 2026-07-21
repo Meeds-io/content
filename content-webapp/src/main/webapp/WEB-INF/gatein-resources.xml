@@ -41,6 +41,11 @@
     <skin-name>Enterprise</skin-name>
     <css-path>/skin/css/newsApp.css</css-path>
     <additional-module>newsDetails</additional-module>
+    <!-- The reader's Properties drawer reuses the shared notes metadata/featured-image
+         drawers; pull their existing skins (as NewsComposer does) so the reused drawer
+         renders correctly wherever the reader loads. -->
+    <additional-module>Notes</additional-module>
+    <additional-module>ImageCropper</additional-module>
   </portlet-skin>
 
   <portlet-skin>
@@ -71,6 +76,8 @@
     <portlet-name>NewsDetail</portlet-name>
     <skin-name>Enterprise</skin-name>
     <additional-module>newsDetails</additional-module>
+    <additional-module>Notes</additional-module>
+    <additional-module>ImageCropper</additional-module>
   </portlet-skin>
 
   <portlet-skin>
@@ -79,6 +86,8 @@
     <skin-name>Enterprise</skin-name>
     <additional-module>NewsComposerActivityStreamExtensions</additional-module>
     <additional-module>newsDetails</additional-module>
+    <additional-module>Notes</additional-module>
+    <additional-module>ImageCropper</additional-module>
   </portlet-skin>
 
   <portlet-skin>
@@ -87,6 +96,8 @@
     <skin-name>Enterprise</skin-name>
     <additional-module>NewsComposerActivityStreamExtensions</additional-module>
     <additional-module>newsDetails</additional-module>
+    <additional-module>Notes</additional-module>
+    <additional-module>ImageCropper</additional-module>
   </portlet-skin>
 
   <portlet-skin>
@@ -208,6 +219,12 @@
       </depends>
       <depends>
         <module>NewsActivityStreamExtensions</module>
+      </depends>
+      <depends>
+        <module>html2canvas</module>
+      </depends>
+      <depends>
+        <module>jspdf</module>
       </depends>
     </module>
   </portlet>
@@ -371,6 +388,9 @@
       <path>/js/newsDetails.bundle.js</path>
     </script>
     <depends>
+      <module>NotesRichEditor</module>
+    </depends>
+    <depends>
       <module>NotesPublication</module>
     </depends>
     <depends>
@@ -401,6 +421,12 @@
     </depends>
     <depends>
       <module>contentTranslationMenu</module>
+    </depends>
+    <depends>
+      <module>jspdf</module>
+    </depends>
+    <depends>
+      <module>html2canvas</module>
     </depends>
   </module>
 

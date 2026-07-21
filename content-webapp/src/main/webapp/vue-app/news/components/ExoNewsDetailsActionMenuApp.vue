@@ -47,13 +47,17 @@
       :show-copy-link-button="showCopyLinkButton"
       :show-delete-button="showDeleteButton"
       :show-edit-button="showEditButton"
+      :show-properties-button="showPropertiesButton"
+      :show-export-pdf-button="showExportPdfButton"
       :current-app="currentApp"
       :show-publish-button="showPublishButton"
       :show-resume-button="showResumeButton"
       :show-share-button="showShareButton"
       :show-refer-button="showReferButton"
       @copy-link="copyLink"
+      @export-pdf="$emit('export-pdf')"
       @edit-article="$emit('edit-article', news)"
+      @open-properties="$emit('open-properties', $event)"
       @delete-article="$emit('delete-article')" />
   </v-menu>
 </template>
@@ -72,6 +76,16 @@ export default {
       default: false
     },
     showEditButton: {
+      type: Boolean,
+      required: false,
+      default: false
+    },
+    showPropertiesButton: {
+      type: Boolean,
+      required: false,
+      default: false
+    },
+    showExportPdfButton: {
       type: Boolean,
       required: false,
       default: false
@@ -165,6 +179,8 @@ export default {
           showPublishButton: this.showPublishButton,
           showCopyLinkButton: this.showCopyLinkButton,
           showReferButton: this.showReferButton,
+          showPropertiesButton: this.showPropertiesButton,
+          showExportPdfButton: this.showExportPdfButton,
           currentApp: this.currentApp
         });
       }
