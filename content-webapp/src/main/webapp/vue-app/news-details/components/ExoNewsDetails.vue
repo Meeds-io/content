@@ -77,6 +77,9 @@
       ref="metadataDrawer"
       :has-featured-image="!!localNews?.illustrationURL"
       @metadata-updated="saveMetadata" />
+    <note-editor-featured-image-drawer
+      :note="localNews"
+      :has-featured-image="!!localNews?.illustrationURL" />
     <note-treeview-drawer
       :settings="{
         saveButtonLabel: $t('content.article.refer.label'),
@@ -314,6 +317,10 @@ export default {
       };
       this.$notesService.updateNoteById(notePayload)
         .then(() => this.getNewsById(this.localNews?.id || this.newsId))
+        // The reader body caches the summary in local data at created() and only
+        // refreshes it on this event, so push the just-saved value to avoid a
+        // manual page reload (the cover rebinds reactively via the news prop).
+        .then(() => this.$root.$emit('update-news-summary', properties.summary))
         .then(() => this.displayMessage({
           message: this.$t('news.details.header.menu.properties.success'),
           type: 'success'
