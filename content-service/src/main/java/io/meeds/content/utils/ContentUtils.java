@@ -1,0 +1,49 @@
+/**
+ * This file is part of the Meeds project (https://meeds.io/).
+ *
+ * Copyright (C) 2020 - 2026 Meeds Association contact@meeds.io
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3 of the License, or (at your option) any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ */
+package io.meeds.content.utils;
+
+public class ContentUtils {
+
+  private ContentUtils() {
+    // Utility class
+  }
+
+  public static final String CONTENT_TYPE_NEWS   = "news";
+
+  public static final String CONTENT_TYPE_NOTES  = "notes";
+
+  /**
+   * Agenda calendar events are not yet resolved by any backing service: the
+   * content addon (io.meeds.*) has no dependency on the agenda addon
+   * (org.exoplatform.*), which sits in a separate addon lineage. This value
+   * is accepted throughout the content-list filter/model classes so the
+   * front-end filter UI can already offer it, but it never contributes any
+   * result.
+   */
+  public static final String CONTENT_TYPE_EVENT  = "event";
+
+  public static final String STATUS_PUBLISHED    = "published";
+
+  public static final String STATUS_MY_CONTENT   = "myContent";
+
+  public static final String STATUS_SCHEDULED    = "scheduled";
+
+  public static final String STATUS_DRAFT        = "draft";
+
+}

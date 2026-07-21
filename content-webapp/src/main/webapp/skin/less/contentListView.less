@@ -17,14 +17,17 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
-import ContentListView from './components/ContentListView.vue';
-import ContentListItem from './components/ContentListItem.vue';
 
-const components = {
-  'content-list-view': ContentListView,
-  'content-list-item': ContentListItem,
-};
+.contentListView {
+  .contentListItemIllustration {
+    width: 64px;
+    height: 64px;
+  }
 
-for (const key in components) {
-  Vue.component(key, components[key]);
+  .text-truncate-2 {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+  }
 }
