@@ -62,6 +62,17 @@
             class="flex-grow-1 mx-2" />
         </template>
       </div>
+      <categories-breadcrumb
+        v-if="breadcrumb"
+        :breadcrumb="breadcrumb"
+        :selected-id="activeCategoryId"
+        class="pb-2"
+        @select="selectCategory" />
+      <category-chips-group
+        v-else-if="categories.length"
+        :categories="categories"
+        class="pb-2"
+        @select="selectCategory" />
       <div v-if="loading" class="d-flex flex-grow-1 align-center justify-center">
         <v-progress-circular indeterminate color="primary" />
       </div>
@@ -115,25 +126,31 @@ export default {
       default: null,
     },
   },
-  data: () => ({
-    items: [],
-    offset: 0,
-    limit: 20,
-    hasMore: false,
-    loading: true,
-    loadingMore: false,
-    itemToDelete: null,
-    filterMode: false,
-    searchText: null,
-    appliedSearchText: null,
-    searchTimeout: null,
-    advancedFilter: {
-      contentTypes: null,
-      status: 'published',
-      spaces: null,
-      selectedSpaces: [],
-    },
-  }),
+  data() {
+    return {
+      items: [],
+      offset: 0,
+      limit: 20,
+      hasMore: false,
+      loading: true,
+      loadingMore: false,
+      itemToDelete: null,
+      filterMode: false,
+      searchText: null,
+      appliedSearchText: null,
+      searchTimeout: null,
+      advancedFilter: {
+        contentTypes: null,
+        status: 'published',
+        spaces: null,
+        selectedSpaces: [],
+      },
+      activeCategoryId: this.categoryId,
+      categoryIds: [],
+      categories: [],
+      breadcrumb: null,
+    };
+  },
   computed: {
     hasAdvancedFilter() {
       return !!(this.advancedFilter.contentTypes?.length || this.advancedFilter.status !== 'published' || this.advancedFilter.spaces?.length);
@@ -156,7 +173,7 @@ export default {
       return {
         offset: this.offset,
         limit: this.limit,
-        categoryId: this.categoryId,
+        categoryId: this.activeCategoryId,
         text: this.appliedSearchText,
         contentTypes: this.advancedFilter.contentTypes,
         status: this.advancedFilter.status,
@@ -167,6 +184,26 @@ export default {
       this.advancedFilter = filter;
       this.load();
     },
+    selectCategory(category) {
+      this.activeCategoryId = category?.id || null;
+      this.load();
+    },
+    async refreshCategories(categoryIds) {
+      this.categoryIds = categoryIds || [];
+      if (this.activeCategoryId) {
+        const [category, ancestorIds] = await Promise.all([
+          this.$categoryService.getCategory(this.activeCategoryId),
+          this.$categoryService.getAncestorIds(this.activeCategoryId),
+        ]);
+        const ancestors = await Promise.all((ancestorIds || []).map(id => this.$categoryService.getCategory(id)));
+        this.breadcrumb = [...ancestors.reverse(), category].filter(cat => cat && cat.parentId !== 0);
+        this.categories = [];
+      } else {
+        this.breadcrumb = null;
+        const resolvedCategories = await Promise.all(this.categoryIds.map(id => this.$categoryService.getCategory(id).catch(() => null)));
+        this.categories = resolvedCategories.filter(cat => cat);
+      }
+    },
     load() {
       this.loading = true;
       this.offset = 0;
@@ -174,6 +211,7 @@ export default {
         .then(data => {
           this.items = data?.items || [];
           this.hasMore = (data?.size || 0) >= this.limit;
+          return this.refreshCategories(data?.categoryIds);
         })
         .finally(() => this.loading = false);
     },

@@ -103,6 +103,12 @@ public class ContentRest {
       result.setOffset(offset);
       result.setLimit(limit);
       result.setSize(items.size());
+      result.setCategoryIds(items.stream()
+                                 .map(ContentEntry::getCategoryIds)
+                                 .filter(java.util.Objects::nonNull)
+                                 .flatMap(List::stream)
+                                 .distinct()
+                                 .collect(java.util.stream.Collectors.toList()));
       return ResponseEntity.ok(result);
     } catch (IllegalAccessException e) {
       LOG.debug("User '{}' is not authorized to access the requested content", currentIdentity.getUserId(), e);
