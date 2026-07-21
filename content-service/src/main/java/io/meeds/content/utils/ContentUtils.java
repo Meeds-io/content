@@ -28,16 +28,6 @@ public class ContentUtils {
 
   public static final String CONTENT_TYPE_NOTES  = "notes";
 
-  /**
-   * Agenda calendar events are not yet resolved by any backing service: the
-   * content addon (io.meeds.*) has no dependency on the agenda addon
-   * (org.exoplatform.*), which sits in a separate addon lineage. This value
-   * is accepted throughout the content-list filter/model classes so the
-   * front-end filter UI can already offer it, but it never contributes any
-   * result.
-   */
-  public static final String CONTENT_TYPE_EVENT  = "event";
-
   public static final String STATUS_PUBLISHED    = "published";
 
   public static final String STATUS_MY_CONTENT   = "myContent";

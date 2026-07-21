@@ -35,9 +35,11 @@
           hide-details
           class="mt-0">
           <v-radio :label="$t('content.list.filter.any')" value="any" />
-          <v-radio :label="$t('content.list.filter.contentType.news')" value="news" />
-          <v-radio :label="$t('content.list.filter.contentType.event')" value="event" />
-          <v-radio :label="$t('content.list.filter.contentType.notes')" value="notes" />
+          <v-radio
+            v-for="contentType in contentTypes"
+            :key="contentType.type"
+            :label="$t(contentType.labelKey)"
+            :value="contentType.type" />
         </v-radio-group>
 
         <div class="text-subtitle text-color mb-2 mt-4">{{ $t('content.list.filter.drawer.status') }}</div>
@@ -125,7 +127,11 @@ export default {
     spaceQuery: null,
     spaceSuggestions: [],
     selectedSpaces: [],
+    contentTypes: [],
   }),
+  created() {
+    this.$contentListService.getContentTypes().then(contentTypes => this.contentTypes = contentTypes || []);
+  },
   watch: {
     spaceQuery() {
       if (!this.spaceQuery) {

@@ -34,14 +34,38 @@ export function init(params) {
   const appId = params.appId;
   const saveSettingsURL = params.saveSettingsURL;
   const canEdit = params.canEdit;
+  const showHeader = params.showHeader !== 'false';
+  const headerTitle = params.headerTitle || null;
+  const showFilterOptions = params.showFilterOptions !== 'false';
+  const allowFilteringPerCategory = params.allowFilteringPerCategory !== 'false';
+  const categoryDepth = parseInt(params.categoryDepth) || 4;
+  const categoryIds = params.categoryIds ? params.categoryIds.split(',').map(id => parseInt(id)) : [];
+  const excludeCategoryIds = params.excludeCategoryIds ? params.excludeCategoryIds.split(',').map(id => parseInt(id)) : [];
 
   exoi18n.loadLanguageAsync(lang, url).then(i18n => {
     Vue.createApp({
       data: {
         saveSettingsURL,
         canEdit,
+        showHeader,
+        headerTitle,
+        showFilterOptions,
+        allowFilteringPerCategory,
+        categoryDepth,
+        categoryIds,
+        excludeCategoryIds,
       },
-      template: `<content-list-view id="${appId}" :can-edit="canEdit" :save-settings-url="saveSettingsURL" />`,
+      template: `<content-list-view
+        id="${appId}"
+        :can-edit="canEdit"
+        :save-settings-url="saveSettingsURL"
+        :show-header="showHeader"
+        :header-title="headerTitle"
+        :show-filter-options="showFilterOptions"
+        :allow-filtering-per-category="allowFilteringPerCategory"
+        :category-depth="categoryDepth"
+        :category-ids="categoryIds"
+        :exclude-category-ids="excludeCategoryIds" />`,
       vuetify: Vue.prototype.vuetifyOptions,
       i18n,
     }, `#${appId}`, 'Content List View');
