@@ -39,7 +39,8 @@
           v-for="contentItem in items"
           :key="`${contentItem.contentType}-${contentItem.id}`"
           :item="contentItem"
-          class="border-box-sizing" />
+          class="border-box-sizing"
+          @delete="confirmDelete" />
         <div v-if="hasMore" class="d-flex justify-center pt-2">
           <v-btn
             :loading="loadingMore"
@@ -49,6 +50,13 @@
           </v-btn>
         </div>
       </div>
+      <exo-confirm-dialog
+        ref="deleteConfirmDialog"
+        :message="$t('content.list.item.delete.confirm.message')"
+        :title="$t('content.list.item.delete.confirm.title')"
+        :ok-label="$t('content.list.item.delete.confirm.ok')"
+        :cancel-label="$t('content.list.item.delete.confirm.cancel')"
+        @ok="deleteConfirmed" />
     </v-main>
   </v-app>
 </template>
@@ -79,6 +87,7 @@ export default {
     hasMore: false,
     loading: true,
     loadingMore: false,
+    itemToDelete: null,
   }),
   created() {
     this.load();
@@ -103,6 +112,24 @@ export default {
           this.hasMore = (data?.size || 0) >= this.limit;
         })
         .finally(() => this.loadingMore = false);
+    },
+    confirmDelete(item) {
+      this.itemToDelete = item;
+      this.$refs.deleteConfirmDialog.open();
+    },
+    deleteConfirmed() {
+      const item = this.itemToDelete;
+      if (!item) {
+        return;
+      }
+      return this.$contentListService.deleteContent(item)
+        .then(() => this.items = this.items.filter(contentItem => contentItem.id !== item.id || contentItem.contentType !== item.contentType))
+        .catch(() => document.dispatchEvent(new CustomEvent('alert-message', {
+          detail: {
+            alertType: 'error',
+            alertMessage: this.$t('content.list.item.delete.error'),
+          },
+        })));
     },
   },
 };
