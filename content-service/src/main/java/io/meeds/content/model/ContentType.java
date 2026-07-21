@@ -7,7 +7,6 @@
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 3 of the License, or (at your option) any later version.
- *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
@@ -17,29 +16,23 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
+package io.meeds.content.model;
 
-.contentListView {
-  .contentListItemIllustration {
-    width: 64px;
-    height: 64px;
-  }
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-  .text-truncate-2 {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    overflow: hidden;
-  }
+/**
+ * A content type registered via {@link io.meeds.content.plugin.ContentTypePlugin},
+ * as exposed to the front-end filter drawer.
+ */
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class ContentType {
 
-  &.contentListViewCompact {
-    .contentListItemIllustration {
-      width: 48px;
-      height: 48px;
-    }
+  private String type;
 
-    .contentListItem {
-      padding-top: 8px !important;
-      padding-bottom: 8px !important;
-    }
-  }
+  private String labelKey;
+
 }

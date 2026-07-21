@@ -18,32 +18,33 @@
  */
 package io.meeds.content.utils;
 
+import org.exoplatform.commons.api.settings.data.Context;
+import org.exoplatform.commons.api.settings.data.Scope;
+
 public class ContentUtils {
 
   private ContentUtils() {
     // Utility class
   }
 
-  public static final String CONTENT_TYPE_NEWS   = "news";
+  public static final String CONTENT_TYPE_NEWS          = "news";
 
-  public static final String CONTENT_TYPE_NOTES  = "notes";
+  public static final String CONTENT_TYPE_NOTES         = "notes";
 
-  /**
-   * Agenda calendar events are not yet resolved by any backing service: the
-   * content addon (io.meeds.*) has no dependency on the agenda addon
-   * (org.exoplatform.*), which sits in a separate addon lineage. This value
-   * is accepted throughout the content-list filter/model classes so the
-   * front-end filter UI can already offer it, but it never contributes any
-   * result.
-   */
-  public static final String CONTENT_TYPE_EVENT  = "event";
+  public static final String STATUS_PUBLISHED           = "published";
 
-  public static final String STATUS_PUBLISHED    = "published";
+  public static final String STATUS_MY_CONTENT          = "myContent";
 
-  public static final String STATUS_MY_CONTENT   = "myContent";
+  public static final String STATUS_SCHEDULED           = "scheduled";
 
-  public static final String STATUS_SCHEDULED    = "scheduled";
+  public static final String STATUS_DRAFT               = "draft";
 
-  public static final String STATUS_DRAFT        = "draft";
+  public static final String  CONTENT_LIST_VIEW_SCOPE_NAME   = "CONTENT_LIST_VIEW_SCOPE";
+
+  public static final String  CONTENT_LIST_VIEW_CONTEXT_NAME = "CONTENT_LIST_VIEW_CONTEXT";
+
+  public static final Context CONTENT_LIST_VIEW_CONTEXT       = Context.GLOBAL.id(CONTENT_LIST_VIEW_CONTEXT_NAME);
+
+  public static final Scope   CONTENT_LIST_VIEW_SCOPE         = Scope.APPLICATION.id(CONTENT_LIST_VIEW_SCOPE_NAME);
 
 }

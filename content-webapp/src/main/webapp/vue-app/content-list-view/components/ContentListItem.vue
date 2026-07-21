@@ -20,30 +20,43 @@
 
 -->
 <template>
-  <div class="contentListItem d-flex py-3">
+  <div :class="compact ? 'py-2' : 'py-3'" class="contentListItem d-flex">
     <a
       :href="item.url"
-      class="contentListItemIllustration d-flex align-center justify-center flex-shrink-0 rounded me-4"
+      class="d-flex align-center justify-center flex-shrink-0 rounded me-4"
       :style="illustrationStyle">
       <v-icon
         v-if="!item.illustrationUrl"
         color="white"
-        size="28">
+        :size="compact && 32 || 42">
         {{ item.icon }}
       </v-icon>
     </a>
     <div class="d-flex flex-column flex-grow-1 overflow-hidden">
       <div class="d-flex align-center">
-        <a :href="item.url" class="text-truncate text-title font-weight-bold text-color flex-grow-1">
+        <a :href="item.url" class="no-min-width text-truncate text-left font-weight-bold text-color flex-grow-1">
           {{ item.title }}
         </a>
         <div class="d-flex align-center flex-shrink-0 ms-2">
           <category-chip
-            v-if="firstCategory"
-            :category="firstCategory"
+            v-for="category in filteredCategories"
+            :key="category.id"
+            :category="category"
             small
             tabindex="-1"
             class="ms-1" />
+          <v-btn
+            v-if="remainingCount > 0"
+            class="flex-shrink-0 flex-grow-0 px-0 ms-1"
+            height="24"
+            width="24"
+            icon
+            @click="openMoreCategoriesDrawer">
+            <span class="primary--text text-subtitle-font-size">
+              {{ $t('categories.remainingCount', { 0: remainingCount }) }}
+            </span>
+          </v-btn>
+          <categories-list-drawer v-if="moreCategoriesDrawer" ref="moreCategoriesDrawer" />
           <content-action-menu-items
             :item="item"
             class="ms-2"
@@ -58,18 +71,30 @@
           :space-id="item.spaceId"
           :size="20"
           small-font-size
-          popover />
-        <v-icon size="10" class="mx-1">fas fa-circle</v-icon>
-        <span class="text-truncate">{{ item.authorDisplayName }}</span>
-        <v-icon size="10" class="mx-1">fas fa-circle</v-icon>
+          popover
+          class="me-2" />
+        <v-icon size="2" class="me-2">fas fa-circle</v-icon>
+        <exo-user-avatar
+          :profile-id="item.authorUsername"
+          :size="20"
+          small-font-size
+          class="me-2" />
+        <v-icon size="2" class="me-2">fas fa-circle</v-icon>
+        <v-icon size="12" class="me-2">far fa-clock</v-icon>
         <date-format :value="item.date" :format="dateFormat" />
       </div>
       <p class="text-truncate-2 text-body mb-0">
         {{ item.summary }}
       </p>
-      <div v-if="item.viewsCount" class="d-flex align-center text-caption text-color mt-1">
-        <v-icon size="14" class="me-1">fas fa-eye</v-icon>
-        {{ item.viewsCount }}
+      <div v-if="item.viewsCount || item.attachmentsCount" class="d-flex align-center justify-end text-caption text-color mt-auto pt-1">
+        <template v-if="item.viewsCount">
+          <v-icon size="14" class="me-1">fas fa-eye</v-icon>
+          <span class="me-3">{{ item.viewsCount }}</span>
+        </template>
+        <template v-if="item.attachmentsCount">
+          <v-icon size="14" class="me-1">fas fa-paperclip</v-icon>
+          <span>{{ item.attachmentsCount }}</span>
+        </template>
       </div>
     </div>
   </div>
@@ -81,9 +106,14 @@ export default {
       type: Object,
       required: true,
     },
+    compact: {
+      type: Boolean,
+      default: false,
+    },
   },
   data: () => ({
-    firstCategory: null,
+    categories: [],
+    moreCategoriesDrawer: false,
     dateFormat: {
       year: 'numeric',
       month: 'long',
@@ -92,27 +122,39 @@ export default {
   }),
   computed: {
     illustrationStyle() {
-      return this.item.illustrationUrl && {
-        backgroundImage: `url(${this.item.illustrationUrl})`,
-        backgroundSize: 'cover',
-      } || {
-        backgroundColor: '#F5A623',
+      const width = this.compact && '112px' || '150px';
+      const minHeight = this.compact && '90px' || '120px';
+      return {
+        width,
+        minHeight,
+        alignSelf: 'stretch',
+        ...(this.item.illustrationUrl && {
+          backgroundImage: `url(${this.item.illustrationUrl})`,
+          backgroundSize: 'cover',
+        } || {
+          backgroundColor: '#F5A623',
+        }),
       };
     },
-    firstCategoryId() {
-      return this.item.categoryIds?.[0];
+    categoryIdsKey() {
+      return this.item.categoryIds?.join(',');
+    },
+    filteredCategories() {
+      return this.categories.slice(0, 2);
+    },
+    remainingCount() {
+      return this.categories.length - 2;
     },
   },
   watch: {
-    firstCategoryId: {
+    categoryIdsKey: {
       immediate: true,
       handler() {
-        if (this.firstCategoryId) {
-          this.$categoryService.getCategory(this.firstCategoryId)
-            .then(category => this.firstCategory = category)
-            .catch(() => this.firstCategory = null);
+        if (this.item.categoryIds?.length) {
+          Promise.all(this.item.categoryIds.map(id => this.$categoryService.getCategory(id).catch(() => null)))
+            .then(categories => this.categories = categories.filter(category => category));
         } else {
-          this.firstCategory = null;
+          this.categories = [];
         }
       },
     },
@@ -123,6 +165,11 @@ export default {
       // full edit/publish flow already lives - the merged list is a listing
       // view, not a place to reimplement that flow.
       window.open(this.item.url, '_blank');
+    },
+    async openMoreCategoriesDrawer() {
+      this.moreCategoriesDrawer = true;
+      await this.$nextTick();
+      this.$refs.moreCategoriesDrawer?.open?.(this.categories);
     },
   },
 };

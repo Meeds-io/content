@@ -20,91 +20,95 @@
 
 -->
 <template>
-  <v-app
-    class="contentListView border-box-sizing"
-    :class="{'contentListViewCompact': compact}"
-    flat>
-    <v-main class="d-flex flex-column fill-height">
-      <div class="d-flex align-center pb-2">
-        <template v-if="!filterMode">
-          <span v-if="!compact" class="text-header-title text-truncate flex-grow-1">{{ $t('content.list.title') }}</span>
-          <v-spacer v-else />
-          <v-btn
-            icon
-            small
-            :aria-label="$t('content.list.filter.open')"
-            @click="filterMode = true">
-            <v-icon size="18" :class="appliedSearchText && 'primary--text'">fa-filter</v-icon>
-          </v-btn>
-          <v-btn
-            icon
-            small
-            :aria-label="$t('content.list.filter.drawer.open')"
-            @click="$refs.filterDrawer.open(advancedFilter)">
-            <v-icon size="18" :class="hasAdvancedFilter && 'primary--text'">fa-bars</v-icon>
-          </v-btn>
+  <v-hover v-model="hover">
+    <v-app
+      class="contentListView border-box-sizing"
+      flat>
+      <v-main class="application-body application-layout-style border-box-sizing d-flex flex-column fill-height px-4 py-5 pt-0">
+        <application-toolbar
+          ref="toolbar"
+          :right-text-filter="{
+            minCharacters: 0,
+            placeholder: $t('content.list.filter.placeholder'),
+            tooltip: $t('content.list.filter.placeholder'),
+          }"
+          :filters-count="advancedFiltersCount"
+          compact
+          class="px-0"
+          @filter-text-input-end-typing="onSearchTextChanged"
+          @filter-expand="filterExpanded = $event">
+          <template v-if="!compact && showHeader" #left>
+            <span class="text-header text-truncate">{{ headerTitle || $t('content.list.title') }}</span>
+          </template>
+          <template v-if="!filterExpanded" #right>
+            <div class="d-flex align-center ms-auto">
+              <v-btn
+                v-if="canEdit && hover"
+                icon
+                small
+                :aria-label="$t('content.list.settings.drawer.open')"
+                @click="$refs.settingsDrawer.open()">
+                <v-icon size="18">fas fa-cog</v-icon>
+              </v-btn>
+              <v-btn
+                icon
+                small
+                :aria-label="$t('content.list.filter.drawer.open')"
+                @click="$refs.filterDrawer.open(advancedFilter)">
+                <v-icon size="18" :class="advancedFiltersCount && 'primary--text' || 'icon-default-color'">fas fa-sliders-h</v-icon>
+              </v-btn>
+              <span v-if="advancedFiltersCount" class="primary--text text-caption">({{ advancedFiltersCount }})</span>
+            </div>
+          </template>
+        </application-toolbar>
+        <template v-if="allowFilteringPerCategory">
+          <categories-breadcrumb
+            v-if="breadcrumb"
+            :breadcrumb="breadcrumb"
+            :selected-id="activeCategoryId"
+            class="pb-2"
+            @select="selectCategory" />
+          <category-chips-group
+            v-else-if="categories.length"
+            :categories="categories"
+            class="pb-2"
+            @select="selectCategory" />
         </template>
-        <template v-else>
-          <v-btn
-            icon
-            small
-            :aria-label="$t('content.list.filter.close')"
-            @click="filterMode = false">
-            <v-icon size="18">fas fa-arrow-left</v-icon>
-          </v-btn>
-          <v-text-field
-            v-model="searchText"
-            :placeholder="$t('content.list.filter.placeholder')"
-            prepend-inner-icon="fa-filter"
-            clearable
-            hide-details
-            dense
-            class="flex-grow-1 mx-2" />
-        </template>
-      </div>
-      <categories-breadcrumb
-        v-if="breadcrumb"
-        :breadcrumb="breadcrumb"
-        :selected-id="activeCategoryId"
-        class="pb-2"
-        @select="selectCategory" />
-      <category-chips-group
-        v-else-if="categories.length"
-        :categories="categories"
-        class="pb-2"
-        @select="selectCategory" />
-      <div v-if="loading" class="d-flex flex-grow-1 align-center justify-center">
-        <v-progress-circular indeterminate color="primary" />
-      </div>
-      <div v-else-if="!items.length" class="d-flex flex-grow-1 align-center justify-center">
-        <span class="text-subtitle text-color">{{ $t('content.list.empty') }}</span>
-      </div>
-      <div v-else class="d-flex flex-column">
-        <content-list-item
-          v-for="contentItem in items"
-          :key="`${contentItem.contentType}-${contentItem.id}`"
-          :item="contentItem"
-          class="border-box-sizing"
-          @delete="confirmDelete" />
-        <div v-if="hasMore" class="d-flex justify-center pt-2">
-          <v-btn
-            :loading="loadingMore"
-            text
-            @click="loadMore">
-            {{ $t('content.list.loadMore') }}
-          </v-btn>
+        <div v-if="loading" class="d-flex flex-grow-1 align-center justify-center">
+          <v-progress-circular indeterminate color="primary" />
         </div>
-      </div>
-      <content-filter-drawer ref="filterDrawer" @apply="applyAdvancedFilter" />
-      <exo-confirm-dialog
-        ref="deleteConfirmDialog"
-        :message="$t('content.list.item.delete.confirm.message')"
-        :title="$t('content.list.item.delete.confirm.title')"
-        :ok-label="$t('content.list.item.delete.confirm.ok')"
-        :cancel-label="$t('content.list.item.delete.confirm.cancel')"
-        @ok="deleteConfirmed" />
-    </v-main>
-  </v-app>
+        <div v-else-if="!items.length" class="d-flex flex-grow-1 align-center justify-center">
+          <span class="text-subtitle text-color">{{ $t('content.list.empty') }}</span>
+        </div>
+        <div v-else class="d-flex flex-column">
+          <content-list-item
+            v-for="contentItem in items"
+            :key="`${contentItem.contentType}-${contentItem.id}`"
+            :item="contentItem"
+            :compact="compact"
+            class="border-box-sizing"
+            @delete="confirmDelete" />
+          <div v-if="hasMore" class="d-flex justify-center pt-2">
+            <v-btn
+              :loading="loadingMore"
+              text
+              @click="loadMore">
+              {{ $t('content.list.loadMore') }}
+            </v-btn>
+          </div>
+        </div>
+        <content-filter-drawer ref="filterDrawer" @apply="applyAdvancedFilter" />
+        <content-list-settings-drawer v-if="canEdit" ref="settingsDrawer" />
+        <exo-confirm-dialog
+          ref="deleteConfirmDialog"
+          :message="$t('content.list.item.delete.confirm.message')"
+          :title="$t('content.list.item.delete.confirm.title')"
+          :ok-label="$t('content.list.item.delete.confirm.ok')"
+          :cancel-label="$t('content.list.item.delete.confirm.cancel')"
+          @ok="deleteConfirmed" />
+      </v-main>
+    </v-app>
+  </v-hover>
 </template>
 <script>
 import * as queryParamUtils from '../js/queryParamUtils.js';
@@ -127,6 +131,26 @@ export default {
       type: [String, Number],
       default: null,
     },
+    showHeader: {
+      type: Boolean,
+      default: true,
+    },
+    headerTitle: {
+      type: String,
+      default: null,
+    },
+    allowFilteringPerCategory: {
+      type: Boolean,
+      default: true,
+    },
+    categoryIds: {
+      type: Array,
+      default: () => [],
+    },
+    excludeCategoryIds: {
+      type: Array,
+      default: () => [],
+    },
   },
   data() {
     return {
@@ -137,10 +161,9 @@ export default {
       loading: true,
       loadingMore: false,
       itemToDelete: null,
-      filterMode: false,
-      searchText: null,
+      hover: false,
+      filterExpanded: false,
       appliedSearchText: null,
-      searchTimeout: null,
       advancedFilter: {
         contentTypes: null,
         status: 'published',
@@ -148,29 +171,29 @@ export default {
         selectedSpaces: [],
       },
       activeCategoryId: this.categoryId,
-      categoryIds: [],
+      resultCategoryIds: [],
       categories: [],
       breadcrumb: null,
     };
   },
   computed: {
-    hasAdvancedFilter() {
-      return !!(this.advancedFilter.contentTypes?.length || this.advancedFilter.status !== 'published' || this.advancedFilter.spaces?.length);
-    },
-  },
-  watch: {
-    searchText() {
-      clearTimeout(this.searchTimeout);
-      this.searchTimeout = setTimeout(() => {
-        this.appliedSearchText = this.searchText;
-        this.load();
-      }, 300);
+    advancedFiltersCount() {
+      let count = 0;
+      if (this.advancedFilter.contentTypes?.length) {
+        count++;
+      }
+      if (this.advancedFilter.status && this.advancedFilter.status !== 'published') {
+        count++;
+      }
+      if (this.advancedFilter.spaces?.length) {
+        count++;
+      }
+      return count;
     },
   },
   created() {
     if (!this.compact) {
-      this.searchText = queryParamUtils.getQueryParam('text');
-      this.appliedSearchText = this.searchText;
+      this.appliedSearchText = queryParamUtils.getQueryParam('text');
       const contentTypesParam = queryParamUtils.getQueryParam('contentTypes');
       const spacesParam = queryParamUtils.getQueryParam('spaces');
       this.advancedFilter = {
@@ -183,7 +206,16 @@ export default {
     }
     this.load();
   },
+  mounted() {
+    if (this.appliedSearchText) {
+      this.$refs.toolbar?.setTerm(this.appliedSearchText);
+    }
+  },
   methods: {
+    onSearchTextChanged(term) {
+      this.appliedSearchText = term || null;
+      this.load();
+    },
     syncQueryParams() {
       if (this.compact) {
         return;
@@ -203,6 +235,8 @@ export default {
         contentTypes: this.advancedFilter.contentTypes,
         status: this.advancedFilter.status,
         spaces: this.advancedFilter.spaces,
+        includeCategoryIds: this.categoryIds,
+        excludeCategoryIds: this.excludeCategoryIds,
       };
     },
     applyAdvancedFilter(filter) {
@@ -213,8 +247,8 @@ export default {
       this.activeCategoryId = category?.id || null;
       this.load();
     },
-    async refreshCategories(categoryIds) {
-      this.categoryIds = categoryIds || [];
+    async refreshCategories(resultCategoryIds) {
+      this.resultCategoryIds = resultCategoryIds || [];
       if (this.activeCategoryId) {
         const [category, ancestorIds] = await Promise.all([
           this.$categoryService.getCategory(this.activeCategoryId),
@@ -225,7 +259,18 @@ export default {
         this.categories = [];
       } else {
         this.breadcrumb = null;
-        const resolvedCategories = await Promise.all(this.categoryIds.map(id => this.$categoryService.getCategory(id).catch(() => null)));
+        // The server only reports which categories are actually present in
+        // the returned items, in no particular order - the admin-configured
+        // "Per category" order (this.categoryIds) is the one that should
+        // drive pill display order, present-in-results ones first, any
+        // other result category following in its own (arbitrary) order.
+        const orderedIds = this.categoryIds?.length
+          ? [
+            ...this.categoryIds.filter(id => this.resultCategoryIds.includes(id)),
+            ...this.resultCategoryIds.filter(id => !this.categoryIds.includes(id)),
+          ]
+          : this.resultCategoryIds;
+        const resolvedCategories = await Promise.all(orderedIds.map(id => this.$categoryService.getCategory(id).catch(() => null)));
         this.categories = resolvedCategories.filter(cat => cat);
       }
     },
