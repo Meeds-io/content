@@ -142,6 +142,7 @@
                 <include>newsComposer.less</include>
                 <include>newsApp.less</include>
                 <include>newsListView.less</include>
+                <include>contentListView.less</include>
                 <include>newsDetails.less</include>
                 <include>newsExtensions.less</include>
                 <include>newsPublishTargetsManagement.less</include>
