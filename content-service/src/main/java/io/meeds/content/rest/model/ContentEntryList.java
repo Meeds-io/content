@@ -36,4 +36,11 @@ public class ContentEntryList {
 
   private int                 size;
 
+  /**
+   * Distinct set of category ids actually present across {@link #items} - so
+   * only categories that content in the current result set actually
+   * belongs to are proposed as filter pills.
+   */
+  private List<Long>          categoryIds;
+
 }
