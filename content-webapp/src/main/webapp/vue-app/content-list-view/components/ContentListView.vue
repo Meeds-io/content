@@ -25,8 +25,35 @@
     :class="{'contentListViewCompact': compact}"
     flat>
     <v-main class="d-flex flex-column fill-height">
-      <div v-if="!compact" class="d-flex align-center pb-2">
-        <span class="text-header-title text-truncate">{{ $t('content.list.title') }}</span>
+      <div class="d-flex align-center pb-2">
+        <template v-if="!filterMode">
+          <span v-if="!compact" class="text-header-title text-truncate flex-grow-1">{{ $t('content.list.title') }}</span>
+          <v-spacer v-else />
+          <v-btn
+            icon
+            small
+            :aria-label="$t('content.list.filter.open')"
+            @click="filterMode = true">
+            <v-icon size="18" :class="appliedSearchText && 'primary--text'">fa-filter</v-icon>
+          </v-btn>
+        </template>
+        <template v-else>
+          <v-btn
+            icon
+            small
+            :aria-label="$t('content.list.filter.close')"
+            @click="filterMode = false">
+            <v-icon size="18">fas fa-arrow-left</v-icon>
+          </v-btn>
+          <v-text-field
+            v-model="searchText"
+            :placeholder="$t('content.list.filter.placeholder')"
+            prepend-inner-icon="fa-filter"
+            clearable
+            hide-details
+            dense
+            class="flex-grow-1 mx-2" />
+        </template>
       </div>
       <div v-if="loading" class="d-flex flex-grow-1 align-center justify-center">
         <v-progress-circular indeterminate color="primary" />
@@ -88,15 +115,36 @@ export default {
     loading: true,
     loadingMore: false,
     itemToDelete: null,
+    filterMode: false,
+    searchText: null,
+    appliedSearchText: null,
+    searchTimeout: null,
   }),
+  watch: {
+    searchText() {
+      clearTimeout(this.searchTimeout);
+      this.searchTimeout = setTimeout(() => {
+        this.appliedSearchText = this.searchText;
+        this.load();
+      }, 300);
+    },
+  },
   created() {
     this.load();
   },
   methods: {
+    currentFilter() {
+      return {
+        offset: this.offset,
+        limit: this.limit,
+        categoryId: this.categoryId,
+        text: this.appliedSearchText,
+      };
+    },
     load() {
       this.loading = true;
       this.offset = 0;
-      return this.$contentListService.getContentList({offset: this.offset, limit: this.limit, categoryId: this.categoryId})
+      return this.$contentListService.getContentList(this.currentFilter())
         .then(data => {
           this.items = data?.items || [];
           this.hasMore = (data?.size || 0) >= this.limit;
@@ -106,7 +154,7 @@ export default {
     loadMore() {
       this.loadingMore = true;
       this.offset += this.limit;
-      return this.$contentListService.getContentList({offset: this.offset, limit: this.limit, categoryId: this.categoryId})
+      return this.$contentListService.getContentList(this.currentFilter())
         .then(data => {
           this.items = [...this.items, ...(data?.items || [])];
           this.hasMore = (data?.size || 0) >= this.limit;
