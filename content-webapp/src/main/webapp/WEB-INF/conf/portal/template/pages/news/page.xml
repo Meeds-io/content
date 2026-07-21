@@ -41,34 +41,7 @@
           <portlet-application>
             <portlet>
               <application-ref>content</application-ref>
-              <portlet-ref>NewsListView</portlet-ref>
-            </portlet>
-            <access-permissions>Everyone</access-permissions>
-            <show-info-bar>false</show-info-bar>
-          </portlet-application>
-          <portlet-application>
-            <portlet>
-              <application-ref>content</application-ref>
-              <portlet-ref>NewsListView</portlet-ref>
-            </portlet>
-            <access-permissions>Everyone</access-permissions>
-            <show-info-bar>false</show-info-bar>
-          </portlet-application>
-        </container>
-        <container template="system:/groovy/portal/webui/container/UISimpleColumnContainer.gtmpl" width="400px">
-          <access-permissions>Everyone</access-permissions>
-          <portlet-application>
-            <portlet>
-              <application-ref>content</application-ref>
-              <portlet-ref>NewsListView</portlet-ref>
-            </portlet>
-            <access-permissions>Everyone</access-permissions>
-            <show-info-bar>false</show-info-bar>
-          </portlet-application>
-          <portlet-application>
-            <portlet>
-              <application-ref>content</application-ref>
-              <portlet-ref>NewsListView</portlet-ref>
+              <portlet-ref>ContentListView</portlet-ref>
             </portlet>
             <access-permissions>Everyone</access-permissions>
             <show-info-bar>false</show-info-bar>

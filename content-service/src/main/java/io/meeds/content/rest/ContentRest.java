@@ -1,0 +1,113 @@
+/**
+ * This file is part of the Meeds project (https://meeds.io/).
+ *
+ * Copyright (C) 2020 - 2026 Meeds Association contact@meeds.io
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3 of the License, or (at your option) any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ */
+package io.meeds.content.rest;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.annotation.Secured;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import org.exoplatform.services.log.ExoLogger;
+import org.exoplatform.services.log.Log;
+import org.exoplatform.services.security.ConversationState;
+import org.exoplatform.services.security.Identity;
+
+import io.meeds.content.model.ContentEntry;
+import io.meeds.content.model.filter.ContentFilter;
+import io.meeds.content.rest.model.ContentEntryList;
+import io.meeds.content.service.ContentService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
+@RestController
+@RequestMapping("contents/all")
+@Tag(name = "content/rest/contents/all", description = "Listing content merged across content types (News, Notes)")
+public class ContentRest {
+
+  private static final Log LOG = ExoLogger.getLogger(ContentRest.class);
+
+  @Autowired
+  private ContentService   contentService;
+
+  @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+  @Secured("users")
+  @Operation(summary = "Get merged content list", method = "GET", description = "This gets the list of content (News articles and Notes) matching the given filters, that the authenticated user has access to.")
+  @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "Content list returned"),
+    @ApiResponse(responseCode = "401", description = "User not authorized to get the content list"),
+    @ApiResponse(responseCode = "500", description = "Internal server error") })
+  public ResponseEntity<ContentEntryList> getContentList(@Parameter(description = "Content types to include (news, notes, event)")
+  @RequestParam(name = "contentTypes", required = false)
+  List<String> contentTypes,
+                                                          @Parameter(description = "Content status (published, myContent, scheduled, draft)")
+                                                          @RequestParam(name = "status", required = false)
+                                                          String status,
+                                                          @Parameter(description = "Spaces to restrict the content to")
+                                                          @RequestParam(name = "spaces", required = false)
+                                                          List<String> spaces,
+                                                          @Parameter(description = "Category id to filter the content by")
+                                                          @RequestParam(name = "categoryId", required = false)
+                                                          Long categoryId,
+                                                          @Parameter(description = "Text to search in the content name/summary/content")
+                                                          @RequestParam(name = "text", required = false)
+                                                          String text,
+                                                          @Parameter(description = "Content pagination offset")
+                                                          @RequestParam(name = "offset", defaultValue = "0", required = false)
+                                                          int offset,
+                                                          @Parameter(description = "Content pagination limit")
+                                                          @RequestParam(name = "limit", defaultValue = "20", required = false)
+                                                          int limit) {
+    Identity currentIdentity = ConversationState.getCurrent().getIdentity();
+    try {
+      ContentFilter filter = new ContentFilter();
+      filter.setContentTypes(contentTypes);
+      filter.setStatus(status);
+      filter.setSpaces(spaces);
+      filter.setCategoryId(categoryId);
+      filter.setSearchText(text);
+      filter.setOffset(offset);
+      filter.setLimit(limit);
+
+      List<ContentEntry> items = contentService.getContentList(filter, currentIdentity);
+
+      ContentEntryList result = new ContentEntryList();
+      result.setItems(items);
+      result.setOffset(offset);
+      result.setLimit(limit);
+      result.setSize(items.size());
+      return ResponseEntity.ok(result);
+    } catch (IllegalAccessException e) {
+      LOG.debug("User '{}' is not authorized to access the requested content", currentIdentity.getUserId(), e);
+      return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+    } catch (Exception e) {
+      LOG.warn("Error while retrieving the content list for user '{}'", currentIdentity.getUserId(), e);
+      return ResponseEntity.internalServerError().build();
+    }
+  }
+
+}
