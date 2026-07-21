@@ -18,12 +18,17 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 import './initComponents.js';
+import * as contentListService from './js/ContentListService.js';
+
+if (!Vue.prototype.$contentListService) {
+  Vue.prototype.$contentListService = contentListService;
+}
 
 // getting language of the PLF
 const lang = eXo && eXo.env && eXo.env.portal.language || 'en';
 
 // should expose the locale resources as REST API
-const url = `/content/i18n/locale.portlet.news.News?lang=${lang}`;
+const url = `/content/i18n/locale.portlet.content.Content?lang=${lang}`;
 
 export function init(params) {
   const appId = params.appId;
