@@ -44,7 +44,12 @@
             small
             tabindex="-1"
             class="ms-1" />
-          <v-icon size="18" class="ms-2">fa-ellipsis-v</v-icon>
+          <content-action-menu-items
+            :item="item"
+            class="ms-2"
+            @edit="openItem"
+            @publish="openItem"
+            @delete="$emit('delete', item)" />
         </div>
       </div>
       <div class="d-flex align-center text-caption text-color mb-1">
@@ -110,6 +115,14 @@ export default {
           this.firstCategory = null;
         }
       },
+    },
+  },
+  methods: {
+    openItem() {
+      // Edit/Publish deep-link into the item's own detail page, where the
+      // full edit/publish flow already lives - the merged list is a listing
+      // view, not a place to reimplement that flow.
+      window.open(this.item.url, '_blank');
     },
   },
 };

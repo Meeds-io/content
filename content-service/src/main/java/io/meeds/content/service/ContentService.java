@@ -35,6 +35,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import org.exoplatform.commons.exception.ObjectNotFoundException;
 import org.exoplatform.services.security.Identity;
 import org.exoplatform.social.core.identity.provider.OrganizationIdentityProvider;
 import org.exoplatform.social.core.manager.IdentityManager;
@@ -51,6 +52,7 @@ import io.meeds.content.model.filter.ContentFilter;
 import io.meeds.content.news.model.News;
 import io.meeds.content.news.model.filter.NewsFilter;
 import io.meeds.content.news.service.NewsService;
+import io.meeds.content.news.utils.NewsUtils;
 import io.meeds.content.utils.ContentUtils;
 import io.meeds.social.category.model.CategoryObject;
 import io.meeds.social.category.service.CategoryLinkService;
@@ -112,6 +114,23 @@ public class ContentService {
 
     entries.sort(Comparator.comparing(ContentEntry::getDate, Comparator.nullsLast(Comparator.<Date> reverseOrder())));
     return entries.stream().skip(offset).limit(limit).collect(Collectors.toList());
+  }
+
+  public void deleteContent(String id, String contentType, String status, Identity currentIdentity) throws Exception {
+    if (StringUtils.equals(contentType, ContentUtils.CONTENT_TYPE_NOTES)) {
+      Page note = noteService.getNoteById(id, currentIdentity);
+      if (note == null) {
+        throw new ObjectNotFoundException("Content with id " + id + " was not found");
+      }
+      if (!noteService.hasPermissionOnPage(note, PermissionType.EDITPAGE, currentIdentity)) {
+        throw new IllegalAccessException("User " + currentIdentity.getUserId() + " is not authorized to delete note " + id);
+      }
+      noteService.deleteNote(note.getWikiType(), note.getWikiOwner(), note.getName(), currentIdentity);
+    } else {
+      String newsObjectType = StringUtils.equals(status, ContentUtils.STATUS_DRAFT) ? NewsUtils.NewsObjectType.LATEST_DRAFT.name()
+                                                                                     : NewsUtils.NewsObjectType.ARTICLE.name();
+      newsService.deleteNews(id, currentIdentity, newsObjectType);
+    }
   }
 
   private Map<String, Set<String>> resolveCategoryLinkedIds(ContentFilter filter) {

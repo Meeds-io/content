@@ -25,11 +25,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.annotation.Secured;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import org.exoplatform.commons.exception.ObjectNotFoundException;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
 import org.exoplatform.services.security.ConversationState;
@@ -106,6 +109,36 @@ public class ContentRest {
       return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     } catch (Exception e) {
       LOG.warn("Error while retrieving the content list for user '{}'", currentIdentity.getUserId(), e);
+      return ResponseEntity.internalServerError().build();
+    }
+  }
+
+  @DeleteMapping(path = "{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+  @Secured("users")
+  @Operation(summary = "Delete a piece of content", method = "DELETE", description = "This deletes the News article or Note with the given id, if the authenticated user has edit permission on it.")
+  @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "Content deleted"),
+    @ApiResponse(responseCode = "403", description = "User not authorized to delete this content"),
+    @ApiResponse(responseCode = "404", description = "Content not found"),
+    @ApiResponse(responseCode = "500", description = "Internal server error") })
+  public ResponseEntity<Void> deleteContent(@PathVariable("id")
+  String id,
+                                            @Parameter(description = "Content type (news or notes)")
+                                            @RequestParam("contentType")
+                                            String contentType,
+                                            @Parameter(description = "Content status, used to resolve which news object type to delete")
+                                            @RequestParam(name = "status", required = false)
+                                            String status) {
+    Identity currentIdentity = ConversationState.getCurrent().getIdentity();
+    try {
+      contentService.deleteContent(id, contentType, status, currentIdentity);
+      return ResponseEntity.ok().build();
+    } catch (ObjectNotFoundException e) {
+      return ResponseEntity.notFound().build();
+    } catch (IllegalAccessException e) {
+      LOG.debug("User '{}' is not authorized to delete content '{}'", currentIdentity.getUserId(), id, e);
+      return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+    } catch (Exception e) {
+      LOG.warn("Error while deleting content '{}' for user '{}'", id, currentIdentity.getUserId(), e);
       return ResponseEntity.internalServerError().build();
     }
   }
