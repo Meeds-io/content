@@ -80,8 +80,8 @@
               class="white rounded-pill mt-n6">
               <category-chip
                 :category="firstCategory"
-                tabindex="-1"
-                small />
+                small
+                @select="openContentListDrawer" />
             </div>
           </div>
           <span
@@ -243,6 +243,11 @@ export default {
     hideAuthor() {
       return this.item?.properties?.hideAuthor;
     }
+  },
+  methods: {
+    openContentListDrawer(category) {
+      this.$root.$emit('open-content-list-drawer', category.id);
+    },
   },
 };
 </script>
