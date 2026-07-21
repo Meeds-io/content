@@ -30,6 +30,7 @@ import static io.meeds.content.news.service.NewsService.SCHEDULE_POST_DATE;
 import static io.meeds.content.news.service.NewsService.UNPUBLISH_SCHEDULED;
 import static io.meeds.content.news.utils.NewsUtils.NewsObjectType.ARTICLE;
 import static io.meeds.content.news.utils.NewsUtils.NewsObjectType.LATEST_DRAFT;
+import static io.meeds.content.news.utils.NewsUtils.NewsUpdateType.CATEGORIES;
 import static io.meeds.content.news.utils.NewsUtils.NewsUpdateType.CONTENT_AND_TITLE;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -45,12 +46,14 @@ import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -99,12 +102,15 @@ import io.meeds.content.news.model.News;
 import io.meeds.content.news.model.NewsDraftObject;
 import io.meeds.content.news.model.NewsLatestDraftObject;
 import io.meeds.content.news.model.filter.NewsFilter;
+import io.meeds.content.news.plugin.NewsCategoryPlugin;
 import io.meeds.content.news.plugin.NewsPageAttachmentPlugin;
 import io.meeds.content.news.search.NewsESSearchResult;
 import io.meeds.content.news.search.NewsSearchConnector;
 import io.meeds.content.news.utils.NewsUtils;
 import io.meeds.notes.model.NoteFeaturedImage;
 import io.meeds.notes.model.NotePageProperties;
+import io.meeds.social.category.model.CategoryObject;
+import io.meeds.social.category.service.CategoryLinkService;
 
 @RunWith(MockitoJUnitRunner.Silent.class)
 public class NewsServiceTest {
@@ -148,6 +154,9 @@ public class NewsServiceTest {
   @Mock
   private UserACL                                      userAcl;
 
+  @Mock
+  private CategoryLinkService                          categoryLinkService;
+
   @InjectMocks
   private NewsService                                  newsService;
 
@@ -169,6 +178,11 @@ public class NewsServiceTest {
     ConversationState conversationState = mock(ConversationState.class);
     CONVERSATION_STATE.when(ConversationState::getCurrent).thenReturn(conversationState);
     CONVERSATION_STATE.when(() -> ConversationState.getCurrent().getIdentity()).thenReturn(johnIdentity);
+    // updateNewsActivity() links categories on every update where a post/pin decision is
+    // supplied (see updateNews()), regardless of newsUpdateType - so any such call reaches
+    // CommonsUtils.getService(CategoryLinkService.class) and must find a stub here.
+    COMMONS_UTILS.when(() -> CommonsUtils.getService(CategoryLinkService.class)).thenReturn(categoryLinkService);
+    when(categoryLinkService.getLinkedIds(any(CategoryObject.class))).thenReturn(Collections.emptyList());
   }
 
   @AfterClass
@@ -912,6 +926,72 @@ public class NewsServiceTest {
     verify(noteService, times(1)).updateNote(any(Page.class), any(), any(), anyBoolean());
     verify(noteService, times(1)).createVersionOfNote(existingPage, identity.getUserId());
     verify(noteService, times(2)).getPublishedVersionByPageIdAndLang(1L, null);
+  }
+
+  @Test
+  public void testUpdateNewsCategoriesWithoutActivity() throws Exception {
+    // Given: an article that was never posted to the activity stream (no activityId) - the
+    // exact scenario where updateNewsActivity() must fall back to linking categories directly
+    // on the article instead of silently no-op'ing because there's no Activity to link on.
+    Page existingPage = mock(Page.class);
+    when(noteService.getNoteById(anyString())).thenReturn(existingPage);
+    when(existingPage.getId()).thenReturn("1");
+    when(existingPage.getWikiOwner()).thenReturn("/space/groupId");
+    when(existingPage.getWikiType()).thenReturn(PortalConfig.GROUP_TYPE);
+    when(existingPage.getAuthor()).thenReturn("john");
+
+    MetadataItem metadataItem = mock(MetadataItem.class);
+    List<MetadataItem> metadataItems = new ArrayList<>();
+    metadataItems.add(metadataItem);
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+                                                             any(MetadataObject.class))).thenReturn(metadataItems);
+    Map<String, String> properties = new HashMap<>();
+    when(metadataItem.getProperties()).thenReturn(properties);
+
+    mockSpace();
+    mockIdentity();
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(anyString(), any(Identity.class))).thenReturn(false);
+    NEWS_UTILS.when(() -> NewsUtils.processMentions(anyString(), any())).thenReturn(new HashSet<>());
+    when(newsTargetingService.getTargetsByNews(any(News.class))).thenReturn(null);
+    when(activityManager.getActivity(nullable(String.class))).thenReturn(null);
+
+    PageVersion pageVersion = mock(PageVersion.class);
+    when(noteService.getPublishedVersionByPageIdAndLang(1L, null)).thenReturn(pageVersion);
+    when(pageVersion.getAuthor()).thenReturn("john");
+    when(pageVersion.getUpdatedDate()).thenReturn(new Date());
+    when(pageVersion.getAuthorFullName()).thenReturn("full name");
+    DraftPage draftPage = mock(DraftPage.class);
+    when(draftPage.getId()).thenReturn("1");
+    when(noteService.getLatestDraftPageByUserAndTargetPageAndLang(anyLong(),
+                                                                  anyString(),
+                                                                  nullable(String.class))).thenReturn(draftPage);
+
+    when(spaceService.isSuperManager(any(Space.class), anyString())).thenReturn(true);
+    when(noteService.updateNote(any(Page.class), any(), any(), anyBoolean())).thenReturn(existingPage);
+    org.exoplatform.social.core.identity.model.Identity socialIdentity =
+                                                                        mock(org.exoplatform.social.core.identity.model.Identity.class);
+    when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(socialIdentity);
+    when(socialIdentity.getId()).thenReturn("1");
+
+    News news = new News();
+    news.setAuthor("john");
+    news.setTitle("new draft title");
+    news.setBody("draft body");
+    news.setId("1");
+    news.setPublicationState(POSTED);
+    news.setSpaceId("1");
+    news.setOriginalBody("body");
+    news.setCategories(Arrays.asList(3L, 5L));
+
+    // When
+    newsService.updateNews(news, "john", false, false, ARTICLE.name().toLowerCase(), CATEGORIES.name());
+
+    // Then: categories are linked directly on the article (CategoryObject("news", "1", ...)),
+    // not silently dropped for lack of an activityId.
+    CategoryObject expectedObject = NewsCategoryPlugin.toCategoryObject(news);
+    verify(categoryLinkService, times(1)).link(3L, expectedObject);
+    verify(categoryLinkService, times(1)).link(5L, expectedObject);
+    verify(categoryLinkService, never()).unlink(anyLong(), any());
   }
 
   @Test
