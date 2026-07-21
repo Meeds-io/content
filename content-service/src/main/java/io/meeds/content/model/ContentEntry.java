@@ -51,6 +51,8 @@ public class ContentEntry {
 
   private String       url;
 
+  private String       authorUsername;
+
   private String       authorDisplayName;
 
   private String       authorAvatarUrl;
@@ -68,6 +70,8 @@ public class ContentEntry {
   private long         commentsCount;
 
   private long         viewsCount;
+
+  private long         attachmentsCount;
 
   private List<Long>   categoryIds;
 
