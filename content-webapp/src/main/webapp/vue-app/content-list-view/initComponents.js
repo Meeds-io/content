@@ -21,12 +21,14 @@ import ContentListView from './components/ContentListView.vue';
 import ContentListItem from './components/ContentListItem.vue';
 import ContentListDrawer from './components/ContentListDrawer.vue';
 import ContentActionMenuItems from './components/ContentActionMenuItems.vue';
+import ContentFilterDrawer from './components/ContentFilterDrawer.vue';
 
 const components = {
   'content-list-view': ContentListView,
   'content-list-item': ContentListItem,
   'content-list-drawer': ContentListDrawer,
   'content-action-menu-items': ContentActionMenuItems,
+  'content-filter-drawer': ContentFilterDrawer,
 };
 
 for (const key in components) {

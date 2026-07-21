@@ -36,6 +36,13 @@
             @click="filterMode = true">
             <v-icon size="18" :class="appliedSearchText && 'primary--text'">fa-filter</v-icon>
           </v-btn>
+          <v-btn
+            icon
+            small
+            :aria-label="$t('content.list.filter.drawer.open')"
+            @click="$refs.filterDrawer.open(advancedFilter)">
+            <v-icon size="18" :class="hasAdvancedFilter && 'primary--text'">fa-bars</v-icon>
+          </v-btn>
         </template>
         <template v-else>
           <v-btn
@@ -77,6 +84,7 @@
           </v-btn>
         </div>
       </div>
+      <content-filter-drawer ref="filterDrawer" @apply="applyAdvancedFilter" />
       <exo-confirm-dialog
         ref="deleteConfirmDialog"
         :message="$t('content.list.item.delete.confirm.message')"
@@ -119,7 +127,18 @@ export default {
     searchText: null,
     appliedSearchText: null,
     searchTimeout: null,
+    advancedFilter: {
+      contentTypes: null,
+      status: 'published',
+      spaces: null,
+      selectedSpaces: [],
+    },
   }),
+  computed: {
+    hasAdvancedFilter() {
+      return !!(this.advancedFilter.contentTypes?.length || this.advancedFilter.status !== 'published' || this.advancedFilter.spaces?.length);
+    },
+  },
   watch: {
     searchText() {
       clearTimeout(this.searchTimeout);
@@ -139,7 +158,14 @@ export default {
         limit: this.limit,
         categoryId: this.categoryId,
         text: this.appliedSearchText,
+        contentTypes: this.advancedFilter.contentTypes,
+        status: this.advancedFilter.status,
+        spaces: this.advancedFilter.spaces,
       };
+    },
+    applyAdvancedFilter(filter) {
+      this.advancedFilter = filter;
+      this.load();
     },
     load() {
       this.loading = true;
