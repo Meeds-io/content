@@ -137,7 +137,7 @@
     </init-param>
     <init-param>
       <name>preload.resource.bundles</name>
-      <value>locale.portlet.news.News</value>
+      <value>locale.portlet.content.Content</value>
     </init-param>
     <init-param>
       <name>layout-content-editable</name>

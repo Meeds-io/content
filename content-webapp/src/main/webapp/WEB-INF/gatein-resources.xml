@@ -66,6 +66,13 @@
 
   <portlet-skin>
     <application-name>content</application-name>
+    <portlet-name>ContentListView</portlet-name>
+    <skin-name>Enterprise</skin-name>
+    <css-path>/skin/css/contentListView.css</css-path>
+  </portlet-skin>
+
+  <portlet-skin>
+    <application-name>content</application-name>
     <portlet-name>newsPublishTargetsManagement</portlet-name>
     <skin-name>Enterprise</skin-name>
     <css-path>/skin/css/newsPublishTargetsManagement.css</css-path>
@@ -281,6 +288,12 @@
       </depends>
       <depends>
         <module>vuetify</module>
+      </depends>
+      <depends>
+        <module>commonVueComponents</module>
+      </depends>
+      <depends>
+        <module>categoryVueComponents</module>
       </depends>
     </module>
   </portlet>

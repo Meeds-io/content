@@ -25,8 +25,26 @@
       <div class="d-flex align-center pb-2">
         <span class="text-header-title text-truncate">{{ $t('content.list.title') }}</span>
       </div>
-      <div class="d-flex flex-grow-1 align-center justify-center">
+      <div v-if="loading" class="d-flex flex-grow-1 align-center justify-center">
+        <v-progress-circular indeterminate color="primary" />
+      </div>
+      <div v-else-if="!items.length" class="d-flex flex-grow-1 align-center justify-center">
         <span class="text-subtitle text-color">{{ $t('content.list.empty') }}</span>
+      </div>
+      <div v-else class="d-flex flex-column">
+        <content-list-item
+          v-for="contentItem in items"
+          :key="`${contentItem.contentType}-${contentItem.id}`"
+          :item="contentItem"
+          class="border-box-sizing" />
+        <div v-if="hasMore" class="d-flex justify-center pt-2">
+          <v-btn
+            :loading="loadingMore"
+            text
+            @click="loadMore">
+            {{ $t('content.list.loadMore') }}
+          </v-btn>
+        </div>
       </div>
     </v-main>
   </v-app>
@@ -41,6 +59,39 @@ export default {
     saveSettingsUrl: {
       type: String,
       default: null,
+    },
+  },
+  data: () => ({
+    items: [],
+    offset: 0,
+    limit: 20,
+    hasMore: false,
+    loading: true,
+    loadingMore: false,
+  }),
+  created() {
+    this.load();
+  },
+  methods: {
+    load() {
+      this.loading = true;
+      this.offset = 0;
+      return this.$contentListService.getContentList({offset: this.offset, limit: this.limit})
+        .then(data => {
+          this.items = data?.items || [];
+          this.hasMore = (data?.size || 0) >= this.limit;
+        })
+        .finally(() => this.loading = false);
+    },
+    loadMore() {
+      this.loadingMore = true;
+      this.offset += this.limit;
+      return this.$contentListService.getContentList({offset: this.offset, limit: this.limit})
+        .then(data => {
+          this.items = [...this.items, ...(data?.items || [])];
+          this.hasMore = (data?.size || 0) >= this.limit;
+        })
+        .finally(() => this.loadingMore = false);
     },
   },
 };
