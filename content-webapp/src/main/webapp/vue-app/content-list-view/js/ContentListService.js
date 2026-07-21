@@ -53,3 +53,22 @@ export function getContentList(filter) {
     }
   });
 }
+
+export function deleteContent(item) {
+  const params = new URLSearchParams();
+  params.set('contentType', item.contentType);
+  if (item.draft) {
+    params.set('status', 'draft');
+  }
+  return fetch(`${CONTENT_LIST_API}/${item.id}?${params.toString()}`, {
+    method: 'DELETE',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  }).then(resp => {
+    if (!resp?.ok) {
+      throw new Error('Error deleting content');
+    }
+  });
+}
