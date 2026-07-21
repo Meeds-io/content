@@ -54,11 +54,13 @@
       :show-resume-button="showResumeButton"
       :show-share-button="showShareButton"
       :show-refer-button="showReferButton"
+      :show-categories-button="showCategoriesButton"
       @copy-link="copyLink"
       @export-pdf="$emit('export-pdf')"
       @edit-article="$emit('edit-article', news)"
       @open-properties="$emit('open-properties', $event)"
-      @delete-article="$emit('delete-article')" />
+      @delete-article="$emit('delete-article')"
+      @manage-categories="$emit('manage-categories', news)" />
   </v-menu>
 </template>
 
@@ -117,6 +119,11 @@ export default {
     },
     showReferButton: {
       type: Boolean,
+      default: false
+    },
+    showCategoriesButton: {
+      type: Boolean,
+      required: false,
       default: false
     }
   },
@@ -181,6 +188,7 @@ export default {
           showReferButton: this.showReferButton,
           showPropertiesButton: this.showPropertiesButton,
           showExportPdfButton: this.showExportPdfButton,
+          showCategoriesButton: this.showCategoriesButton,
           currentApp: this.currentApp
         });
       }

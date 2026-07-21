@@ -50,6 +50,14 @@
         type="content-card-event-date-chip"
         element="span"
         class="mt-n12" />
+      <div
+        v-if="firstCategory"
+        class="position-absolute b-0 r-0 ma-2 white rounded-pill">
+        <category-chip
+          :category="firstCategory"
+          tabindex="-1"
+          small />
+      </div>
     </v-sheet>
     <div
       class="text-area articleLinkDetails"
@@ -109,6 +117,14 @@
               element="span"
               class="mt-2 mb-2" />
             <div
+              v-if="firstCategory"
+              class="d-flex justify-end mt-2 mb-2">
+              <category-chip
+                :category="firstCategory"
+                tabindex="-1"
+                small />
+            </div>
+            <div
               v-if="showArticleSummary && hasSummary"
               class="text-truncate-3 mt-4 text-subtitle">
               {{ item?.properties?.summary }}
@@ -160,9 +176,27 @@ export default {
     slideActive: false,
     isArticleLinkFocused: false,
     isCardFocused: false,
-    showDetails: false
+    showDetails: false,
+    firstCategory: null
   }),
+  watch: {
+    firstCategoryId: {
+      immediate: true,
+      handler() {
+        if (this.firstCategoryId) {
+          this.$categoryService.getCategory(this.firstCategoryId)
+            .then(category => this.firstCategory = category)
+            .catch(() => this.firstCategory = null);
+        } else {
+          this.firstCategory = null;
+        }
+      },
+    },
+  },
   computed: {
+    firstCategoryId() {
+      return this.item?.categories?.[0];
+    },
     hasSummary() {
       return this.item?.properties?.summary?.length;
     },
