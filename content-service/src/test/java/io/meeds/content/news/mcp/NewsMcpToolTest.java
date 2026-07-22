@@ -656,9 +656,6 @@ public class NewsMcpToolTest {
                                                      any(),
                                                      any(),
                                                      any(),
-                                                     any(),
-                                                     any(),
-                                                     any(),
                                                      anyLong()))
             .thenReturn(image);
       upload.when(() -> UploadToolUtils.materialize(any(), any(), anyString(), anyString())).thenReturn("upload-1");
