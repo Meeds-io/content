@@ -435,10 +435,10 @@ public class NewsMcpTool implements McpToolPlugin {
     UploadToolUtils.FetchedContent image = UploadToolUtils.resolveImage(attachmentService,
                                                                         fileService,
                                                                         getCurrentUserAclIdentity(),
-                                                                        imageUrl,
-                                                                        imageBase64,
-                                                                        attachmentObjectType,
-                                                                        attachmentObjectId,
+                                                                        new UploadToolUtils.ImageSource(imageUrl,
+                                                                                                        imageBase64,
+                                                                                                        attachmentObjectType,
+                                                                                                        attachmentObjectId),
                                                                         UploadToolUtils.DEFAULT_MAX_BYTES);
     String uploadId = UploadToolUtils.materialize(uploadService, image.bytes(), image.fileName(), image.mimeType());
     // for a published article news_id == the note page id; a draft/staged article
