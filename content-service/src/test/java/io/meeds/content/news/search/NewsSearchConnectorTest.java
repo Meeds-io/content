@@ -291,4 +291,22 @@ public class NewsSearchConnectorTest {
     assertEquals(0, result.size());
 
   }
+
+  @Test
+  public void testBuildTermQueryStatementAddsWildcardPerWord() {
+    // Without a trailing wildcard on each word, query_string only matches a
+    // whole token - searching by the first few letters of a title/body/
+    // summary word (while the user is still typing) would return nothing.
+    String termQuery = ReflectionTestUtils.invokeMethod(newsSearchConnector, "buildTermQueryStatement", "ab cd");
+
+    assertNotNull(termQuery);
+    String expectedFragment = NewsSearchConnector.SEARCH_QUERY_TERM.replace("@term@", "ab* cd*");
+    assertEquals(expectedFragment, termQuery);
+  }
+
+  @Test
+  public void testBuildTermQueryStatementReturnsEmptyForBlankTerm() {
+    String termQuery = ReflectionTestUtils.invokeMethod(newsSearchConnector, "buildTermQueryStatement", "   ");
+    assertEquals("", termQuery);
+  }
 }
