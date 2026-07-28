@@ -29,7 +29,7 @@
     </template>
     <template #content>
       <div class="pa-4">
-        <div class="text-subtitle text-color mb-2">{{ $t('content.list.filter.drawer.contentType') }}</div>
+        <div class="text-header">{{ $t('content.list.filter.drawer.contentType') }}</div>
         <v-radio-group
           v-model="contentTypeOption"
           hide-details
@@ -42,7 +42,7 @@
             :value="contentType.type" />
         </v-radio-group>
 
-        <div class="text-subtitle text-color mb-2 mt-4">{{ $t('content.list.filter.drawer.status') }}</div>
+        <div class="text-header mt-4">{{ $t('content.list.filter.drawer.status') }}</div>
         <v-radio-group
           v-model="status"
           hide-details
@@ -53,7 +53,7 @@
           <v-radio :label="$t('content.list.filter.status.draft')" value="draft" />
         </v-radio-group>
 
-        <div class="text-subtitle text-color mb-2 mt-4">{{ $t('content.list.filter.drawer.spaces') }}</div>
+        <div class="text-header mb-2 mt-4">{{ $t('content.list.filter.drawer.spaces') }}</div>
         <v-radio-group
           v-model="spacesOption"
           hide-details
