@@ -19,9 +19,9 @@
 package io.meeds.content.link.rest;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.List;
 
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpStatus;
@@ -40,6 +40,7 @@ import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.server.ResponseStatusException;
 
 import org.exoplatform.commons.exception.ObjectNotFoundException;
+import org.exoplatform.commons.file.model.FileItem;
 import org.exoplatform.social.rest.api.RestUtils;
 
 import io.meeds.content.link.model.Link;
@@ -121,7 +122,7 @@ public class LinkRest {
     }
   }
 
-  @GetMapping(path = "{name}/{id}/icon", produces = MediaType.IMAGE_PNG_VALUE)
+  @GetMapping(path = "{name}/{id}/icon")
   @Operation(summary = "Gets a link icon specified by setting name and link id", method = "GET", description = "Gets a link icon specified by setting name and link id")
   @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "Request fulfilled"),
     @ApiResponse(responseCode = "304", description = "Not modified"),
@@ -144,21 +145,36 @@ public class LinkRest {
       if (request.checkNotModified(eTag)) {
         return ResponseEntity.status(HttpStatus.NOT_MODIFIED).build();
       } else {
-        InputStream stream = linkService.getLinkIconStream(linkSetting.getName(), id);
-        if (stream == null) {
+        FileItem iconFile = linkService.getLinkIconFile(linkSetting.getName(), id);
+        if (iconFile == null) {
           return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         } else {
           BodyBuilder builder = ResponseEntity.ok();
-          return builder.contentType(MediaType.IMAGE_PNG)
+          // Serve the icon with its original content type (e.g. image/svg+xml)
+          // instead of a hardcoded one, otherwise the browser can't render
+          // formats such as SVG.
+          return builder.contentType(getIconMediaType(iconFile))
                         .lastModified(linkSetting.getLastModified())
                         .eTag(eTag)
-                        .body(new InputStreamResource(stream));
+                        .body(new InputStreamResource(iconFile.getAsStream()));
         }
       }
     } catch (IllegalAccessException e) {
       throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, e.getMessage());
     } catch (IOException e) {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+    }
+  }
+
+  private MediaType getIconMediaType(FileItem iconFile) {
+    String mimeType = iconFile.getFileInfo() == null ? null : iconFile.getFileInfo().getMimetype();
+    if (StringUtils.isBlank(mimeType)) {
+      return MediaType.IMAGE_PNG;
+    }
+    try {
+      return MediaType.parseMediaType(mimeType);
+    } catch (Exception e) {
+      return MediaType.IMAGE_PNG;
     }
   }
 
