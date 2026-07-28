@@ -46,6 +46,8 @@ import org.exoplatform.commons.utils.PageList;
 import org.exoplatform.services.security.Identity;
 import org.exoplatform.social.attachment.AttachmentService;
 import org.exoplatform.social.core.manager.IdentityManager;
+import org.exoplatform.social.metadata.MetadataService;
+import org.exoplatform.social.metadata.model.MetadataItem;
 import org.exoplatform.wiki.model.Page;
 import org.exoplatform.wiki.model.PermissionType;
 import org.exoplatform.wiki.service.NoteService;
@@ -53,6 +55,7 @@ import org.exoplatform.wiki.service.search.SearchResult;
 
 import io.meeds.content.model.ContentEntry;
 import io.meeds.content.model.filter.ContentFilter;
+import io.meeds.content.news.service.NewsService;
 import io.meeds.content.utils.ContentUtils;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -69,6 +72,9 @@ public class NoteContentTypePluginTest {
   @Mock
   private AttachmentService   attachmentService;
 
+  @Mock
+  private MetadataService     metadataService;
+
   @InjectMocks
   private NoteContentTypePlugin plugin;
 
@@ -78,6 +84,9 @@ public class NoteContentTypePluginTest {
   public void setUp() {
     currentIdentity = new Identity(JOHN);
     when(attachmentService.getAttachmentFileIds(anyString(), anyString())).thenReturn(Collections.emptyList());
+    // By default, no note is a published News article - individual tests
+    // override this to verify the deduplication behavior.
+    when(metadataService.getMetadataItemsByMetadataAndObject(eq(NewsService.NEWS_METADATA_KEY), any())).thenReturn(Collections.emptyList());
   }
 
   @Test
@@ -147,6 +156,28 @@ public class NoteContentTypePluginTest {
     assertTrue(entry.isCanDelete());
     assertFalse(entry.isCanPublish());
     assertFalse(entry.isCanSchedule());
+  }
+
+  @Test
+  public void testSearchExcludesNotePublishedAsNewsArticle() throws Exception {
+    // A note published as a News article is the same underlying wiki page
+    // (News.getId() IS the page id): once NEWS_METADATA is attached to it,
+    // it must show up once, as a News article, not twice.
+    ContentFilter filter = new ContentFilter();
+    SearchResult result = new SearchResult();
+    result.setId(1L);
+    mockSearchResults(result);
+
+    Page note = new Page();
+    note.setId("1");
+    note.setActivityId("activity1");
+    when(noteService.getNoteById("1", currentIdentity)).thenReturn(note);
+    when(metadataService.getMetadataItemsByMetadataAndObject(eq(NewsService.NEWS_METADATA_KEY), any()))
+        .thenReturn(Arrays.asList(mock(MetadataItem.class)));
+
+    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null);
+
+    assertTrue(entries.isEmpty());
   }
 
   @Test

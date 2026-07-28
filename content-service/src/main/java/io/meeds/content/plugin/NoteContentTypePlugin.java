@@ -34,6 +34,7 @@ import org.exoplatform.social.attachment.AttachmentService;
 import org.exoplatform.social.core.manager.IdentityManager;
 import org.exoplatform.social.core.space.model.Space;
 import org.exoplatform.social.core.space.spi.SpaceService;
+import org.exoplatform.social.metadata.MetadataService;
 import org.exoplatform.wiki.model.Page;
 import org.exoplatform.wiki.model.PermissionType;
 import org.exoplatform.wiki.service.NoteService;
@@ -42,6 +43,8 @@ import org.exoplatform.wiki.service.search.WikiSearchData;
 
 import io.meeds.content.model.ContentEntry;
 import io.meeds.content.model.filter.ContentFilter;
+import io.meeds.content.news.model.NewsPageObject;
+import io.meeds.content.news.service.NewsService;
 import io.meeds.content.utils.ContentUtils;
 
 @Component
@@ -58,6 +61,9 @@ public class NoteContentTypePlugin implements ContentTypePlugin {
 
   @Autowired
   private AttachmentService attachmentService;
+
+  @Autowired
+  private MetadataService   metadataService;
 
   @Override
   public String getType() {
@@ -125,7 +131,11 @@ public class NoteContentTypePlugin implements ContentTypePlugin {
             // (announced to a space feed): a published note has an
             // activityId, exactly like a News article.
             && (!StringUtils.equals(status, ContentUtils.STATUS_PUBLISHED)
-                || StringUtils.isNotBlank(note.getActivityId()))) {
+                || StringUtils.isNotBlank(note.getActivityId()))
+            // A note published as a News article is the very same wiki page
+            // (News.getId() IS the page id) with NEWS_METADATA attached to
+            // it - it must be listed once, as a News article, not twice.
+            && !isPublishedAsArticle(noteId)) {
           entries.add(toContentEntry(note, currentIdentity));
         }
       } catch (IllegalAccessException e) {
@@ -133,6 +143,11 @@ public class NoteContentTypePlugin implements ContentTypePlugin {
       }
     }
     return entries;
+  }
+
+  private boolean isPublishedAsArticle(String noteId) {
+    NewsPageObject newsPageObject = new NewsPageObject(NewsService.NEWS_METADATA_PAGE_OBJECT_TYPE, noteId, null, 0);
+    return CollectionUtils.isNotEmpty(metadataService.getMetadataItemsByMetadataAndObject(NewsService.NEWS_METADATA_KEY, newsPageObject));
   }
 
   @Override
