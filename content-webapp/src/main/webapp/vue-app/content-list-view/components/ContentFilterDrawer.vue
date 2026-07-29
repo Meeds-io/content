@@ -62,29 +62,15 @@
           <v-radio :label="$t('content.list.filter.spaces.selected')" value="selected" />
         </v-radio-group>
         <div v-if="spacesOption === 'selected'" class="mt-2">
-          <v-text-field
-            v-model="spaceQuery"
-            :placeholder="$t('content.list.filter.spaces.search')"
-            prepend-inner-icon="fa-search"
-            hide-details
-            dense
-            class="mb-2" />
-          <v-list
-            v-if="spaceSuggestions.length"
-            dense
-            class="pa-0">
-            <v-list-item
-              v-for="space in spaceSuggestions"
-              :key="space.id"
-              class="ps-2 pe-4"
-              @click="addSpace(space)">
-              <exo-space-avatar
-                :space-id="space.id"
-                :size="24"
-                class="me-2" />
-              <span class="text-truncate">{{ space.displayName }}</span>
-            </v-list-item>
-          </v-list>
+          <exo-identity-suggester
+            v-if="showSuggester"
+            ref="spaceSuggester"
+            v-model="spaceIdentity"
+            :labels="spaceSuggesterLabels"
+            :ignore-items="ignoreSpaceItems"
+            :include-users="false"
+            include-spaces
+            class="mt-n2 mb-2" />
           <div
             v-for="space in selectedSpaces"
             :key="space.id"
@@ -124,24 +110,39 @@ export default {
     contentTypeOption: 'any',
     status: 'published',
     spacesOption: 'any',
-    spaceQuery: null,
-    spaceSuggestions: [],
+    spaceIdentity: null,
+    showSuggester: true,
     selectedSpaces: [],
     contentTypes: [],
   }),
+  computed: {
+    spaceSuggesterLabels() {
+      return {
+        placeholder: this.$t('content.list.filter.spaces.search'),
+        searchPlaceholder: this.$t('content.list.filter.spaces.search'),
+        noDataLabel: this.$t('content.list.filter.spaces.noResults'),
+      };
+    },
+    ignoreSpaceItems() {
+      return this.selectedSpaces.map(space => `space:${space.prettyName}`);
+    },
+  },
   created() {
     this.$contentListService.getContentTypes().then(contentTypes => this.contentTypes = contentTypes || []);
   },
   watch: {
-    spaceQuery() {
-      if (!this.spaceQuery) {
-        this.spaceSuggestions = [];
-        return;
+    spaceIdentity() {
+      if (this.spaceIdentity) {
+        if (!this.selectedSpaces.some(space => space.id === this.spaceIdentity.spaceId)) {
+          this.selectedSpaces = [...this.selectedSpaces, {
+            id: this.spaceIdentity.spaceId,
+            displayName: this.spaceIdentity.displayName,
+            prettyName: this.spaceIdentity.remoteId,
+          }];
+        }
+        this.spaceIdentity = null;
+        this.resetSuggester();
       }
-      this.$spaceService.getSpaces(this.spaceQuery, 0, 10, 'member', 'identity').then(data => {
-        const selectedIds = this.selectedSpaces.map(space => space.id);
-        this.spaceSuggestions = (data?.spaces || []).filter(space => !selectedIds.includes(space.id));
-      });
     },
   },
   methods: {
@@ -150,14 +151,13 @@ export default {
       this.status = currentFilter?.status || 'published';
       this.selectedSpaces = currentFilter?.selectedSpaces || [];
       this.spacesOption = this.selectedSpaces.length ? 'selected' : 'any';
-      this.spaceQuery = null;
-      this.spaceSuggestions = [];
+      this.spaceIdentity = null;
+      this.showSuggester = true;
       this.$refs.drawer.open();
     },
-    addSpace(space) {
-      this.selectedSpaces = [...this.selectedSpaces, space];
-      this.spaceQuery = null;
-      this.spaceSuggestions = [];
+    resetSuggester() {
+      this.showSuggester = false;
+      this.$nextTick().then(() => this.showSuggester = true);
     },
     removeSpace(space) {
       this.selectedSpaces = this.selectedSpaces.filter(selectedSpace => selectedSpace.id !== space.id);
