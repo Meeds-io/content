@@ -174,6 +174,8 @@ public class NoteContentTypePlugin implements ContentTypePlugin {
       entry.setSpaceDisplayName(space.getDisplayName());
       entry.setSpaceAvatarUrl(space.getAvatarUrl());
     }
+    entry.setSpaceGroupId(note.getWikiOwner());
+    entry.setParentId(note.getParentPageId());
     entry.setDate(note.getUpdatedDate());
     entry.setAttachmentsCount(attachmentService.getAttachmentFileIds(note.getAttachmentObjectType(), note.getId()).size());
     // Page.getCategoryIds() is never populated by NoteService itself - only
