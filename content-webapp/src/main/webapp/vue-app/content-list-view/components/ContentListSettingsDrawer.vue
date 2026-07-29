@@ -156,7 +156,7 @@ export default {
       this.showHeader = this.$root.showHeader !== false;
       this.headerTranslations = this.$root.headerTranslations || {};
       this.allowFilteringPerCategory = this.$root.allowFilteringPerCategory !== false;
-      this.categoryDepth = this.$root.categoryDepth || 4;
+      this.categoryDepth = Number.isInteger(this.$root.categoryDepth) ? this.$root.categoryDepth : 4;
       this.includeCategories = [];
       this.excludeCategories = [];
       this.filterIncludeCategories = false;

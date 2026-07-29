@@ -183,6 +183,9 @@ public class NewsContentTypePlugin implements ContentTypePlugin {
     entry.setSpaceId(news.getSpaceId());
     entry.setSpaceDisplayName(news.getSpaceDisplayName());
     entry.setSpaceAvatarUrl(news.getSpaceAvatarUrl());
+    entry.setActivityId(news.getActivityId());
+    entry.setSpaceUrl(news.getSpaceUrl());
+    entry.setLang(news.getLang());
     entry.setDate(news.getUpdateDate());
     entry.setLikesCount(news.getLikesCount());
     entry.setCommentsCount(news.getCommentsCount());

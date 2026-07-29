@@ -33,28 +33,28 @@
     </template>
     <v-list class="pa-0 text-no-wrap width-fit-content contentActionMenuItems">
       <v-list-item class="ps-2 pe-4 d-flex align-center" @click="copyLink">
-        <v-icon size="16" class="clickable icon-menu">fas fa-link</v-icon>
+        <v-icon size="16" class="clickable icon-menu me-2">fas fa-link</v-icon>
         <span class="text-color">{{ $t('content.list.item.copyLink') }}</span>
       </v-list-item>
       <v-list-item
         v-if="item.canEdit"
         class="ps-2 pe-4 d-flex align-center"
         @click="$emit('edit', item)">
-        <v-icon size="16" class="clickable icon-menu">fas fa-edit</v-icon>
+        <v-icon size="16" class="clickable icon-menu me-2">fas fa-edit</v-icon>
         <span class="text-color">{{ $t('content.list.item.edit') }}</span>
       </v-list-item>
       <v-list-item
         v-if="item.canPublish && !item.draft"
         class="ps-2 pe-4 d-flex align-center"
         @click="$emit('publish', item)">
-        <v-icon size="16" class="clickable icon-menu">fa-solid fa-paper-plane</v-icon>
+        <v-icon size="16" class="clickable icon-menu me-2">fa-solid fa-paper-plane</v-icon>
         <span class="text-color">{{ $t('content.list.item.publish') }}</span>
       </v-list-item>
       <v-list-item
         v-if="item.canDelete"
         class="ps-2 pe-4 d-flex align-center"
         @click="$emit('delete', item)">
-        <v-icon size="16" class="clickable icon-menu">fas fa-trash</v-icon>
+        <v-icon size="16" class="clickable icon-menu me-2">fas fa-trash</v-icon>
         <span class="text-color">{{ $t('content.list.item.delete') }}</span>
       </v-list-item>
     </v-list>

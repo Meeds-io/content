@@ -51,6 +51,7 @@ import org.exoplatform.commons.utils.PageList;
 import org.exoplatform.services.security.Identity;
 import org.exoplatform.social.attachment.AttachmentService;
 import org.exoplatform.social.core.manager.IdentityManager;
+import org.exoplatform.social.core.space.spi.SpaceService;
 import org.exoplatform.wiki.model.Page;
 import org.exoplatform.wiki.model.PermissionType;
 import org.exoplatform.wiki.service.NoteService;
@@ -81,6 +82,9 @@ public class NoteContentTypePluginTest {
   @Mock
   private CategoryLinkService categoryLinkService;
 
+  @Mock
+  private SpaceService        spaceService;
+
   @InjectMocks
   private NoteContentTypePlugin plugin;
 
@@ -91,8 +95,9 @@ public class NoteContentTypePluginTest {
     currentIdentity = new Identity(JOHN);
     when(attachmentService.getAttachmentFileIds(anyString(), anyString())).thenReturn(Collections.emptyList());
     // NoteCategoryPlugin.getCategoryIds(note) - called by toContentEntry -
-    // reaches this service via the static container lookup, not injection.
+    // reaches these services via the static container lookup, not injection.
     lenient().when(CommonsUtils.getService(CategoryLinkService.class)).thenReturn(categoryLinkService);
+    lenient().when(CommonsUtils.getService(SpaceService.class)).thenReturn(spaceService);
     lenient().when(categoryLinkService.getLinkedIds(any(CategoryObject.class))).thenReturn(Collections.emptyList());
   }
 
@@ -150,6 +155,8 @@ public class NoteContentTypePluginTest {
     note.setTitle("Note Title");
     note.setAuthor(JOHN);
     note.setActivityId("activity1");
+    note.setWikiOwner("space1GroupId");
+    note.setParentPageId("parent1");
     when(noteService.getNoteById("1", currentIdentity)).thenReturn(note);
     when(noteService.hasPermissionOnPage(note, PermissionType.EDITPAGE, currentIdentity)).thenReturn(true);
     when(attachmentService.getAttachmentFileIds(eq(note.getAttachmentObjectType()), eq("1"))).thenReturn(Arrays.asList("f1"));
@@ -168,6 +175,8 @@ public class NoteContentTypePluginTest {
     assertTrue(entry.isCanDelete());
     assertFalse(entry.isCanPublish());
     assertFalse(entry.isCanSchedule());
+    assertEquals("space1GroupId", entry.getSpaceGroupId());
+    assertEquals("parent1", entry.getParentId());
   }
 
   @Test
