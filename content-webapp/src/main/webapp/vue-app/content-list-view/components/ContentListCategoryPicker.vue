@@ -40,6 +40,7 @@
       <v-btn
         icon
         small
+        :aria-label="$t('content.list.settings.drawer.filterList.deleteCategory')"
         @click="remove(category)">
         <v-icon size="16" color="error">fas fa-trash</v-icon>
       </v-btn>
