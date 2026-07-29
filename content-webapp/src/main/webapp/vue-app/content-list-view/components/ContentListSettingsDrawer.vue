@@ -23,82 +23,97 @@
   <exo-drawer
     id="ContentListSettingsDrawer"
     ref="drawer"
+    v-model="drawer"
+    :loading="saving"
+    allow-expand
     right>
     <template #title>
       {{ $t('content.list.settings.drawer.title') }}
     </template>
-    <template #content>
-      <div class="pa-4">
-        <div class="d-flex align-center justify-space-between">
-          <span class="text-subtitle text-color">{{ $t('content.list.settings.drawer.showHeader') }}</span>
+    <template v-if="drawer" #content>
+      <div class="pa-5">
+        <div class="mb-2 text-header">{{ $t('content.list.settings.drawer.displayOptions') }}</div>
+        <div class="d-flex align-center text-start">
+          <div>{{ $t('content.list.settings.drawer.showHeader') }}</div>
+          <v-spacer />
           <v-switch
             v-model="showHeader"
             hide-details
-            class="mt-0" />
+            class="ma-0 width-fit-content" />
         </div>
-        <v-text-field
+        <translation-text-field
           v-if="showHeader"
-          v-model="headerTitle"
+          ref="headerTitleInput"
+          id="headerTitleInput"
+          v-model="headerTranslations"
+          :default-language="language"
           :placeholder="$t('content.list.title')"
-          hide-details
-          dense
-          class="mb-4" />
+          :drawer-title="$t('content.list.settings.drawer.titleTranslation')"
+          maxlength="150"
+          class="mb-4"
+          no-expand-icon
+          back-icon
+          required />
 
-        <div class="text-subtitle text-color mt-4 mb-2">{{ $t('content.list.settings.drawer.filterOptions') }}</div>
-        <div class="d-flex align-center justify-space-between">
-          <span class="text-body text-color">{{ $t('content.list.settings.drawer.allowFilteringPerCategory') }}</span>
+        <div class="mt-4 mb-2 text-header">{{ $t('content.list.settings.drawer.filterOptions') }}</div>
+        <div class="d-flex align-center text-start">
+          <div>{{ $t('content.list.settings.drawer.allowFilteringPerCategory') }}</div>
+          <v-spacer />
           <v-switch
             v-model="allowFilteringPerCategory"
             hide-details
-            class="mt-0" />
+            class="ma-0 width-fit-content" />
         </div>
-        <div v-if="allowFilteringPerCategory" class="d-flex align-center justify-space-between mt-2">
-          <span class="text-body text-color">{{ $t('content.list.settings.drawer.categoryDepth') }}</span>
-          <div class="d-flex align-center">
-            <v-btn
-              icon
-              small
-              :disabled="categoryDepth <= 0"
-              @click="categoryDepth--">
-              <v-icon size="16">fas fa-minus</v-icon>
-            </v-btn>
-            <span class="mx-2">{{ categoryDepth }}</span>
-            <v-btn
-              icon
-              small
-              :disabled="categoryDepth >= 50"
-              @click="categoryDepth++">
-              <v-icon size="16">fas fa-plus</v-icon>
-            </v-btn>
-          </div>
-        </div>
-        <div class="d-flex align-center justify-space-between mt-4">
-          <span class="text-body text-color">{{ $t('content.list.settings.drawer.showFilterOptions') }}</span>
-          <v-switch
-            v-model="showFilterOptions"
-            hide-details
-            class="mt-0" />
+        <div v-if="allowFilteringPerCategory" class="d-flex full-width align-center text-start">
+          <div>{{ $t('content.list.settings.drawer.categoryDepth') }}</div>
+          <v-spacer />
+          <number-input
+            v-model="categoryDepth"
+            :step="1"
+            :min="0"
+            :max="50" />
         </div>
 
-        <div class="text-subtitle text-color mt-4 mb-2">{{ $t('content.list.settings.drawer.filterList') }}</div>
+        <div class="mt-4 mb-2 text-header">{{ $t('content.list.settings.drawer.filterList') }}</div>
+        <div class="d-flex align-center text-start">
+          <div>{{ $t('content.list.settings.drawer.filterList.include') }}</div>
+          <v-spacer />
+          <v-switch
+            v-model="filterIncludeCategories"
+            hide-details
+            class="ma-0 width-fit-content" />
+        </div>
         <content-list-category-picker
+          v-if="filterIncludeCategories"
           v-model="includeCategories"
-          :label="$t('content.list.settings.drawer.filterList.include')" />
+          class="mt-2" />
+
+        <div class="d-flex align-center text-start mt-4">
+          <div>{{ $t('content.list.settings.drawer.filterList.exclude') }}</div>
+          <v-spacer />
+          <v-switch
+            v-model="filterExcludeCategories"
+            hide-details
+            class="ma-0 width-fit-content" />
+        </div>
         <content-list-category-picker
+          v-if="filterExcludeCategories"
           v-model="excludeCategories"
-          :label="$t('content.list.settings.drawer.filterList.exclude')"
-          class="mt-4" />
+          class="mt-2" />
       </div>
     </template>
     <template #footer>
       <div class="d-flex">
-        <v-btn text @click="close">
+        <v-btn
+          :disabled="saving"
+          class="btn ms-auto me-2"
+          @click="close">
           {{ $t('content.list.settings.drawer.cancel') }}
         </v-btn>
-        <v-spacer />
         <v-btn
           :loading="saving"
           class="btn btn-primary"
+          elevation="0"
           @click="save">
           {{ $t('content.list.settings.drawer.save') }}
         </v-btn>
@@ -109,30 +124,51 @@
 <script>
 export default {
   data: () => ({
+    drawer: false,
     saving: false,
+    translationObjectType: 'contentListView',
+    headerTitleFieldName: 'headerTitleInput',
+    language: 'en',
     showHeader: true,
-    headerTitle: null,
-    showFilterOptions: true,
+    headerTranslations: null,
     allowFilteringPerCategory: true,
     categoryDepth: 4,
     includeCategories: [],
     excludeCategories: [],
+    filterIncludeCategories: false,
+    filterExcludeCategories: false,
   }),
+  watch: {
+    filterIncludeCategories() {
+      if (this.drawer && !this.filterIncludeCategories) {
+        this.includeCategories = [];
+      }
+    },
+    filterExcludeCategories() {
+      if (this.drawer && !this.filterExcludeCategories) {
+        this.excludeCategories = [];
+      }
+    },
+  },
   methods: {
     open() {
+      this.language = this.$root.language || 'en';
       this.showHeader = this.$root.showHeader !== false;
-      this.headerTitle = this.$root.headerTitle;
-      this.showFilterOptions = this.$root.showFilterOptions !== false;
+      this.headerTranslations = this.$root.headerTranslations || {};
       this.allowFilteringPerCategory = this.$root.allowFilteringPerCategory !== false;
       this.categoryDepth = this.$root.categoryDepth || 4;
       this.includeCategories = [];
       this.excludeCategories = [];
+      this.filterIncludeCategories = false;
+      this.filterExcludeCategories = false;
       Promise.all([
         Promise.all((this.$root.categoryIds || []).map(id => this.$categoryService.getCategory(id).catch(() => null))),
         Promise.all((this.$root.excludeCategoryIds || []).map(id => this.$categoryService.getCategory(id).catch(() => null))),
       ]).then(([included, excluded]) => {
         this.includeCategories = included.filter(category => category);
         this.excludeCategories = excluded.filter(category => category);
+        this.filterIncludeCategories = !!this.includeCategories.length;
+        this.filterExcludeCategories = !!this.excludeCategories.length;
       });
       this.$refs.drawer.open();
     },
@@ -143,14 +179,15 @@ export default {
       this.saving = true;
       const settings = {
         showHeader: this.showHeader,
-        headerTitle: this.headerTitle || '',
-        showFilterOptions: this.showFilterOptions,
+        headerTitle: this.headerTranslations?.[this.language] || this.headerTranslations?.[this.$root.defaultLanguage] || '',
         allowFilteringPerCategory: this.allowFilteringPerCategory,
         categoryDepth: this.categoryDepth,
         categoryIds: this.includeCategories.map(category => category.id).join(','),
         excludeCategoryIds: this.excludeCategories.map(category => category.id).join(','),
       };
       this.$contentListService.saveSettings(this.$root.saveSettingsURL, settings)
+        .then(() => this.$translationService.saveTranslations(this.translationObjectType, this.$root.applicationId,
+          this.headerTitleFieldName, this.headerTranslations))
         .then(() => window.location.reload())
         .catch(() => document.dispatchEvent(new CustomEvent('alert-message', {
           detail: {
