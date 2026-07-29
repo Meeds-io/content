@@ -24,7 +24,7 @@
     <v-app
       class="contentListView border-box-sizing"
       flat>
-      <v-main class="application-body application-layout-style border-box-sizing d-flex flex-column fill-height px-4 py-5 pt-0">
+      <v-main class="application-body application-layout-style border-box-sizing d-flex flex-column fill-height py-5 pt-0">
         <application-toolbar
           ref="toolbar"
           :right-text-filter="{
@@ -34,7 +34,6 @@
           }"
           :filters-count="advancedFiltersCount"
           compact
-          class="px-0"
           @filter-text-input-end-typing="onSearchTextChanged"
           @filter-expand="filterExpanded = $event">
           <template v-if="!compact && showHeader" #left>
@@ -53,6 +52,7 @@
               <v-btn
                 icon
                 small
+                class="ms-4"
                 :aria-label="$t('content.list.filter.drawer.open')"
                 @click="$refs.filterDrawer.open(advancedFilter)">
                 <v-icon size="18" :class="advancedFiltersCount && 'primary--text' || 'icon-default-color'">fas fa-sliders-h</v-icon>
@@ -66,12 +66,12 @@
             v-if="breadcrumb"
             :breadcrumb="breadcrumb"
             :selected-id="activeCategoryId"
-            class="pb-2"
+            class="px-4 pb-2"
             @select="selectCategory" />
           <category-chips-group
             v-else-if="categories.length"
             :categories="categories"
-            class="pb-2"
+            class="px-4 pb-2"
             @select="selectCategory" />
         </template>
         <div v-if="loading" class="d-flex flex-grow-1 align-center justify-center">
@@ -80,7 +80,7 @@
         <div v-else-if="!items.length" class="d-flex flex-grow-1 align-center justify-center">
           <span class="text-subtitle text-color">{{ $t('content.list.empty') }}</span>
         </div>
-        <div v-else class="d-flex flex-column">
+        <div v-else class="d-flex flex-column px-4">
           <content-list-item
             v-for="contentItem in items"
             :key="`${contentItem.contentType}-${contentItem.id}`"
@@ -196,12 +196,20 @@ export default {
       this.appliedSearchText = queryParamUtils.getQueryParam('text');
       const contentTypesParam = queryParamUtils.getQueryParam('contentTypes');
       const spacesParam = queryParamUtils.getQueryParam('spaces');
+      const spaceIds = spacesParam ? spacesParam.split(',') : null;
       this.advancedFilter = {
         contentTypes: contentTypesParam ? contentTypesParam.split(',') : null,
         status: queryParamUtils.getQueryParam('status') || 'published',
-        spaces: spacesParam ? spacesParam.split(',') : null,
+        spaces: spaceIds,
         selectedSpaces: [],
       };
+      if (spaceIds?.length) {
+        // The drawer's own picker needs the resolved Space objects (avatar,
+        // display name), not just the ids restored from the URL - fetch
+        // them once so reopening the drawer after a reload shows the
+        // actually active filter instead of appearing reset to defaults.
+        this.$spaceService.getSpacesByIds(spaceIds).then(data => this.advancedFilter.selectedSpaces = data?.spaces || []);
+      }
       this.activeCategoryId = queryParamUtils.getQueryParam('categoryId') || this.categoryId;
     }
     this.load();
