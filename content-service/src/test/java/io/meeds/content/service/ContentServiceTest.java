@@ -123,8 +123,8 @@ public class ContentServiceTest {
 
     ContentEntry olderNews = entry("1", "news", new Date(1000));
     ContentEntry newerNote = entry("2", "notes", new Date(2000));
-    when(newsPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull())).thenReturn(Arrays.asList(olderNews));
-    when(notesPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull())).thenReturn(Arrays.asList(newerNote));
+    when(newsPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.isNull())).thenReturn(Arrays.asList(olderNews));
+    when(notesPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.isNull())).thenReturn(Arrays.asList(newerNote));
 
     List<ContentEntry> items = contentService.getContentList(filter, currentIdentity);
 
@@ -167,12 +167,12 @@ public class ContentServiceTest {
     filter.setContentTypes(Arrays.asList("news"));
     filter.setLimit(20);
 
-    when(newsPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull())).thenReturn(Arrays.asList(entry("1", "news", new Date())));
+    when(newsPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.isNull())).thenReturn(Arrays.asList(entry("1", "news", new Date())));
 
     List<ContentEntry> items = contentService.getContentList(filter, currentIdentity);
 
     assertEquals(1, items.size());
-    verify(notesPlugin, never()).search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.any());
+    verify(notesPlugin, never()).search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
   }
 
   @Test
@@ -185,8 +185,8 @@ public class ContentServiceTest {
     newsEntries.add(entry("1", "news", new Date(3000)));
     newsEntries.add(entry("2", "news", new Date(2000)));
     newsEntries.add(entry("3", "news", new Date(1000)));
-    when(newsPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull())).thenReturn(newsEntries);
-    when(notesPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull())).thenReturn(java.util.Collections.emptyList());
+    when(newsPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.isNull())).thenReturn(newsEntries);
+    when(notesPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.isNull())).thenReturn(java.util.Collections.emptyList());
 
     List<ContentEntry> items = contentService.getContentList(filter, currentIdentity);
 
@@ -204,8 +204,8 @@ public class ContentServiceTest {
     excluded.setCategoryIds(Arrays.asList(5L));
     ContentEntry kept = entry("2", "news", new Date(1000));
     kept.setCategoryIds(Arrays.asList(6L));
-    when(newsPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull())).thenReturn(Arrays.asList(excluded, kept));
-    when(notesPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull())).thenReturn(java.util.Collections.emptyList());
+    when(newsPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.isNull())).thenReturn(Arrays.asList(excluded, kept));
+    when(notesPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.isNull())).thenReturn(java.util.Collections.emptyList());
 
     List<ContentEntry> items = contentService.getContentList(filter, currentIdentity);
 
