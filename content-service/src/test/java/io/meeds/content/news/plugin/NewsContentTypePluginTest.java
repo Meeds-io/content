@@ -120,6 +120,9 @@ public class NewsContentTypePluginTest {
     news.setCategories(Arrays.asList(1L, 2L));
     news.setCanEdit(true);
     news.setCanDelete(true);
+    news.setActivityId("activity1");
+    news.setSpaceUrl("/portal/g/:spaces:space1/space-1");
+    news.setLang("fr");
     when(newsService.getNews(any(NewsFilter.class), eq(currentIdentity))).thenReturn(Arrays.asList(news));
     when(attachmentService.getAttachmentFileIds(eq(NewsPageAttachmentPlugin.OBJECT_TYPE), eq("1"))).thenReturn(Arrays.asList("f1", "f2"));
 
@@ -134,6 +137,9 @@ public class NewsContentTypePluginTest {
     assertEquals(2, entry.getAttachmentsCount());
     assertTrue(entry.isPublished());
     assertTrue(entry.isCanEdit());
+    assertEquals("activity1", entry.getActivityId());
+    assertEquals("/portal/g/:spaces:space1/space-1", entry.getSpaceUrl());
+    assertEquals("fr", entry.getLang());
   }
 
   @Test

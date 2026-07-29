@@ -60,8 +60,9 @@
           <content-action-menu-items
             :item="item"
             class="ms-2"
-            @edit="openItem"
+            @edit="editItem"
             @publish="openItem"
+            @published="$emit('published', item)"
             @delete="$emit('delete', item)" />
         </div>
       </div>
@@ -161,10 +162,42 @@ export default {
   },
   methods: {
     openItem() {
-      // Edit/Publish deep-link into the item's own detail page, where the
-      // full edit/publish flow already lives - the merged list is a listing
+      // Publish deep-links into the item's own detail page, where the
+      // full publish flow already lives - the merged list is a listing
       // view, not a place to reimplement that flow.
       window.open(this.item.url, '_blank');
+    },
+    editItem() {
+      // Unlike the view/publish URL, editing needs each content type's own
+      // dedicated editor app (news-editor/notes-editor), not the item's own
+      // view page - mirrors NewsApp.vue's getEditUrl() and
+      // NotePage.vue's editNote() exactly.
+      const editUrl = this.item.contentType === 'notes' ? this.getNoteEditUrl() : this.getNewsEditUrl();
+      window.open(editUrl, '_blank');
+    },
+    getNewsEditUrl() {
+      let editUrl = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news-editor?newsId=${this.item.id}`;
+      if (this.item.spaceId) {
+        editUrl += `&spaceId=${this.item.spaceId}`;
+      }
+      if (this.item.activityId) {
+        editUrl += `&activityId=${this.item.activityId}`;
+      }
+      if (this.item.spaceUrl) {
+        editUrl += `&spaceName=${this.item.spaceUrl.substring(this.item.spaceUrl.lastIndexOf('/') + 1)}`;
+      }
+      editUrl += `&type=${this.item.activityId && 'latest_draft' || 'draft'}`;
+      if (this.item.lang) {
+        editUrl += `&lang=${this.item.lang}`;
+      }
+      return editUrl;
+    },
+    getNoteEditUrl() {
+      return `${eXo.env.portal.context}/${eXo.env.portal.portalName}/notes-editor?noteId=${this.item.id}`
+        + `&spaceGroupId=${this.item.spaceGroupId || ''}`
+        + '&isDraft=false'
+        + `&parentNoteId=${this.item.parentId || ''}`
+        + `&notePageUri=${encodeURIComponent(eXo.env.portal.selectedNodeUri || '')}`;
     },
     async openMoreCategoriesDrawer() {
       this.moreCategoriesDrawer = true;

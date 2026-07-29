@@ -63,6 +63,16 @@ public class ContentEntry {
 
   private String       spaceAvatarUrl;
 
+  private String       activityId;
+
+  private String       spaceUrl;
+
+  private String       lang;
+  
+  private String       spaceGroupId;
+
+  private String       parentId;
+
   private Date         date;
 
   private long         likesCount;

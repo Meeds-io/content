@@ -19,9 +19,30 @@
  */
 import './initComponents.js';
 import * as contentListService from './js/ContentListService.js';
+import * as newsServices from '../services/newsServices.js';
+import * as newsTargetingService from '../services/newsTargetingService.js';
+import * as notePublishService from '../news-extensions/note-publish-extensions/publishService.js';
 
 if (!Vue.prototype.$contentListService) {
   Vue.prototype.$contentListService = contentListService;
+}
+
+if (!Vue.prototype.$newsServices) {
+  window.Object.defineProperty(Vue.prototype, '$newsServices', {
+    value: newsServices,
+  });
+}
+
+if (!Vue.prototype.$newsTargetingService) {
+  window.Object.defineProperty(Vue.prototype, '$newsTargetingService', {
+    value: newsTargetingService,
+  });
+}
+
+if (!Vue.prototype.$notePublishService) {
+  window.Object.defineProperty(Vue.prototype, '$notePublishService', {
+    value: notePublishService,
+  });
 }
 
 // getting language of the PLF
@@ -37,7 +58,8 @@ export function init(params) {
   const canEdit = params.canEdit;
   const showHeader = params.showHeader !== 'false';
   const allowFilteringPerCategory = params.allowFilteringPerCategory !== 'false';
-  const categoryDepth = parseInt(params.categoryDepth) || 4;
+  const parsedCategoryDepth = parseInt(params.categoryDepth);
+  const categoryDepth = Number.isNaN(parsedCategoryDepth) ? 4 : parsedCategoryDepth;
   const categoryIds = params.categoryIds ? params.categoryIds.split(',').map(id => parseInt(id)) : [];
   const excludeCategoryIds = params.excludeCategoryIds ? params.excludeCategoryIds.split(',').map(id => parseInt(id)) : [];
 
