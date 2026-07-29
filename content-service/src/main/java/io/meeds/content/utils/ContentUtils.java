@@ -18,22 +18,33 @@
  */
 package io.meeds.content.utils;
 
+import org.exoplatform.commons.api.settings.data.Context;
+import org.exoplatform.commons.api.settings.data.Scope;
+
 public class ContentUtils {
 
   private ContentUtils() {
     // Utility class
   }
 
-  public static final String CONTENT_TYPE_NEWS   = "news";
+  public static final String CONTENT_TYPE_NEWS          = "news";
 
-  public static final String CONTENT_TYPE_NOTES  = "notes";
+  public static final String CONTENT_TYPE_NOTES         = "notes";
 
-  public static final String STATUS_PUBLISHED    = "published";
+  public static final String STATUS_PUBLISHED           = "published";
 
-  public static final String STATUS_MY_CONTENT   = "myContent";
+  public static final String STATUS_MY_CONTENT          = "myContent";
 
-  public static final String STATUS_SCHEDULED    = "scheduled";
+  public static final String STATUS_SCHEDULED           = "scheduled";
 
-  public static final String STATUS_DRAFT        = "draft";
+  public static final String STATUS_DRAFT               = "draft";
+
+  public static final String  CONTENT_LIST_VIEW_SCOPE_NAME   = "CONTENT_LIST_VIEW_SCOPE";
+
+  public static final String  CONTENT_LIST_VIEW_CONTEXT_NAME = "CONTENT_LIST_VIEW_CONTEXT";
+
+  public static final Context CONTENT_LIST_VIEW_CONTEXT       = Context.GLOBAL.id(CONTENT_LIST_VIEW_CONTEXT_NAME);
+
+  public static final Scope   CONTENT_LIST_VIEW_SCOPE         = Scope.APPLICATION.id(CONTENT_LIST_VIEW_SCOPE_NAME);
 
 }

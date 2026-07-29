@@ -174,7 +174,7 @@ public class NewsContentTypePlugin implements ContentTypePlugin {
     entry.setContentType(ContentUtils.CONTENT_TYPE_NEWS);
     entry.setIcon("fa-newspaper");
     entry.setTitle(news.getTitle());
-    entry.setSummary(news.getProperties() == null ? null : news.getProperties().getSummary());
+    entry.setSummary(resolveNewsSummary(news));
     entry.setIllustrationUrl(news.getIllustrationURL());
     entry.setUrl(news.getUrl());
     entry.setAuthorUsername(news.getAuthor());
@@ -198,6 +198,15 @@ public class NewsContentTypePlugin implements ContentTypePlugin {
     entry.setCanPublish(news.isCanPublish());
     entry.setCanSchedule(news.isCanSchedule());
     return entry;
+  }
+
+  private String resolveNewsSummary(News news) {
+    String summary = news.getProperties() != null ? news.getProperties().getSummary() : null;
+    if (StringUtils.isBlank(summary) && StringUtils.isNotBlank(news.getBody())) {
+      String text = org.exoplatform.wiki.utils.Utils.html2text(news.getBody());
+      summary = text.length() > 200 ? text.substring(0, 200) : text;
+    }
+    return summary;
   }
 
 }
