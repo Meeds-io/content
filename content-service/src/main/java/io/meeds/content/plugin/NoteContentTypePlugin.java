@@ -79,13 +79,14 @@ public class NoteContentTypePlugin implements ContentTypePlugin {
   public List<ContentEntry> search(ContentFilter filter,
                                    int fetchLimit,
                                    Identity currentIdentity,
-                                   Set<String> categoryLinkedIds) throws Exception {
+                                   Set<String> categoryLinkedIds,
+                                   Set<String> activityLinkedIds) throws Exception {
     String status = effectiveStatus(filter.getStatus());
     if (StringUtils.equals(status, ContentUtils.STATUS_SCHEDULED) || StringUtils.equals(status, ContentUtils.STATUS_DRAFT)) {
       // Regular notes have no publish workflow (no scheduled/draft state).
       return Collections.emptyList();
     }
-    if (categoryLinkedIds != null && CollectionUtils.isEmpty(categoryLinkedIds)) {
+    if (categoryLinkedIds != null && CollectionUtils.isEmpty(categoryLinkedIds) && CollectionUtils.isEmpty(activityLinkedIds)) {
       return Collections.emptyList();
     }
 
@@ -114,12 +115,21 @@ public class NoteContentTypePlugin implements ContentTypePlugin {
     List<ContentEntry> entries = new ArrayList<>();
     for (SearchResult result : results) {
       String noteId = String.valueOf(result.getId());
-      if (categoryLinkedIds != null && !categoryLinkedIds.contains(noteId)) {
+      // Only a note's own id is known before fetching its Page - when there
+      // is no Activity-linked bucket to also check, a plain id mismatch can
+      // be ruled out without fetching. Once published though, a note's own
+      // category link is redirected onto its Activity (see
+      // NoteCategoryPlugin#toCategoryObject), so its activityId (known only
+      // once fetched) must still be checked whenever that bucket is non-empty.
+      if (categoryLinkedIds != null && CollectionUtils.isEmpty(activityLinkedIds) && !categoryLinkedIds.contains(noteId)) {
         continue;
       }
       try {
         Page note = noteService.getNoteById(noteId, currentIdentity);
         if (note != null
+            && (categoryLinkedIds == null
+                || categoryLinkedIds.contains(noteId)
+                || (StringUtils.isNotBlank(note.getActivityId()) && activityLinkedIds.contains(note.getActivityId())))
             && (!StringUtils.equals(status, ContentUtils.STATUS_MY_CONTENT)
                 || StringUtils.equals(note.getAuthor(), currentIdentity.getUserId()))
             // Published excludes notes only saved and never published
