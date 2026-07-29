@@ -37,7 +37,8 @@ export function init(params) {
   const canEdit = params.canEdit;
   const showHeader = params.showHeader !== 'false';
   const allowFilteringPerCategory = params.allowFilteringPerCategory !== 'false';
-  const categoryDepth = parseInt(params.categoryDepth) || 4;
+  const parsedCategoryDepth = parseInt(params.categoryDepth);
+  const categoryDepth = Number.isNaN(parsedCategoryDepth) ? 4 : parsedCategoryDepth;
   const categoryIds = params.categoryIds ? params.categoryIds.split(',').map(id => parseInt(id)) : [];
   const excludeCategoryIds = params.excludeCategoryIds ? params.excludeCategoryIds.split(',').map(id => parseInt(id)) : [];
 
