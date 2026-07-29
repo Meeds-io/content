@@ -10,9 +10,11 @@
     Object canEditAttribute = request.getAttribute("canEdit");
     boolean canEdit = canEditAttribute instanceof Boolean && (Boolean) canEditAttribute;
 
+    String[] applicationIdParams = (String[]) request.getAttribute("applicationId");
+    String applicationId = applicationIdParams == null || applicationIdParams.length == 0 ? "" : applicationIdParams[0];
+
     String[] showHeaderParams = (String[]) request.getAttribute("showHeader");
     String[] headerTitleParams = (String[]) request.getAttribute("headerTitle");
-    String[] showFilterOptionsParams = (String[]) request.getAttribute("showFilterOptions");
     String[] allowFilteringPerCategoryParams = (String[]) request.getAttribute("allowFilteringPerCategory");
     String[] categoryDepthParams = (String[]) request.getAttribute("categoryDepth");
     String[] categoryIdsParams = (String[]) request.getAttribute("categoryIds");
@@ -20,7 +22,6 @@
 
     String showHeader = showHeaderParams == null || showHeaderParams.length == 0 ? "true" : showHeaderParams[0];
     String headerTitle = headerTitleParams == null || headerTitleParams.length == 0 ? "" : headerTitleParams[0];
-    String showFilterOptions = showFilterOptionsParams == null || showFilterOptionsParams.length == 0 ? "true" : showFilterOptionsParams[0];
     String allowFilteringPerCategory = allowFilteringPerCategoryParams == null || allowFilteringPerCategoryParams.length == 0 ? "true" : allowFilteringPerCategoryParams[0];
     String categoryDepth = categoryDepthParams == null || categoryDepthParams.length == 0 ? "4" : categoryDepthParams[0];
     String categoryIds = categoryIdsParams == null || categoryIdsParams.length == 0 ? "" : categoryIdsParams[0];
@@ -30,11 +31,11 @@
     <script type="text/javascript">
       require(['PORTLET/content/ContentListView'], app => app.init({
         appId: '<%=appId%>',
+        applicationId: <%= "'" + applicationId + "'" %>,
         saveSettingsURL: <%= "'" + saveSettingsURL + "'" %>,
         canEdit: <%= canEdit %>,
         showHeader: <%= "'" + showHeader + "'" %>,
         headerTitle: <%= headerTitle == null ? null : "'" + headerTitle.replace("'", "\\'") + "'" %>,
-        showFilterOptions: <%= "'" + showFilterOptions + "'" %>,
         allowFilteringPerCategory: <%= "'" + allowFilteringPerCategory + "'" %>,
         categoryDepth: <%= "'" + categoryDepth + "'" %>,
         categoryIds: <%= "'" + categoryIds + "'" %>,

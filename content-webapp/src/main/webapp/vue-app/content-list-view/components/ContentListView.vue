@@ -27,7 +27,7 @@
       <v-main class="application-body application-layout-style border-box-sizing d-flex flex-column fill-height px-4 py-5 pt-0">
         <application-toolbar
           ref="toolbar"
-          :right-text-filter="showFilterOptions && {
+          :right-text-filter="{
             minCharacters: 0,
             placeholder: $t('content.list.filter.placeholder'),
             tooltip: $t('content.list.filter.placeholder'),
@@ -40,7 +40,7 @@
           <template v-if="!compact && showHeader" #left>
             <span class="text-header text-truncate">{{ headerTitle || $t('content.list.title') }}</span>
           </template>
-          <template v-if="!filterExpanded && (showFilterOptions || (canEdit && hover))" #right>
+          <template v-if="!filterExpanded" #right>
             <div class="d-flex align-center ms-auto">
               <v-btn
                 v-if="canEdit && hover"
@@ -51,7 +51,6 @@
                 <v-icon size="18">fas fa-cog</v-icon>
               </v-btn>
               <v-btn
-                v-if="showFilterOptions"
                 icon
                 small
                 :aria-label="$t('content.list.filter.drawer.open')"
@@ -139,10 +138,6 @@ export default {
     headerTitle: {
       type: String,
       default: null,
-    },
-    showFilterOptions: {
-      type: Boolean,
-      default: true,
     },
     allowFilteringPerCategory: {
       type: Boolean,

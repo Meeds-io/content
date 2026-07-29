@@ -137,6 +137,23 @@ public class NewsContentTypePluginTest {
   }
 
   @Test
+  public void testSearchFallsBackToBodyWhenSummaryBlank() throws Exception {
+    // No properties/summary set on this article - the summary must fall
+    // back to the raw body content, the same way NoteContentTypePlugin
+    // already does for notes, instead of showing nothing.
+    ContentFilter filter = new ContentFilter();
+    News news = new News();
+    news.setId("1");
+    news.setBody("<p>Some <b>rich</b> article content.</p>");
+    when(newsService.getNews(any(NewsFilter.class), eq(currentIdentity))).thenReturn(Arrays.asList(news));
+
+    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null);
+
+    assertEquals(1, entries.size());
+    assertEquals("Some rich article content.", entries.get(0).getSummary());
+  }
+
+  @Test
   public void testSearchFiltersOutNonAllowedCategoryLinkedIds() throws Exception {
     ContentFilter filter = new ContentFilter();
     News allowed = new News();
