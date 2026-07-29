@@ -43,6 +43,7 @@ import org.exoplatform.wiki.service.search.WikiSearchData;
 import io.meeds.content.model.ContentEntry;
 import io.meeds.content.model.filter.ContentFilter;
 import io.meeds.content.utils.ContentUtils;
+import io.meeds.notes.plugin.NoteCategoryPlugin;
 
 @Component
 public class NoteContentTypePlugin implements ContentTypePlugin {
@@ -175,7 +176,11 @@ public class NoteContentTypePlugin implements ContentTypePlugin {
     }
     entry.setDate(note.getUpdatedDate());
     entry.setAttachmentsCount(attachmentService.getAttachmentFileIds(note.getAttachmentObjectType(), note.getId()).size());
-    entry.setCategoryIds(note.getCategoryIds());
+    // Page.getCategoryIds() is never populated by NoteService itself - only
+    // the REST layer (NotesRestService) fills it in, via this same static
+    // helper, after fetching a note. Call it directly here for the same
+    // result the Notes application already shows.
+    entry.setCategoryIds(NoteCategoryPlugin.getCategoryIds(note));
     entry.setPublished(true);
     entry.setDraft(false);
     entry.setScheduled(false);

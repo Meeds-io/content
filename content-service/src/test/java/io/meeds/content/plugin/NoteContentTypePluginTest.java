@@ -25,7 +25,9 @@ import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -34,14 +36,17 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import org.exoplatform.commons.exception.ObjectNotFoundException;
+import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.commons.utils.PageList;
 import org.exoplatform.services.security.Identity;
 import org.exoplatform.social.attachment.AttachmentService;
@@ -54,11 +59,15 @@ import org.exoplatform.wiki.service.search.SearchResult;
 import io.meeds.content.model.ContentEntry;
 import io.meeds.content.model.filter.ContentFilter;
 import io.meeds.content.utils.ContentUtils;
+import io.meeds.social.category.model.CategoryObject;
+import io.meeds.social.category.service.CategoryLinkService;
 
 @RunWith(MockitoJUnitRunner.class)
 public class NoteContentTypePluginTest {
 
   private static final String JOHN = "john";
+
+  private static final MockedStatic<CommonsUtils> COMMONS_UTILS = mockStatic(CommonsUtils.class);
 
   @Mock
   private NoteService         noteService;
@@ -69,6 +78,9 @@ public class NoteContentTypePluginTest {
   @Mock
   private AttachmentService   attachmentService;
 
+  @Mock
+  private CategoryLinkService categoryLinkService;
+
   @InjectMocks
   private NoteContentTypePlugin plugin;
 
@@ -78,6 +90,15 @@ public class NoteContentTypePluginTest {
   public void setUp() {
     currentIdentity = new Identity(JOHN);
     when(attachmentService.getAttachmentFileIds(anyString(), anyString())).thenReturn(Collections.emptyList());
+    // NoteCategoryPlugin.getCategoryIds(note) - called by toContentEntry -
+    // reaches this service via the static container lookup, not injection.
+    lenient().when(CommonsUtils.getService(CategoryLinkService.class)).thenReturn(categoryLinkService);
+    lenient().when(categoryLinkService.getLinkedIds(any(CategoryObject.class))).thenReturn(Collections.emptyList());
+  }
+
+  @AfterClass
+  public static void afterRunBare() {
+    COMMONS_UTILS.close();
   }
 
   @Test
@@ -147,6 +168,28 @@ public class NoteContentTypePluginTest {
     assertTrue(entry.isCanDelete());
     assertFalse(entry.isCanPublish());
     assertFalse(entry.isCanSchedule());
+  }
+
+  @Test
+  public void testSearchResolvesCategoryIdsViaNoteCategoryPlugin() throws Exception {
+    // Page.getCategoryIds() is never populated by NoteService itself; the
+    // entry's categoryIds must come from NoteCategoryPlugin's own resolution
+    // instead - the same one the Notes application relies on.
+    ContentFilter filter = new ContentFilter();
+    SearchResult result = new SearchResult();
+    result.setId(1L);
+    mockSearchResults(result);
+
+    Page note = new Page();
+    note.setId("1");
+    note.setActivityId("activity1");
+    when(noteService.getNoteById("1", currentIdentity)).thenReturn(note);
+    when(categoryLinkService.getLinkedIds(any(CategoryObject.class))).thenReturn(Arrays.asList(7L, 8L));
+
+    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null);
+
+    assertEquals(1, entries.size());
+    assertEquals(Arrays.asList(7L, 8L), entries.get(0).getCategoryIds());
   }
 
   @Test
