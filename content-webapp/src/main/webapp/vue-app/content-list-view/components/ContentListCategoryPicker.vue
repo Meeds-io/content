@@ -21,26 +21,10 @@
 -->
 <template>
   <div>
-    <span class="text-body text-color">{{ label }}</span>
-    <v-text-field
-      v-model="query"
-      :placeholder="$t('content.list.settings.drawer.filterList.search')"
-      prepend-inner-icon="fa-search"
-      hide-details
-      dense
-      class="mt-1 mb-1" />
-    <v-list
-      v-if="suggestions.length"
-      dense
-      class="pa-0">
-      <v-list-item
-        v-for="category in suggestions"
-        :key="category.id"
-        class="ps-2 pe-4"
-        @click="add(category)">
-        <span class="text-truncate">{{ category.name }}</span>
-      </v-list-item>
-    </v-list>
+    <span v-if="label" class="text-body text-color">{{ label }}</span>
+    <category-suggester
+      v-model="categoryId"
+      class="mt-1 mb-2 mx-0 pa-0" />
     <div
       v-for="(category, index) in value"
       :key="category.id"
@@ -75,27 +59,23 @@ export default {
     },
   },
   data: () => ({
-    query: null,
-    suggestions: [],
+    categoryId: null,
   }),
   watch: {
-    query() {
-      if (!this.query) {
-        this.suggestions = [];
-        return;
+    async categoryId() {
+      if (this.categoryId) {
+        if (!this.value.some(category => category.id === this.categoryId)) {
+          const category = await this.$categoryService.getCategory(this.categoryId).catch(() => null);
+          if (category) {
+            this.$emit('input', [...this.value, category]);
+          }
+        }
+        await this.$nextTick();
+        this.categoryId = null;
       }
-      this.$categoryService.findCategories({query: this.query, limit: 10}).then(data => {
-        const selectedIds = this.value.map(category => category.id);
-        this.suggestions = (data || []).filter(category => !selectedIds.includes(category.id));
-      });
     },
   },
   methods: {
-    add(category) {
-      this.$emit('input', [...this.value, category]);
-      this.query = null;
-      this.suggestions = [];
-    },
     remove(category) {
       this.$emit('input', this.value.filter(selected => selected.id !== category.id));
     },

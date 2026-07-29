@@ -32,11 +32,10 @@ const url = `/content/i18n/locale.portlet.content.Content?lang=${lang}`;
 
 export function init(params) {
   const appId = params.appId;
+  const applicationId = params.applicationId;
   const saveSettingsURL = params.saveSettingsURL;
   const canEdit = params.canEdit;
   const showHeader = params.showHeader !== 'false';
-  const headerTitle = params.headerTitle || null;
-  const showFilterOptions = params.showFilterOptions !== 'false';
   const allowFilteringPerCategory = params.allowFilteringPerCategory !== 'false';
   const categoryDepth = parseInt(params.categoryDepth) || 4;
   const categoryIds = params.categoryIds ? params.categoryIds.split(',').map(id => parseInt(id)) : [];
@@ -45,15 +44,24 @@ export function init(params) {
   exoi18n.loadLanguageAsync(lang, url).then(i18n => {
     Vue.createApp({
       data: {
+        applicationId,
+        headerTranslations: null,
         saveSettingsURL,
         canEdit,
         showHeader,
-        headerTitle,
-        showFilterOptions,
+        headerTitle: null,
         allowFilteringPerCategory,
         categoryDepth,
         categoryIds,
         excludeCategoryIds,
+        language: lang,
+        defaultLanguage: eXo?.env?.portal?.defaultLanguage,
+      },
+      created() {
+        Vue.prototype.$translationService.getTranslations('contentListView', applicationId, 'headerTitleInput').then(translations => {
+          this.headerTranslations = translations;
+          this.headerTitle = translations?.[lang] || translations?.[this.defaultLanguage] || params.headerTitle || null;
+        });
       },
       template: `<content-list-view
         id="${appId}"
@@ -61,7 +69,6 @@ export function init(params) {
         :save-settings-url="saveSettingsURL"
         :show-header="showHeader"
         :header-title="headerTitle"
-        :show-filter-options="showFilterOptions"
         :allow-filtering-per-category="allowFilteringPerCategory"
         :category-depth="categoryDepth"
         :category-ids="categoryIds"
