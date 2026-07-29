@@ -73,9 +73,21 @@ public interface ContentTypePlugin {
    * @param categoryLinkedIds ids (as known to this content type) of objects
    *                            linked to the category being filtered by, or
    *                            {@code null} when no category filter is active
+   * @param activityLinkedIds ids of Activities linked to the category being
+   *                            filtered by (never {@code null} when
+   *                            {@code categoryLinkedIds} isn't) - once an
+   *                            item is published, its own category links are
+   *                            redirected onto its underlying Activity (see
+   *                            NewsCategoryPlugin/NoteCategoryPlugin's
+   *                            toCategoryObject), so a matching item must
+   *                            also be recognized by its own activity id
    * @return the matching entries
    */
-  List<ContentEntry> search(ContentFilter filter, int fetchLimit, Identity currentIdentity, Set<String> categoryLinkedIds) throws Exception;
+  List<ContentEntry> search(ContentFilter filter,
+                            int fetchLimit,
+                            Identity currentIdentity,
+                            Set<String> categoryLinkedIds,
+                            Set<String> activityLinkedIds) throws Exception;
 
   /**
    * Deletes the content item with the given id.
