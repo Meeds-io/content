@@ -122,8 +122,8 @@ public class ContentServiceTest {
 
     ContentEntry olderNews = entry("1", "news", new Date(1000));
     ContentEntry newerNote = entry("2", "notes", new Date(2000));
-    when(newsPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull())).thenReturn(Arrays.asList(olderNews));
-    when(notesPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull())).thenReturn(Arrays.asList(newerNote));
+    when(newsPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.isNull())).thenReturn(Arrays.asList(olderNews));
+    when(notesPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.isNull())).thenReturn(Arrays.asList(newerNote));
 
     List<ContentEntry> items = contentService.getContentList(filter, currentIdentity);
 
@@ -138,12 +138,12 @@ public class ContentServiceTest {
     filter.setContentTypes(Arrays.asList("news"));
     filter.setLimit(20);
 
-    when(newsPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull())).thenReturn(Arrays.asList(entry("1", "news", new Date())));
+    when(newsPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.isNull())).thenReturn(Arrays.asList(entry("1", "news", new Date())));
 
     List<ContentEntry> items = contentService.getContentList(filter, currentIdentity);
 
     assertEquals(1, items.size());
-    verify(notesPlugin, never()).search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.any());
+    verify(notesPlugin, never()).search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
   }
 
   @Test
@@ -156,8 +156,8 @@ public class ContentServiceTest {
     newsEntries.add(entry("1", "news", new Date(3000)));
     newsEntries.add(entry("2", "news", new Date(2000)));
     newsEntries.add(entry("3", "news", new Date(1000)));
-    when(newsPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull())).thenReturn(newsEntries);
-    when(notesPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull())).thenReturn(java.util.Collections.emptyList());
+    when(newsPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.isNull())).thenReturn(newsEntries);
+    when(notesPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.isNull())).thenReturn(java.util.Collections.emptyList());
 
     List<ContentEntry> items = contentService.getContentList(filter, currentIdentity);
 
@@ -175,8 +175,8 @@ public class ContentServiceTest {
     excluded.setCategoryIds(Arrays.asList(5L));
     ContentEntry kept = entry("2", "news", new Date(1000));
     kept.setCategoryIds(Arrays.asList(6L));
-    when(newsPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull())).thenReturn(Arrays.asList(excluded, kept));
-    when(notesPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull())).thenReturn(java.util.Collections.emptyList());
+    when(newsPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.isNull())).thenReturn(Arrays.asList(excluded, kept));
+    when(notesPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.isNull())).thenReturn(java.util.Collections.emptyList());
 
     List<ContentEntry> items = contentService.getContentList(filter, currentIdentity);
 
@@ -196,13 +196,52 @@ public class ContentServiceTest {
     when(categoryLinkService.getLinkedObjects(eq(9L), anyList(), eq(0), anyInt())).thenReturn(Arrays.asList(newsObject));
 
     ContentEntry matchingNews = entry("1", "news", new Date());
-    when(newsPlugin.search(eq(filter), anyInt(), eq(currentIdentity), eq(Set.of("1")))).thenReturn(Arrays.asList(matchingNews));
-    when(notesPlugin.search(eq(filter), anyInt(), eq(currentIdentity), eq(java.util.Collections.emptySet()))).thenReturn(java.util.Collections.emptyList());
+    when(newsPlugin.search(eq(filter), anyInt(), eq(currentIdentity), eq(Set.of("1")), eq(java.util.Collections.emptySet())))
+                                                                                                                            .thenReturn(Arrays.asList(matchingNews));
+    when(notesPlugin.search(eq(filter),
+                            anyInt(),
+                            eq(currentIdentity),
+                            eq(java.util.Collections.emptySet()),
+                            eq(java.util.Collections.emptySet()))).thenReturn(java.util.Collections.emptyList());
 
     List<ContentEntry> items = contentService.getContentList(filter, currentIdentity);
 
     assertEquals(1, items.size());
     assertEquals("1", items.get(0).getId());
+  }
+
+  @Test
+  public void testGetContentListByCategoryResolvesActivityLinkedIdsAcrossTypes() throws Exception {
+    // Once published, News/Notes category links are redirected onto their
+    // underlying Activity (NewsCategoryPlugin/NoteCategoryPlugin's
+    // toCategoryObject) - resolveCategoryLinkedIds must also resolve that
+    // "activity" bucket and hand it to every plugin, alongside its own
+    // type's bucket, so a published item can still be matched.
+    ContentFilter filter = new ContentFilter();
+    filter.setLimit(20);
+    filter.setCategoryId(9L);
+
+    CategoryObject activityObject = new CategoryObject();
+    activityObject.setType("activity");
+    activityObject.setId("activity1");
+    when(categoryLinkService.getLinkedObjects(eq(9L), anyList(), eq(0), anyInt())).thenReturn(Arrays.asList(activityObject));
+
+    ContentEntry matchingNote = entry("2", "notes", new Date());
+    when(newsPlugin.search(eq(filter),
+                           anyInt(),
+                           eq(currentIdentity),
+                           eq(java.util.Collections.emptySet()),
+                           eq(Set.of("activity1")))).thenReturn(java.util.Collections.emptyList());
+    when(notesPlugin.search(eq(filter),
+                            anyInt(),
+                            eq(currentIdentity),
+                            eq(java.util.Collections.emptySet()),
+                            eq(Set.of("activity1")))).thenReturn(Arrays.asList(matchingNote));
+
+    List<ContentEntry> items = contentService.getContentList(filter, currentIdentity);
+
+    assertEquals(1, items.size());
+    assertEquals("2", items.get(0).getId());
   }
 
   @Test

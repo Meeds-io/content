@@ -43,6 +43,7 @@ import io.meeds.content.model.ContentEntry;
 import io.meeds.content.model.ContentType;
 import io.meeds.content.model.filter.ContentFilter;
 import io.meeds.content.plugin.ContentTypePlugin;
+import io.meeds.social.activity.plugin.ActivityCategoryPlugin;
 import io.meeds.social.category.model.CategoryObject;
 import io.meeds.social.category.service.CategoryLinkService;
 
@@ -116,7 +117,11 @@ public class ContentService {
       // when no category filter is active at all (categoryLinkedIds itself
       // is null).
       Set<String> allowedIds = categoryLinkedIds == null ? null : categoryLinkedIds.getOrDefault(plugin.getType(), Collections.emptySet());
-      entries.addAll(plugin.search(filter, fetchLimit, currentIdentity, allowedIds));
+      Set<String> allowedActivityIds =
+                                      categoryLinkedIds == null ? null
+                                                                : categoryLinkedIds.getOrDefault(ActivityCategoryPlugin.OBJECT_TYPE,
+                                                                                                  Collections.emptySet());
+      entries.addAll(plugin.search(filter, fetchLimit, currentIdentity, allowedIds, allowedActivityIds));
     }
 
     if (CollectionUtils.isNotEmpty(filter.getExcludeCategoryIds())) {
@@ -148,6 +153,13 @@ public class ContentService {
     if (types.isEmpty()) {
       return Collections.emptyMap();
     }
+    // Once an item is published, its category links are redirected onto its
+    // underlying Activity instead of its own type (see
+    // NewsCategoryPlugin/NoteCategoryPlugin's toCategoryObject): always
+    // resolve that bucket too so each plugin can match a candidate by its
+    // own activityId, not just by its own id.
+    types = new ArrayList<>(types);
+    types.add(ActivityCategoryPlugin.OBJECT_TYPE);
     Map<String, Set<String>> linkedIdsByType = new HashMap<>();
     for (Long categoryId : categoryIds) {
       List<CategoryObject> linkedObjects = categoryLinkService.getLinkedObjects(categoryId, types, 0, CATEGORY_LINKS_FETCH_CAP);
