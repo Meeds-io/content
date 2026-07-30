@@ -86,6 +86,7 @@
         <content-list-category-picker
           v-if="filterIncludeCategories"
           v-model="includeCategories"
+          sortable
           class="mt-2" />
 
         <div class="d-flex align-center text-start mt-4">

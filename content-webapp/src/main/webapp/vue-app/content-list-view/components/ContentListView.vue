@@ -267,7 +267,18 @@ export default {
         this.categories = [];
       } else {
         this.breadcrumb = null;
-        const resolvedCategories = await Promise.all(this.resultCategoryIds.map(id => this.$categoryService.getCategory(id).catch(() => null)));
+        // The server only reports which categories are actually present in
+        // the returned items, in no particular order - the admin-configured
+        // "Per category" order (this.categoryIds) is the one that should
+        // drive pill display order, present-in-results ones first, any
+        // other result category following in its own (arbitrary) order.
+        const orderedIds = this.categoryIds?.length
+          ? [
+            ...this.categoryIds.filter(id => this.resultCategoryIds.includes(id)),
+            ...this.resultCategoryIds.filter(id => !this.categoryIds.includes(id)),
+          ]
+          : this.resultCategoryIds;
+        const resolvedCategories = await Promise.all(orderedIds.map(id => this.$categoryService.getCategory(id).catch(() => null)));
         this.categories = resolvedCategories.filter(cat => cat);
       }
     },
