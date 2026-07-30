@@ -80,9 +80,8 @@ public class NewsContentTypePlugin implements ContentTypePlugin {
   public List<ContentEntry> search(ContentFilter filter,
                                    int fetchLimit,
                                    Identity currentIdentity,
-                                   Set<String> categoryLinkedIds,
-                                   Set<String> activityLinkedIds) throws Exception {
-    if (categoryLinkedIds != null && CollectionUtils.isEmpty(categoryLinkedIds) && CollectionUtils.isEmpty(activityLinkedIds)) {
+                                   Set<String> categoryLinkedIds) throws Exception {
+    if (categoryLinkedIds != null && CollectionUtils.isEmpty(categoryLinkedIds)) {
       return Collections.emptyList();
     }
 
@@ -102,9 +101,7 @@ public class NewsContentTypePlugin implements ContentTypePlugin {
     String status = effectiveStatus(filter.getStatus());
     return newsList.stream()
                    .filter(Objects::nonNull)
-                   .filter(news -> categoryLinkedIds == null
-                       || categoryLinkedIds.contains(news.getId())
-                       || (StringUtils.isNotBlank(news.getActivityId()) && activityLinkedIds.contains(news.getActivityId())))
+                   .filter(news -> categoryLinkedIds == null || categoryLinkedIds.contains(news.getId()))
                    .map(news -> toContentEntry(news, status))
                    .collect(Collectors.toList());
   }

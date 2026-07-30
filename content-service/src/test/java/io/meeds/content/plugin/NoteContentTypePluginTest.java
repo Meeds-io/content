@@ -117,7 +117,7 @@ public class NoteContentTypePluginTest {
   public void testSearchReturnsEmptyForScheduledStatus() throws Exception {
     ContentFilter filter = new ContentFilter();
     filter.setStatus(ContentUtils.STATUS_SCHEDULED);
-    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null, null);
+    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null);
     assertTrue(entries.isEmpty());
   }
 
@@ -125,14 +125,14 @@ public class NoteContentTypePluginTest {
   public void testSearchReturnsEmptyForDraftStatus() throws Exception {
     ContentFilter filter = new ContentFilter();
     filter.setStatus(ContentUtils.STATUS_DRAFT);
-    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null, null);
+    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null);
     assertTrue(entries.isEmpty());
   }
 
   @Test
   public void testSearchReturnsEmptyWhenCategoryLinkedIdsEmpty() throws Exception {
     ContentFilter filter = new ContentFilter();
-    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, Collections.emptySet(), Collections.emptySet());
+    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, Collections.emptySet());
     assertTrue(entries.isEmpty());
   }
 
@@ -161,7 +161,7 @@ public class NoteContentTypePluginTest {
     when(noteService.hasPermissionOnPage(note, PermissionType.EDITPAGE, currentIdentity)).thenReturn(true);
     when(attachmentService.getAttachmentFileIds(eq(note.getAttachmentObjectType()), eq("1"))).thenReturn(Arrays.asList("f1"));
 
-    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null, null);
+    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null);
 
     assertEquals(1, entries.size());
     ContentEntry entry = entries.get(0);
@@ -195,7 +195,7 @@ public class NoteContentTypePluginTest {
     when(noteService.getNoteById("1", currentIdentity)).thenReturn(note);
     when(categoryLinkService.getLinkedIds(any(CategoryObject.class))).thenReturn(Arrays.asList(7L, 8L));
 
-    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null, null);
+    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null);
 
     assertEquals(1, entries.size());
     assertEquals(Arrays.asList(7L, 8L), entries.get(0).getCategoryIds());
@@ -214,7 +214,7 @@ public class NoteContentTypePluginTest {
     note.setActivityId(null);
     when(noteService.getNoteById("1", currentIdentity)).thenReturn(note);
 
-    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null, null);
+    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null);
 
     assertTrue(entries.isEmpty());
   }
@@ -238,7 +238,7 @@ public class NoteContentTypePluginTest {
     when(noteService.getNoteById("1", currentIdentity)).thenReturn(myNote);
     when(noteService.getNoteById("2", currentIdentity)).thenReturn(otherNote);
 
-    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null, null);
+    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null);
 
     assertEquals(1, entries.size());
     assertEquals("1", entries.get(0).getId());
@@ -258,40 +258,10 @@ public class NoteContentTypePluginTest {
     note.setActivityId("activity1");
     when(noteService.getNoteById("1", currentIdentity)).thenReturn(note);
 
-    List<ContentEntry> entries =
-                               plugin.search(filter, 20, currentIdentity, Collections.singleton("1"), Collections.emptySet());
+    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, Collections.singleton("1"));
 
     assertEquals(1, entries.size());
     verify(noteService, never()).getNoteById(eq("2"), any());
-  }
-
-  @Test
-  public void testSearchMatchesByActivityLinkedIdWhenOwnIdNotLinked() throws Exception {
-    // Once published, a note's own category link is redirected onto its
-    // underlying Activity (NoteCategoryPlugin#toCategoryObject) - so a
-    // category filter match must also be recognized via the note's own
-    // activityId, not only via its own id.
-    ContentFilter filter = new ContentFilter();
-    SearchResult linked = new SearchResult();
-    linked.setId(1L);
-    SearchResult notLinked = new SearchResult();
-    notLinked.setId(2L);
-    mockSearchResults(linked, notLinked);
-
-    Page linkedNote = new Page();
-    linkedNote.setId("1");
-    linkedNote.setActivityId("activity1");
-    Page notLinkedNote = new Page();
-    notLinkedNote.setId("2");
-    notLinkedNote.setActivityId("activity2");
-    when(noteService.getNoteById("1", currentIdentity)).thenReturn(linkedNote);
-    when(noteService.getNoteById("2", currentIdentity)).thenReturn(notLinkedNote);
-
-    List<ContentEntry> entries =
-                               plugin.search(filter, 20, currentIdentity, Collections.emptySet(), Collections.singleton("activity1"));
-
-    assertEquals(1, entries.size());
-    assertEquals("1", entries.get(0).getId());
   }
 
   @Test
@@ -302,7 +272,7 @@ public class NoteContentTypePluginTest {
     mockSearchResults(result);
     when(noteService.getNoteById("1", currentIdentity)).thenThrow(new IllegalAccessException("no access"));
 
-    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null, null);
+    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null);
 
     assertTrue(entries.isEmpty());
   }
@@ -312,7 +282,7 @@ public class NoteContentTypePluginTest {
     ContentFilter filter = new ContentFilter();
     mockSearchResults();
 
-    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null, null);
+    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null);
 
     assertTrue(entries.isEmpty());
   }

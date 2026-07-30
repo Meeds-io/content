@@ -93,7 +93,7 @@ public class NewsContentTypePluginTest {
   @Test
   public void testSearchReturnsEmptyWhenCategoryLinkedIdsEmpty() throws Exception {
     ContentFilter filter = new ContentFilter();
-    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, Collections.emptySet(), Collections.emptySet());
+    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, Collections.emptySet());
     assertTrue(entries.isEmpty());
   }
 
@@ -101,7 +101,7 @@ public class NewsContentTypePluginTest {
   public void testSearchReturnsEmptyWhenNewsServiceReturnsNull() throws Exception {
     ContentFilter filter = new ContentFilter();
     when(newsService.getNews(any(NewsFilter.class), eq(currentIdentity))).thenReturn(null);
-    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null, null);
+    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null);
     assertTrue(entries.isEmpty());
   }
 
@@ -126,7 +126,7 @@ public class NewsContentTypePluginTest {
     when(newsService.getNews(any(NewsFilter.class), eq(currentIdentity))).thenReturn(Arrays.asList(news));
     when(attachmentService.getAttachmentFileIds(eq(NewsPageAttachmentPlugin.OBJECT_TYPE), eq("1"))).thenReturn(Arrays.asList("f1", "f2"));
 
-    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null, null);
+    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null);
 
     assertEquals(1, entries.size());
     ContentEntry entry = entries.get(0);
@@ -153,7 +153,7 @@ public class NewsContentTypePluginTest {
     news.setBody("<p>Some <b>rich</b> article content.</p>");
     when(newsService.getNews(any(NewsFilter.class), eq(currentIdentity))).thenReturn(Arrays.asList(news));
 
-    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null, null);
+    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null);
 
     assertEquals(1, entries.size());
     assertEquals("Some rich article content.", entries.get(0).getSummary());
@@ -169,28 +169,7 @@ public class NewsContentTypePluginTest {
     when(newsService.getNews(any(NewsFilter.class), eq(currentIdentity))).thenReturn(Arrays.asList(allowed, notAllowed));
 
     Set<String> categoryLinkedIds = Collections.singleton("1");
-    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, categoryLinkedIds, Collections.emptySet());
-
-    assertEquals(1, entries.size());
-    assertEquals("1", entries.get(0).getId());
-  }
-
-  @Test
-  public void testSearchMatchesByActivityLinkedIdWhenOwnIdNotLinked() throws Exception {
-    // Once published, a News article's own category link is redirected onto
-    // its underlying Activity (NewsCategoryPlugin#toCategoryObject) - so a
-    // category filter match must also be recognized via the article's own
-    // activityId, not only via its own id.
-    ContentFilter filter = new ContentFilter();
-    News published = new News();
-    published.setId("1");
-    published.setActivityId("activity1");
-    News other = new News();
-    other.setId("2");
-    other.setActivityId("activity2");
-    when(newsService.getNews(any(NewsFilter.class), eq(currentIdentity))).thenReturn(Arrays.asList(published, other));
-
-    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, Collections.emptySet(), Collections.singleton("activity1"));
+    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, categoryLinkedIds);
 
     assertEquals(1, entries.size());
     assertEquals("1", entries.get(0).getId());
@@ -212,7 +191,7 @@ public class NewsContentTypePluginTest {
     when(identityManager.getOrCreateIdentity(OrganizationIdentityProvider.NAME, JOHN)).thenReturn(socialIdentity);
     when(newsService.searchNews(any(NewsFilter.class), eq(socialIdentity))).thenReturn(Collections.emptyList());
 
-    plugin.search(filter, 20, currentIdentity, null, null);
+    plugin.search(filter, 20, currentIdentity, null);
 
     verify(newsService).searchNews(any(NewsFilter.class), eq(socialIdentity));
     verify(newsService, never()).getNews(any(NewsFilter.class), any());
@@ -236,7 +215,7 @@ public class NewsContentTypePluginTest {
       return Collections.emptyList();
     });
 
-    plugin.search(filter, 20, currentIdentity, null, null);
+    plugin.search(filter, 20, currentIdentity, null);
 
     verify(newsService).searchNews(any(NewsFilter.class), any());
   }
@@ -251,7 +230,7 @@ public class NewsContentTypePluginTest {
       return Collections.emptyList();
     });
 
-    plugin.search(filter, 20, currentIdentity, null, null);
+    plugin.search(filter, 20, currentIdentity, null);
   }
 
   @Test
@@ -265,7 +244,7 @@ public class NewsContentTypePluginTest {
       return Collections.emptyList();
     });
 
-    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null, null);
+    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null);
     assertTrue(entries.isEmpty());
   }
 
@@ -279,7 +258,7 @@ public class NewsContentTypePluginTest {
       return Collections.emptyList();
     });
 
-    plugin.search(filter, 20, currentIdentity, null, null);
+    plugin.search(filter, 20, currentIdentity, null);
   }
 
   @Test
