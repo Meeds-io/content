@@ -21,6 +21,7 @@ package io.meeds.content.service;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -122,8 +123,36 @@ public class ContentServiceTest {
 
     ContentEntry olderNews = entry("1", "news", new Date(1000));
     ContentEntry newerNote = entry("2", "notes", new Date(2000));
-    when(newsPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.isNull())).thenReturn(Arrays.asList(olderNews));
-    when(notesPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.isNull())).thenReturn(Arrays.asList(newerNote));
+    when(newsPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull())).thenReturn(Arrays.asList(olderNews));
+    when(notesPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull())).thenReturn(Arrays.asList(newerNote));
+
+    List<ContentEntry> items = contentService.getContentList(filter, currentIdentity);
+
+    assertEquals(2, items.size());
+    assertEquals("2", items.get(0).getId());
+    assertEquals("1", items.get(1).getId());
+  }
+
+  @Test
+  public void testGetContentListByIncludedCategoriesSortsByCategoryOrderThenDate() throws Exception {
+    // The admin-configured "Per category" list order (ContentFilter's
+    // includeCategoryIds, already reflecting the order set/reordered in the
+    // settings drawer) must drive item display order, not just which
+    // category pills show: an item matching an earlier-ranked category
+    // comes first even if an item matching a later-ranked category is more
+    // recent.
+    ContentFilter filter = new ContentFilter();
+    filter.setLimit(20);
+    filter.setIncludeCategoryIds(Arrays.asList(10L, 20L));
+
+    ContentEntry newerInSecondCategory = entry("1", "news", new Date(2000));
+    newerInSecondCategory.setCategoryIds(Arrays.asList(20L));
+    ContentEntry olderInFirstCategory = entry("2", "news", new Date(1000));
+    olderInFirstCategory.setCategoryIds(Arrays.asList(10L));
+    when(newsPlugin.search(eq(filter), anyInt(), eq(currentIdentity), any()))
+                                                                            .thenReturn(Arrays.asList(newerInSecondCategory,
+                                                                                                       olderInFirstCategory));
+    when(notesPlugin.search(eq(filter), anyInt(), eq(currentIdentity), any())).thenReturn(java.util.Collections.emptyList());
 
     List<ContentEntry> items = contentService.getContentList(filter, currentIdentity);
 
@@ -138,12 +167,12 @@ public class ContentServiceTest {
     filter.setContentTypes(Arrays.asList("news"));
     filter.setLimit(20);
 
-    when(newsPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.isNull())).thenReturn(Arrays.asList(entry("1", "news", new Date())));
+    when(newsPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull())).thenReturn(Arrays.asList(entry("1", "news", new Date())));
 
     List<ContentEntry> items = contentService.getContentList(filter, currentIdentity);
 
     assertEquals(1, items.size());
-    verify(notesPlugin, never()).search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+    verify(notesPlugin, never()).search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.any());
   }
 
   @Test
@@ -156,8 +185,8 @@ public class ContentServiceTest {
     newsEntries.add(entry("1", "news", new Date(3000)));
     newsEntries.add(entry("2", "news", new Date(2000)));
     newsEntries.add(entry("3", "news", new Date(1000)));
-    when(newsPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.isNull())).thenReturn(newsEntries);
-    when(notesPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.isNull())).thenReturn(java.util.Collections.emptyList());
+    when(newsPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull())).thenReturn(newsEntries);
+    when(notesPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull())).thenReturn(java.util.Collections.emptyList());
 
     List<ContentEntry> items = contentService.getContentList(filter, currentIdentity);
 
@@ -175,8 +204,8 @@ public class ContentServiceTest {
     excluded.setCategoryIds(Arrays.asList(5L));
     ContentEntry kept = entry("2", "news", new Date(1000));
     kept.setCategoryIds(Arrays.asList(6L));
-    when(newsPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.isNull())).thenReturn(Arrays.asList(excluded, kept));
-    when(notesPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.isNull())).thenReturn(java.util.Collections.emptyList());
+    when(newsPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull())).thenReturn(Arrays.asList(excluded, kept));
+    when(notesPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull())).thenReturn(java.util.Collections.emptyList());
 
     List<ContentEntry> items = contentService.getContentList(filter, currentIdentity);
 
@@ -185,7 +214,7 @@ public class ContentServiceTest {
   }
 
   @Test
-  public void testGetContentListByCategoryResolvesLinkedIdsPerType() throws Exception {
+  public void testGetContentListByCategoryResolvesLinkedIds() throws Exception {
     ContentFilter filter = new ContentFilter();
     filter.setLimit(20);
     filter.setCategoryId(9L);
@@ -196,13 +225,8 @@ public class ContentServiceTest {
     when(categoryLinkService.getLinkedObjects(eq(9L), anyList(), eq(0), anyInt())).thenReturn(Arrays.asList(newsObject));
 
     ContentEntry matchingNews = entry("1", "news", new Date());
-    when(newsPlugin.search(eq(filter), anyInt(), eq(currentIdentity), eq(Set.of("1")), eq(java.util.Collections.emptySet())))
-                                                                                                                            .thenReturn(Arrays.asList(matchingNews));
-    when(notesPlugin.search(eq(filter),
-                            anyInt(),
-                            eq(currentIdentity),
-                            eq(java.util.Collections.emptySet()),
-                            eq(java.util.Collections.emptySet()))).thenReturn(java.util.Collections.emptyList());
+    when(newsPlugin.search(eq(filter), anyInt(), eq(currentIdentity), eq(Set.of("1")))).thenReturn(Arrays.asList(matchingNews));
+    when(notesPlugin.search(eq(filter), anyInt(), eq(currentIdentity), eq(Set.of("1")))).thenReturn(java.util.Collections.emptyList());
 
     List<ContentEntry> items = contentService.getContentList(filter, currentIdentity);
 
@@ -211,32 +235,28 @@ public class ContentServiceTest {
   }
 
   @Test
-  public void testGetContentListByCategoryResolvesActivityLinkedIdsAcrossTypes() throws Exception {
-    // Once published, News/Notes category links are redirected onto their
-    // underlying Activity (NewsCategoryPlugin/NoteCategoryPlugin's
-    // toCategoryObject) - resolveCategoryLinkedIds must also resolve that
-    // "activity" bucket and hand it to every plugin, alongside its own
-    // type's bucket, so a published item can still be matched.
+  public void testGetContentListByCategoryMatchesAcrossTypesForSharedId() throws Exception {
+    // A published Note's category link is recorded under whichever type its
+    // shared Activity's specific metadata object currently resolves to - for
+    // News/Notes that is always "news" once published
+    // (NewsService#updateNewsActivity/postNewsActivity), never the note's
+    // own "notes" type, even when the category was added from the Notes UI.
+    // Since News and Notes are the same wiki Page row (same id) once linked
+    // to the same Activity, resolveCategoryLinkedIds must hand every plugin
+    // the same flat, non-type-partitioned id set so the Notes candidate
+    // still matches by its own (shared) id.
     ContentFilter filter = new ContentFilter();
     filter.setLimit(20);
     filter.setCategoryId(9L);
 
-    CategoryObject activityObject = new CategoryObject();
-    activityObject.setType("activity");
-    activityObject.setId("activity1");
-    when(categoryLinkService.getLinkedObjects(eq(9L), anyList(), eq(0), anyInt())).thenReturn(Arrays.asList(activityObject));
+    CategoryObject newsObject = new CategoryObject();
+    newsObject.setType("news");
+    newsObject.setId("2");
+    when(categoryLinkService.getLinkedObjects(eq(9L), anyList(), eq(0), anyInt())).thenReturn(Arrays.asList(newsObject));
 
     ContentEntry matchingNote = entry("2", "notes", new Date());
-    when(newsPlugin.search(eq(filter),
-                           anyInt(),
-                           eq(currentIdentity),
-                           eq(java.util.Collections.emptySet()),
-                           eq(Set.of("activity1")))).thenReturn(java.util.Collections.emptyList());
-    when(notesPlugin.search(eq(filter),
-                            anyInt(),
-                            eq(currentIdentity),
-                            eq(java.util.Collections.emptySet()),
-                            eq(Set.of("activity1")))).thenReturn(Arrays.asList(matchingNote));
+    when(newsPlugin.search(eq(filter), anyInt(), eq(currentIdentity), eq(Set.of("2")))).thenReturn(java.util.Collections.emptyList());
+    when(notesPlugin.search(eq(filter), anyInt(), eq(currentIdentity), eq(Set.of("2")))).thenReturn(Arrays.asList(matchingNote));
 
     List<ContentEntry> items = contentService.getContentList(filter, currentIdentity);
 

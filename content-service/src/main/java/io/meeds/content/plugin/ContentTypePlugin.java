@@ -70,24 +70,23 @@ public interface ContentTypePlugin {
    *                            types are merged
    * @param currentIdentity   the current user, for ACL and "My Content"
    *                            resolution
-   * @param categoryLinkedIds ids (as known to this content type) of objects
-   *                            linked to the category being filtered by, or
+   * @param categoryLinkedIds ids of objects linked to the category being
+   *                            filtered by - a flat union resolved across
+   *                            every registered content type (not just this
+   *                            plugin's own type), since a wiki-page-backed
+   *                            item's link ends up recorded under whichever
+   *                            type its shared Activity currently resolves
+   *                            to, not necessarily its own; matching a
+   *                            candidate's own id against this set is always
+   *                            correct since ids are never reused across
+   *                            content types backed by the same wiki Page.
    *                            {@code null} when no category filter is active
-   * @param activityLinkedIds ids of Activities linked to the category being
-   *                            filtered by (never {@code null} when
-   *                            {@code categoryLinkedIds} isn't) - once an
-   *                            item is published, its own category links are
-   *                            redirected onto its underlying Activity (see
-   *                            NewsCategoryPlugin/NoteCategoryPlugin's
-   *                            toCategoryObject), so a matching item must
-   *                            also be recognized by its own activity id
    * @return the matching entries
    */
   List<ContentEntry> search(ContentFilter filter,
                             int fetchLimit,
                             Identity currentIdentity,
-                            Set<String> categoryLinkedIds,
-                            Set<String> activityLinkedIds) throws Exception;
+                            Set<String> categoryLinkedIds) throws Exception;
 
   /**
    * Deletes the content item with the given id.

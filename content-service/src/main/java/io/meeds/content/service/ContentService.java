@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -99,7 +98,7 @@ public class ContentService {
     // in-category item can surface regardless of its date-sort position);
     // otherwise it is simply (offset + limit).
     int fetchLimit = (byCategory || byIncludedCategories) ? CATEGORY_LINKS_FETCH_CAP : offset + limit;
-    Map<String, Set<String>> categoryLinkedIds = null;
+    Set<String> categoryLinkedIds = null;
     if (byCategory) {
       categoryLinkedIds = resolveCategoryLinkedIds(filter, List.of(filter.getCategoryId()));
     } else if (byIncludedCategories) {
@@ -111,17 +110,7 @@ public class ContentService {
       if (!filter.hasContentType(plugin.getType())) {
         continue;
       }
-      // getOrDefault (not get): when a category filter is active, a type
-      // with no linked ids must be told "zero allowed" (empty set), not
-      // "unrestricted" (null) - the two collapse to the same `null` only
-      // when no category filter is active at all (categoryLinkedIds itself
-      // is null).
-      Set<String> allowedIds = categoryLinkedIds == null ? null : categoryLinkedIds.getOrDefault(plugin.getType(), Collections.emptySet());
-      Set<String> allowedActivityIds =
-                                      categoryLinkedIds == null ? null
-                                                                : categoryLinkedIds.getOrDefault(ActivityCategoryPlugin.OBJECT_TYPE,
-                                                                                                  Collections.emptySet());
-      entries.addAll(plugin.search(filter, fetchLimit, currentIdentity, allowedIds, allowedActivityIds));
+      entries.addAll(plugin.search(filter, fetchLimit, currentIdentity, categoryLinkedIds));
     }
 
     if (CollectionUtils.isNotEmpty(filter.getExcludeCategoryIds())) {
@@ -133,8 +122,33 @@ public class ContentService {
                        .collect(Collectors.toList());
     }
 
-    entries.sort(Comparator.comparing(ContentEntry::getDate, Comparator.nullsLast(Comparator.<Date> reverseOrder())));
+    Comparator<ContentEntry> dateDesc = Comparator.comparing(ContentEntry::getDate, Comparator.nullsLast(Comparator.<Date> reverseOrder()));
+    if (byIncludedCategories) {
+      // The admin-configured "Per category" list order (already reflected
+      // in filter.getIncludeCategoryIds() - its order is exactly the one
+      // set/reordered in the settings drawer) drives the display order of
+      // items themselves, not just of the category pills: items matching an
+      // earlier-ranked category come first, and within the same rank items
+      // are still sorted by date desc.
+      List<Long> includeCategoryIds = filter.getIncludeCategoryIds();
+      entries.sort(Comparator.comparingInt((ContentEntry entry) -> categoryRank(entry, includeCategoryIds)).thenComparing(dateDesc));
+    } else {
+      entries.sort(dateDesc);
+    }
     return entries.stream().skip(offset).limit(limit).collect(Collectors.toList());
+  }
+
+  private int categoryRank(ContentEntry entry, List<Long> includeCategoryIds) {
+    if (entry.getCategoryIds() == null) {
+      return Integer.MAX_VALUE;
+    }
+    int rank = Integer.MAX_VALUE;
+    for (int i = 0; i < includeCategoryIds.size() && i < rank; i++) {
+      if (entry.getCategoryIds().contains(includeCategoryIds.get(i))) {
+        rank = i;
+      }
+    }
+    return rank;
   }
 
   public void deleteContent(String id, String contentType, String status, Identity currentIdentity) throws Exception {
@@ -145,29 +159,39 @@ public class ContentService {
     plugin.delete(id, status, currentIdentity);
   }
 
-  private Map<String, Set<String>> resolveCategoryLinkedIds(ContentFilter filter, List<Long> categoryIds) {
+  private Set<String> resolveCategoryLinkedIds(ContentFilter filter, List<Long> categoryIds) {
     List<String> types = contentTypePlugins.stream()
                                            .map(ContentTypePlugin::getType)
                                            .filter(filter::hasContentType)
                                            .collect(Collectors.toList());
     if (types.isEmpty()) {
-      return Collections.emptyMap();
+      return Collections.emptySet();
     }
-    // Once an item is published, its category links are redirected onto its
-    // underlying Activity instead of its own type (see
-    // NewsCategoryPlugin/NoteCategoryPlugin's toCategoryObject): always
-    // resolve that bucket too so each plugin can match a candidate by its
-    // own activityId, not just by its own id.
-    types = new ArrayList<>(types);
-    types.add(ActivityCategoryPlugin.OBJECT_TYPE);
-    Map<String, Set<String>> linkedIdsByType = new HashMap<>();
+    // Once a wiki-page-backed item (News/Notes) is posted to a space feed,
+    // its category link is stored under whichever type its shared Activity's
+    // *specific metadata object* currently resolves to (see
+    // ActivityCategoryPlugin#getObject / ExoSocialActivityImpl#getMetadataObject)
+    // - for News/Notes that is always "news" once published
+    // (NewsService#updateNewsActivity/postNewsActivity overwrite it), never
+    // literally "activity", regardless of which of the two content types the
+    // category was actually added from. Since News and Notes are the very
+    // same wiki Page row (same id) once linked to the same Activity, ids are
+    // matched here as one flat union across every queried type - not
+    // partitioned per content type - so a link recorded under "news" still
+    // matches the corresponding Notes candidate with the same id, and vice
+    // versa. Also querying the generic "activity" type as a fallback, for
+    // any future content type whose Activity never sets a specific
+    // metadata object.
+    List<String> queryTypes = new ArrayList<>(types);
+    queryTypes.add(ActivityCategoryPlugin.OBJECT_TYPE);
+    Set<String> linkedIds = new HashSet<>();
     for (Long categoryId : categoryIds) {
-      List<CategoryObject> linkedObjects = categoryLinkService.getLinkedObjects(categoryId, types, 0, CATEGORY_LINKS_FETCH_CAP);
+      List<CategoryObject> linkedObjects = categoryLinkService.getLinkedObjects(categoryId, queryTypes, 0, CATEGORY_LINKS_FETCH_CAP);
       for (CategoryObject linkedObject : linkedObjects) {
-        linkedIdsByType.computeIfAbsent(linkedObject.getType(), key -> new HashSet<>()).add(linkedObject.getId());
+        linkedIds.add(linkedObject.getId());
       }
     }
-    return linkedIdsByType;
+    return linkedIds;
   }
 
 }
