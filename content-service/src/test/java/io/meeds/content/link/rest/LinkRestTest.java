@@ -27,9 +27,12 @@ import static org.mockito.Mockito.mockStatic;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -94,6 +97,15 @@ public class LinkRestTest extends AbstractSpringConfigurationTest { // NOSONAR
   private static final String            FILE_NAME            = "cover.png";
 
   private static final String            UPLOAD_ID            = "1234";
+
+  private static final String            SVG_MIME_TYPE        = "image/svg+xml";
+
+  private static final String            SVG_FILE_NAME        = "icon.svg";
+
+  private static final String            SVG_UPLOAD_ID        = "5678";
+
+  private static final String            SVG_CONTENT          =
+                                                    "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"10\" height=\"10\"><rect width=\"10\" height=\"10\"/></svg>";
 
   private LayoutService                  layoutService;
 
@@ -305,6 +317,38 @@ public class LinkRestTest extends AbstractSpringConfigurationTest { // NOSONAR
     response.andExpect(status().isOk());
   }
 
+  @Test
+  @SneakyThrows
+  public void testGetSvgLinkIcon() {
+    String pageName = "testGetSvgLinkIcon";
+    LinkSetting linkSetting = initLinkSetting(LINK_SETTING_NAME, pageName, true);
+    assertNotNull(linkSetting);
+
+    registerAdministratorUser(USERNAME);
+    LinkSettingRestEntity linkSettingEntity = newSvgLinkSettingRestEntity();
+    MockHttpServletRequestBuilder responseBuilder = put(getUrl()).content(toJsonString(linkSettingEntity))
+                                                                 .contentType(MediaType.APPLICATION_JSON)
+                                                                 .with(testAdminUser())
+                                                                 .with(testSimpleUser());
+    mockMvc.perform(responseBuilder).andExpect(status().isOk());
+
+    registerAnonymousUser();
+    ResultActions response = getLink(false, false);
+    response.andExpect(status().isOk());
+    LinkSettingRestEntity linkSettingRestEntity = getLinkSetting(response);
+    LinkRestEntity link = linkSettingRestEntity.getLinks().get(0);
+    assertNotNull(link);
+    assertNotNull(link.getIconUrl());
+
+    // An SVG icon must be served with its original content type, otherwise the
+    // browser can't render it.
+    response = getByUrl(link.getIconUrl(), true, true);
+    response.andExpect(status().isOk())
+            .andExpect(content().contentTypeCompatibleWith(MediaType.valueOf(SVG_MIME_TYPE)));
+    byte[] bytes = response.andReturn().getResponse().getContentAsByteArray();
+    assertEquals(SVG_CONTENT, new String(bytes, StandardCharsets.UTF_8));
+  }
+
   private String getUrl() {
     return REST_PATH + "/" + LINK_SETTING_NAME;
   }
@@ -440,6 +484,41 @@ public class LinkRestTest extends AbstractSpringConfigurationTest { // NOSONAR
   private void uploadResource() {
     File tempFile = File.createTempFile("image", "temp");
     uploadService.createUploadResource(UPLOAD_ID, tempFile.getPath(), FILE_NAME, MIME_TYPE);
+  }
+
+  @SneakyThrows
+  private void uploadSvgResource() {
+    File tempFile = File.createTempFile("icon", ".svg");
+    Files.writeString(tempFile.toPath(), SVG_CONTENT);
+    uploadService.createUploadResource(SVG_UPLOAD_ID, tempFile.getPath(), SVG_FILE_NAME, SVG_MIME_TYPE);
+  }
+
+  @SneakyThrows
+  private LinkSettingRestEntity newSvgLinkSettingRestEntity() {
+    Map<String, String> linkNames = new HashMap<>();
+    linkNames.put("en", "Name-en");
+    Map<String, String> linkDescriptions = new HashMap<>();
+    linkDescriptions.put("en", "Description-en");
+
+    List<LinkRestEntity> links = new ArrayList<>();
+    links.add(new LinkRestEntity(0, linkNames, linkDescriptions, "url1", "icon1", true, 1, null, 0, SVG_UPLOAD_ID));
+    uploadSvgResource();
+
+    Map<String, String> linkHeaders = new HashMap<>();
+    linkHeaders.put("en", "Header-en");
+    return new LinkSettingRestEntity(0,
+                                     LINK_SETTING_NAME,
+                                     linkHeaders,
+                                     LinkDisplayType.CARD,
+                                     LinkAlignType.CENTER,
+                                     LinkAlignType.END,
+                                     true,
+                                     12,
+                                     true,
+                                     true,
+                                     true,
+                                     "#SeeMore",
+                                     links);
   }
 
   private void registerAnonymousUser() {

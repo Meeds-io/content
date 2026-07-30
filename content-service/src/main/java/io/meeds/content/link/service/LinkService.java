@@ -49,6 +49,7 @@ import org.exoplatform.services.log.Log;
 import org.exoplatform.services.resources.LocaleConfigService;
 import org.exoplatform.services.security.Identity;
 import org.exoplatform.services.security.IdentityConstants;
+import org.exoplatform.upload.UploadResource;
 import org.exoplatform.upload.UploadService;
 
 import io.meeds.content.link.model.Link;
@@ -85,6 +86,10 @@ public class LinkService {
   public static final String    ERROR_READING_ICON             = "Error while reading link icon fir setting '%s' with id '%s'";
 
   public static final String    FILE_API_NAMESPACE             = "links";
+
+  public static final String    DEFAULT_ICON_MIME_TYPE         = "image/png";
+
+  public static final String    DEFAULT_ICON_FILE_NAME         = "icon.png";
 
   public static final String    LINK_SETTINGS_HEADER_FIELD     = "header";
 
@@ -378,14 +383,27 @@ public class LinkService {
    *           of an existing file
    */
   public InputStream getLinkIconStream(String linkSettingName, long linkId) throws IOException {
+    FileItem file = getLinkIconFile(linkSettingName, linkId);
+    return file == null ? null : file.getAsStream();
+  }
+
+  /**
+   * @param linkSettingName {@link LinkSetting} name
+   * @param linkId {@link Link} technical identifier
+   * @return {@link FileItem} of the Icon file if it exists else null. The
+   *         returned file holds the original mime type of the uploaded icon
+   *         (e.g. image/svg+xml), so it can be served with the right content
+   *         type instead of a hardcoded one.
+   * @throws IOException when an error happens while reading the icon file
+   */
+  public FileItem getLinkIconFile(String linkSettingName, long linkId) throws IOException {
     List<Link> links = getLinks(linkSettingName);
     Link link = CollectionUtils.isEmpty(links) ? null : links.stream().filter(l -> l.getId() == linkId).findFirst().orElse(null);
     if (link == null || link.getIconFileId() == 0) {
       return null;
     }
     try {
-      FileItem file = fileService.getFile(link.getIconFileId());
-      return file == null ? null : file.getAsStream();
+      return fileService.getFile(link.getIconFileId());
     } catch (FileStorageException e) {
       throw new IOException(String.format(ERROR_READING_ICON, linkSettingName, linkId), e);
     }
@@ -470,8 +488,8 @@ public class LinkService {
             || linkWithIconAttachment.getInputStream() != null)) {
       try (InputStream inputStream = getInputStream(linkWithIconAttachment)) {
         FileItem fileItem = new FileItem(null,
-                                         "icon.png",
-                                         "image/png",
+                                         getIconFileName(linkWithIconAttachment),
+                                         getIconMimeType(linkWithIconAttachment),
                                          FILE_API_NAMESPACE,
                                          inputStream.available(),
                                          new Date(),
@@ -498,6 +516,23 @@ public class LinkService {
                                                            new FileInputStream(uploadService.getUploadResource(linkWithIconAttachment.getUploadId())
                                                                                             .getStoreLocation()) :
                                                            linkWithIconAttachment.getInputStream();
+  }
+
+  private String getIconMimeType(LinkWithIconAttachment linkWithIconAttachment) {
+    UploadResource uploadResource = getUploadResource(linkWithIconAttachment);
+    return uploadResource != null && StringUtils.isNotBlank(uploadResource.getMimeType()) ? uploadResource.getMimeType()
+                                                                                          : DEFAULT_ICON_MIME_TYPE;
+  }
+
+  private String getIconFileName(LinkWithIconAttachment linkWithIconAttachment) {
+    UploadResource uploadResource = getUploadResource(linkWithIconAttachment);
+    return uploadResource != null && StringUtils.isNotBlank(uploadResource.getFileName()) ? uploadResource.getFileName()
+                                                                                          : DEFAULT_ICON_FILE_NAME;
+  }
+
+  private UploadResource getUploadResource(LinkWithIconAttachment linkWithIconAttachment) {
+    return StringUtils.isBlank(linkWithIconAttachment.getUploadId()) ? null
+                                                                     : uploadService.getUploadResource(linkWithIconAttachment.getUploadId());
   }
 
   private void deleteLinkIconFile(long oldFileId) {
