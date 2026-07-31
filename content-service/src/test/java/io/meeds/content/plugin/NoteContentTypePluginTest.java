@@ -180,6 +180,66 @@ public class NoteContentTypePluginTest {
   }
 
   @Test
+  public void testSearchMarksSpaceNoteAsPublishableWhenEditable() throws Exception {
+    ContentFilter filter = new ContentFilter();
+    SearchResult result = new SearchResult();
+    result.setId(1L);
+    mockSearchResults(result);
+
+    Page note = new Page();
+    note.setId("1");
+    note.setActivityId("activity1");
+    note.setWikiType("group");
+    note.setWikiOwner("/spaces/space1");
+    when(noteService.getNoteById("1", currentIdentity)).thenReturn(note);
+    when(noteService.hasPermissionOnPage(note, PermissionType.EDITPAGE, currentIdentity)).thenReturn(true);
+
+    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null);
+
+    assertTrue(entries.get(0).isCanPublish());
+  }
+
+  @Test
+  public void testSearchMarksNoteNotPublishableWhenNotEditable() throws Exception {
+    ContentFilter filter = new ContentFilter();
+    SearchResult result = new SearchResult();
+    result.setId(1L);
+    mockSearchResults(result);
+
+    Page note = new Page();
+    note.setId("1");
+    note.setActivityId("activity1");
+    note.setWikiType("group");
+    note.setWikiOwner("/spaces/space1");
+    when(noteService.getNoteById("1", currentIdentity)).thenReturn(note);
+    when(noteService.hasPermissionOnPage(note, PermissionType.EDITPAGE, currentIdentity)).thenReturn(false);
+
+    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null);
+
+    assertFalse(entries.get(0).isCanPublish());
+  }
+
+  @Test
+  public void testSearchMarksNonSpaceNoteNotPublishable() throws Exception {
+    ContentFilter filter = new ContentFilter();
+    SearchResult result = new SearchResult();
+    result.setId(1L);
+    mockSearchResults(result);
+
+    Page note = new Page();
+    note.setId("1");
+    note.setActivityId("activity1");
+    note.setWikiType("portal");
+    note.setWikiOwner("home");
+    when(noteService.getNoteById("1", currentIdentity)).thenReturn(note);
+    when(noteService.hasPermissionOnPage(note, PermissionType.EDITPAGE, currentIdentity)).thenReturn(true);
+
+    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null);
+
+    assertFalse(entries.get(0).isCanPublish());
+  }
+
+  @Test
   public void testSearchResolvesCategoryIdsViaNoteCategoryPlugin() throws Exception {
     // Page.getCategoryIds() is never populated by NoteService itself; the
     // entry's categoryIds must come from NoteCategoryPlugin's own resolution

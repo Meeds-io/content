@@ -68,12 +68,21 @@
             :selected-id="activeCategoryId"
             class="px-4 pb-2"
             @select="selectCategory" />
-          <category-chips-group
+          <v-card
             v-else-if="categories.length"
-            :categories="categories"
-            class="px-4 pb-2"
-            @select="selectCategory" />
+            class="d-flex align-center transparent px-4 pb-2"
+            min-height="34"
+            flat>
+            <category-chips-group
+              :categories="categories"
+              class="flex-grow-1 flex-shrink-1 text-start"
+              @select="selectCategory"
+              @open-more="openMoreCategories" />
+          </v-card>
         </template>
+        <categories-list-drawer
+          ref="moreCategoriesDrawer"
+          @select="selectCategory" />
         <div v-if="loading" class="d-flex flex-grow-1 align-center justify-center">
           <v-progress-circular indeterminate color="primary" />
         </div>
@@ -87,6 +96,7 @@
             :item="contentItem"
             :compact="compact"
             class="border-box-sizing"
+            @published="load"
             @delete="confirmDelete" />
           <div v-if="hasMore" class="d-flex justify-center pt-2">
             <v-btn
@@ -99,6 +109,7 @@
         </div>
         <content-filter-drawer ref="filterDrawer" @apply="applyAdvancedFilter" />
         <content-list-settings-drawer v-if="canEdit" ref="settingsDrawer" />
+        <note-publication-target-drawer />
         <exo-confirm-dialog
           ref="deleteConfirmDialog"
           :message="$t('content.list.item.delete.confirm.message')"
@@ -254,6 +265,9 @@ export default {
     selectCategory(category) {
       this.activeCategoryId = category?.id || null;
       this.load();
+    },
+    openMoreCategories(categories) {
+      this.$refs.moreCategoriesDrawer.open(categories);
     },
     async refreshCategories(resultCategoryIds) {
       this.resultCategoryIds = resultCategoryIds || [];

@@ -91,6 +91,7 @@ import org.exoplatform.social.metadata.model.MetadataKey;
 import org.exoplatform.social.metadata.model.MetadataObject;
 import org.exoplatform.upload.UploadService;
 import org.exoplatform.wiki.WikiException;
+import org.exoplatform.wiki.jpa.search.WikiPageIndexingServiceConnector;
 import org.exoplatform.wiki.model.DraftPage;
 import org.exoplatform.wiki.model.Page;
 import org.exoplatform.wiki.model.PageVersion;
@@ -992,6 +993,7 @@ public class NewsServiceTest {
     verify(categoryLinkService, times(1)).link(3L, expectedObject);
     verify(categoryLinkService, times(1)).link(5L, expectedObject);
     verify(categoryLinkService, never()).unlink(anyLong(), any());
+    verify(indexingService, never()).unindex(eq(WikiPageIndexingServiceConnector.TYPE), anyString());
   }
 
   @Test

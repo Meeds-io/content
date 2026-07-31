@@ -62,6 +62,7 @@
             class="ms-2"
             @edit="editItem"
             @publish="openItem"
+            @published="$emit('published', item)"
             @delete="$emit('delete', item)" />
         </div>
       </div>

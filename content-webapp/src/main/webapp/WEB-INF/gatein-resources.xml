@@ -133,6 +133,9 @@
       <module>vuetify</module>
     </depends>
     <depends>
+      <module>extensionRegistry</module>
+    </depends>
+    <depends>
       <module>commonVueComponents</module>
     </depends>
     <depends>
@@ -140,6 +143,9 @@
     </depends>
     <depends>
       <module>applicationToolbarComponent</module>
+    </depends>
+    <depends>
+      <module>NotesPublication</module>
     </depends>
   </module>
 
@@ -324,6 +330,9 @@
         <module>vuetify</module>
       </depends>
       <depends>
+        <module>extensionRegistry</module>
+      </depends>
+      <depends>
         <module>commonVueComponents</module>
       </depends>
       <depends>
@@ -334,6 +343,9 @@
       </depends>
       <depends>
         <module>translationField</module>
+      </depends>
+      <depends>
+        <module>NotesPublication</module>
       </depends>
     </module>
   </portlet>

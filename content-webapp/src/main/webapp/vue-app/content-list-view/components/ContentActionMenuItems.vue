@@ -20,7 +20,11 @@
 
 -->
 <template>
-  <v-menu offset-y left>
+  <v-menu
+    v-model="menu"
+    :content-class="menuId"
+    offset-y
+    left>
     <template #activator="{on, attrs}">
       <v-btn
         v-on="on"
@@ -39,21 +43,27 @@
       <v-list-item
         v-if="item.canEdit"
         class="ps-2 pe-4 d-flex align-center"
-        @click="$emit('edit', item)">
+        @click="edit">
         <v-icon size="16" class="clickable icon-menu me-2">fas fa-edit</v-icon>
         <span class="text-color">{{ $t('content.list.item.edit') }}</span>
       </v-list-item>
+      <component
+        :is="publishActionExtension.componentName"
+        v-if="item.canPublish && !item.draft && publishActionExtension"
+        :item="item"
+        @close="menu = false"
+        @published="$emit('published', item)" />
       <v-list-item
-        v-if="item.canPublish && !item.draft"
+        v-else-if="item.canPublish && !item.draft"
         class="ps-2 pe-4 d-flex align-center"
-        @click="$emit('publish', item)">
+        @click="publish">
         <v-icon size="16" class="clickable icon-menu me-2">fa-solid fa-paper-plane</v-icon>
         <span class="text-color">{{ $t('content.list.item.publish') }}</span>
       </v-list-item>
       <v-list-item
         v-if="item.canDelete"
         class="ps-2 pe-4 d-flex align-center"
-        @click="$emit('delete', item)">
+        @click="deleteItem">
         <v-icon size="16" class="clickable icon-menu me-2">fas fa-trash</v-icon>
         <span class="text-color">{{ $t('content.list.item.delete') }}</span>
       </v-list-item>
@@ -68,15 +78,50 @@ export default {
       required: true,
     },
   },
+  data: () => ({
+    menu: false,
+    menuId: `contentActionMenu${parseInt(Math.random() * 10000)}`,
+    publishActionExtensions: [],
+  }),
+  computed: {
+    publishActionExtension() {
+      return this.publishActionExtensions.find(extension => extension.type === this.item.contentType);
+    },
+  },
+  created() {
+    document.addEventListener('click', this.closeMenuOnClick);
+    this.publishActionExtensions = extensionRegistry.loadExtensions('ContentListItem', 'publishAction') || [];
+  },
+  beforeDestroy() {
+    document.removeEventListener('click', this.closeMenuOnClick);
+  },
   methods: {
+    closeMenuOnClick(e) {
+      if (this.menu && e.target && !e.target.closest(`.${this.menuId}`)) {
+        this.menu = false;
+      }
+    },
     copyLink() {
-      navigator.clipboard.writeText(this.item.url)
+      this.menu = false;
+      navigator.clipboard.writeText(`${window.location.origin}${this.item.url}`)
         .then(() => document.dispatchEvent(new CustomEvent('alert-message', {
           detail: {
             alertType: 'success',
             alertMessage: this.$t('content.list.item.copyLink.success'),
           },
         })));
+    },
+    edit() {
+      this.menu = false;
+      this.$emit('edit', this.item);
+    },
+    publish() {
+      this.menu = false;
+      this.$emit('publish', this.item);
+    },
+    deleteItem() {
+      this.menu = false;
+      this.$emit('delete', this.item);
     },
   },
 };

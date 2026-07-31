@@ -1624,9 +1624,12 @@ public class NewsService {
       properties.put(PAGE_REFERRED, Boolean.TRUE.toString());
       properties.put(DE_REFER_PAGE_ID, articlePage.getParentPageId());
     } else {
+      boolean wasReferred = Boolean.parseBoolean(properties.get(PAGE_REFERRED));
       properties.remove(PAGE_REFERRED);
       properties.remove(DE_REFER_PAGE_ID);
-      indexingService.unindex(WikiPageIndexingServiceConnector.TYPE, articlePage.getId());
+      if (wasReferred) {
+        indexingService.unindex(WikiPageIndexingServiceConnector.TYPE, articlePage.getId());
+      }
     }
   }
 
