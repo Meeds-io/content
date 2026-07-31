@@ -29,6 +29,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import org.exoplatform.commons.exception.ObjectNotFoundException;
+import org.exoplatform.portal.config.model.PortalConfig;
 import org.exoplatform.services.security.Identity;
 import org.exoplatform.social.attachment.AttachmentService;
 import org.exoplatform.social.core.manager.IdentityManager;
@@ -188,9 +189,16 @@ public class NoteContentTypePlugin implements ContentTypePlugin {
     entry.setScheduled(false);
     entry.setCanEdit(noteService.hasPermissionOnPage(note, PermissionType.EDITPAGE, currentIdentity));
     entry.setCanDelete(entry.isCanEdit());
-    entry.setCanPublish(false);
+    entry.setCanPublish(canPublishNote(note, entry.isCanEdit()));
     entry.setCanSchedule(false);
     return entry;
+  }
+
+  private boolean canPublishNote(Page note, boolean canEdit) {
+    return canEdit
+        && StringUtils.equals(PortalConfig.GROUP_TYPE, note.getWikiType())
+        && StringUtils.isNotBlank(note.getWikiOwner())
+        && note.getWikiOwner().startsWith("/spaces/");
   }
 
   private String resolveNoteSummary(Page note) {
