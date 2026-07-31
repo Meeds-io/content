@@ -24,6 +24,8 @@ import ContentActionMenuItems from './components/ContentActionMenuItems.vue';
 import ContentFilterDrawer from './components/ContentFilterDrawer.vue';
 import ContentListSettingsDrawer from './components/ContentListSettingsDrawer.vue';
 import ContentListCategoryPicker from './components/ContentListCategoryPicker.vue';
+import NotesPublishAction from './components/NotesPublishAction.vue';
+import NewsPublishAction from './components/NewsPublishAction.vue';
 
 const components = {
   'content-list-view': ContentListView,
@@ -33,8 +35,19 @@ const components = {
   'content-filter-drawer': ContentFilterDrawer,
   'content-list-settings-drawer': ContentListSettingsDrawer,
   'content-list-category-picker': ContentListCategoryPicker,
+  'notes-content-list-publish-action': NotesPublishAction,
+  'news-content-list-publish-action': NewsPublishAction,
 };
 
 for (const key in components) {
   Vue.component(key, components[key]);
 }
+
+extensionRegistry.registerExtension('ContentListItem', 'publishAction', {
+  type: 'notes',
+  componentName: 'notes-content-list-publish-action',
+});
+extensionRegistry.registerExtension('ContentListItem', 'publishAction', {
+  type: 'news',
+  componentName: 'news-content-list-publish-action',
+});
