@@ -22,7 +22,7 @@
 <template>
   <v-menu
     v-model="menu"
-    :content-class="menuId"
+    :content-class="`${menuId} position-absolute application-menu z-index-modal`"
     offset-y
     left>
     <template #activator="{on, attrs}">
@@ -88,16 +88,35 @@ export default {
       return this.publishActionExtensions.find(extension => extension.type === this.item.contentType);
     },
   },
+  watch: {
+    menu(opened) {
+      if (opened) {
+        this.$root.$emit('content-list-item-menu-opened', this.menuId);
+      }
+    },
+  },
   created() {
     document.addEventListener('click', this.closeMenuOnClick);
+    document.addEventListener('scroll', this.closeMenu, true);
+    this.$root.$on('content-list-item-menu-opened', this.closeIfOther);
     this.publishActionExtensions = extensionRegistry.loadExtensions('ContentListItem', 'publishAction') || [];
   },
   beforeDestroy() {
     document.removeEventListener('click', this.closeMenuOnClick);
+    document.removeEventListener('scroll', this.closeMenu, true);
+    this.$root.$off('content-list-item-menu-opened', this.closeIfOther);
   },
   methods: {
+    closeMenu() {
+      this.menu = false;
+    },
     closeMenuOnClick(e) {
       if (this.menu && e.target && !e.target.closest(`.${this.menuId}`)) {
+        this.menu = false;
+      }
+    },
+    closeIfOther(openedMenuId) {
+      if (this.menu && openedMenuId !== this.menuId) {
         this.menu = false;
       }
     },
