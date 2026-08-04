@@ -61,28 +61,15 @@
             </div>
           </template>
         </application-toolbar>
-        <template v-if="allowFilteringPerCategory">
-          <categories-breadcrumb
-            v-if="breadcrumb"
-            :breadcrumb="breadcrumb"
-            :selected-id="activeCategoryId"
-            class="px-4 pb-2"
-            @select="selectCategory" />
-          <v-card
-            v-else-if="categories.length"
-            class="d-flex align-center transparent px-4 pb-2"
-            min-height="34"
-            flat>
-            <category-chips-group
-              :categories="categories"
-              class="flex-grow-1 flex-shrink-1 text-start"
-              @select="selectCategory"
-              @open-more="openMoreCategories" />
-          </v-card>
-        </template>
-        <categories-list-drawer
-          ref="moreCategoriesDrawer"
-          @select="selectCategory" />
+        <categories-filter
+          v-if="allowFilteringPerCategory"
+          :value="activeCategoryId"
+          :category-ids="categoryIds"
+          :exclude-category-ids="excludeCategoryIds"
+          :category-depth="categoryDepth"
+          class="px-4 pb-2"
+          hide-on-empty
+          @input="selectCategory" />
         <div v-if="loading" class="d-flex flex-grow-1 align-center justify-center">
           <v-progress-circular indeterminate color="primary" />
         </div>
@@ -167,6 +154,10 @@ export default {
       type: Array,
       default: () => [],
     },
+    categoryDepth: {
+      type: Number,
+      default: 4,
+    },
   },
   data() {
     return {
@@ -187,9 +178,6 @@ export default {
         selectedSpaces: [],
       },
       activeCategoryId: this.categoryId,
-      resultCategoryIds: [],
-      categories: [],
-      breadcrumb: null,
     };
   },
   computed: {
@@ -269,39 +257,9 @@ export default {
       this.advancedFilter = filter;
       this.load();
     },
-    selectCategory(category) {
-      this.activeCategoryId = category?.id || null;
+    selectCategory(categoryId) {
+      this.activeCategoryId = categoryId || null;
       this.load();
-    },
-    openMoreCategories(categories) {
-      this.$refs.moreCategoriesDrawer.open(categories);
-    },
-    async refreshCategories(resultCategoryIds) {
-      this.resultCategoryIds = resultCategoryIds || [];
-      if (this.activeCategoryId) {
-        const [category, ancestorIds] = await Promise.all([
-          this.$categoryService.getCategory(this.activeCategoryId),
-          this.$categoryService.getAncestorIds(this.activeCategoryId),
-        ]);
-        const ancestors = await Promise.all((ancestorIds || []).map(id => this.$categoryService.getCategory(id)));
-        this.breadcrumb = [...ancestors.reverse(), category].filter(cat => cat && cat.parentId !== 0);
-        this.categories = [];
-      } else {
-        this.breadcrumb = null;
-        // The server only reports which categories are actually present in
-        // the returned items, in no particular order - the admin-configured
-        // "Per category" order (this.categoryIds) is the one that should
-        // drive pill display order, present-in-results ones first, any
-        // other result category following in its own (arbitrary) order.
-        const orderedIds = this.categoryIds?.length
-          ? [
-            ...this.categoryIds.filter(id => this.resultCategoryIds.includes(id)),
-            ...this.resultCategoryIds.filter(id => !this.categoryIds.includes(id)),
-          ]
-          : this.resultCategoryIds;
-        const resolvedCategories = await Promise.all(orderedIds.map(id => this.$categoryService.getCategory(id).catch(() => null)));
-        this.categories = resolvedCategories.filter(cat => cat);
-      }
     },
     load() {
       this.loading = true;
@@ -311,7 +269,6 @@ export default {
         .then(data => {
           this.items = data?.items || [];
           this.hasMore = (data?.size || 0) >= this.limit;
-          return this.refreshCategories(data?.categoryIds);
         })
         .finally(() => this.loading = false);
     },
