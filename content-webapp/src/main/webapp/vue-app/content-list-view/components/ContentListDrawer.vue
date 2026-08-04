@@ -24,12 +24,17 @@
     id="ContentListDrawer"
     ref="drawer"
     v-model="drawer"
-    right>
+    allow-expand
+    right
+    @expand-updated="expanded = $event">
     <template #title>
       {{ $t('content.list.title') }}
     </template>
     <template v-if="drawer" #content>
-      <content-list-view compact :category-id="categoryId" />
+      <content-list-view
+        compact
+        :expanded="expanded"
+        :category-id="categoryId" />
     </template>
   </exo-drawer>
 </template>
@@ -37,6 +42,7 @@
 export default {
   data: () => ({
     drawer: false,
+    expanded: false,
     categoryId: null,
   }),
   methods: {

@@ -28,7 +28,7 @@
       <v-icon
         v-if="!item.illustrationUrl"
         color="white"
-        :size="compact && 32 || 42">
+        :size="illustrationIconSize">
         {{ item.icon }}
       </v-icon>
     </a>
@@ -37,34 +37,34 @@
         <a :href="item.url" class="no-min-width text-truncate text-left font-weight-bold text-color flex-grow-1">
           {{ item.title }}
         </a>
-        <div class="d-flex align-center flex-shrink-0 ms-2">
+        <div class="d-flex align-center overflow-hidden flex-shrink-1 no-min-width ms-2">
           <category-chip
             v-for="category in filteredCategories"
             :key="category.id"
             :category="category"
             small
             tabindex="-1"
-            class="ms-1" />
-          <v-btn
-            v-if="remainingCount > 0"
-            class="flex-shrink-0 flex-grow-0 px-0 ms-1"
-            height="24"
-            width="24"
-            icon
-            @click="openMoreCategoriesDrawer">
-            <span class="primary--text text-subtitle-font-size">
-              {{ $t('categories.remainingCount', { 0: remainingCount }) }}
-            </span>
-          </v-btn>
-          <categories-list-drawer v-if="moreCategoriesDrawer" ref="moreCategoriesDrawer" />
-          <content-action-menu-items
-            :item="item"
-            class="ms-2"
-            @edit="editItem"
-            @publish="openItem"
-            @published="$emit('published', item)"
-            @delete="$emit('delete', item)" />
+            class="flex-shrink-0 ms-1" />
         </div>
+        <v-btn
+          v-if="remainingCount > 0"
+          class="flex-shrink-0 flex-grow-0 px-0 ms-1"
+          height="24"
+          width="24"
+          icon
+          @click="openMoreCategoriesDrawer">
+          <span class="primary--text text-subtitle-font-size">
+            {{ $t('categories.remainingCount', { 0: remainingCount }) }}
+          </span>
+        </v-btn>
+        <categories-list-drawer v-if="moreCategoriesDrawer" ref="moreCategoriesDrawer" />
+        <content-action-menu-items
+          :item="item"
+          class="flex-shrink-0 ms-2"
+          @edit="editItem"
+          @publish="openItem"
+          @published="$emit('published', item)"
+          @delete="$emit('delete', item)" />
       </div>
       <div class="d-flex align-center text-caption text-color mb-1">
         <exo-space-avatar
@@ -111,6 +111,10 @@ export default {
       type: Boolean,
       default: false,
     },
+    expanded: {
+      type: Boolean,
+      default: true,
+    },
   },
   data: () => ({
     categories: [],
@@ -122,9 +126,12 @@ export default {
     },
   }),
   computed: {
+    illustrationIconSize() {
+      return !this.compact && 42 || this.expanded && 32 || 24;
+    },
     illustrationStyle() {
-      const width = this.compact && '112px' || '150px';
-      const minHeight = this.compact && '90px' || '120px';
+      const width = !this.compact && '150px' || this.expanded && '112px' || '64px';
+      const minHeight = !this.compact && '120px' || this.expanded && '90px' || '64px';
       return {
         width,
         minHeight,
@@ -140,11 +147,14 @@ export default {
     categoryIdsKey() {
       return this.item.categoryIds?.join(',');
     },
+    maxVisibleCategories() {
+      return this.expanded ? 2 : 1;
+    },
     filteredCategories() {
-      return this.categories.slice(0, 2);
+      return this.categories.slice(0, this.maxVisibleCategories);
     },
     remainingCount() {
-      return this.categories.length - 2;
+      return this.categories.length - this.maxVisibleCategories;
     },
   },
   watch: {
