@@ -26,6 +26,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -33,6 +34,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -56,6 +58,7 @@ import io.meeds.content.model.filter.ContentFilter;
 import io.meeds.content.plugin.ContentTypePlugin;
 import io.meeds.social.category.model.CategoryObject;
 import io.meeds.social.category.service.CategoryLinkService;
+import io.meeds.social.category.service.CategoryService;
 
 @RunWith(MockitoJUnitRunner.class)
 public class ContentServiceTest {
@@ -67,6 +70,9 @@ public class ContentServiceTest {
 
   @Mock
   private CategoryLinkService categoryLinkService;
+
+  @Mock
+  private CategoryService     categoryService;
 
   @InjectMocks
   private ContentService      contentService;
@@ -93,6 +99,7 @@ public class ContentServiceTest {
     plugins.put("notesPlugin", notesPlugin);
     plugins.put("newsPlugin", newsPlugin);
     when(applicationContext.getBeansOfType(ContentTypePlugin.class)).thenReturn(plugins);
+    lenient().when(categoryService.getSubcategoryIds(anyLong(), anyLong(), anyLong(), anyLong())).thenReturn(Collections.emptyList());
 
     contentService.init();
 
@@ -223,6 +230,30 @@ public class ContentServiceTest {
     newsObject.setType("news");
     newsObject.setId("1");
     when(categoryLinkService.getLinkedObjects(eq(9L), anyList(), eq(0), anyInt())).thenReturn(Arrays.asList(newsObject));
+
+    ContentEntry matchingNews = entry("1", "news", new Date());
+    when(newsPlugin.search(eq(filter), anyInt(), eq(currentIdentity), eq(Set.of("1")))).thenReturn(Arrays.asList(matchingNews));
+    when(notesPlugin.search(eq(filter), anyInt(), eq(currentIdentity), eq(Set.of("1")))).thenReturn(java.util.Collections.emptyList());
+
+    List<ContentEntry> items = contentService.getContentList(filter, currentIdentity);
+
+    assertEquals(1, items.size());
+    assertEquals("1", items.get(0).getId());
+  }
+
+  @Test
+  public void testGetContentListByCategoryIncludesSubcategoryLinkedContent() throws Exception {
+    ContentFilter filter = new ContentFilter();
+    filter.setLimit(20);
+    filter.setCategoryId(9L);
+
+    when(categoryService.getSubcategoryIds(eq(9L), anyLong(), anyLong(), eq(-1L))).thenReturn(Arrays.asList(20L));
+    when(categoryLinkService.getLinkedObjects(eq(9L), anyList(), eq(0), anyInt())).thenReturn(java.util.Collections.emptyList());
+
+    CategoryObject subcategoryObject = new CategoryObject();
+    subcategoryObject.setType("news");
+    subcategoryObject.setId("1");
+    when(categoryLinkService.getLinkedObjects(eq(20L), anyList(), eq(0), anyInt())).thenReturn(Arrays.asList(subcategoryObject));
 
     ContentEntry matchingNews = entry("1", "news", new Date());
     when(newsPlugin.search(eq(filter), anyInt(), eq(currentIdentity), eq(Set.of("1")))).thenReturn(Arrays.asList(matchingNews));
