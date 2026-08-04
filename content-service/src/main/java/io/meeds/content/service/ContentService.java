@@ -45,6 +45,7 @@ import io.meeds.content.plugin.ContentTypePlugin;
 import io.meeds.social.activity.plugin.ActivityCategoryPlugin;
 import io.meeds.social.category.model.CategoryObject;
 import io.meeds.social.category.service.CategoryLinkService;
+import io.meeds.social.category.service.CategoryService;
 
 /**
  * Merges content coming from every registered {@link ContentTypePlugin} (News
@@ -68,6 +69,9 @@ public class ContentService {
 
   @Autowired
   private CategoryLinkService       categoryLinkService;
+
+  @Autowired
+  private CategoryService           categoryService;
 
   private List<ContentTypePlugin>   contentTypePlugins;
 
@@ -186,12 +190,20 @@ public class ContentService {
     queryTypes.add(ActivityCategoryPlugin.OBJECT_TYPE);
     Set<String> linkedIds = new HashSet<>();
     for (Long categoryId : categoryIds) {
-      List<CategoryObject> linkedObjects = categoryLinkService.getLinkedObjects(categoryId, queryTypes, 0, CATEGORY_LINKS_FETCH_CAP);
-      for (CategoryObject linkedObject : linkedObjects) {
-        linkedIds.add(linkedObject.getId());
+      for (Long id : withSubcategoryIds(categoryId)) {
+        List<CategoryObject> linkedObjects = categoryLinkService.getLinkedObjects(id, queryTypes, 0, CATEGORY_LINKS_FETCH_CAP);
+        for (CategoryObject linkedObject : linkedObjects) {
+          linkedIds.add(linkedObject.getId());
+        }
       }
     }
     return linkedIds;
+  }
+
+  private Set<Long> withSubcategoryIds(Long categoryId) {
+    Set<Long> ids = new HashSet<>(categoryService.getSubcategoryIds(categoryId, 0, 0, -1));
+    ids.add(categoryId);
+    return ids;
   }
 
 }
