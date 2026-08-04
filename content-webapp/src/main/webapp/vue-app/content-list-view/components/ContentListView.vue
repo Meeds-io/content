@@ -95,6 +95,7 @@
             :key="`${contentItem.contentType}-${contentItem.id}`"
             :item="contentItem"
             :compact="compact"
+            :expanded="expanded"
             class="border-box-sizing"
             @published="load"
             @delete="confirmDelete" />
@@ -137,6 +138,10 @@ export default {
     compact: {
       type: Boolean,
       default: false,
+    },
+    expanded: {
+      type: Boolean,
+      default: true,
     },
     categoryId: {
       type: [String, Number],
@@ -203,6 +208,8 @@ export default {
     },
   },
   created() {
+    const lang = eXo.env.portal.language;
+    exoi18n.loadLanguageAsync(lang, `/content/i18n/locale.portlet.content.Content?lang=${lang}`);
     if (!this.compact) {
       this.appliedSearchText = queryParamUtils.getQueryParam('text');
       const contentTypesParam = queryParamUtils.getQueryParam('contentTypes');
