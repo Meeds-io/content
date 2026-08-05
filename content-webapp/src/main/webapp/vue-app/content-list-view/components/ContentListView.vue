@@ -68,6 +68,7 @@
           :exclude-category-ids="excludeCategoryIds"
           :category-depth="categoryDepth"
           class="px-4 pb-2"
+          object-type="content"
           hide-on-empty
           @input="selectCategory" />
         <div v-if="loading" class="d-flex flex-grow-1 align-center justify-center">
