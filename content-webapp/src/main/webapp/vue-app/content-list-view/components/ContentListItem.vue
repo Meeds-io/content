@@ -47,8 +47,8 @@
             :key="category.id"
             :category="category"
             small
-            tabindex="-1"
-            class="flex-shrink-0 ms-1" />
+            class="flex-shrink-0 ms-1"
+            @select="selectCategory" />
         </div>
         <v-btn
           v-if="remainingCount > 0"
@@ -61,7 +61,10 @@
             {{ $t('categories.remainingCount', { 0: remainingCount }) }}
           </span>
         </v-btn>
-        <categories-list-drawer v-if="moreCategoriesDrawer" ref="moreCategoriesDrawer" />
+        <categories-list-drawer
+          v-if="moreCategoriesDrawer"
+          ref="moreCategoriesDrawer"
+          @select="selectCategory" />
         <content-action-menu-items
           :item="item"
           class="flex-shrink-0 ms-2"
@@ -225,6 +228,9 @@ export default {
       this.moreCategoriesDrawer = true;
       await this.$nextTick();
       this.$refs.moreCategoriesDrawer?.open?.(this.categories);
+    },
+    selectCategory(category) {
+      this.$emit('select-category', category?.id);
     },
   },
 };
