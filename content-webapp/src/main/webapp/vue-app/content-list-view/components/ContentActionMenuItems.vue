@@ -36,7 +36,10 @@
       </v-btn>
     </template>
     <v-list class="pa-0 text-no-wrap width-fit-content contentActionMenuItems">
-      <v-list-item class="ps-2 pe-4 d-flex align-center" @click="copyLink">
+      <v-list-item
+        v-if="item.url"
+        class="ps-2 pe-4 d-flex align-center"
+        @click="copyLink">
         <v-icon size="16" class="clickable icon-menu me-2">fas fa-link</v-icon>
         <span class="text-color">{{ $t('content.list.item.copyLink') }}</span>
       </v-list-item>
