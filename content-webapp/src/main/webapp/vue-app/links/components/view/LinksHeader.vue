@@ -27,7 +27,7 @@
       'pb-4': !$root.isCard,
     }"
     class="d-flex align-center">
-    <div v-if="header" class="flex-grow-1 flex-shrink-1 text-truncate widget-text-header text-start">
+    <div v-if="header" class="flex-shrink-1 text-truncate widget-text-header text-start">
       {{ header }}
     </div>
     <v-spacer />
