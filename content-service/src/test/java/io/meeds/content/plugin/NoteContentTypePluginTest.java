@@ -48,17 +48,22 @@ import org.mockito.junit.MockitoJUnitRunner;
 import org.exoplatform.commons.exception.ObjectNotFoundException;
 import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.commons.utils.PageList;
+import org.exoplatform.portal.config.model.PortalConfig;
 import org.exoplatform.services.security.Identity;
 import org.exoplatform.social.attachment.AttachmentService;
 import org.exoplatform.social.core.manager.IdentityManager;
+import org.exoplatform.social.core.space.model.Space;
 import org.exoplatform.social.core.space.spi.SpaceService;
+import org.exoplatform.wiki.model.DraftPage;
 import org.exoplatform.wiki.model.Page;
 import org.exoplatform.wiki.model.PermissionType;
 import org.exoplatform.wiki.service.NoteService;
 import org.exoplatform.wiki.service.search.SearchResult;
+import org.exoplatform.wiki.utils.NoteConstants;
 
 import io.meeds.content.model.ContentEntry;
 import io.meeds.content.model.filter.ContentFilter;
+import io.meeds.content.news.utils.NewsUtils;
 import io.meeds.content.utils.ContentUtils;
 import io.meeds.social.category.model.CategoryObject;
 import io.meeds.social.category.service.CategoryLinkService;
@@ -69,6 +74,8 @@ public class NoteContentTypePluginTest {
   private static final String JOHN = "john";
 
   private static final MockedStatic<CommonsUtils> COMMONS_UTILS = mockStatic(CommonsUtils.class);
+
+  private static final MockedStatic<NewsUtils>    NEWS_UTILS    = mockStatic(NewsUtils.class);
 
   @Mock
   private NoteService         noteService;
@@ -104,6 +111,7 @@ public class NoteContentTypePluginTest {
   @AfterClass
   public static void afterRunBare() {
     COMMONS_UTILS.close();
+    NEWS_UTILS.close();
   }
 
   @Test
@@ -122,11 +130,87 @@ public class NoteContentTypePluginTest {
   }
 
   @Test
-  public void testSearchReturnsEmptyForDraftStatus() throws Exception {
+  public void testSearchReturnsEmptyForDraftStatusWhenFilteringByCategory() throws Exception {
     ContentFilter filter = new ContentFilter();
     filter.setStatus(ContentUtils.STATUS_DRAFT);
-    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null);
+    // Drafts are staged, unsaved edits: they can never be linked to a
+    // category, so a category filter must exclude them entirely.
+    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, Collections.singleton("1"));
     assertTrue(entries.isEmpty());
+  }
+
+  @Test
+  public void testSearchDraftStatusReturnsOnlyCurrentUsersOwnDrafts() throws Exception {
+    ContentFilter filter = new ContentFilter();
+    filter.setStatus(ContentUtils.STATUS_DRAFT);
+
+    Space space = mock(Space.class);
+    when(space.getId()).thenReturn("1");
+    when(space.getGroupId()).thenReturn("/spaces/space1");
+    when(space.getDisplayName()).thenReturn("Space 1");
+    NEWS_UTILS.when(() -> NewsUtils.getMyFilteredSpacesIds(currentIdentity, null)).thenReturn(Arrays.asList(1L));
+    when(spaceService.getSpaceById("1")).thenReturn(space);
+
+    DraftPage myDraft = new DraftPage();
+    myDraft.setId("draft1");
+    myDraft.setTitle("My Draft");
+    myDraft.setAuthor(JOHN);
+    DraftPage otherDraft = new DraftPage();
+    otherDraft.setId("draft2");
+    otherDraft.setTitle("Other Draft");
+    otherDraft.setAuthor("someoneElse");
+    when(noteService.getDraftsOfWiki("/spaces/space1", PortalConfig.GROUP_TYPE, NoteConstants.NOTE_HOME_NAME))
+                                                                                                              .thenReturn(Arrays.asList(myDraft,
+                                                                                                                                        otherDraft));
+
+    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null);
+
+    assertEquals(1, entries.size());
+    ContentEntry entry = entries.get(0);
+    assertEquals("draft1", entry.getId());
+    assertEquals(ContentUtils.CONTENT_TYPE_NOTES, entry.getContentType());
+    assertEquals("My Draft", entry.getTitle());
+    assertTrue(entry.isDraft());
+    assertFalse(entry.isPublished());
+    assertTrue(entry.isCanEdit());
+    assertTrue(entry.isCanDelete());
+    assertFalse(entry.isCanPublish());
+    assertEquals("1", entry.getSpaceId());
+  }
+
+  @Test
+  public void testSearchDraftStatusSkipsSpaceWhenNoteServiceThrows() throws Exception {
+    // A space whose wiki has no Home page yet (e.g. it never had a note
+    // saved) makes NoteService throw instead of returning an empty list -
+    // this must not take down drafts from the user's other spaces.
+    ContentFilter filter = new ContentFilter();
+    filter.setStatus(ContentUtils.STATUS_DRAFT);
+
+    Space brokenSpace = mock(Space.class);
+    when(brokenSpace.getId()).thenReturn("1");
+    when(brokenSpace.getGroupId()).thenReturn("/spaces/broken");
+    Space okSpace = mock(Space.class);
+    when(okSpace.getId()).thenReturn("2");
+    when(okSpace.getGroupId()).thenReturn("/spaces/ok");
+    when(okSpace.getDisplayName()).thenReturn("Space 2");
+
+    NEWS_UTILS.when(() -> NewsUtils.getMyFilteredSpacesIds(currentIdentity, null)).thenReturn(Arrays.asList(1L, 2L));
+    when(spaceService.getSpaceById("1")).thenReturn(brokenSpace);
+    when(spaceService.getSpaceById("2")).thenReturn(okSpace);
+    when(noteService.getDraftsOfWiki("/spaces/broken", PortalConfig.GROUP_TYPE, NoteConstants.NOTE_HOME_NAME))
+                                                                                                              .thenThrow(new NullPointerException());
+
+    DraftPage draft = new DraftPage();
+    draft.setId("draft1");
+    draft.setTitle("My Draft");
+    draft.setAuthor(JOHN);
+    when(noteService.getDraftsOfWiki("/spaces/ok", PortalConfig.GROUP_TYPE, NoteConstants.NOTE_HOME_NAME))
+                                                                                                          .thenReturn(Arrays.asList(draft));
+
+    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null);
+
+    assertEquals(1, entries.size());
+    assertEquals("draft1", entries.get(0).getId());
   }
 
   @Test
@@ -262,7 +346,10 @@ public class NoteContentTypePluginTest {
   }
 
   @Test
-  public void testSearchExcludesUnpublishedNoteWhenStatusPublished() throws Exception {
+  public void testSearchIncludesNoteWithoutActivityWhenStatusPublished() throws Exception {
+    // The default/"Saved" status lists every saved note, whether or not it
+    // has ever been announced to a space feed - unlike News, a note without
+    // an activityId is not excluded.
     ContentFilter filter = new ContentFilter();
     filter.setStatus(ContentUtils.STATUS_PUBLISHED);
     SearchResult result = new SearchResult();
@@ -276,7 +363,7 @@ public class NoteContentTypePluginTest {
 
     List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null);
 
-    assertTrue(entries.isEmpty());
+    assertEquals(1, entries.size());
   }
 
   @Test
@@ -385,6 +472,29 @@ public class NoteContentTypePluginTest {
     plugin.delete("1", ContentUtils.STATUS_PUBLISHED, currentIdentity);
 
     verify(noteService).deleteNote("group", "/spaces/space1", "myNote", currentIdentity);
+  }
+
+  @Test
+  public void testDeleteDraftThrowsWhenDraftNotFound() throws Exception {
+    when(noteService.getDraftNoteById("1", JOHN)).thenReturn(null);
+    try {
+      plugin.delete("1", ContentUtils.STATUS_DRAFT, currentIdentity);
+      fail("Expected ObjectNotFoundException");
+    } catch (ObjectNotFoundException e) {
+      // expected
+    }
+  }
+
+  @Test
+  public void testDeleteDraftSucceeds() throws Exception {
+    DraftPage draft = new DraftPage();
+    draft.setId("1");
+    when(noteService.getDraftNoteById("1", JOHN)).thenReturn(draft);
+
+    plugin.delete("1", ContentUtils.STATUS_DRAFT, currentIdentity);
+
+    verify(noteService).removeDraftById("1");
+    verify(noteService, never()).deleteNote(anyString(), anyString(), anyString(), any());
   }
 
 }
