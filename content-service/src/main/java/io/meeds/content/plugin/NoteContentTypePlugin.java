@@ -20,6 +20,7 @@ package io.meeds.content.plugin;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 
@@ -30,24 +31,31 @@ import org.springframework.stereotype.Component;
 
 import org.exoplatform.commons.exception.ObjectNotFoundException;
 import org.exoplatform.portal.config.model.PortalConfig;
+import org.exoplatform.services.log.ExoLogger;
+import org.exoplatform.services.log.Log;
 import org.exoplatform.services.security.Identity;
 import org.exoplatform.social.attachment.AttachmentService;
 import org.exoplatform.social.core.manager.IdentityManager;
 import org.exoplatform.social.core.space.model.Space;
 import org.exoplatform.social.core.space.spi.SpaceService;
+import org.exoplatform.wiki.model.DraftPage;
 import org.exoplatform.wiki.model.Page;
 import org.exoplatform.wiki.model.PermissionType;
 import org.exoplatform.wiki.service.NoteService;
 import org.exoplatform.wiki.service.search.SearchResult;
 import org.exoplatform.wiki.service.search.WikiSearchData;
+import org.exoplatform.wiki.utils.NoteConstants;
 
 import io.meeds.content.model.ContentEntry;
 import io.meeds.content.model.filter.ContentFilter;
+import io.meeds.content.news.utils.NewsUtils;
 import io.meeds.content.utils.ContentUtils;
 import io.meeds.notes.plugin.NoteCategoryPlugin;
 
 @Component
 public class NoteContentTypePlugin implements ContentTypePlugin {
+
+  private static final Log LOG = ExoLogger.getLogger(NoteContentTypePlugin.class);
 
   @Autowired
   private NoteService     noteService;
@@ -82,12 +90,17 @@ public class NoteContentTypePlugin implements ContentTypePlugin {
                                    Identity currentIdentity,
                                    Set<String> categoryLinkedIds) throws Exception {
     String status = effectiveStatus(filter.getStatus());
-    if (StringUtils.equals(status, ContentUtils.STATUS_SCHEDULED) || StringUtils.equals(status, ContentUtils.STATUS_DRAFT)) {
-      // Regular notes have no publish workflow (no scheduled/draft state).
+    if (StringUtils.equals(status, ContentUtils.STATUS_SCHEDULED)) {
+      // Regular notes have no scheduled-publish workflow.
       return Collections.emptyList();
     }
     if (categoryLinkedIds != null && CollectionUtils.isEmpty(categoryLinkedIds)) {
       return Collections.emptyList();
+    }
+    if (StringUtils.equals(status, ContentUtils.STATUS_DRAFT)) {
+      // Drafts are staged, unsaved edits (DraftPage), not linkable to a
+      // category, so a category filter can never match one.
+      return categoryLinkedIds != null ? Collections.emptyList() : searchDraftNotes(filter, fetchLimit, currentIdentity);
     }
 
     WikiSearchData searchData = new WikiSearchData(null, null, null, null, null);
@@ -122,12 +135,7 @@ public class NoteContentTypePlugin implements ContentTypePlugin {
         Page note = noteService.getNoteById(noteId, currentIdentity);
         if (note != null
             && (!StringUtils.equals(status, ContentUtils.STATUS_MY_CONTENT)
-                || StringUtils.equals(note.getAuthor(), currentIdentity.getUserId()))
-            // Published excludes notes only saved and never published
-            // (announced to a space feed): a published note has an
-            // activityId, exactly like a News article.
-            && (!StringUtils.equals(status, ContentUtils.STATUS_PUBLISHED)
-                || StringUtils.isNotBlank(note.getActivityId()))) {
+                || StringUtils.equals(note.getAuthor(), currentIdentity.getUserId()))) {
           entries.add(toContentEntry(note, currentIdentity));
         }
       } catch (IllegalAccessException e) {
@@ -139,6 +147,14 @@ public class NoteContentTypePlugin implements ContentTypePlugin {
 
   @Override
   public void delete(String id, String status, Identity currentIdentity) throws Exception {
+    if (StringUtils.equals(status, ContentUtils.STATUS_DRAFT)) {
+      DraftPage draft = noteService.getDraftNoteById(id, currentIdentity.getUserId());
+      if (draft == null) {
+        throw new ObjectNotFoundException("Content with id " + id + " was not found");
+      }
+      noteService.removeDraftById(id);
+      return;
+    }
     Page note = noteService.getNoteById(id, currentIdentity);
     if (note == null) {
       throw new ObjectNotFoundException("Content with id " + id + " was not found");
@@ -151,6 +167,67 @@ public class NoteContentTypePlugin implements ContentTypePlugin {
 
   private String effectiveStatus(String status) {
     return StringUtils.isBlank(status) ? ContentUtils.STATUS_PUBLISHED : status;
+  }
+
+  private List<ContentEntry> searchDraftNotes(ContentFilter filter, int fetchLimit, Identity currentIdentity) throws Exception {
+    List<Long> spaceIds = NewsUtils.getMyFilteredSpacesIds(currentIdentity, filter.getSpaces());
+    List<ContentEntry> entries = new ArrayList<>();
+    for (Long spaceId : spaceIds) {
+      Space space = spaceService.getSpaceById(String.valueOf(spaceId));
+      if (space == null) {
+        continue;
+      }
+      List<DraftPage> drafts;
+      try {
+        drafts = noteService.getDraftsOfWiki(space.getGroupId(), PortalConfig.GROUP_TYPE, NoteConstants.NOTE_HOME_NAME);
+      } catch (Exception e) {
+        // A space whose wiki has no Home page yet (e.g. it never had a note
+        // saved) makes NoteService fail instead of returning an empty list -
+        // skip it rather than failing the whole content list.
+        LOG.debug("Unable to retrieve draft notes of space {}", space.getId(), e);
+        continue;
+      }
+      for (DraftPage draft : drafts) {
+        // Drafts are personal staging data: only the current user's own
+        // drafts are ever shown, regardless of space membership.
+        if (StringUtils.equals(draft.getAuthor(), currentIdentity.getUserId())) {
+          entries.add(toDraftContentEntry(draft, space));
+        }
+      }
+    }
+    entries.sort(Comparator.comparing(ContentEntry::getDate, Comparator.nullsLast(Comparator.reverseOrder())));
+    return entries.size() > fetchLimit ? entries.subList(0, fetchLimit) : entries;
+  }
+
+  private ContentEntry toDraftContentEntry(DraftPage draft, Space space) {
+    ContentEntry entry = new ContentEntry();
+    entry.setId(draft.getId());
+    entry.setContentType(ContentUtils.CONTENT_TYPE_NOTES);
+    entry.setIcon("fa-clipboard");
+    entry.setTitle(draft.getTitle());
+    entry.setSummary(resolveNoteSummary(draft));
+    entry.setAuthorUsername(draft.getAuthor());
+    entry.setAuthorDisplayName(draft.getAuthorFullName());
+    if (StringUtils.isNotBlank(draft.getAuthor())) {
+      org.exoplatform.social.core.identity.model.Identity authorIdentity = identityManager.getOrCreateUserIdentity(draft.getAuthor());
+      if (authorIdentity != null && authorIdentity.getProfile() != null) {
+        entry.setAuthorAvatarUrl(authorIdentity.getProfile().getAvatarUrl());
+      }
+    }
+    entry.setSpaceId(space.getId());
+    entry.setSpaceDisplayName(space.getDisplayName());
+    entry.setSpaceAvatarUrl(space.getAvatarUrl());
+    entry.setSpaceGroupId(space.getGroupId());
+    entry.setParentId(draft.getParentPageId());
+    entry.setDate(draft.getUpdatedDate());
+    entry.setPublished(false);
+    entry.setDraft(true);
+    entry.setScheduled(false);
+    entry.setCanEdit(true);
+    entry.setCanDelete(true);
+    entry.setCanPublish(false);
+    entry.setCanSchedule(false);
+    return entry;
   }
 
   private ContentEntry toContentEntry(Page note, Identity currentIdentity) {

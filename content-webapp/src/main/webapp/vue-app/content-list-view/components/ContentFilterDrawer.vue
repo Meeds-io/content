@@ -33,24 +33,27 @@
         <v-radio-group
           v-model="contentTypeOption"
           hide-details
-          class="mt-0">
-          <v-radio :label="$t('content.list.filter.any')" value="any" />
-          <v-radio
-            v-for="contentType in contentTypes"
-            :key="contentType.type"
-            :label="$t(contentType.labelKey)"
-            :value="contentType.type" />
-        </v-radio-group>
-
-        <div class="text-header mt-4">{{ $t('content.list.filter.drawer.status') }}</div>
-        <v-radio-group
-          v-model="status"
-          hide-details
-          class="mt-0">
-          <v-radio :label="$t('content.list.filter.status.published')" value="published" />
-          <v-radio :label="$t('content.list.filter.status.myContent')" value="myContent" />
-          <v-radio :label="$t('content.list.filter.status.scheduled')" value="scheduled" />
-          <v-radio :label="$t('content.list.filter.status.draft')" value="draft" />
+          class="mt-0"
+          @change="onContentTypeChange">
+          <v-radio :label="$t('content.list.filter.contentType.any')" value="any" />
+          <template v-for="contentType in contentTypes">
+            <v-radio
+              :key="contentType.type"
+              :label="$t(contentType.labelKey)"
+              :value="contentType.type" />
+            <v-radio-group
+              v-if="contentTypeOption === contentType.type && statusOptionsByType[contentType.type]"
+              :key="`${contentType.type}-status`"
+              v-model="status"
+              hide-details
+              class="mt-0 mb-2 ms-8">
+              <v-radio
+                v-for="statusOption in statusOptionsByType[contentType.type]"
+                :key="statusOption.value"
+                :label="$t(statusOption.labelKey)"
+                :value="statusOption.value" />
+            </v-radio-group>
+          </template>
         </v-radio-group>
 
         <div class="text-header mb-2 mt-4">{{ $t('content.list.filter.drawer.spaces') }}</div>
@@ -114,6 +117,18 @@ export default {
     showSuggester: true,
     selectedSpaces: [],
     contentTypes: [],
+    statusOptionsByType: {
+      news: [
+        { value: 'published', labelKey: 'content.list.filter.status.published' },
+        { value: 'myContent', labelKey: 'content.list.filter.status.myContent' },
+        { value: 'scheduled', labelKey: 'content.list.filter.status.scheduled' },
+        { value: 'draft', labelKey: 'content.list.filter.status.draft' },
+      ],
+      notes: [
+        { value: 'published', labelKey: 'content.list.filter.status.saved' },
+        { value: 'draft', labelKey: 'content.list.filter.status.draft' },
+      ],
+    },
   }),
   computed: {
     spaceSuggesterLabels() {
@@ -159,6 +174,12 @@ export default {
       this.showSuggester = false;
       this.$nextTick().then(() => this.showSuggester = true);
     },
+    onContentTypeChange(value) {
+      const options = this.statusOptionsByType[value] || [];
+      if (options.length) {
+        this.status = options[0].value;
+      }
+    },
     removeSpace(space) {
       this.selectedSpaces = this.selectedSpaces.filter(selectedSpace => selectedSpace.id !== space.id);
     },
@@ -171,7 +192,7 @@ export default {
     apply() {
       this.$emit('apply', {
         contentTypes: this.contentTypeOption === 'any' ? null : [this.contentTypeOption],
-        status: this.status,
+        status: this.contentTypeOption === 'any' ? null : this.status,
         spaces: this.spacesOption === 'selected' ? this.selectedSpaces.map(space => space.id) : null,
         selectedSpaces: this.spacesOption === 'selected' ? this.selectedSpaces : [],
       });
