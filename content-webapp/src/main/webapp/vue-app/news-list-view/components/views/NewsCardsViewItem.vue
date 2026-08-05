@@ -56,7 +56,7 @@
         <category-chip
           :category="firstCategory"
           small
-          @select="openContentListDrawer" />
+          tabindex="-1" />
       </div>
     </v-sheet>
     <div
@@ -122,7 +122,7 @@
               <category-chip
                 :category="firstCategory"
                 small
-                @select="openContentListDrawer" />
+                tabindex="-1" />
             </div>
             <div
               v-if="showArticleSummary && hasSummary"
@@ -247,9 +247,6 @@ export default {
     blurContentHover(event) {
       event.target.blur();
       this.$refs.newsCard.focus();
-    },
-    openContentListDrawer(category) {
-      this.$root.$emit('open-content-list-drawer', category.id);
     },
   }
 };

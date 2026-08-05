@@ -81,7 +81,7 @@
               <category-chip
                 :category="firstCategory"
                 small
-                @select="openContentListDrawer" />
+                tabindex="-1" />
             </div>
           </div>
           <span
