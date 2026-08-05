@@ -24,7 +24,8 @@
     <a
       :href="item.url"
       class="d-flex align-center justify-center flex-shrink-0 rounded me-4"
-      :style="illustrationStyle">
+      :style="illustrationStyle"
+      @click="onItemLinkClick">
       <v-icon
         v-if="!item.illustrationUrl"
         color="white"
@@ -34,7 +35,10 @@
     </a>
     <div class="d-flex flex-column flex-grow-1 overflow-hidden">
       <div class="d-flex align-center">
-        <a :href="item.url" class="no-min-width text-truncate text-left font-weight-bold text-color flex-grow-1">
+        <a
+          :href="item.url"
+          class="no-min-width text-truncate text-left font-weight-bold text-color flex-grow-1"
+          @click="onItemLinkClick">
           {{ item.title }}
         </a>
         <div class="d-flex align-center overflow-hidden flex-shrink-1 no-min-width ms-2">
@@ -205,9 +209,17 @@ export default {
     getNoteEditUrl() {
       return `${eXo.env.portal.context}/${eXo.env.portal.portalName}/notes-editor?noteId=${this.item.id}`
         + `&spaceGroupId=${this.item.spaceGroupId || ''}`
-        + '&isDraft=false'
+        + `&isDraft=${this.item.draft ? 'true' : 'false'}`
         + `&parentNoteId=${this.item.parentId || ''}`
         + `&notePageUri=${encodeURIComponent(eXo.env.portal.selectedNodeUri || '')}`;
+    },
+    onItemLinkClick(event) {
+      // A draft note has no standalone view page - the only meaningful
+      // action is to open it back in its editor.
+      if (!this.item.url) {
+        event.preventDefault();
+        this.editItem();
+      }
     },
     async openMoreCategoriesDrawer() {
       this.moreCategoriesDrawer = true;
