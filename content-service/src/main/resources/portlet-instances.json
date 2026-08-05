@@ -21,7 +21,7 @@
     },
     {
       "nameId":"ContentListView",
-      "categoryNameId":"content",
+      "categoryNameId":"tools",
       "portletName":"ContentListView",
       "names":{
         "en":"layout.portletInstance.ContentListView.name"
