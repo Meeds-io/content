@@ -86,7 +86,8 @@
             :expanded="expanded"
             class="border-box-sizing"
             @published="load"
-            @delete="confirmDelete" />
+            @delete="confirmDelete"
+            @select-category="selectCategory" />
           <div v-if="hasMore" class="d-flex justify-center pt-2">
             <v-btn
               :loading="loadingMore"
