@@ -23,7 +23,7 @@
   <div :class="isCompactDisplay ? 'py-2' : 'py-3'" class="contentListItem d-flex">
     <a
       :href="item.url"
-      class="d-flex align-center justify-center flex-shrink-0 rounded me-4"
+      class="d-flex align-center justify-center flex-shrink-0 rounded position-relative me-4"
       :style="illustrationStyle"
       @click="onItemLinkClick">
       <v-icon
@@ -32,6 +32,12 @@
         :size="illustrationIconSize">
         {{ item.icon }}
       </v-icon>
+      <v-avatar
+        size="20"
+        color="white"
+        class="position-absolute t-0 l-0 ma-1">
+        <v-icon size="12" class="icon-default-color">{{ item.icon }}</v-icon>
+      </v-avatar>
     </a>
     <div class="d-flex flex-column flex-grow-1 overflow-hidden">
       <div class="d-flex align-center">
