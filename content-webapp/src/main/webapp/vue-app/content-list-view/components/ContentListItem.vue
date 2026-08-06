@@ -20,7 +20,7 @@
 
 -->
 <template>
-  <div :class="compact ? 'py-2' : 'py-3'" class="contentListItem d-flex">
+  <div :class="isCompactDisplay ? 'py-2' : 'py-3'" class="contentListItem d-flex">
     <a
       :href="item.url"
       class="d-flex align-center justify-center flex-shrink-0 rounded me-4"
@@ -77,6 +77,7 @@
         <exo-space-avatar
           v-if="item.spaceId"
           :space-id="item.spaceId"
+          :avatar="isCompactDisplay"
           :size="20"
           small-font-size
           popover
@@ -94,7 +95,7 @@
       <p class="text-truncate-2 text-body mb-0">
         {{ item.summary }}
       </p>
-      <div v-if="item.viewsCount || item.attachmentsCount" class="d-flex align-center justify-end text-caption text-color mt-auto pt-1">
+      <div v-if="!isCompactDisplay && (item.viewsCount || item.attachmentsCount)" class="d-flex align-center justify-end text-caption text-color mt-auto pt-1">
         <template v-if="item.viewsCount">
           <v-icon size="14" class="me-1">fas fa-eye</v-icon>
           <span class="me-3">{{ item.viewsCount }}</span>
@@ -133,12 +134,21 @@ export default {
     },
   }),
   computed: {
+    isMobile() {
+      return this.$vuetify.breakpoint.mobile;
+    },
+    isCompactDisplay() {
+      return this.isMobile || (this.compact && !this.expanded);
+    },
     illustrationIconSize() {
+      if (this.isCompactDisplay) {
+        return 24;
+      }
       return !this.compact && 42 || this.expanded && 32 || 24;
     },
     illustrationStyle() {
-      const width = !this.compact && '150px' || this.expanded && '112px' || '64px';
-      const minHeight = !this.compact && '120px' || this.expanded && '90px' || '64px';
+      const width = this.isCompactDisplay ? '64px' : (!this.compact && '150px' || this.expanded && '112px' || '64px');
+      const minHeight = this.isCompactDisplay ? '64px' : (!this.compact && '120px' || this.expanded && '90px' || '64px');
       return {
         width,
         minHeight,
@@ -155,12 +165,18 @@ export default {
       return this.item.categoryIds?.join(',');
     },
     maxVisibleCategories() {
+      if (this.isCompactDisplay) {
+        return 0;
+      }
       return this.expanded ? 2 : 1;
     },
     filteredCategories() {
       return this.categories.slice(0, this.maxVisibleCategories);
     },
     remainingCount() {
+      if (this.isCompactDisplay) {
+        return this.categories.length;
+      }
       return this.categories.length - this.maxVisibleCategories;
     },
   },
