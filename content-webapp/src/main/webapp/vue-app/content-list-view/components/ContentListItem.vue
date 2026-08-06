@@ -47,7 +47,7 @@
           @click="onItemLinkClick">
           {{ item.title }}
         </a>
-        <div class="d-flex align-center overflow-hidden flex-shrink-1 no-min-width ms-2">
+        <div class="d-flex align-center flex-shrink-0 ms-2">
           <category-chip
             v-for="category in filteredCategories"
             :key="category.id"
