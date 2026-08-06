@@ -95,7 +95,7 @@
           <category-chip
             :category="firstCategory"
             small
-            @select="openContentListDrawer" />
+            tabindex="-1" />
         </div>
         <div class="d-flex align-center mb-1">
           <div
@@ -113,7 +113,7 @@
             v-if="firstCategory && index > 0"
             :category="firstCategory"
             small
-            @select="openContentListDrawer" />
+            tabindex="-1" />
         </div>
         <span
           v-if="showArticleTitle"
@@ -303,9 +303,6 @@ export default {
       } else {
         return this.item.illustrationURL?.concat('&size=1410x344').toString();
       }
-    },
-    openContentListDrawer(category) {
-      this.$root.$emit('open-content-list-drawer', category.id);
     },
   }
 };

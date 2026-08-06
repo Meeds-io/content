@@ -21,6 +21,7 @@ package io.meeds.content.news.service;
 import static io.meeds.content.news.service.NewsService.DRAFT;
 import static io.meeds.content.news.service.NewsService.EXTERNAL_PAGE;
 import static io.meeds.content.news.service.NewsService.NEWS_ACTIVITIES;
+import static io.meeds.content.news.service.NewsService.NEWS_ACTIVITY_POSTED;
 import static io.meeds.content.news.service.NewsService.NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME;
 import static io.meeds.content.news.service.NewsService.NEWS_DELETED;
 import static io.meeds.content.news.service.NewsService.NEWS_PUBLICATION_STATE;
@@ -67,6 +68,7 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
@@ -85,6 +87,7 @@ import org.exoplatform.social.core.manager.IdentityManager;
 import org.exoplatform.social.core.space.model.Space;
 import org.exoplatform.social.core.space.spi.SpaceService;
 import org.exoplatform.social.core.utils.MentionUtils;
+import org.exoplatform.social.metadata.MetadataFilter;
 import org.exoplatform.social.metadata.MetadataService;
 import org.exoplatform.social.metadata.model.MetadataItem;
 import org.exoplatform.social.metadata.model.MetadataKey;
@@ -476,6 +479,12 @@ public class NewsServiceTest {
     List<News> newsList = newsService.getNews(newsFilter, johnIdentity);
     assertNotNull(newsList);
     assertEquals(newsList.size(), 1);
+
+    ArgumentCaptor<MetadataFilter> filterCaptor = ArgumentCaptor.forClass(MetadataFilter.class);
+    verify(metadataService).getMetadataItemsByFilter(filterCaptor.capture(), anyLong(), anyLong());
+    MetadataFilter capturedFilter = filterCaptor.getValue();
+    assertFalse(capturedFilter.getMetadataProperties().containsKey(NEWS_ACTIVITY_POSTED));
+    assertFalse(capturedFilter.getCombinedMetadataProperties().containsKey(NEWS_ACTIVITY_POSTED));
   }
 
   @Test
@@ -499,6 +508,12 @@ public class NewsServiceTest {
     List<News> newsList = newsService.getNews(newsFilter, johnIdentity);
     assertNotNull(newsList);
     assertEquals(newsList.size(), 1);
+
+    ArgumentCaptor<MetadataFilter> filterCaptor = ArgumentCaptor.forClass(MetadataFilter.class);
+    verify(metadataService).getMetadataItemsByFilter(filterCaptor.capture(), anyLong(), anyLong());
+    MetadataFilter capturedFilter = filterCaptor.getValue();
+    assertFalse(capturedFilter.getMetadataProperties().containsKey(NEWS_ACTIVITY_POSTED));
+    assertFalse(capturedFilter.getCombinedMetadataProperties().containsKey(NEWS_ACTIVITY_POSTED));
   }
 
   @Test

@@ -61,7 +61,7 @@
               <category-chip
                 :category="firstCategory(item)"
                 small
-                @select="openContentListDrawer" />
+                tabindex="-1" />
             </div>
             <div class="px-10 mt-auto pb-13 no-min-width full-width flex-column">
               <div
@@ -155,9 +155,6 @@ export default {
     },
     firstCategory(item) {
       return this.firstCategories[item.id];
-    },
-    openContentListDrawer(category) {
-      this.$root.$emit('open-content-list-drawer', category.id);
     },
   }
 };
