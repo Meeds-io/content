@@ -36,6 +36,8 @@ import org.exoplatform.social.core.identity.provider.OrganizationIdentityProvide
 import org.exoplatform.social.core.manager.IdentityManager;
 import org.exoplatform.social.core.space.model.Space;
 import org.exoplatform.social.core.space.spi.SpaceService;
+import org.exoplatform.social.metadata.favorite.FavoriteService;
+import org.exoplatform.social.metadata.favorite.model.Favorite;
 
 import io.meeds.content.model.ContentEntry;
 import io.meeds.content.model.filter.ContentFilter;
@@ -60,6 +62,9 @@ public class NewsContentTypePlugin implements ContentTypePlugin {
 
   @Autowired
   private AttachmentService attachmentService;
+
+  @Autowired
+  private FavoriteService favoriteService;
 
   @Override
   public String getType() {
@@ -102,7 +107,7 @@ public class NewsContentTypePlugin implements ContentTypePlugin {
     return newsList.stream()
                    .filter(Objects::nonNull)
                    .filter(news -> categoryLinkedIds == null || categoryLinkedIds.contains(news.getId()))
-                   .map(news -> toContentEntry(news, status))
+                   .map(news -> toContentEntry(news, status, currentIdentity))
                    .collect(Collectors.toList());
   }
 
@@ -168,7 +173,7 @@ public class NewsContentTypePlugin implements ContentTypePlugin {
     return StringUtils.isBlank(status) ? ContentUtils.STATUS_PUBLISHED : status;
   }
 
-  private ContentEntry toContentEntry(News news, String status) {
+  private ContentEntry toContentEntry(News news, String status, Identity currentIdentity) {
     ContentEntry entry = new ContentEntry();
     entry.setId(news.getId());
     entry.setContentType(ContentUtils.CONTENT_TYPE_NEWS);
@@ -200,7 +205,13 @@ public class NewsContentTypePlugin implements ContentTypePlugin {
     entry.setCanDelete(news.isCanDelete());
     entry.setCanPublish(news.isCanPublish());
     entry.setCanSchedule(news.isCanSchedule());
+    entry.setFavorite(isFavorite(news.getId(), currentIdentity));
     return entry;
+  }
+
+  private boolean isFavorite(String newsId, Identity currentIdentity) {
+    long userIdentityId = Long.parseLong(identityManager.getOrCreateUserIdentity(currentIdentity.getUserId()).getId());
+    return favoriteService.isFavorite(new Favorite(ContentUtils.CONTENT_TYPE_NEWS, newsId, null, userIdentityId));
   }
 
   private String resolveNewsSummary(News news) {
