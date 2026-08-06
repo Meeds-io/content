@@ -71,6 +71,14 @@
           v-if="moreCategoriesDrawer"
           ref="moreCategoriesDrawer"
           @select="selectCategory" />
+        <favorite-button
+          v-if="canBookmark"
+          :id="item.id"
+          :favorite="item.favorite"
+          :space-id="item.spaceId"
+          :type="item.contentType"
+          :type-label="item.contentType"
+          class="flex-shrink-0 ms-1" />
         <content-action-menu-items
           :item="item"
           class="flex-shrink-0 ms-2"
@@ -145,6 +153,9 @@ export default {
     },
     isCompactDisplay() {
       return this.isMobile || (this.compact && !this.expanded);
+    },
+    canBookmark() {
+      return !this.isMobile && !this.item.draft && !this.item.scheduled;
     },
     illustrationIconSize() {
       if (this.isCompactDisplay) {

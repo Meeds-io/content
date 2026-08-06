@@ -54,6 +54,7 @@ import org.exoplatform.social.attachment.AttachmentService;
 import org.exoplatform.social.core.manager.IdentityManager;
 import org.exoplatform.social.core.space.model.Space;
 import org.exoplatform.social.core.space.spi.SpaceService;
+import org.exoplatform.social.metadata.favorite.FavoriteService;
 import org.exoplatform.wiki.model.DraftPage;
 import org.exoplatform.wiki.model.Page;
 import org.exoplatform.wiki.model.PermissionType;
@@ -92,6 +93,9 @@ public class NoteContentTypePluginTest {
   @Mock
   private SpaceService        spaceService;
 
+  @Mock
+  private FavoriteService     favoriteService;
+
   @InjectMocks
   private NoteContentTypePlugin plugin;
 
@@ -106,6 +110,9 @@ public class NoteContentTypePluginTest {
     lenient().when(CommonsUtils.getService(CategoryLinkService.class)).thenReturn(categoryLinkService);
     lenient().when(CommonsUtils.getService(SpaceService.class)).thenReturn(spaceService);
     lenient().when(categoryLinkService.getLinkedIds(any(CategoryObject.class))).thenReturn(Collections.emptyList());
+    org.exoplatform.social.core.identity.model.Identity johnIdentity = mock(org.exoplatform.social.core.identity.model.Identity.class);
+    lenient().when(johnIdentity.getId()).thenReturn("1");
+    lenient().when(identityManager.getOrCreateUserIdentity(JOHN)).thenReturn(johnIdentity);
   }
 
   @AfterClass
@@ -244,6 +251,7 @@ public class NoteContentTypePluginTest {
     when(noteService.getNoteById("1", currentIdentity)).thenReturn(note);
     when(noteService.hasPermissionOnPage(note, PermissionType.EDITPAGE, currentIdentity)).thenReturn(true);
     when(attachmentService.getAttachmentFileIds(eq(note.getAttachmentObjectType()), eq("1"))).thenReturn(Arrays.asList("f1"));
+    when(favoriteService.isFavorite(any())).thenReturn(true);
 
     List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null);
 
@@ -261,6 +269,7 @@ public class NoteContentTypePluginTest {
     assertFalse(entry.isCanSchedule());
     assertEquals("space1GroupId", entry.getSpaceGroupId());
     assertEquals("parent1", entry.getParentId());
+    assertTrue(entry.isFavorite());
   }
 
   @Test
