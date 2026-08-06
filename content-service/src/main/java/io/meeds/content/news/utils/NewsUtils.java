@@ -76,6 +76,8 @@ public class NewsUtils {
 
   public static final String LIKE_NEWS                       = "exo.news.likeArticle";
 
+  public static final String SEND_KUDOS_NEWS                 = "exo.news.sendKudosArticle";
+
   public static final String DELETE_NEWS                     = "exo.news.deleteArticle";
 
   public static final String UPDATE_NEWS                     = "exo.news.updateArticle";
