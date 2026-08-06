@@ -38,6 +38,8 @@ import org.exoplatform.social.attachment.AttachmentService;
 import org.exoplatform.social.core.manager.IdentityManager;
 import org.exoplatform.social.core.space.model.Space;
 import org.exoplatform.social.core.space.spi.SpaceService;
+import org.exoplatform.social.metadata.favorite.FavoriteService;
+import org.exoplatform.social.metadata.favorite.model.Favorite;
 import org.exoplatform.wiki.model.DraftPage;
 import org.exoplatform.wiki.model.Page;
 import org.exoplatform.wiki.model.PermissionType;
@@ -68,6 +70,9 @@ public class NoteContentTypePlugin implements ContentTypePlugin {
 
   @Autowired
   private AttachmentService attachmentService;
+
+  @Autowired
+  private FavoriteService favoriteService;
 
   @Override
   public String getType() {
@@ -268,7 +273,13 @@ public class NoteContentTypePlugin implements ContentTypePlugin {
     entry.setCanDelete(entry.isCanEdit());
     entry.setCanPublish(canPublishNote(note, entry.isCanEdit()));
     entry.setCanSchedule(false);
+    entry.setFavorite(isFavorite(note.getId(), currentIdentity));
     return entry;
+  }
+
+  private boolean isFavorite(String noteId, Identity currentIdentity) {
+    long userIdentityId = Long.parseLong(identityManager.getOrCreateUserIdentity(currentIdentity.getUserId()).getId());
+    return favoriteService.isFavorite(new Favorite(ContentUtils.CONTENT_TYPE_NOTES, noteId, null, userIdentityId));
   }
 
   private boolean canPublishNote(Page note, boolean canEdit) {

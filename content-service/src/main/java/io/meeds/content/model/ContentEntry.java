@@ -99,4 +99,6 @@ public class ContentEntry {
 
   private boolean      canSchedule;
 
+  private boolean      favorite;
+
 }
