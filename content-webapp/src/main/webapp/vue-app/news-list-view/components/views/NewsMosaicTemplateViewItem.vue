@@ -244,10 +244,5 @@ export default {
       return this.item?.properties?.hideAuthor;
     }
   },
-  methods: {
-    openContentListDrawer(category) {
-      this.$root.$emit('open-content-list-drawer', category.id);
-    },
-  },
 };
 </script>
