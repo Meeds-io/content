@@ -46,6 +46,7 @@ import org.exoplatform.social.core.identity.provider.OrganizationIdentityProvide
 import org.exoplatform.social.core.manager.IdentityManager;
 import org.exoplatform.social.core.space.model.Space;
 import org.exoplatform.social.core.space.spi.SpaceService;
+import org.exoplatform.social.metadata.favorite.FavoriteService;
 
 import io.meeds.content.model.ContentEntry;
 import io.meeds.content.model.filter.ContentFilter;
@@ -72,6 +73,9 @@ public class NewsContentTypePluginTest {
   @Mock
   private AttachmentService   attachmentService;
 
+  @Mock
+  private FavoriteService     favoriteService;
+
   @InjectMocks
   private NewsContentTypePlugin plugin;
 
@@ -81,6 +85,9 @@ public class NewsContentTypePluginTest {
   public void setUp() {
     currentIdentity = new Identity(JOHN);
     when(attachmentService.getAttachmentFileIds(anyString(), anyString())).thenReturn(Collections.emptyList());
+    org.exoplatform.social.core.identity.model.Identity johnIdentity = mock(org.exoplatform.social.core.identity.model.Identity.class);
+    when(johnIdentity.getId()).thenReturn("1");
+    when(identityManager.getOrCreateUserIdentity(JOHN)).thenReturn(johnIdentity);
   }
 
   @Test
@@ -125,6 +132,7 @@ public class NewsContentTypePluginTest {
     news.setLang("fr");
     when(newsService.getNews(any(NewsFilter.class), eq(currentIdentity))).thenReturn(Arrays.asList(news));
     when(attachmentService.getAttachmentFileIds(eq(NewsPageAttachmentPlugin.OBJECT_TYPE), eq("1"))).thenReturn(Arrays.asList("f1", "f2"));
+    when(favoriteService.isFavorite(any())).thenReturn(true);
 
     List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null);
 
@@ -140,6 +148,7 @@ public class NewsContentTypePluginTest {
     assertEquals("activity1", entry.getActivityId());
     assertEquals("/portal/g/:spaces:space1/space-1", entry.getSpaceUrl());
     assertEquals("fr", entry.getLang());
+    assertTrue(entry.isFavorite());
   }
 
   @Test
