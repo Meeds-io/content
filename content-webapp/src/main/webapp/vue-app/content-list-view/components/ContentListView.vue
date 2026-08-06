@@ -47,7 +47,7 @@
                 small
                 :aria-label="$t('content.list.settings.drawer.open')"
                 @click="$refs.settingsDrawer.open()">
-                <v-icon size="18">fas fa-cog</v-icon>
+                <v-icon size="20">fas fa-cog</v-icon>
               </v-btn>
               <v-btn
                 icon
@@ -55,7 +55,7 @@
                 class="ms-4"
                 :aria-label="$t('content.list.filter.drawer.open')"
                 @click="$refs.filterDrawer.open(advancedFilter)">
-                <v-icon size="18" :class="advancedFiltersCount && 'primary--text' || 'icon-default-color'">fas fa-sliders-h</v-icon>
+                <v-icon size="20" :class="advancedFiltersCount && 'primary--text' || 'icon-default-color'">fas fa-sliders-h</v-icon>
               </v-btn>
               <span v-if="advancedFiltersCount" class="primary--text text-caption">({{ advancedFiltersCount }})</span>
             </div>
