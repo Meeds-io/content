@@ -139,6 +139,7 @@ public class NoteContentTypePlugin implements ContentTypePlugin {
       try {
         Page note = noteService.getNoteById(noteId, currentIdentity);
         if (note != null
+            && StringUtils.equals(PortalConfig.GROUP_TYPE, note.getWikiType())
             && (!StringUtils.equals(status, ContentUtils.STATUS_MY_CONTENT)
                 || StringUtils.equals(note.getAuthor(), currentIdentity.getUserId()))) {
           entries.add(toContentEntry(note, currentIdentity));

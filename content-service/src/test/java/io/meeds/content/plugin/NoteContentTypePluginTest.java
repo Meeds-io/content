@@ -246,6 +246,7 @@ public class NoteContentTypePluginTest {
     note.setTitle("Note Title");
     note.setAuthor(JOHN);
     note.setActivityId("activity1");
+    note.setWikiType("group");
     note.setWikiOwner("space1GroupId");
     note.setParentPageId("parent1");
     when(noteService.getNoteById("1", currentIdentity)).thenReturn(note);
@@ -313,7 +314,8 @@ public class NoteContentTypePluginTest {
   }
 
   @Test
-  public void testSearchMarksNonSpaceNoteNotPublishable() throws Exception {
+  public void testSearchExcludesPersonalNotes() throws Exception {
+    // Personal (non-space) notes are out of scope for the Content List app.
     ContentFilter filter = new ContentFilter();
     SearchResult result = new SearchResult();
     result.setId(1L);
@@ -325,11 +327,10 @@ public class NoteContentTypePluginTest {
     note.setWikiType("portal");
     note.setWikiOwner("home");
     when(noteService.getNoteById("1", currentIdentity)).thenReturn(note);
-    when(noteService.hasPermissionOnPage(note, PermissionType.EDITPAGE, currentIdentity)).thenReturn(true);
 
     List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null);
 
-    assertFalse(entries.get(0).isCanPublish());
+    assertTrue(entries.isEmpty());
   }
 
   @Test
@@ -345,6 +346,7 @@ public class NoteContentTypePluginTest {
     Page note = new Page();
     note.setId("1");
     note.setActivityId("activity1");
+    note.setWikiType("group");
     when(noteService.getNoteById("1", currentIdentity)).thenReturn(note);
     when(categoryLinkService.getLinkedIds(any(CategoryObject.class))).thenReturn(Arrays.asList(7L, 8L));
 
@@ -368,6 +370,7 @@ public class NoteContentTypePluginTest {
     Page note = new Page();
     note.setId("1");
     note.setActivityId(null);
+    note.setWikiType("group");
     when(noteService.getNoteById("1", currentIdentity)).thenReturn(note);
 
     List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null);
@@ -388,6 +391,7 @@ public class NoteContentTypePluginTest {
     Page myNote = new Page();
     myNote.setId("1");
     myNote.setAuthor(JOHN);
+    myNote.setWikiType("group");
     Page otherNote = new Page();
     otherNote.setId("2");
     otherNote.setAuthor("someoneElse");
@@ -412,6 +416,7 @@ public class NoteContentTypePluginTest {
     Page note = new Page();
     note.setId("1");
     note.setActivityId("activity1");
+    note.setWikiType("group");
     when(noteService.getNoteById("1", currentIdentity)).thenReturn(note);
 
     List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, Collections.singleton("1"));
