@@ -74,8 +74,9 @@
         <div v-if="loading" class="d-flex flex-grow-1 align-center justify-center">
           <v-progress-circular indeterminate color="primary" />
         </div>
-        <div v-else-if="!items.length" class="d-flex flex-grow-1 align-center justify-center">
-          <span class="text-subtitle text-color">{{ $t('content.list.empty') }}</span>
+        <div v-else-if="!items.length" class="d-flex flex-grow-1 flex-column align-center justify-center">
+          <v-icon size="64" class="tertiary--text mb-4">fas fa-newspaper</v-icon>
+          <span>{{ $t('content.list.empty') }}</span>
         </div>
         <div v-else class="d-flex flex-column px-4">
           <content-list-item
