@@ -26,12 +26,6 @@
       class="d-flex align-center justify-center flex-shrink-0 rounded position-relative me-4"
       :style="illustrationStyle"
       @click="onItemLinkClick">
-      <v-icon
-        v-if="!item.illustrationUrl"
-        color="white"
-        :size="illustrationIconSize">
-        {{ item.icon }}
-      </v-icon>
       <v-avatar
         size="20"
         color="white"
@@ -157,11 +151,8 @@ export default {
     canBookmark() {
       return !this.isMobile && !this.item.draft && !this.item.scheduled;
     },
-    illustrationIconSize() {
-      if (this.isCompactDisplay) {
-        return 24;
-      }
-      return !this.compact && 42 || this.expanded && 32 || 24;
+    defaultIllustrationUrl() {
+      return this.item.contentType === 'notes' ? '/content/images/notes.webp' : '/content/images/news.webp';
     },
     illustrationStyle() {
       const width = this.isCompactDisplay ? '64px' : (!this.compact && '150px' || this.expanded && '112px' || '64px');
@@ -170,12 +161,9 @@ export default {
         width,
         minHeight,
         alignSelf: 'stretch',
-        ...(this.item.illustrationUrl && {
-          backgroundImage: `url(${this.item.illustrationUrl})`,
-          backgroundSize: 'cover',
-        } || {
-          backgroundColor: '#F5A623',
-        }),
+        backgroundImage: `url(${this.item.illustrationUrl || this.defaultIllustrationUrl})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
       };
     },
     categoryIdsKey() {
