@@ -30,7 +30,6 @@
           :right-text-filter="{
             minCharacters: 0,
             placeholder: $t('content.list.filter.placeholder'),
-            tooltip: $t('content.list.filter.placeholder'),
           }"
           :filters-count="advancedFiltersCount"
           compact
