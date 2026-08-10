@@ -20,82 +20,90 @@
 
 -->
 <template>
-  <div :class="isCompactDisplay ? 'py-2' : 'py-3'" class="contentListItem d-flex">
-    <a
-      :href="item.url"
+  <a
+    :href="item.url"
+    tabindex="0"
+    :class="isCompactDisplay ? 'py-2' : 'py-3'"
+    class="contentListItem d-flex"
+    @click="onItemLinkClick"
+    @keydown.enter="onItemLinkClick">
+    <div
       class="d-flex align-center justify-center flex-shrink-0 rounded position-relative me-4"
-      :style="illustrationStyle"
-      @click="onItemLinkClick">
+      :style="illustrationStyle">
       <v-avatar
         size="20"
         color="white"
         class="position-absolute t-0 l-0 ma-1">
         <v-icon size="12" class="icon-default-color">{{ item.icon }}</v-icon>
       </v-avatar>
-    </a>
+    </div>
     <div class="d-flex flex-column flex-grow-1 overflow-hidden">
       <div class="d-flex align-center">
-        <a
-          :href="item.url"
-          class="no-min-width text-truncate text-left font-weight-bold text-color flex-grow-1"
-          @click="onItemLinkClick">
+        <span class="no-min-width text-truncate text-left font-weight-bold text-color flex-grow-1">
           {{ item.title }}
-        </a>
-        <div class="d-flex align-center flex-shrink-0 ms-2">
-          <category-chip
-            v-for="category in filteredCategories"
-            :key="category.id"
-            :category="category"
-            small
-            class="flex-shrink-0 ms-1"
+        </span>
+        <div
+          class="d-flex align-center"
+          @click.stop
+          @keydown.stop>
+          <div class="d-flex align-center flex-shrink-0 ms-2">
+            <category-chip
+              v-for="category in filteredCategories"
+              :key="category.id"
+              :category="category"
+              small
+              class="flex-shrink-0 ms-1"
+              @select="selectCategory" />
+          </div>
+          <v-btn
+            v-if="remainingCount > 0"
+            class="flex-shrink-0 flex-grow-0 px-0 ms-1"
+            height="24"
+            width="24"
+            icon
+            @click="openMoreCategoriesDrawer">
+            <span class="primary--text text-subtitle-font-size">
+              {{ $t('categories.remainingCount', { 0: remainingCount }) }}
+            </span>
+          </v-btn>
+          <categories-list-drawer
+            v-if="moreCategoriesDrawer"
+            ref="moreCategoriesDrawer"
             @select="selectCategory" />
+          <favorite-button
+            v-if="canBookmark"
+            :id="item.id"
+            :favorite="item.favorite"
+            :space-id="item.spaceId"
+            :type="item.contentType"
+            :type-label="item.contentType"
+            class="flex-shrink-0 ms-1" />
+          <content-action-menu-items
+            :item="item"
+            class="flex-shrink-0 ms-2"
+            @edit="editItem"
+            @publish="openItem"
+            @published="$emit('published', item)"
+            @delete="$emit('delete', item)" />
         </div>
-        <v-btn
-          v-if="remainingCount > 0"
-          class="flex-shrink-0 flex-grow-0 px-0 ms-1"
-          height="24"
-          width="24"
-          icon
-          @click="openMoreCategoriesDrawer">
-          <span class="primary--text text-subtitle-font-size">
-            {{ $t('categories.remainingCount', { 0: remainingCount }) }}
-          </span>
-        </v-btn>
-        <categories-list-drawer
-          v-if="moreCategoriesDrawer"
-          ref="moreCategoriesDrawer"
-          @select="selectCategory" />
-        <favorite-button
-          v-if="canBookmark"
-          :id="item.id"
-          :favorite="item.favorite"
-          :space-id="item.spaceId"
-          :type="item.contentType"
-          :type-label="item.contentType"
-          class="flex-shrink-0 ms-1" />
-        <content-action-menu-items
-          :item="item"
-          class="flex-shrink-0 ms-2"
-          @edit="editItem"
-          @publish="openItem"
-          @published="$emit('published', item)"
-          @delete="$emit('delete', item)" />
       </div>
       <div class="d-flex align-center text-caption text-color mb-1">
-        <exo-space-avatar
-          v-if="item.spaceId"
-          :space-id="item.spaceId"
-          :avatar="isCompactDisplay"
-          :size="20"
-          small-font-size
-          popover
-          class="me-2" />
+        <div v-if="item.spaceId" class="d-flex align-center me-2 no-min-width">
+          <v-avatar
+            size="20"
+            class="flex-shrink-0"
+            :class="!isCompactDisplay && 'me-1'">
+            <img :src="item.spaceAvatarUrl" :alt="item.spaceDisplayName">
+          </v-avatar>
+          <span v-if="!isCompactDisplay" class="text-truncate text-subtitle-font-size">{{ item.spaceDisplayName }}</span>
+        </div>
         <v-icon size="2" class="me-2">fas fa-circle</v-icon>
-        <exo-user-avatar
-          :profile-id="item.authorUsername"
-          :size="20"
-          small-font-size
-          class="me-2" />
+        <div class="d-flex align-center me-2 no-min-width">
+          <v-avatar size="20" class="flex-shrink-0 me-1">
+            <img :src="item.authorAvatarUrl" :alt="item.authorDisplayName">
+          </v-avatar>
+          <span class="text-truncate text-subtitle-font-size">{{ item.authorDisplayName }}</span>
+        </div>
         <v-icon size="2" class="me-2">fas fa-circle</v-icon>
         <v-icon size="12" class="me-2">far fa-clock</v-icon>
         <date-format :value="item.date" :format="dateFormat" />
@@ -114,7 +122,7 @@
         </template>
       </div>
     </div>
-  </div>
+  </a>
 </template>
 <script>
 export default {
@@ -155,12 +163,12 @@ export default {
       return this.item.contentType === 'notes' ? '/content/images/notes.webp' : '/content/images/news.webp';
     },
     illustrationStyle() {
-      const width = this.isCompactDisplay ? '64px' : (!this.compact && '150px' || this.expanded && '112px' || '64px');
-      const minHeight = this.isCompactDisplay ? '64px' : (!this.compact && '120px' || this.expanded && '90px' || '64px');
+      const width = this.isCompactDisplay ? '80px' : (!this.compact && '150px' || this.expanded && '112px' || '64px');
       return {
         width,
-        minHeight,
-        alignSelf: 'stretch',
+        height: this.isCompactDisplay ? '80px' : null,
+        minHeight: this.isCompactDisplay ? null : (!this.compact && '120px' || this.expanded && '90px' || '64px'),
+        alignSelf: this.isCompactDisplay ? 'flex-start' : 'stretch',
         backgroundImage: `url(${this.item.illustrationUrl || this.defaultIllustrationUrl})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
