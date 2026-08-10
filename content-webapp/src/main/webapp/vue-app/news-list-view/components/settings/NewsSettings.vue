@@ -23,10 +23,10 @@
     v-if="showSettingsContainer"
     min-height="30"
     class="background-transparent d-flex flex-row align-center px-2">
-    <div class="d-flex latestNewsTitleContainer flex-column flex-grow-1 my-1 text-truncate">
+    <div class="d-flex latestNewsTitleContainer flex-column flex-grow-1 min-width-0 my-1">
       <span
         v-if="showHeader"
-        class="widget-text-header text-truncate d-block line-height-normal"
+        class="text-header text-truncate d-block line-height-normal"
         :title="headerTitle">{{ headerTitle }}</span>
     </div>
     <div v-if="showSeeAll && !hideSeeAllButton" class="d-flex flex-column my-auto me-2">
