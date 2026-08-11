@@ -44,7 +44,7 @@
         </span>
         <div
           class="d-flex align-center"
-          @click.stop
+          @click.stop.prevent
           @keydown.stop>
           <div class="d-flex align-center flex-shrink-0 ms-2">
             <category-chip

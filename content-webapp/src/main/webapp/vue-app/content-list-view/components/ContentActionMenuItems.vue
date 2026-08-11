@@ -31,7 +31,8 @@
         v-bind="attrs"
         icon
         small
-        :aria-label="$t('content.list.item.actions')">
+        :aria-label="$t('content.list.item.actions')"
+        @click.stop.prevent>
         <v-icon size="18">fa-ellipsis-v</v-icon>
       </v-btn>
     </template>
