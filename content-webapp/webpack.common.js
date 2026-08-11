@@ -10,7 +10,6 @@ const config = {
     newsActivityComposer: './src/main/webapp/vue-app/news-activity-composer-app/main.js',
     newsDetails: './src/main/webapp/vue-app/news-details/main.js',
     latestNews: './src/main/webapp/vue-app/latest-news/main.js',
-    news: './src/main/webapp/vue-app/news/main.js',
     newsSearchCard: './src/main/webapp/vue-app/news-search/main.js',
     newsDetailsApp: './src/main/webapp/vue-app/news-details-app/main.js',
     newsListView: './src/main/webapp/vue-app/news-list-view/main.js',

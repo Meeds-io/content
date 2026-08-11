@@ -19,14 +19,14 @@
  */
 
 import ExoNewsDetails  from './components/ExoNewsDetails.vue';
-import ExoNewsDetailsActionMenuApp from '../news/components/ExoNewsDetailsActionMenuApp.vue';
+import ExoNewsDetailsActionMenuApp from './components/ExoNewsDetailsActionMenuApp.vue';
 import ExoNewsDetailsActivity from './components/ExoNewsDetailsActivity.vue';
 import ExoNewsDetailsToolBar from './components/ExoNewsDetailsToolBar.vue';
 import ExoNewsDetailsBody from './components/ExoNewsDetailsBody.vue';
 import ExoNewsDetailsTime from './components/ExoNewsDetailsTime.vue';
 import ExoNewsFavoriteAction from './components/ExoNewsFavoriteAction.vue';
-import NewsActionMenuItems from '../news/components/NewsActionMenuItems.vue';
-import NewsMobileActionMenu from '../news/components/NewsMobileActionMenu.vue';
+import NewsActionMenuItems from './components/NewsActionMenuItems.vue';
+import NewsMobileActionMenu from './components/NewsMobileActionMenu.vue';
 
 import * as  newsServices from '../services/newsServices.js';
 import * as newsConstants from '../services/newsConstants.js';
