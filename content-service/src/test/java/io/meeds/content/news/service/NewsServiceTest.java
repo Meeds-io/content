@@ -194,6 +194,7 @@ public class NewsServiceTest {
     COMMONS_UTILS.close();
     PORTAL_CONTAINER.close();
     NEWS_UTILS.close();
+    CONVERSATION_STATE.close();
     MENTION_UTILS.close();
     SPACE_UTILS.close();
   }
@@ -675,6 +676,10 @@ public class NewsServiceTest {
                                                            anyMap(),
                                                            anyLong(),
                                                            anyBoolean());
+    // A brand-new (non-referred) article page must be unindexed from the
+    // notes index right away, not only on its first later update - otherwise
+    // it shows up twice in the merged Content List until then.
+    verify(indexingService, times(1)).unindex(eq(WikiPageIndexingServiceConnector.TYPE), eq("1"));
     Page note = new Page();
     note.setId("1");
     note.setTitle(newsArticle.getTitle());
@@ -1008,7 +1013,7 @@ public class NewsServiceTest {
     verify(categoryLinkService, times(1)).link(3L, expectedObject);
     verify(categoryLinkService, times(1)).link(5L, expectedObject);
     verify(categoryLinkService, never()).unlink(anyLong(), any());
-    verify(indexingService, never()).unindex(eq(WikiPageIndexingServiceConnector.TYPE), anyString());
+    verify(indexingService, times(1)).unindex(eq(WikiPageIndexingServiceConnector.TYPE), eq("1"));
   }
 
   @Test

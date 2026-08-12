@@ -20,6 +20,7 @@ package io.meeds.content.news.search;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -308,5 +309,18 @@ public class NewsSearchConnectorTest {
   public void testBuildTermQueryStatementReturnsEmptyForBlankTerm() {
     String termQuery = ReflectionTestUtils.invokeMethod(newsSearchConnector, "buildTermQueryStatement", "   ");
     assertEquals("", termQuery);
+  }
+
+  @Test
+  public void testBuildTermQueryStatementAnalyzesWildcardSoCapitalizedTermsStillMatch() {
+    // query_string defaults to analyze_wildcard=false, so a wildcarded term
+    // (added above for prefix matching) would otherwise skip the field
+    // analyzer's lowercasing and never match a capitalized search term
+    // (e.g. mobile keyboards auto-capitalizing the first word) against the
+    // lowercased index tokens.
+    String termQuery = ReflectionTestUtils.invokeMethod(newsSearchConnector, "buildTermQueryStatement", "Meeds");
+
+    assertNotNull(termQuery);
+    assertTrue(termQuery.contains("\"analyze_wildcard\": true"));
   }
 }

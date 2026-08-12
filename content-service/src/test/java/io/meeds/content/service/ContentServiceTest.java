@@ -36,9 +36,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import org.junit.Before;
@@ -47,12 +45,12 @@ import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
-import org.springframework.context.ApplicationContext;
 
 import org.exoplatform.commons.exception.ObjectNotFoundException;
 import org.exoplatform.services.security.Identity;
 
 import io.meeds.content.model.ContentEntry;
+import io.meeds.content.model.ContentPage;
 import io.meeds.content.model.ContentType;
 import io.meeds.content.model.filter.ContentFilter;
 import io.meeds.content.plugin.ContentTypePlugin;
@@ -64,9 +62,6 @@ import io.meeds.social.category.service.CategoryService;
 public class ContentServiceTest {
 
   private static final String JOHN = "john";
-
-  @Mock
-  private ApplicationContext  applicationContext;
 
   @Mock
   private CategoryLinkService categoryLinkService;
@@ -95,13 +90,9 @@ public class ContentServiceTest {
     when(notesPlugin.getLabelKey()).thenReturn("content.list.filter.contentType.notes");
     when(notesPlugin.getOrder()).thenReturn(30);
 
-    Map<String, ContentTypePlugin> plugins = new LinkedHashMap<>();
-    plugins.put("notesPlugin", notesPlugin);
-    plugins.put("newsPlugin", newsPlugin);
-    when(applicationContext.getBeansOfType(ContentTypePlugin.class)).thenReturn(plugins);
+    contentService.addPlugin(notesPlugin);
+    contentService.addPlugin(newsPlugin);
     lenient().when(categoryService.getSubcategoryIds(anyLong(), anyLong(), anyLong(), anyLong())).thenReturn(Collections.emptyList());
-
-    contentService.init();
 
     currentIdentity = new Identity(JOHN);
   }
@@ -123,6 +114,20 @@ public class ContentServiceTest {
   }
 
   @Test
+  public void testAddPluginIgnoresASecondPluginRegisteringTheSameType() {
+    // A second plugin registering an already-taken type (e.g. a
+    // misconfigured addon) must not crash the whole registry - it's just
+    // ignored, keeping the first registration.
+    ContentTypePlugin secondNewsPlugin = mock(ContentTypePlugin.class);
+    when(secondNewsPlugin.getType()).thenReturn("news");
+
+    contentService.addPlugin(secondNewsPlugin);
+
+    List<ContentType> types = contentService.getContentTypes();
+    assertEquals(2, types.size());
+  }
+
+  @Test
   public void testGetContentListMergesAndSortsByDateDesc() throws Exception {
     ContentFilter filter = new ContentFilter();
     filter.setOffset(0);
@@ -133,7 +138,7 @@ public class ContentServiceTest {
     when(newsPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull())).thenReturn(Arrays.asList(olderNews));
     when(notesPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull())).thenReturn(Arrays.asList(newerNote));
 
-    List<ContentEntry> items = contentService.getContentList(filter, currentIdentity);
+    List<ContentEntry> items = contentService.getContentList(filter, currentIdentity).getItems();
 
     assertEquals(2, items.size());
     assertEquals("2", items.get(0).getId());
@@ -161,7 +166,7 @@ public class ContentServiceTest {
                                                                                                        olderInFirstCategory));
     when(notesPlugin.search(eq(filter), anyInt(), eq(currentIdentity), any())).thenReturn(java.util.Collections.emptyList());
 
-    List<ContentEntry> items = contentService.getContentList(filter, currentIdentity);
+    List<ContentEntry> items = contentService.getContentList(filter, currentIdentity).getItems();
 
     assertEquals(2, items.size());
     assertEquals("2", items.get(0).getId());
@@ -176,7 +181,7 @@ public class ContentServiceTest {
 
     when(newsPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull())).thenReturn(Arrays.asList(entry("1", "news", new Date())));
 
-    List<ContentEntry> items = contentService.getContentList(filter, currentIdentity);
+    List<ContentEntry> items = contentService.getContentList(filter, currentIdentity).getItems();
 
     assertEquals(1, items.size());
     verify(notesPlugin, never()).search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.any());
@@ -195,10 +200,13 @@ public class ContentServiceTest {
     when(newsPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull())).thenReturn(newsEntries);
     when(notesPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull())).thenReturn(java.util.Collections.emptyList());
 
-    List<ContentEntry> items = contentService.getContentList(filter, currentIdentity);
+    ContentPage page = contentService.getContentList(filter, currentIdentity);
 
-    assertEquals(1, items.size());
-    assertEquals("2", items.get(0).getId());
+    // Exactly the requested page, plus hasMore telling the caller there's a
+    // next page (item "3" exists beyond it) without exposing that extra row.
+    assertEquals(1, page.getItems().size());
+    assertEquals("2", page.getItems().get(0).getId());
+    assertTrue(page.isHasMore());
   }
 
   @Test
@@ -214,7 +222,7 @@ public class ContentServiceTest {
     when(newsPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull())).thenReturn(Arrays.asList(excluded, kept));
     when(notesPlugin.search(eq(filter), anyInt(), eq(currentIdentity), org.mockito.ArgumentMatchers.isNull())).thenReturn(java.util.Collections.emptyList());
 
-    List<ContentEntry> items = contentService.getContentList(filter, currentIdentity);
+    List<ContentEntry> items = contentService.getContentList(filter, currentIdentity).getItems();
 
     assertEquals(1, items.size());
     assertEquals("2", items.get(0).getId());
@@ -235,7 +243,7 @@ public class ContentServiceTest {
     when(newsPlugin.search(eq(filter), anyInt(), eq(currentIdentity), eq(Set.of("1")))).thenReturn(Arrays.asList(matchingNews));
     when(notesPlugin.search(eq(filter), anyInt(), eq(currentIdentity), eq(Set.of("1")))).thenReturn(java.util.Collections.emptyList());
 
-    List<ContentEntry> items = contentService.getContentList(filter, currentIdentity);
+    List<ContentEntry> items = contentService.getContentList(filter, currentIdentity).getItems();
 
     assertEquals(1, items.size());
     assertEquals("1", items.get(0).getId());
@@ -259,7 +267,7 @@ public class ContentServiceTest {
     when(newsPlugin.search(eq(filter), anyInt(), eq(currentIdentity), eq(Set.of("1")))).thenReturn(Arrays.asList(matchingNews));
     when(notesPlugin.search(eq(filter), anyInt(), eq(currentIdentity), eq(Set.of("1")))).thenReturn(java.util.Collections.emptyList());
 
-    List<ContentEntry> items = contentService.getContentList(filter, currentIdentity);
+    List<ContentEntry> items = contentService.getContentList(filter, currentIdentity).getItems();
 
     assertEquals(1, items.size());
     assertEquals("1", items.get(0).getId());
@@ -289,7 +297,7 @@ public class ContentServiceTest {
     when(newsPlugin.search(eq(filter), anyInt(), eq(currentIdentity), eq(Set.of("2")))).thenReturn(java.util.Collections.emptyList());
     when(notesPlugin.search(eq(filter), anyInt(), eq(currentIdentity), eq(Set.of("2")))).thenReturn(Arrays.asList(matchingNote));
 
-    List<ContentEntry> items = contentService.getContentList(filter, currentIdentity);
+    List<ContentEntry> items = contentService.getContentList(filter, currentIdentity).getItems();
 
     assertEquals(1, items.size());
     assertEquals("2", items.get(0).getId());

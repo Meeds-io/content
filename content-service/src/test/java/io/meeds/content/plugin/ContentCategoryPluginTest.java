@@ -22,15 +22,14 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -38,11 +37,12 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
+import org.exoplatform.services.security.ConversationState;
+import org.exoplatform.services.security.Identity;
+import org.exoplatform.services.security.IdentityRegistry;
 import org.exoplatform.wiki.model.Page;
 import org.exoplatform.wiki.service.NoteService;
 
-import io.meeds.content.news.model.News;
-import io.meeds.content.news.service.NewsService;
 import io.meeds.content.utils.ContentUtils;
 import io.meeds.social.activity.plugin.ActivityCategoryPlugin;
 import io.meeds.social.category.model.CategoryObject;
@@ -52,11 +52,10 @@ import io.meeds.social.category.service.CategoryPluginService;
 @RunWith(MockitoJUnitRunner.class)
 public class ContentCategoryPluginTest {
 
-  @Mock
-  private CategoryLinkService   categoryLinkService;
+  private static final String   JOHN = "john";
 
   @Mock
-  private NewsService           newsService;
+  private CategoryLinkService   categoryLinkService;
 
   @Mock
   private NoteService           noteService;
@@ -64,14 +63,30 @@ public class ContentCategoryPluginTest {
   @Mock
   private CategoryPluginService categoryPluginService;
 
+  @Mock
+  private IdentityRegistry      identityRegistry;
+
   @InjectMocks
   private ContentCategoryPlugin plugin;
+
+  private Identity              identity;
 
   @Before
   public void setUp() {
     when(categoryLinkService.getLinkedIds(ContentUtils.CONTENT_TYPE_NEWS)).thenReturn(Collections.emptyList());
     when(categoryLinkService.getLinkedIds(ContentUtils.CONTENT_TYPE_NOTES)).thenReturn(Collections.emptyList());
     when(categoryLinkService.getLinkedIds(ActivityCategoryPlugin.OBJECT_TYPE)).thenReturn(Collections.emptyList());
+    identity = new Identity(JOHN);
+    when(identityRegistry.getIdentity(JOHN)).thenReturn(identity);
+  }
+
+  @After
+  public void tearDown() {
+    ConversationState.setCurrent(null);
+  }
+
+  private List<Long> getCategoryIds() {
+    return plugin.getCategoryIds(0, JOHN);
   }
 
   @Test
@@ -86,7 +101,7 @@ public class ContentCategoryPluginTest {
   }
 
   @Test
-  public void testGetCategoryIdsUnionsNewsNotesAndActivityWhenLinkedContentExists() {
+  public void testGetCategoryIdsUnionsNewsNotesAndActivityWhenLinkedContentExists() throws Exception {
     when(categoryLinkService.getLinkedIds(ContentUtils.CONTENT_TYPE_NEWS)).thenReturn(Arrays.asList(1L, 2L));
     when(categoryLinkService.getLinkedIds(ContentUtils.CONTENT_TYPE_NOTES)).thenReturn(Arrays.asList(2L, 3L));
     when(categoryLinkService.getLinkedIds(ActivityCategoryPlugin.OBJECT_TYPE)).thenReturn(Arrays.asList(3L, 4L));
@@ -96,9 +111,9 @@ public class ContentCategoryPluginTest {
                                                                                                                                                     "news" + categoryId,
                                                                                                                                                     0)));
     }
-    when(newsService.getNewsArticleById(anyString())).thenReturn(mock(News.class));
+    when(noteService.getNoteById(org.mockito.ArgumentMatchers.anyString(), eq(identity))).thenReturn(new Page());
 
-    List<Long> categoryIds = plugin.getCategoryIds();
+    List<Long> categoryIds = getCategoryIds();
 
     assertEquals(4, categoryIds.size());
     assertTrue(categoryIds.containsAll(Arrays.asList(1L, 2L, 3L, 4L)));
@@ -106,11 +121,11 @@ public class ContentCategoryPluginTest {
 
   @Test
   public void testGetCategoryIdsEmptyWhenNothingLinked() {
-    assertTrue(plugin.getCategoryIds().isEmpty());
+    assertTrue(getCategoryIds().isEmpty());
   }
 
   @Test
-  public void testGetCategoryIdsExcludesCategoryWhenLinkedNewsWasDeleted() {
+  public void testGetCategoryIdsExcludesCategoryWhenLinkedNewsWasDeleted() throws Exception {
     // Simulates an orphaned category link: the News article was deleted but
     // its category-link metadata was never cleaned up.
     when(categoryLinkService.getLinkedIds(ContentUtils.CONTENT_TYPE_NEWS)).thenReturn(Arrays.asList(1L));
@@ -118,25 +133,74 @@ public class ContentCategoryPluginTest {
                                                                                 .thenReturn(Collections.singletonList(new CategoryObject(ContentUtils.CONTENT_TYPE_NEWS,
                                                                                                                                           "deletedNews",
                                                                                                                                           0)));
-    when(newsService.getNewsArticleById("deletedNews")).thenReturn(null);
+    when(noteService.getNoteById("deletedNews", identity)).thenReturn(null);
 
-    assertTrue(plugin.getCategoryIds().isEmpty());
+    assertTrue(getCategoryIds().isEmpty());
   }
 
   @Test
-  public void testGetCategoryIdsKeepsCategoryWhenLinkedNoteExists() {
+  public void testGetCategoryIdsExcludesCategoryWhenLinkedNewsNotVisibleToUser() throws Exception {
+    // The article still exists but this user has no access to it (e.g. a
+    // private space they aren't a member of) - it must not surface its
+    // category to them.
+    when(categoryLinkService.getLinkedIds(ContentUtils.CONTENT_TYPE_NEWS)).thenReturn(Arrays.asList(1L));
+    when(categoryLinkService.getLinkedObjects(eq(1L), anyList(), eq(0), eq(20)))
+                                                                                .thenReturn(Collections.singletonList(new CategoryObject(ContentUtils.CONTENT_TYPE_NEWS,
+                                                                                                                                          "privateNews",
+                                                                                                                                          0)));
+    when(noteService.getNoteById("privateNews", identity)).thenThrow(new IllegalAccessException());
+
+    assertTrue(getCategoryIds().isEmpty());
+  }
+
+  @Test
+  public void testGetCategoryIdsFallsBackToConversationStateWhenIdentityRegistryMisses() throws Exception {
+    // IdentityRegistry is a per-node cache - a cluster node that didn't
+    // handle the login (or an evicted entry) can miss for a genuinely
+    // authenticated user, whose identity is still available from the
+    // current request's own ConversationState.
+    when(identityRegistry.getIdentity(JOHN)).thenReturn(null);
+    ConversationState.setCurrent(new ConversationState(identity));
     when(categoryLinkService.getLinkedIds(ContentUtils.CONTENT_TYPE_NOTES)).thenReturn(Arrays.asList(5L));
     when(categoryLinkService.getLinkedObjects(eq(5L), anyList(), eq(0), eq(20)))
                                                                                 .thenReturn(Collections.singletonList(new CategoryObject(ContentUtils.CONTENT_TYPE_NOTES,
                                                                                                                                           "note1",
                                                                                                                                           0)));
-    when(noteService.getNoteById("note1")).thenReturn(new Page());
+    when(noteService.getNoteById("note1", identity)).thenReturn(new Page());
 
-    assertEquals(Arrays.asList(5L), plugin.getCategoryIds());
+    assertEquals(Arrays.asList(5L), getCategoryIds());
   }
 
   @Test
-  public void testGetCategoryIdsKeepsCategoryWhenActivityResolvesToExistingNews() {
+  public void testGetCategoryIdsExcludesEverythingWithoutThrowingWhenNoIdentityAvailable() throws Exception {
+    // Neither IdentityRegistry nor ConversationState can resolve who's
+    // asking (e.g. a background/system call) - must not NPE trying to
+    // check visibility, just treat every candidate as not visible.
+    when(identityRegistry.getIdentity(JOHN)).thenReturn(null);
+    ConversationState.setCurrent(null);
+    when(categoryLinkService.getLinkedIds(ContentUtils.CONTENT_TYPE_NOTES)).thenReturn(Arrays.asList(5L));
+    when(categoryLinkService.getLinkedObjects(eq(5L), anyList(), eq(0), eq(20)))
+                                                                                .thenReturn(Collections.singletonList(new CategoryObject(ContentUtils.CONTENT_TYPE_NOTES,
+                                                                                                                                          "note1",
+                                                                                                                                          0)));
+
+    assertTrue(getCategoryIds().isEmpty());
+  }
+
+  @Test
+  public void testGetCategoryIdsKeepsCategoryWhenLinkedNoteExists() throws Exception {
+    when(categoryLinkService.getLinkedIds(ContentUtils.CONTENT_TYPE_NOTES)).thenReturn(Arrays.asList(5L));
+    when(categoryLinkService.getLinkedObjects(eq(5L), anyList(), eq(0), eq(20)))
+                                                                                .thenReturn(Collections.singletonList(new CategoryObject(ContentUtils.CONTENT_TYPE_NOTES,
+                                                                                                                                          "note1",
+                                                                                                                                          0)));
+    when(noteService.getNoteById("note1", identity)).thenReturn(new Page());
+
+    assertEquals(Arrays.asList(5L), getCategoryIds());
+  }
+
+  @Test
+  public void testGetCategoryIdsKeepsCategoryWhenActivityResolvesToExistingNews() throws Exception {
     // A posted article's category link is recorded under "activity" (using
     // the activity's own id) - it only counts once resolved back to the News
     // it actually represents.
@@ -146,13 +210,13 @@ public class ContentCategoryPluginTest {
     when(categoryLinkService.getLinkedObjects(eq(6L), anyList(), eq(0), eq(20)))
                                                                                 .thenReturn(Collections.singletonList(activityLink));
     when(categoryPluginService.getObject(activityLink)).thenReturn(resolvedNews);
-    when(newsService.getNewsArticleById("news1")).thenReturn(mock(News.class));
+    when(noteService.getNoteById("news1", identity)).thenReturn(new Page());
 
-    assertEquals(Arrays.asList(6L), plugin.getCategoryIds());
+    assertEquals(Arrays.asList(6L), getCategoryIds());
   }
 
   @Test
-  public void testGetCategoryIdsOnlyKeepsTheOneAssociatedCategoryAmongFourTopLevelCategories() {
+  public void testGetCategoryIdsOnlyKeepsTheOneAssociatedCategoryAmongFourTopLevelCategories() throws Exception {
     // Reproduces the reported scenario: 4 top-level categories exist
     // (ids 1-4), only category 2 ("Knowledge Sharing") is actually linked to
     // an existing Note - categories 1, 3 and 4 must NOT be returned, even
@@ -163,9 +227,9 @@ public class ContentCategoryPluginTest {
                                                                                 .thenReturn(Collections.singletonList(new CategoryObject(ContentUtils.CONTENT_TYPE_NOTES,
                                                                                                                                           "note1",
                                                                                                                                           0)));
-    when(noteService.getNoteById("note1")).thenReturn(new Page());
+    when(noteService.getNoteById("note1", identity)).thenReturn(new Page());
 
-    List<Long> categoryIds = plugin.getCategoryIds();
+    List<Long> categoryIds = getCategoryIds();
 
     assertEquals(Arrays.asList(2L), categoryIds);
   }
@@ -180,7 +244,7 @@ public class ContentCategoryPluginTest {
                                                                                 .thenReturn(Collections.singletonList(activityLink));
     when(categoryPluginService.getObject(activityLink)).thenReturn(activityLink);
 
-    assertTrue(plugin.getCategoryIds().isEmpty());
+    assertTrue(getCategoryIds().isEmpty());
   }
 
 }

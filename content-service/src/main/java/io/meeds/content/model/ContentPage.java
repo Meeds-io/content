@@ -16,33 +16,26 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
-package io.meeds.content.rest.model;
+package io.meeds.content.model;
 
 import java.util.List;
 
-import io.meeds.content.model.ContentEntry;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * One page of {@link ContentEntry} results, with {@link #hasMore} carrying
+ * the pagination signal explicitly instead of leaving the caller to infer it
+ * from whether {@link #items} came back full-sized.
+ */
 @Data
 @NoArgsConstructor
-public class ContentEntryList {
+@AllArgsConstructor
+public class ContentPage {
 
   private List<ContentEntry> items;
 
-  private int                 offset;
-
-  private int                 limit;
-
-  private int                 size;
-
-  private boolean              hasMore;
-
-  /**
-   * Distinct set of category ids actually present across {@link #items} - so
-   * only categories that content in the current result set actually
-   * belongs to are proposed as filter pills.
-   */
-  private List<Long>          categoryIds;
+  private boolean            hasMore;
 
 }

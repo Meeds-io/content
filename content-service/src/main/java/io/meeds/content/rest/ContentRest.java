@@ -19,6 +19,8 @@
 package io.meeds.content.rest;
 
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -39,6 +41,7 @@ import org.exoplatform.services.security.ConversationState;
 import org.exoplatform.services.security.Identity;
 
 import io.meeds.content.model.ContentEntry;
+import io.meeds.content.model.ContentPage;
 import io.meeds.content.model.ContentType;
 import io.meeds.content.model.filter.ContentFilter;
 import io.meeds.content.rest.model.ContentEntryList;
@@ -54,7 +57,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @Tag(name = "content/rest/contents/all", description = "Listing content merged across content types (News, Notes)")
 public class ContentRest {
 
-  private static final Log LOG = ExoLogger.getLogger(ContentRest.class);
+  private static final Log LOG          = ExoLogger.getLogger(ContentRest.class);
+
+  private static final int MAX_LIMIT    = 100;
 
   @Autowired
   private ContentService   contentService;
@@ -102,6 +107,7 @@ public class ContentRest {
                                                           List<Long> excludeCategoryIds) {
     Identity currentIdentity = ConversationState.getCurrent().getIdentity();
     try {
+      int clampedLimit = Math.min(limit, MAX_LIMIT);
       ContentFilter filter = new ContentFilter();
       filter.setContentTypes(contentTypes);
       filter.setStatus(status);
@@ -109,27 +115,36 @@ public class ContentRest {
       filter.setCategoryId(categoryId);
       filter.setSearchText(text);
       filter.setOffset(offset);
-      filter.setLimit(limit);
+      filter.setLimit(clampedLimit);
       filter.setIncludeCategoryIds(includeCategoryIds);
       filter.setExcludeCategoryIds(excludeCategoryIds);
 
-      List<ContentEntry> items = contentService.getContentList(filter, currentIdentity);
+      ContentPage contentPage = contentService.getContentList(filter, currentIdentity);
+      List<ContentEntry> items = contentPage.getItems();
 
       ContentEntryList result = new ContentEntryList();
       result.setItems(items);
       result.setOffset(offset);
-      result.setLimit(limit);
+      result.setLimit(clampedLimit);
       result.setSize(items.size());
+      result.setHasMore(contentPage.isHasMore());
       result.setCategoryIds(items.stream()
                                  .map(ContentEntry::getCategoryIds)
-                                 .filter(java.util.Objects::nonNull)
+                                 .filter(Objects::nonNull)
                                  .flatMap(List::stream)
                                  .distinct()
-                                 .collect(java.util.stream.Collectors.toList()));
+                                 .collect(Collectors.toList()));
       return ResponseEntity.ok(result);
+    } catch (ObjectNotFoundException e) {
+      return ResponseEntity.notFound().build();
     } catch (IllegalAccessException e) {
       LOG.debug("User '{}' is not authorized to access the requested content", currentIdentity.getUserId(), e);
       return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+    } catch (IllegalArgumentException e) {
+      // The typed ResponseEntity<ContentEntryList> return can't carry the
+      // exception's message code the way other endpoints do - trading that
+      // off for a strongly-typed success body.
+      return ResponseEntity.badRequest().body(null);
     } catch (Exception e) {
       LOG.warn("Error while retrieving the content list for user '{}'", currentIdentity.getUserId(), e);
       return ResponseEntity.internalServerError().build();

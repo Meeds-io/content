@@ -88,6 +88,7 @@ public class NewsSearchConnector {
       "must":{ "query_string" :{
               "fields": ["body", "posterName", "summary","title"],
               "default_operator": "AND",
+              "analyze_wildcard": true,
               "query": "@term@"}
               },""";
 

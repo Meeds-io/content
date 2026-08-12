@@ -270,7 +270,7 @@ export default {
       return this.$contentListService.getContentList(this.currentFilter())
         .then(data => {
           this.items = data?.items || [];
-          this.hasMore = (data?.size || 0) >= this.limit;
+          this.hasMore = !!data?.hasMore;
         })
         .finally(() => this.loading = false);
     },
@@ -280,7 +280,7 @@ export default {
       return this.$contentListService.getContentList(this.currentFilter())
         .then(data => {
           this.items = [...this.items, ...(data?.items || [])];
-          this.hasMore = (data?.size || 0) >= this.limit;
+          this.hasMore = !!data?.hasMore;
         })
         .finally(() => this.loadingMore = false);
     },

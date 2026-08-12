@@ -68,7 +68,7 @@ public class ContentEntry {
   private String       spaceUrl;
 
   private String       lang;
-  
+
   private String       spaceGroupId;
 
   private String       parentId;

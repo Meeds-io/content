@@ -1611,6 +1611,11 @@ public class NewsService {
     if (MapUtils.isNotEmpty(article.getParameters())) {
       newsPageProperties.putAll(article.getParameters());
     }
+    // A brand-new article page is indexed into the notes index immediately
+    // by PageIndexingListener.postAddPage - without this, it stays
+    // duplicated (once as news, once as notes) until the article's first
+    // update, since that's the only other place this cleanup runs.
+    referOrDeReferArticlePage(article, articlePage, newsPageProperties);
 
     metadataService.createMetadataItem(newsPageObject,
                                        NEWS_METADATA_KEY,
@@ -1624,12 +1629,13 @@ public class NewsService {
       properties.put(PAGE_REFERRED, Boolean.TRUE.toString());
       properties.put(DE_REFER_PAGE_ID, articlePage.getParentPageId());
     } else {
-      boolean wasReferred = Boolean.parseBoolean(properties.get(PAGE_REFERRED));
       properties.remove(PAGE_REFERRED);
       properties.remove(DE_REFER_PAGE_ID);
-      if (wasReferred) {
-        indexingService.unindex(WikiPageIndexingServiceConnector.TYPE, articlePage.getId());
-      }
+      // Articles are wiki pages, so PageIndexingListener indexes every save
+      // into the notes index too - unconditionally undoing that here on
+      // every non-referred update is what keeps an article from showing up
+      // twice in the merged Content List (once as news, once as notes).
+      indexingService.unindex(WikiPageIndexingServiceConnector.TYPE, articlePage.getId());
     }
   }
 

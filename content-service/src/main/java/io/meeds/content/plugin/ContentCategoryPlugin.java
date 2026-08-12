@@ -29,9 +29,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import org.exoplatform.container.PortalContainer;
+import org.exoplatform.services.log.ExoLogger;
+import org.exoplatform.services.log.Log;
+import org.exoplatform.services.security.ConversationState;
+import org.exoplatform.services.security.Identity;
+import org.exoplatform.services.security.IdentityRegistry;
 import org.exoplatform.wiki.service.NoteService;
 
-import io.meeds.content.news.service.NewsService;
 import io.meeds.content.utils.ContentUtils;
 import io.meeds.social.activity.plugin.ActivityCategoryPlugin;
 import io.meeds.social.category.model.CategoryObject;
@@ -59,6 +63,8 @@ import jakarta.annotation.PostConstruct;
 @Component
 public class ContentCategoryPlugin implements CategoryPlugin {
 
+  private static final Log      LOG                      = ExoLogger.getLogger(ContentCategoryPlugin.class);
+
   // Upper bound on how many linked objects of a candidate category are
   // inspected to find one that still genuinely exists.
   private static final int      LINKED_OBJECTS_FETCH_CAP = 20;
@@ -75,10 +81,10 @@ public class ContentCategoryPlugin implements CategoryPlugin {
   private CategoryPluginService categoryPluginService;
 
   @Autowired
-  private NewsService           newsService;
+  private NoteService           noteService;
 
   @Autowired
-  private NoteService           noteService;
+  private IdentityRegistry      identityRegistry;
 
   @PostConstruct
   public void init() {
@@ -104,7 +110,7 @@ public class ContentCategoryPlugin implements CategoryPlugin {
   }
 
   @Override
-  public List<Long> getCategoryIds() {
+  public List<Long> getCategoryIds(long spaceId, String username) {
     List<String> queryTypes = Arrays.asList(ContentUtils.CONTENT_TYPE_NEWS,
                                             ContentUtils.CONTENT_TYPE_NOTES,
                                             ActivityCategoryPlugin.OBJECT_TYPE);
@@ -113,20 +119,50 @@ public class ContentCategoryPlugin implements CategoryPlugin {
     candidateIds.addAll(categoryLinkService.getLinkedIds(ContentUtils.CONTENT_TYPE_NOTES));
     candidateIds.addAll(categoryLinkService.getLinkedIds(ActivityCategoryPlugin.OBJECT_TYPE));
 
+    Identity identity = resolveIdentity(username);
     List<Long> categoryIds = new ArrayList<>();
     for (Long categoryId : candidateIds) {
       List<CategoryObject> linkedObjects = categoryLinkService.getLinkedObjects(categoryId,
                                                                                 queryTypes,
                                                                                 0,
                                                                                 LINKED_OBJECTS_FETCH_CAP);
-      if (linkedObjects.stream().anyMatch(this::stillExists)) {
+      if (linkedObjects.stream().anyMatch(object -> stillExistsAndVisible(object, identity))) {
         categoryIds.add(categoryId);
+      } else if (linkedObjects.size() >= LINKED_OBJECTS_FETCH_CAP) {
+        LOG.debug("Category {} has at least {} linked objects, none of the first {} still exist/are visible - "
+            + "the fetch cap may be hiding a genuinely-visible one further down",
+                 categoryId,
+                 LINKED_OBJECTS_FETCH_CAP,
+                 LINKED_OBJECTS_FETCH_CAP);
       }
     }
     return categoryIds;
   }
 
-  private boolean stillExists(CategoryObject object) {
+  private Identity resolveIdentity(String username) {
+    Identity identity = identityRegistry.getIdentity(username);
+    if (identity != null) {
+      return identity;
+    }
+    // IdentityRegistry is an in-memory, per-node cache: a cluster node that
+    // didn't handle the login, or an evicted entry, can miss even for a
+    // genuinely authenticated user - fall back to the request's own
+    // identity (set once per request, unaffected by that cache) before
+    // giving up.
+    ConversationState conversationState = ConversationState.getCurrent();
+    return conversationState == null ? null : conversationState.getIdentity();
+  }
+
+  private boolean stillExistsAndVisible(CategoryObject object, Identity identity) {
+    if (identity == null) {
+      // Neither IdentityRegistry nor ConversationState could resolve who's
+      // asking (e.g. a background/system call) - NoteService dereferences
+      // the identity unguarded, so bail out rather than risk an NPE here.
+      LOG.debug("No identity available to resolve visibility of {}:{} - treating it as not visible",
+               object.getType(),
+               object.getId());
+      return false;
+    }
     try {
       // An Activity-typed link is generic (any app can tag an activity with a
       // category, e.g. a plain status update) - it only counts as "content"
@@ -135,15 +171,22 @@ public class ContentCategoryPlugin implements CategoryPlugin {
       // it as "activity" for anything unrelated to this app).
       CategoryObject resolved = StringUtils.equals(object.getType(), ActivityCategoryPlugin.OBJECT_TYPE)
           ? categoryPluginService.getObject(object) : object;
-      if (StringUtils.equals(resolved.getType(), ContentUtils.CONTENT_TYPE_NEWS)) {
-        return newsService.getNewsArticleById(resolved.getId()) != null;
-      } else if (StringUtils.equals(resolved.getType(), ContentUtils.CONTENT_TYPE_NOTES)) {
-        return noteService.getNoteById(resolved.getId()) != null;
+      if (StringUtils.equals(resolved.getType(), ContentUtils.CONTENT_TYPE_NEWS)
+          || StringUtils.equals(resolved.getType(), ContentUtils.CONTENT_TYPE_NOTES)) {
+        // A News article is itself a wiki Page, so this single ACL-checked
+        // lookup both confirms existence and scopes the result to what the
+        // requesting user can actually see, without paying for a News
+        // article's full build (space/metadata/targets...) just to test
+        // "does this still exist".
+        return noteService.getNoteById(resolved.getId(), identity) != null;
       }
       return false;
     } catch (Exception e) {
-      // A dangling/orphaned link (e.g. deleted content) must not surface its
-      // category - treat any resolution failure as "no longer exists".
+      // A dangling/orphaned link (e.g. deleted content) or a link the user
+      // isn't allowed to see must not surface its category - treat any
+      // resolution failure as "no longer exists", but keep a trace so a
+      // filter that looks empty for the wrong reason is diagnosable.
+      LOG.debug("Unable to resolve visibility of {}:{} for user '{}'", object.getType(), object.getId(), identity.getUserId(), e);
       return false;
     }
   }

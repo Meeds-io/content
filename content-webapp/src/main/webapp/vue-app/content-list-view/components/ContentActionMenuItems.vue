@@ -75,6 +75,8 @@
   </v-menu>
 </template>
 <script>
+let menuIdSequence = 0;
+
 export default {
   props: {
     item: {
@@ -84,7 +86,7 @@ export default {
   },
   data: () => ({
     menu: false,
-    menuId: `contentActionMenu${parseInt(Math.random() * 10000)}`,
+    menuId: `contentActionMenu${menuIdSequence++}`,
     publishActionExtensions: [],
   }),
   computed: {

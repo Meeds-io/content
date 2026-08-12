@@ -26,19 +26,20 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
-
-import jakarta.annotation.PostConstruct;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 
 import org.exoplatform.commons.exception.ObjectNotFoundException;
+import org.exoplatform.services.log.ExoLogger;
+import org.exoplatform.services.log.Log;
 import org.exoplatform.services.security.Identity;
 
 import io.meeds.content.model.ContentEntry;
+import io.meeds.content.model.ContentPage;
 import io.meeds.content.model.ContentType;
 import io.meeds.content.model.filter.ContentFilter;
 import io.meeds.content.plugin.ContentTypePlugin;
@@ -53,9 +54,16 @@ import io.meeds.social.category.service.CategoryService;
  * single, uniform, paginated list. Each content type is fetched independently
  * then merged/sorted/sliced in memory: this is an accepted MVP tradeoff since
  * no content type shares a common filter/pagination type with another.
+ * Plugins self-register via {@link #addPlugin(ContentTypePlugin)} (same
+ * pattern as {@code CategoryPluginService}) rather than being snapshotted
+ * once via {@code getBeansOfType} - a plugin declared in another WAR, whose
+ * Spring context the Kernel bridge merges in after this one boots, still
+ * registers correctly.
  */
 @Service
 public class ContentService {
+
+  private static final Log LOG = ExoLogger.getLogger(ContentService.class);
 
   // Upper bound on how many objects linked to a category are considered when
   // filtering the merged list by category. Combining a category filter with
@@ -64,8 +72,21 @@ public class ContentService {
   // category.
   private static final int CATEGORY_LINKS_FETCH_CAP = 500;
 
-  @Autowired
-  private ApplicationContext        applicationContext;
+  // Upper bound on how many raw rows are fetched per content type on the
+  // non-category path, independent of CATEGORY_LINKS_FETCH_CAP (that one is
+  // specifically about category-link resolution, not a generic fetch
+  // ceiling).
+  private static final int CONTENT_FETCH_CAP        = 500;
+
+  // Flat safety margin - not a multiplier - added on top of (offset + limit)
+  // when fetching each content type's raw rows, to absorb rows a plugin
+  // still drops after the fetch (permission checks, non-space notes, "My
+  // Content" author filtering...) without under-filling the requested page.
+  // Deliberately additive rather than a factor of (offset + limit): a
+  // multiplier makes every content type's per-item N+1 cost grow with page
+  // depth (page 5 at limit=20 would otherwise re-fetch/re-check 300 rows
+  // just to render 20), while a flat margin keeps that cost bounded.
+  private static final int OVER_FETCH_MARGIN        = 20;
 
   @Autowired
   private CategoryLinkService       categoryLinkService;
@@ -73,25 +94,31 @@ public class ContentService {
   @Autowired
   private CategoryService           categoryService;
 
-  private List<ContentTypePlugin>   contentTypePlugins;
+  private final Map<String, ContentTypePlugin> contentTypePluginsByType = new ConcurrentHashMap<>();
 
-  private Map<String, ContentTypePlugin> contentTypePluginsByType;
+  public void addPlugin(ContentTypePlugin plugin) {
+    ContentTypePlugin existing = contentTypePluginsByType.putIfAbsent(plugin.getType(), plugin);
+    if (existing != null) {
+      LOG.warn("Content type '{}' is already registered by {} - ignoring registration from {}",
+              plugin.getType(),
+              existing.getClass().getName(),
+              plugin.getClass().getName());
+    }
+  }
 
-  @PostConstruct
-  public void init() {
-    contentTypePlugins = new ArrayList<>(applicationContext.getBeansOfType(ContentTypePlugin.class).values());
-    contentTypePlugins.sort(Comparator.comparingInt(ContentTypePlugin::getOrder).thenComparing(ContentTypePlugin::getType));
-    contentTypePluginsByType = contentTypePlugins.stream()
-                                                 .collect(Collectors.toMap(ContentTypePlugin::getType, plugin -> plugin));
+  private List<ContentTypePlugin> getContentTypePlugins() {
+    List<ContentTypePlugin> plugins = new ArrayList<>(contentTypePluginsByType.values());
+    plugins.sort(Comparator.comparingInt(ContentTypePlugin::getOrder).thenComparing(ContentTypePlugin::getType));
+    return plugins;
   }
 
   public List<ContentType> getContentTypes() {
-    return contentTypePlugins.stream()
+    return getContentTypePlugins().stream()
                              .map(plugin -> new ContentType(plugin.getType(), plugin.getLabelKey()))
                              .collect(Collectors.toList());
   }
 
-  public List<ContentEntry> getContentList(ContentFilter filter, Identity currentIdentity) throws Exception {
+  public ContentPage getContentList(ContentFilter filter, Identity currentIdentity) throws Exception {
     int offset = filter.getOffset();
     int limit = filter.getLimit();
     boolean byCategory = filter.getCategoryId() != null;
@@ -100,8 +127,13 @@ public class ContentService {
     // paginated against another's results ahead of the merge: when
     // filtering by category, the bound is the category-links cap (so any
     // in-category item can surface regardless of its date-sort position);
-    // otherwise it is simply (offset + limit).
-    int fetchLimit = (byCategory || byIncludedCategories) ? CATEGORY_LINKS_FETCH_CAP : offset + limit;
+    // otherwise it is (offset + limit) with a flat safety margin, since a
+    // plugin may still drop rows after this raw fetch (permission checks,
+    // non-space notes, "My Content" author filtering...) - fetching only
+    // exactly (offset + limit) would silently under-fill the page in that
+    // case.
+    int fetchLimit = (byCategory || byIncludedCategories) ? CATEGORY_LINKS_FETCH_CAP
+                                                          : Math.min(offset + limit + OVER_FETCH_MARGIN, CONTENT_FETCH_CAP);
     Set<String> categoryLinkedIds = null;
     if (byCategory) {
       categoryLinkedIds = resolveCategoryLinkedIds(filter, List.of(filter.getCategoryId()));
@@ -110,7 +142,7 @@ public class ContentService {
     }
 
     List<ContentEntry> entries = new ArrayList<>();
-    for (ContentTypePlugin plugin : contentTypePlugins) {
+    for (ContentTypePlugin plugin : getContentTypePlugins()) {
       if (!filter.hasContentType(plugin.getType())) {
         continue;
       }
@@ -139,7 +171,17 @@ public class ContentService {
     } else {
       entries.sort(dateDesc);
     }
-    return entries.stream().skip(offset).limit(limit).collect(Collectors.toList());
+    // One extra row beyond the requested page, when available, tells us
+    // there is a next page without relying on the page itself coming back
+    // full-sized (a filtered-down page can be smaller than "limit" while
+    // more content still exists further down) - trimmed off before
+    // returning, only its presence is exposed, via ContentPage#hasMore.
+    List<ContentEntry> page = entries.stream().skip(offset).limit(limit + 1L).collect(Collectors.toList());
+    boolean hasMore = page.size() > limit;
+    if (hasMore) {
+      page = page.subList(0, limit);
+    }
+    return new ContentPage(page, hasMore);
   }
 
   private int categoryRank(ContentEntry entry, List<Long> includeCategoryIds) {
@@ -164,7 +206,7 @@ public class ContentService {
   }
 
   private Set<String> resolveCategoryLinkedIds(ContentFilter filter, List<Long> categoryIds) {
-    List<String> types = contentTypePlugins.stream()
+    List<String> types = getContentTypePlugins().stream()
                                            .map(ContentTypePlugin::getType)
                                            .filter(filter::hasContentType)
                                            .collect(Collectors.toList());
@@ -192,6 +234,11 @@ public class ContentService {
     for (Long categoryId : categoryIds) {
       for (Long id : withSubcategoryIds(categoryId)) {
         List<CategoryObject> linkedObjects = categoryLinkService.getLinkedObjects(id, queryTypes, 0, CATEGORY_LINKS_FETCH_CAP);
+        if (linkedObjects.size() >= CATEGORY_LINKS_FETCH_CAP) {
+          LOG.debug("Category {} has at least {} linked objects - the category filter's fetch cap was hit, some content may be missing from it",
+                    id,
+                    CATEGORY_LINKS_FETCH_CAP);
+        }
         for (CategoryObject linkedObject : linkedObjects) {
           linkedIds.add(linkedObject.getId());
         }

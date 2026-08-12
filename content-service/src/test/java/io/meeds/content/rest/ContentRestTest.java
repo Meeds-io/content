@@ -40,6 +40,7 @@ import org.exoplatform.services.security.ConversationState;
 import org.exoplatform.services.security.Identity;
 
 import io.meeds.content.model.ContentEntry;
+import io.meeds.content.model.ContentPage;
 import io.meeds.content.model.ContentType;
 import io.meeds.content.model.filter.ContentFilter;
 import io.meeds.content.rest.model.ContentEntryList;
@@ -77,7 +78,7 @@ public class ContentRestTest {
     ContentEntry entry = new ContentEntry();
     entry.setId("1");
     entry.setCategoryIds(Arrays.asList(1L, 2L));
-    when(contentService.getContentList(any(ContentFilter.class), any(Identity.class))).thenReturn(Arrays.asList(entry));
+    when(contentService.getContentList(any(ContentFilter.class), any(Identity.class))).thenReturn(new ContentPage(Arrays.asList(entry), false));
 
     ResponseEntity<ContentEntryList> response = contentRest.getContentList(null, null, null, null, null, 0, 20, null, null);
 
@@ -85,6 +86,46 @@ public class ContentRestTest {
     ContentEntryList body = response.getBody();
     assertEquals(1, body.getSize());
     assertEquals(Arrays.asList(1L, 2L), body.getCategoryIds());
+  }
+
+  @Test
+  public void testGetContentListClampsLimitToMax() throws Exception {
+    when(contentService.getContentList(any(ContentFilter.class), any(Identity.class))).thenReturn(new ContentPage(Arrays.asList(), false));
+
+    ResponseEntity<ContentEntryList> response = contentRest.getContentList(null, null, null, null, null, 0, 100000, null, null);
+
+    assertEquals(200, response.getStatusCodeValue());
+    assertEquals(100, response.getBody().getLimit());
+  }
+
+  @Test
+  public void testGetContentListPropagatesHasMore() throws Exception {
+    ContentEntry entry = new ContentEntry();
+    entry.setId("1");
+    when(contentService.getContentList(any(ContentFilter.class), any(Identity.class))).thenReturn(new ContentPage(Arrays.asList(entry), true));
+
+    ResponseEntity<ContentEntryList> response = contentRest.getContentList(null, null, null, null, null, 0, 20, null, null);
+
+    assertEquals(200, response.getStatusCodeValue());
+    assertEquals(true, response.getBody().isHasMore());
+  }
+
+  @Test
+  public void testGetContentListNotFound() throws Exception {
+    when(contentService.getContentList(any(ContentFilter.class), any(Identity.class))).thenThrow(new ObjectNotFoundException("not found"));
+
+    ResponseEntity<ContentEntryList> response = contentRest.getContentList(null, null, null, null, null, 0, 20, null, null);
+
+    assertEquals(404, response.getStatusCodeValue());
+  }
+
+  @Test
+  public void testGetContentListBadRequest() throws Exception {
+    when(contentService.getContentList(any(ContentFilter.class), any(Identity.class))).thenThrow(new IllegalArgumentException("bad status"));
+
+    ResponseEntity<ContentEntryList> response = contentRest.getContentList(null, null, null, null, null, 0, 20, null, null);
+
+    assertEquals(400, response.getStatusCodeValue());
   }
 
   @Test

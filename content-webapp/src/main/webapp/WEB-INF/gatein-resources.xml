@@ -37,19 +37,6 @@
 
   <portlet-skin>
     <application-name>content</application-name>
-    <portlet-name>News</portlet-name>
-    <skin-name>Enterprise</skin-name>
-    <css-path>/skin/css/newsApp.css</css-path>
-    <additional-module>newsDetails</additional-module>
-    <!-- The reader's Properties drawer reuses the shared notes metadata/featured-image
-         drawers; pull their existing skins (as NewsComposer does) so the reused drawer
-         renders correctly wherever the reader loads. -->
-    <additional-module>Notes</additional-module>
-    <additional-module>ImageCropper</additional-module>
-  </portlet-skin>
-
-  <portlet-skin>
-    <application-name>content</application-name>
     <portlet-name>NewsComposer</portlet-name>
     <skin-name>Enterprise</skin-name>
     <css-path>/skin/css/newsComposer.css</css-path>

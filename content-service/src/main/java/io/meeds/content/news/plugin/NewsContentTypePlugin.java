@@ -46,7 +46,10 @@ import io.meeds.content.news.model.filter.NewsFilter;
 import io.meeds.content.news.service.NewsService;
 import io.meeds.content.news.utils.NewsUtils;
 import io.meeds.content.plugin.ContentTypePlugin;
+import io.meeds.content.service.ContentService;
 import io.meeds.content.utils.ContentUtils;
+
+import jakarta.annotation.PostConstruct;
 
 @Component
 public class NewsContentTypePlugin implements ContentTypePlugin {
@@ -65,6 +68,14 @@ public class NewsContentTypePlugin implements ContentTypePlugin {
 
   @Autowired
   private FavoriteService favoriteService;
+
+  @Autowired
+  private ContentService  contentService;
+
+  @PostConstruct
+  public void init() {
+    contentService.addPlugin(this);
+  }
 
   @Override
   public String getType() {
@@ -104,10 +115,13 @@ public class NewsContentTypePlugin implements ContentTypePlugin {
       return Collections.emptyList();
     }
     String status = effectiveStatus(filter.getStatus());
+    // Resolved once for the whole page rather than once per item: the
+    // viewer's own identity id never changes across the loop.
+    long userIdentityId = Long.parseLong(identityManager.getOrCreateUserIdentity(currentIdentity.getUserId()).getId());
     return newsList.stream()
                    .filter(Objects::nonNull)
                    .filter(news -> categoryLinkedIds == null || categoryLinkedIds.contains(news.getId()))
-                   .map(news -> toContentEntry(news, status, currentIdentity))
+                   .map(news -> toContentEntry(news, status, userIdentityId))
                    .collect(Collectors.toList());
   }
 
@@ -173,7 +187,7 @@ public class NewsContentTypePlugin implements ContentTypePlugin {
     return StringUtils.isBlank(status) ? ContentUtils.STATUS_PUBLISHED : status;
   }
 
-  private ContentEntry toContentEntry(News news, String status, Identity currentIdentity) {
+  private ContentEntry toContentEntry(News news, String status, long userIdentityId) {
     ContentEntry entry = new ContentEntry();
     entry.setId(news.getId());
     entry.setContentType(ContentUtils.CONTENT_TYPE_NEWS);
@@ -205,22 +219,17 @@ public class NewsContentTypePlugin implements ContentTypePlugin {
     entry.setCanDelete(news.isCanDelete());
     entry.setCanPublish(news.isCanPublish());
     entry.setCanSchedule(news.isCanSchedule());
-    entry.setFavorite(isFavorite(news.getId(), currentIdentity));
+    entry.setFavorite(isFavorite(news.getId(), userIdentityId));
     return entry;
   }
 
-  private boolean isFavorite(String newsId, Identity currentIdentity) {
-    long userIdentityId = Long.parseLong(identityManager.getOrCreateUserIdentity(currentIdentity.getUserId()).getId());
+  private boolean isFavorite(String newsId, long userIdentityId) {
     return favoriteService.isFavorite(new Favorite(ContentUtils.CONTENT_TYPE_NEWS, newsId, null, userIdentityId));
   }
 
   private String resolveNewsSummary(News news) {
     String summary = news.getProperties() != null ? news.getProperties().getSummary() : null;
-    if (StringUtils.isBlank(summary) && StringUtils.isNotBlank(news.getBody())) {
-      String text = org.exoplatform.wiki.utils.Utils.html2text(news.getBody());
-      summary = text.length() > 200 ? text.substring(0, 200) : text;
-    }
-    return summary;
+    return ContentUtils.resolveSummary(summary, news.getBody());
   }
 
 }

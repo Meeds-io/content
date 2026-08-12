@@ -140,7 +140,6 @@
               <compress>false</compress>
               <includes>
                 <include>newsComposer.less</include>
-                <include>newsApp.less</include>
                 <include>newsListView.less</include>
                 <include>newsDetails.less</include>
                 <include>newsExtensions.less</include>

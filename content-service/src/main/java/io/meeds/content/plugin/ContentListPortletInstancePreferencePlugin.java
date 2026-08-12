@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
-package io.meeds.content.news.plugin;
+package io.meeds.content.plugin;
 
 import java.util.Collections;
 import java.util.List;
@@ -32,7 +32,10 @@ import org.exoplatform.container.ExoContainerContext;
 import org.exoplatform.portal.config.model.Application;
 import org.exoplatform.portal.pom.spi.portlet.Portlet;
 import org.exoplatform.portal.pom.spi.portlet.Preference;
+import org.exoplatform.services.log.ExoLogger;
+import org.exoplatform.services.log.Log;
 
+import io.meeds.content.utils.ContentUtils;
 import io.meeds.layout.model.PortletInstanceContext;
 import io.meeds.layout.model.PortletInstancePreference;
 import io.meeds.layout.plugin.PortletInstancePreferencePlugin;
@@ -44,7 +47,9 @@ import lombok.SneakyThrows;
 
 @Component
 @Profile("layout")
-public class NewsListPortletInstancePreferencePlugin implements PortletInstancePreferencePlugin {
+public class ContentListPortletInstancePreferencePlugin implements PortletInstancePreferencePlugin {
+
+  private static final Log       LOG                            = ExoLogger.getLogger(ContentListPortletInstancePreferencePlugin.class);
 
   private static final String    APPLICATION_ID_PREFERENCE_NAME = "applicationId";
 
@@ -61,12 +66,16 @@ public class NewsListPortletInstancePreferencePlugin implements PortletInstanceP
     if (portletInstanceService == null) {
       portletInstanceService = ExoContainerContext.getService(PortletInstanceService.class);
     }
+    if (portletInstanceService == null) {
+      LOG.warn("PortletInstanceService is not available - Content List instances won't carry their header title over when created from a saved instance");
+      return;
+    }
     portletInstanceService.addPortletInstancePreferencePlugin(this);
   }
 
   @Override
   public String getPortletName() {
-    return "NewsListView";
+    return "ContentListView";
   }
 
   @Override
@@ -84,7 +93,9 @@ public class NewsListPortletInstancePreferencePlugin implements PortletInstanceP
         return Collections.emptyList();
       }
     }
-    TranslationField translationField = translationService.getTranslationField("newsListView", settingName, "headerNameInput");
+    TranslationField translationField = translationService.getTranslationField(ContentUtils.CONTENT_LIST_VIEW_TYPE,
+                                                                               settingName,
+                                                                               ContentUtils.CONTENT_LIST_HEADER_TITLE_FIELD);
     if (translationField != null) {
       return Collections.singletonList(new PortletInstancePreference(DATA_INIT_PREFERENCE_NAME,
                                                                      JsonUtils.toJsonString(translationField)));

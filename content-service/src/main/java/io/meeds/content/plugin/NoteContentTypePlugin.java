@@ -51,8 +51,11 @@ import org.exoplatform.wiki.utils.NoteConstants;
 import io.meeds.content.model.ContentEntry;
 import io.meeds.content.model.filter.ContentFilter;
 import io.meeds.content.news.utils.NewsUtils;
+import io.meeds.content.service.ContentService;
 import io.meeds.content.utils.ContentUtils;
 import io.meeds.notes.plugin.NoteCategoryPlugin;
+
+import jakarta.annotation.PostConstruct;
 
 @Component
 public class NoteContentTypePlugin implements ContentTypePlugin {
@@ -73,6 +76,14 @@ public class NoteContentTypePlugin implements ContentTypePlugin {
 
   @Autowired
   private FavoriteService favoriteService;
+
+  @Autowired
+  private ContentService  contentService;
+
+  @PostConstruct
+  public void init() {
+    contentService.addPlugin(this);
+  }
 
   @Override
   public String getType() {
@@ -130,6 +141,9 @@ public class NoteContentTypePlugin implements ContentTypePlugin {
     if (CollectionUtils.isEmpty(results)) {
       return Collections.emptyList();
     }
+    // Resolved once for the whole page rather than once per item: the
+    // viewer's own identity id never changes across the loop.
+    long userIdentityId = Long.parseLong(identityManager.getOrCreateUserIdentity(currentIdentity.getUserId()).getId());
     List<ContentEntry> entries = new ArrayList<>();
     for (SearchResult result : results) {
       String noteId = String.valueOf(result.getId());
@@ -142,7 +156,7 @@ public class NoteContentTypePlugin implements ContentTypePlugin {
             && StringUtils.equals(PortalConfig.GROUP_TYPE, note.getWikiType())
             && (!StringUtils.equals(status, ContentUtils.STATUS_MY_CONTENT)
                 || StringUtils.equals(note.getAuthor(), currentIdentity.getUserId()))) {
-          entries.add(toContentEntry(note, currentIdentity));
+          entries.add(toContentEntry(note, currentIdentity, userIdentityId));
         }
       } catch (IllegalAccessException e) {
         // Current user cannot view this note, skip it.
@@ -236,7 +250,7 @@ public class NoteContentTypePlugin implements ContentTypePlugin {
     return entry;
   }
 
-  private ContentEntry toContentEntry(Page note, Identity currentIdentity) {
+  private ContentEntry toContentEntry(Page note, Identity currentIdentity, long userIdentityId) {
     ContentEntry entry = new ContentEntry();
     entry.setId(note.getId());
     entry.setContentType(ContentUtils.CONTENT_TYPE_NOTES);
@@ -274,12 +288,11 @@ public class NoteContentTypePlugin implements ContentTypePlugin {
     entry.setCanDelete(entry.isCanEdit());
     entry.setCanPublish(canPublishNote(note, entry.isCanEdit()));
     entry.setCanSchedule(false);
-    entry.setFavorite(isFavorite(note.getId(), currentIdentity));
+    entry.setFavorite(isFavorite(note.getId(), userIdentityId));
     return entry;
   }
 
-  private boolean isFavorite(String noteId, Identity currentIdentity) {
-    long userIdentityId = Long.parseLong(identityManager.getOrCreateUserIdentity(currentIdentity.getUserId()).getId());
+  private boolean isFavorite(String noteId, long userIdentityId) {
     return favoriteService.isFavorite(new Favorite(ContentUtils.CONTENT_TYPE_NOTES, noteId, null, userIdentityId));
   }
 
@@ -292,11 +305,7 @@ public class NoteContentTypePlugin implements ContentTypePlugin {
 
   private String resolveNoteSummary(Page note) {
     String summary = note.getProperties() != null ? note.getProperties().getSummary() : null;
-    if (StringUtils.isBlank(summary) && StringUtils.isNotBlank(note.getContent())) {
-      String text = org.exoplatform.wiki.utils.Utils.html2text(note.getContent());
-      summary = text.length() > 200 ? text.substring(0, 200) : text;
-    }
-    return summary;
+    return ContentUtils.resolveSummary(summary, note.getContent());
   }
 
 }

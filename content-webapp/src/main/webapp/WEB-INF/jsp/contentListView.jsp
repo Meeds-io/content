@@ -1,4 +1,5 @@
 <%@ taglib uri="http://java.sun.com/portlet_2_0" prefix="portlet" %>
+<%@ page import="org.apache.commons.text.StringEscapeUtils" %>
 
 <portlet:defineObjects />
 <portlet:actionURL var="saveSettingsURL" />
@@ -34,12 +35,12 @@
         applicationId: <%= "'" + applicationId + "'" %>,
         saveSettingsURL: <%= "'" + saveSettingsURL + "'" %>,
         canEdit: <%= canEdit %>,
-        showHeader: <%= "'" + showHeader + "'" %>,
-        headerTitle: <%= headerTitle == null ? null : "'" + headerTitle.replace("'", "\\'") + "'" %>,
-        allowFilteringPerCategory: <%= "'" + allowFilteringPerCategory + "'" %>,
-        categoryDepth: <%= "'" + categoryDepth + "'" %>,
-        categoryIds: <%= "'" + categoryIds + "'" %>,
-        excludeCategoryIds: <%= "'" + excludeCategoryIds + "'" %>
+        showHeader: <%= "'" + StringEscapeUtils.escapeEcmaScript(showHeader) + "'" %>,
+        headerTitle: <%= headerTitle == null ? null : "'" + StringEscapeUtils.escapeEcmaScript(headerTitle) + "'" %>,
+        allowFilteringPerCategory: <%= "'" + StringEscapeUtils.escapeEcmaScript(allowFilteringPerCategory) + "'" %>,
+        categoryDepth: <%= "'" + StringEscapeUtils.escapeEcmaScript(categoryDepth) + "'" %>,
+        categoryIds: <%= "'" + StringEscapeUtils.escapeEcmaScript(categoryIds) + "'" %>,
+        excludeCategoryIds: <%= "'" + StringEscapeUtils.escapeEcmaScript(excludeCategoryIds) + "'" %>
       }));
     </script>
   </div>
