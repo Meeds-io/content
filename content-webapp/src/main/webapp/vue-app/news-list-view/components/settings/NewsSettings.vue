@@ -21,12 +21,12 @@
 <template>
   <v-sheet 
     v-if="showSettingsContainer"
-    height="30"
-    class="background-transparent d-flex flex-row px-2">
+    min-height="30"
+    class="background-transparent d-flex flex-row align-center px-2">
     <div class="d-flex latestNewsTitleContainer flex-column flex-grow-1 my-1 text-truncate">
       <span
         v-if="showHeader"
-        class="widget-text-header text-truncate"
+        class="widget-text-header text-truncate d-block line-height-normal"
         :title="headerTitle">{{ headerTitle }}</span>
     </div>
     <div v-if="showSeeAll && !hideSeeAllButton" class="d-flex flex-column my-auto me-2">
