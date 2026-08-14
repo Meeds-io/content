@@ -51,7 +51,7 @@ const lang = eXo && eXo.env && eXo.env.portal.language || 'en';
 // should expose the locale resources as REST API
 const url = `/content/i18n/locale.portlet.content.Content?lang=${lang}`;
 
-export function init(params) {
+export async function init(params) {
   const appId = params.appId;
   const applicationId = params.applicationId;
   const saveSettingsURL = params.saveSettingsURL;
@@ -62,41 +62,46 @@ export function init(params) {
   const categoryDepth = Number.isNaN(parsedCategoryDepth) ? 4 : parsedCategoryDepth;
   const categoryIds = params.categoryIds ? params.categoryIds.split(',').map(id => parseInt(id)) : [];
   const excludeCategoryIds = params.excludeCategoryIds ? params.excludeCategoryIds.split(',').map(id => parseInt(id)) : [];
+  const defaultLanguage = eXo?.env?.portal?.defaultLanguage;
 
-  exoi18n.loadLanguageAsync(lang, url).then(i18n => {
-    Vue.createApp({
-      data: {
-        applicationId,
-        headerTranslations: null,
-        saveSettingsURL,
-        canEdit,
-        showHeader,
-        headerTitle: null,
-        allowFilteringPerCategory,
-        categoryDepth,
-        categoryIds,
-        excludeCategoryIds,
-        language: lang,
-        defaultLanguage: eXo?.env?.portal?.defaultLanguage,
-      },
-      created() {
-        Vue.prototype.$translationService.getTranslations('contentListView', applicationId, 'headerTitleInput').then(translations => {
-          this.headerTranslations = translations;
-          this.headerTitle = translations?.[lang] || translations?.[this.defaultLanguage] || params.headerTitle || null;
-        });
-      },
-      template: `<content-list-view
-        id="${appId}"
-        :can-edit="canEdit"
-        :save-settings-url="saveSettingsURL"
-        :show-header="showHeader"
-        :header-title="headerTitle"
-        :allow-filtering-per-category="allowFilteringPerCategory"
-        :category-depth="categoryDepth"
-        :category-ids="categoryIds"
-        :exclude-category-ids="excludeCategoryIds" />`,
-      vuetify: Vue.prototype.vuetifyOptions,
-      i18n,
-    }, `#${appId}`, 'Content List View');
-  });
+  // Reference data (i18n + header title translations) is awaited before
+  // mounting, matching how the other portlets (activity stream, documents...)
+  // boot: the header title is present at first render instead of popping in,
+  // and mounting after these awaits means the dynamic page layout has
+  // finished (re-)installing this application's container by the time the
+  // app attaches to it.
+  const i18n = await exoi18n.loadLanguageAsync(lang, url);
+  const headerTranslations = await Vue.prototype.$translationService
+    .getTranslations('contentListView', applicationId, 'headerTitleInput')
+    .catch(() => null);
+  const headerTitle = headerTranslations?.[lang] || headerTranslations?.[defaultLanguage] || params.headerTitle || null;
+
+  await Vue.createApp({
+    data: {
+      applicationId,
+      headerTranslations,
+      saveSettingsURL,
+      canEdit,
+      showHeader,
+      headerTitle,
+      allowFilteringPerCategory,
+      categoryDepth,
+      categoryIds,
+      excludeCategoryIds,
+      language: lang,
+      defaultLanguage,
+    },
+    template: `<content-list-view
+      id="${appId}"
+      :can-edit="canEdit"
+      :save-settings-url="saveSettingsURL"
+      :show-header="showHeader"
+      :header-title="headerTitle"
+      :allow-filtering-per-category="allowFilteringPerCategory"
+      :category-depth="categoryDepth"
+      :category-ids="categoryIds"
+      :exclude-category-ids="excludeCategoryIds" />`,
+    vuetify: Vue.prototype.vuetifyOptions,
+    i18n,
+  }, `#${appId}`, 'Content List View');
 }
