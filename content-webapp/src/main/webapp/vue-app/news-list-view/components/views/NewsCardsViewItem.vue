@@ -55,8 +55,8 @@
         class="position-absolute b-0 r-0 ma-2 white rounded-pill">
         <category-chip
           :category="firstCategory"
-          tabindex="-1"
-          small />
+          small
+          tabindex="-1" />
       </div>
     </v-sheet>
     <div
@@ -121,8 +121,8 @@
               class="d-flex justify-end mt-2 mb-2">
               <category-chip
                 :category="firstCategory"
-                tabindex="-1"
-                small />
+                small
+                tabindex="-1" />
             </div>
             <div
               v-if="showArticleSummary && hasSummary"
@@ -247,7 +247,7 @@ export default {
     blurContentHover(event) {
       event.target.blur();
       this.$refs.newsCard.focus();
-    }
+    },
   }
 };
 </script>

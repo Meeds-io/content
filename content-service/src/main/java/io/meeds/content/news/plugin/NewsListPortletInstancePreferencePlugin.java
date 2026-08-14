@@ -46,7 +46,7 @@ import lombok.SneakyThrows;
 @Profile("layout")
 public class NewsListPortletInstancePreferencePlugin implements PortletInstancePreferencePlugin {
 
-  private static final String    CMS_SETTING_PREFERENCE_NAME = "applicationId";
+  private static final String    APPLICATION_ID_PREFERENCE_NAME = "applicationId";
 
   private static final String    DATA_INIT_PREFERENCE_NAME   = "data.init";
 
@@ -97,7 +97,7 @@ public class NewsListPortletInstancePreferencePlugin implements PortletInstanceP
     if (preferences == null) {
       return null;
     }
-    Preference settingNamePreference = preferences.getPreference(CMS_SETTING_PREFERENCE_NAME);
+    Preference settingNamePreference = preferences.getPreference(APPLICATION_ID_PREFERENCE_NAME);
     return settingNamePreference == null ? null : settingNamePreference.getValue();
   }
 

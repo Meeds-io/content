@@ -1611,6 +1611,11 @@ public class NewsService {
     if (MapUtils.isNotEmpty(article.getParameters())) {
       newsPageProperties.putAll(article.getParameters());
     }
+    // A brand-new article page is indexed into the notes index immediately
+    // by PageIndexingListener.postAddPage - without this, it stays
+    // duplicated (once as news, once as notes) until the article's first
+    // update, since that's the only other place this cleanup runs.
+    referOrDeReferArticlePage(article, articlePage, newsPageProperties);
 
     metadataService.createMetadataItem(newsPageObject,
                                        NEWS_METADATA_KEY,
@@ -1626,6 +1631,10 @@ public class NewsService {
     } else {
       properties.remove(PAGE_REFERRED);
       properties.remove(DE_REFER_PAGE_ID);
+      // Articles are wiki pages, so PageIndexingListener indexes every save
+      // into the notes index too - unconditionally undoing that here on
+      // every non-referred update is what keeps an article from showing up
+      // twice in the merged Content List (once as news, once as notes).
       indexingService.unindex(WikiPageIndexingServiceConnector.TYPE, articlePage.getId());
     }
   }
@@ -1875,17 +1884,13 @@ public class NewsService {
     metadataFilter.setMetadataName(NEWS_METADATA_NAME);
     metadataFilter.setMetadataTypeName(NEWS_METADATA_TYPE.getName());
     metadataFilter.setMetadataObjectTypes(List.of(NEWS_METADATA_PAGE_OBJECT_TYPE));
-    metadataFilter.setMetadataProperties(Map.of(NEWS_ACTIVITY_POSTED,
-                                                "true",
-                                                NEWS_PUBLICATION_STATE,
+    metadataFilter.setMetadataProperties(Map.of(NEWS_PUBLICATION_STATE,
                                                 POSTED,
                                                 NEWS_DELETED,
                                                 "false"));
     metadataFilter.setMetadataSpaceIds(NewsUtils.getMyFilteredSpacesIds(currentIdentity, filter.getSpaces()));
     metadataFilter.setSortField(filter.getSortField());
-    metadataFilter.setCombinedMetadataProperties(Map.of(NEWS_ACTIVITY_POSTED,
-                                                        "true",
-                                                        PUBLISHED,
+    metadataFilter.setCombinedMetadataProperties(Map.of(PUBLISHED,
                                                         "true",
                                                         NEWS_AUDIENCE,
                                                         NewsUtils.ALL_NEWS_AUDIENCE,
@@ -1945,17 +1950,13 @@ public class NewsService {
     metadataFilter.setMetadataTypeName(NEWS_METADATA_TYPE.getName());
     metadataFilter.setMetadataObjectTypes(List.of(NEWS_METADATA_PAGE_OBJECT_TYPE));
     metadataFilter.setCreatorId(Long.parseLong(identityManager.getOrCreateUserIdentity(filter.getAuthor()).getId()));
-    metadataFilter.setMetadataProperties(Map.of(NEWS_ACTIVITY_POSTED,
-                                                "true",
-                                                NEWS_PUBLICATION_STATE,
+    metadataFilter.setMetadataProperties(Map.of(NEWS_PUBLICATION_STATE,
                                                 POSTED,
                                                 NEWS_DELETED,
                                                 "false"));
     metadataFilter.setMetadataSpaceIds(NewsUtils.getMyFilteredSpacesIds(currentIdentity, filter.getSpaces()));
     metadataFilter.setSortField(filter.getSortField());
-    metadataFilter.setCombinedMetadataProperties(Map.of(NEWS_ACTIVITY_POSTED,
-                                                        "true",
-                                                        PUBLISHED,
+    metadataFilter.setCombinedMetadataProperties(Map.of(PUBLISHED,
                                                         "true",
                                                         NEWS_AUDIENCE,
                                                         NewsUtils.ALL_NEWS_AUDIENCE,

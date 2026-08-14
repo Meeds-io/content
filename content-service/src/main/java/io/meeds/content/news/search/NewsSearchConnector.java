@@ -88,6 +88,7 @@ public class NewsSearchConnector {
       "must":{ "query_string" :{
               "fields": ["body", "posterName", "summary","title"],
               "default_operator": "AND",
+              "analyze_wildcard": true,
               "query": "@term@"}
               },""";
 
@@ -209,7 +210,15 @@ public class NewsSearchConnector {
       return "";
     }
     term = removeSpecialCharacters(term);
-    return SEARCH_QUERY_TERM.replace("@term@", term);
+    // A trailing wildcard is required on each word for query_string to match
+    // a partial/prefix term (e.g. while the user is still typing) - without
+    // it, query_string only matches a whole token, so searching by the
+    // first few letters of a title/body/summary word returns nothing.
+    String wildcardTerm = Arrays.stream(term.split(" "))
+                                .filter(StringUtils::isNotBlank)
+                                .map(word -> word.trim() + "*")
+                                .collect(Collectors.joining(" "));
+    return SEARCH_QUERY_TERM.replace("@term@", wildcardTerm);
   }
 
   private Long parseLong(JSONObject hitSource, String key) {

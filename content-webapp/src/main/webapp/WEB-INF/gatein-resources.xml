@@ -37,19 +37,6 @@
 
   <portlet-skin>
     <application-name>content</application-name>
-    <portlet-name>News</portlet-name>
-    <skin-name>Enterprise</skin-name>
-    <css-path>/skin/css/newsApp.css</css-path>
-    <additional-module>newsDetails</additional-module>
-    <!-- The reader's Properties drawer reuses the shared notes metadata/featured-image
-         drawers; pull their existing skins (as NewsComposer does) so the reused drawer
-         renders correctly wherever the reader loads. -->
-    <additional-module>Notes</additional-module>
-    <additional-module>ImageCropper</additional-module>
-  </portlet-skin>
-
-  <portlet-skin>
-    <application-name>content</application-name>
     <portlet-name>NewsComposer</portlet-name>
     <skin-name>Enterprise</skin-name>
     <css-path>/skin/css/newsComposer.css</css-path>
@@ -108,6 +95,47 @@
     <additional-module>ImageCropper</additional-module>
   </portlet-skin>
 
+  <!--
+    Bare/shared alias of the ContentListView portlet's own module (below), so
+    other portlets (NewsListView, newsDetails) can depend on it too. A module
+    declared inside a <portlet> block is only resolvable while that specific
+    portlet is present on the page ("Can't find dependent resource
+    SHARED/ContentListView" otherwise) - this alias points at the identical
+    bundle but is registered at the shared/portal scope.
+  -->
+  <module>
+    <name>ContentListShared</name>
+    <load-group>contentGRP</load-group>
+    <script>
+      <minify>false</minify>
+      <path>/js/contentListView.bundle.js</path>
+    </script>
+    <depends>
+      <module>vue</module>
+    </depends>
+    <depends>
+      <module>eXoVueI18n</module>
+    </depends>
+    <depends>
+      <module>vuetify</module>
+    </depends>
+    <depends>
+      <module>extensionRegistry</module>
+    </depends>
+    <depends>
+      <module>commonVueComponents</module>
+    </depends>
+    <depends>
+      <module>categoryVueComponents</module>
+    </depends>
+    <depends>
+      <module>applicationToolbarComponent</module>
+    </depends>
+    <depends>
+      <module>NotesPublication</module>
+    </depends>
+  </module>
+
   <portlet>
     <name>NewsComposer</name>
     <module>
@@ -149,41 +177,6 @@
       </depends>
       <depends>
         <module>ExtendedDomPurify</module>
-      </depends>
-    </module>
-  </portlet>
-
-  <portlet>
-    <name>News</name>
-    <module>
-      <script>
-        <minify>false</minify>
-        <path>/js/news.bundle.js</path>
-      </script>
-      <depends>
-        <module>vue</module>
-      </depends>
-      <depends>
-        <module>vuetify</module>
-      </depends>
-      <depends>
-        <module>eXoVueI18n</module>
-      </depends>
-      <depends>
-        <module>commonVueComponents</module>
-      </depends>
-      <depends>
-        <module>extensionRegistry</module>
-      </depends>
-      <depends>
-        <module>newsDetails</module>
-      </depends>
-      <depends>
-        <module>latestNews</module>
-      </depends>
-      <depends>
-        <module>jquery</module>
-        <as>$</as>
       </depends>
     </module>
   </portlet>
@@ -260,7 +253,51 @@
         <module>commonVueComponents</module>
       </depends>
       <depends>
+        <module>categoryVueComponents</module>
+      </depends>
+      <depends>
+        <module>ContentListShared</module>
+      </depends>
+      <depends>
         <module>translationField</module>
+      </depends>
+    </module>
+  </portlet>
+
+  <portlet>
+    <name>ContentListView</name>
+    <module>
+      <load-group>contentGRP</load-group>
+      <script>
+        <minify>false</minify>
+        <path>/js/contentListView.bundle.js</path>
+      </script>
+      <depends>
+        <module>vue</module>
+      </depends>
+      <depends>
+        <module>eXoVueI18n</module>
+      </depends>
+      <depends>
+        <module>vuetify</module>
+      </depends>
+      <depends>
+        <module>extensionRegistry</module>
+      </depends>
+      <depends>
+        <module>commonVueComponents</module>
+      </depends>
+      <depends>
+        <module>categoryVueComponents</module>
+      </depends>
+      <depends>
+        <module>applicationToolbarComponent</module>
+      </depends>
+      <depends>
+        <module>translationField</module>
+      </depends>
+      <depends>
+        <module>NotesPublication</module>
       </depends>
     </module>
   </portlet>
@@ -411,6 +448,12 @@
     </depends>
     <depends>
       <module>commonVueComponents</module>
+    </depends>
+    <depends>
+      <module>categoryVueComponents</module>
+    </depends>
+    <depends>
+      <module>ContentListShared</module>
     </depends>
     <depends>
       <module>commons-editor</module>

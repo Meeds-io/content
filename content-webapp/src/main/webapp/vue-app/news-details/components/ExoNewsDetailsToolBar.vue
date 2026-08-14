@@ -123,7 +123,7 @@
       v-if="categoriesListDrawerOpened"
       ref="categoriesListDrawer"
       @select="openEntryListDrawer" />
-    <category-entry-drawer ref="entryListDrawer" />
+    <content-list-drawer ref="contentListDrawer" />
   </div>
 </template>
 
@@ -257,7 +257,7 @@ export default {
       this.$refs.categoriesListDrawer.open(this.categories);
     },
     openEntryListDrawer(category) {
-      this.$refs.entryListDrawer.open(category.id, ['news', 'notes']);
+      this.$refs.contentListDrawer.open(category.id);
     },
     goBack() {
       if (this.lastVisitedPage) {

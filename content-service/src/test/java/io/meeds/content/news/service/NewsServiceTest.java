@@ -21,6 +21,7 @@ package io.meeds.content.news.service;
 import static io.meeds.content.news.service.NewsService.DRAFT;
 import static io.meeds.content.news.service.NewsService.EXTERNAL_PAGE;
 import static io.meeds.content.news.service.NewsService.NEWS_ACTIVITIES;
+import static io.meeds.content.news.service.NewsService.NEWS_ACTIVITY_POSTED;
 import static io.meeds.content.news.service.NewsService.NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME;
 import static io.meeds.content.news.service.NewsService.NEWS_DELETED;
 import static io.meeds.content.news.service.NewsService.NEWS_PUBLICATION_STATE;
@@ -67,6 +68,7 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
@@ -85,12 +87,14 @@ import org.exoplatform.social.core.manager.IdentityManager;
 import org.exoplatform.social.core.space.model.Space;
 import org.exoplatform.social.core.space.spi.SpaceService;
 import org.exoplatform.social.core.utils.MentionUtils;
+import org.exoplatform.social.metadata.MetadataFilter;
 import org.exoplatform.social.metadata.MetadataService;
 import org.exoplatform.social.metadata.model.MetadataItem;
 import org.exoplatform.social.metadata.model.MetadataKey;
 import org.exoplatform.social.metadata.model.MetadataObject;
 import org.exoplatform.upload.UploadService;
 import org.exoplatform.wiki.WikiException;
+import org.exoplatform.wiki.jpa.search.WikiPageIndexingServiceConnector;
 import org.exoplatform.wiki.model.DraftPage;
 import org.exoplatform.wiki.model.Page;
 import org.exoplatform.wiki.model.PageVersion;
@@ -190,6 +194,7 @@ public class NewsServiceTest {
     COMMONS_UTILS.close();
     PORTAL_CONTAINER.close();
     NEWS_UTILS.close();
+    CONVERSATION_STATE.close();
     MENTION_UTILS.close();
     SPACE_UTILS.close();
   }
@@ -475,6 +480,12 @@ public class NewsServiceTest {
     List<News> newsList = newsService.getNews(newsFilter, johnIdentity);
     assertNotNull(newsList);
     assertEquals(newsList.size(), 1);
+
+    ArgumentCaptor<MetadataFilter> filterCaptor = ArgumentCaptor.forClass(MetadataFilter.class);
+    verify(metadataService).getMetadataItemsByFilter(filterCaptor.capture(), anyLong(), anyLong());
+    MetadataFilter capturedFilter = filterCaptor.getValue();
+    assertFalse(capturedFilter.getMetadataProperties().containsKey(NEWS_ACTIVITY_POSTED));
+    assertFalse(capturedFilter.getCombinedMetadataProperties().containsKey(NEWS_ACTIVITY_POSTED));
   }
 
   @Test
@@ -498,6 +509,12 @@ public class NewsServiceTest {
     List<News> newsList = newsService.getNews(newsFilter, johnIdentity);
     assertNotNull(newsList);
     assertEquals(newsList.size(), 1);
+
+    ArgumentCaptor<MetadataFilter> filterCaptor = ArgumentCaptor.forClass(MetadataFilter.class);
+    verify(metadataService).getMetadataItemsByFilter(filterCaptor.capture(), anyLong(), anyLong());
+    MetadataFilter capturedFilter = filterCaptor.getValue();
+    assertFalse(capturedFilter.getMetadataProperties().containsKey(NEWS_ACTIVITY_POSTED));
+    assertFalse(capturedFilter.getCombinedMetadataProperties().containsKey(NEWS_ACTIVITY_POSTED));
   }
 
   @Test
@@ -659,6 +676,10 @@ public class NewsServiceTest {
                                                            anyMap(),
                                                            anyLong(),
                                                            anyBoolean());
+    // A brand-new (non-referred) article page must be unindexed from the
+    // notes index right away, not only on its first later update - otherwise
+    // it shows up twice in the merged Content List until then.
+    verify(indexingService, times(1)).unindex(eq(WikiPageIndexingServiceConnector.TYPE), eq("1"));
     Page note = new Page();
     note.setId("1");
     note.setTitle(newsArticle.getTitle());
@@ -992,6 +1013,7 @@ public class NewsServiceTest {
     verify(categoryLinkService, times(1)).link(3L, expectedObject);
     verify(categoryLinkService, times(1)).link(5L, expectedObject);
     verify(categoryLinkService, never()).unlink(anyLong(), any());
+    verify(indexingService, times(1)).unindex(eq(WikiPageIndexingServiceConnector.TYPE), eq("1"));
   }
 
   @Test

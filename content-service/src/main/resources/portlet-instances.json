@@ -12,7 +12,26 @@
       },
       "illustrationPath":"war:/../images/portlets/NewsList.webp",
       "preferences":[
-        
+
+      ],
+      "permissions":[
+        "*:/platform/users"
+      ],
+      "system":true
+    },
+    {
+      "nameId":"ContentListView",
+      "categoryNameId":"tools",
+      "portletName":"ContentListView",
+      "names":{
+        "en":"layout.portletInstance.ContentListView.name"
+      },
+      "descriptions":{
+        "en":"layout.portletInstance.ContentListView.description"
+      },
+      "illustrationPath":"war:/../images/portlets/contentList.webp",
+      "preferences":[
+
       ],
       "permissions":[
         "*:/platform/users"

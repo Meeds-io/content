@@ -57,8 +57,8 @@
           <category-chip
             v-if="firstCategory"
             :category="firstCategory"
-            tabindex="-1"
-            small />
+            small
+            tabindex="-1" />
         </div>
         <span
           v-if="showArticleTitle"
