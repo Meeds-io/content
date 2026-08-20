@@ -86,7 +86,10 @@ const newsActivityTypeExtensionOptions = {
     if (news?.properties?.summary) {
       return news?.properties?.summary;
     } else if (news?.body) {
-      return Vue.prototype.$utils.htmlToText(news.body);
+      return Vue.prototype.$utils.htmlToText(news.body)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;');
     }
     return '';
   },
