@@ -25,6 +25,7 @@ import static io.meeds.content.news.utils.NewsUtils.DELETE_NEWS;
 import static io.meeds.content.news.utils.NewsUtils.LIKE_NEWS;
 import static io.meeds.content.news.utils.NewsUtils.POST_NEWS;
 import static io.meeds.content.news.utils.NewsUtils.REMOVE_ARTICLE_TRANSLATION;
+import static io.meeds.content.news.utils.NewsUtils.SEND_KUDOS_NEWS;
 import static io.meeds.content.news.utils.NewsUtils.SHARE_NEWS;
 import static io.meeds.content.news.utils.NewsUtils.UPDATE_NEWS;
 import static io.meeds.content.news.utils.NewsUtils.VIEW_NEWS;
@@ -55,22 +56,24 @@ import jakarta.annotation.PostConstruct;
 @Profile("analytics")
 public class AnalyticsNewsListener extends Listener<Object, News> {
 
-  private static final String   CREATE_CONTENT_OPERATION_NAME  = "createContent";
+  private static final String   CREATE_CONTENT_OPERATION_NAME     = "createContent";
 
-  private static final String   UPDATE_CONTENT_OPERATION_NAME  = "updateContent";
+  private static final String   UPDATE_CONTENT_OPERATION_NAME     = "updateContent";
 
-  private static final String   DELETE_CONTENT_OPERATION_NAME  = "deleteContent";
+  private static final String   DELETE_CONTENT_OPERATION_NAME     = "deleteContent";
 
-  private static final String   VIEW_CONTENT_OPERATION_NAME    = "viewContent";
+  private static final String   VIEW_CONTENT_OPERATION_NAME       = "viewContent";
 
-  private static final String   SHARE_CONTENT_OPERATION_NAME   = "shareContent";
+  private static final String   SHARE_CONTENT_OPERATION_NAME      = "shareContent";
 
-  private static final String   LIKE_CONTENT_OPERATION_NAME    = "likeContent";
+  private static final String   LIKE_CONTENT_OPERATION_NAME       = "likeContent";
 
-  private static final String   COMMENT_CONTENT_OPERATION_NAME = "commentContent";
+  private static final String   COMMENT_CONTENT_OPERATION_NAME    = "commentContent";
 
-  private static final String[] LISTENER_EVENTS                = { POST_NEWS, UPDATE_NEWS, DELETE_NEWS, VIEW_NEWS, SHARE_NEWS,
-      COMMENT_NEWS, LIKE_NEWS, ADD_ARTICLE_TRANSLATION, REMOVE_ARTICLE_TRANSLATION };
+  private static final String   SEND_KUDOS_CONTENT_OPERATION_NAME = "sendKudosContent";
+
+  private static final String[] LISTENER_EVENTS                   = { POST_NEWS, UPDATE_NEWS, DELETE_NEWS, VIEW_NEWS, SHARE_NEWS,
+      COMMENT_NEWS, LIKE_NEWS, SEND_KUDOS_NEWS, ADD_ARTICLE_TRANSLATION, REMOVE_ARTICLE_TRANSLATION };
 
   @Autowired
   private IdentityManager       identityManager;
@@ -145,6 +148,7 @@ public class AnalyticsNewsListener extends Listener<Object, News> {
     case "exo.news.shareArticle" -> SHARE_CONTENT_OPERATION_NAME;
     case "exo.news.commentArticle" -> COMMENT_CONTENT_OPERATION_NAME;
     case "exo.news.likeArticle" -> LIKE_CONTENT_OPERATION_NAME;
+    case "exo.news.sendKudosArticle" -> SEND_KUDOS_CONTENT_OPERATION_NAME;
     default -> throw new IllegalArgumentException("Unknown event: " + eventName);
     };
   }
