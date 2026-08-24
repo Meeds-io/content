@@ -25,6 +25,8 @@ import static io.meeds.content.news.utils.NewsUtils.NewsObjectType.ARTICLE;
 
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -62,6 +64,8 @@ public class NewsActivityListener extends ActivityListenerPlugin {
   private static final String NEWS_ID = "newsId";
 
   private static final String NEWS_ACTIVITY_TYPE = "news";
+
+  private static final String KUDOS_ACTIVITY_COMMENT_TYPE = "exokudos:activity";
 
   @Autowired
   private ActivityManager     activityManager;
@@ -126,11 +130,14 @@ public class NewsActivityListener extends ActivityListenerPlugin {
     ExoSocialActivity activity = activityManager.getActivity(event.getActivity().getParentId());
     if (activity != null && activity.getTemplateParams() != null && activity.getTemplateParams().containsKey(NEWS_ID)) {
       org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
+      boolean kudos = StringUtils.equals(event.getActivity().getType(), KUDOS_ACTIVITY_COMMENT_TYPE);
       try {
         News news = newsService.getNewsByActivityId(activity.getId(), currentIdentity);
-        NewsUtils.broadcastEvent(NewsUtils.COMMENT_NEWS, currentIdentity.getUserId(), news);
+        NewsUtils.broadcastEvent(kudos ? NewsUtils.SEND_KUDOS_NEWS : NewsUtils.COMMENT_NEWS,
+                                 currentIdentity.getUserId(),
+                                 news);
       } catch (Exception e) {
-        LOG.error("Error broadcast comment news event", e);
+        LOG.error("Error broadcast {} news event", kudos ? "send kudos" : "comment", e);
       }
     }
   }
