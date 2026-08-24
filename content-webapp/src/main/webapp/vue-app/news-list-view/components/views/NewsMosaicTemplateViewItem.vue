@@ -100,6 +100,11 @@
               width="20"
               height="20"
               alt="" />
+            <span
+              v-if="showArticleSpace"
+              class="text-truncate flex-shrink-1 my-auto ms-2">
+              {{ item.spaceDisplayName }}
+            </span>
             <v-icon
               v-if="showArticleSpace && showArticleAuthor"
               class="mx-1"
