@@ -19,6 +19,7 @@
 package io.meeds.content.news.model.filter;
 
 import java.util.List;
+import java.util.Set;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -28,6 +29,8 @@ import lombok.NoArgsConstructor;
 public class NewsFilter {
 
   private boolean      publishedNews;
+
+  private Set<String>  newsIds;
 
   private boolean      draftNews;
 
