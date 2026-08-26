@@ -104,6 +104,16 @@
               </span>
             </div>
           </div>
+          <div
+            v-if="showSummaryFallback"
+            class="text-truncate-2 mt-2 text-subtitle">
+            {{ item?.properties?.summary }}
+          </div>
+          <div
+            v-else-if="showReadMoreFallback"
+            class="mt-2 text-subtitle font-weight-bold primary--text">
+            {{ $t('news.cards.readMore') }}
+          </div>
           <div v-if="showDetails">
             <extension-registry-components
               :params="{
@@ -235,6 +245,15 @@ export default {
     },
     isHiddenSpace() {
       return this.item && !this.item.spaceMember && this.item.hiddenSpace;
+    },
+    isSpaceDisplayed() {
+      return this.showArticleSpace && !this.isHiddenSpace;
+    },
+    showSummaryFallback() {
+      return !this.showDetails && !this.showArticleAuthor && !this.isSpaceDisplayed && this.hasSummary;
+    },
+    showReadMoreFallback() {
+      return !this.showDetails && (!this.showArticleAuthor || !this.isSpaceDisplayed);
     },
     articleUrl() {
       return eXo.env.portal.userName !== '' ? this.item.url : `${eXo.env.portal.context}/${eXo.env.portal.portalName}/news-detail?newsId=${this.item.id}&type=article`;
