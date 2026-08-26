@@ -101,7 +101,7 @@ public class NewsContentTypePlugin implements ContentTypePlugin {
       return Collections.emptyList();
     }
 
-    NewsFilter newsFilter = toNewsFilter(filter, fetchLimit, currentIdentity.getUserId());
+    NewsFilter newsFilter = toNewsFilter(filter, fetchLimit, currentIdentity.getUserId(), categoryLinkedIds);
     List<News> newsList;
     if (StringUtils.isNotBlank(filter.getSearchText())) {
       org.exoplatform.social.core.identity.model.Identity socialIdentity =
@@ -132,8 +132,9 @@ public class NewsContentTypePlugin implements ContentTypePlugin {
     newsService.deleteNews(id, currentIdentity, newsObjectType);
   }
 
-  private NewsFilter toNewsFilter(ContentFilter filter, int fetchLimit, String currentUser) {
+  private NewsFilter toNewsFilter(ContentFilter filter, int fetchLimit, String currentUser, Set<String> categoryLinkedIds) {
     NewsFilter newsFilter = new NewsFilter();
+    newsFilter.setNewsIds(categoryLinkedIds);
     boolean textSearch = StringUtils.isNotBlank(filter.getSearchText());
     newsFilter.setSpaces(resolveNewsSpaces(filter.getSpaces(), textSearch));
 

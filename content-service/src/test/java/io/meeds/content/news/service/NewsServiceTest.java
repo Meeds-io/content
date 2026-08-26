@@ -61,6 +61,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 import org.exoplatform.commons.exception.ObjectNotFoundException;
 import org.exoplatform.social.core.space.SpaceUtils;
@@ -486,6 +487,24 @@ public class NewsServiceTest {
     MetadataFilter capturedFilter = filterCaptor.getValue();
     assertFalse(capturedFilter.getMetadataProperties().containsKey(NEWS_ACTIVITY_POSTED));
     assertFalse(capturedFilter.getCombinedMetadataProperties().containsKey(NEWS_ACTIVITY_POSTED));
+  }
+
+  @Test
+  public void testGetPostedArticlesOnlyBuildsFilteredNewsIds() throws Exception {
+    NewsFilter newsFilter = new NewsFilter();
+    newsFilter.setNewsIds(Set.of("1"));
+    MetadataItem matchingItem = mock(MetadataItem.class);
+    when(matchingItem.getObjectId()).thenReturn("1");
+    when(matchingItem.getProperties()).thenReturn(Map.of(NEWS_PUBLICATION_STATE, POSTED));
+    MetadataItem excludedItem = mock(MetadataItem.class);
+    when(excludedItem.getObjectId()).thenReturn("2");
+
+    mockBuildArticle(List.of(matchingItem, excludedItem));
+
+    List<News> newsList = newsService.getNews(newsFilter, johnIdentity);
+    assertNotNull(newsList);
+    assertEquals(1, newsList.size());
+    verify(noteService, never()).getNoteById("2");
   }
 
   @Test
@@ -1179,6 +1198,29 @@ public class NewsServiceTest {
     List<News> news = newsService.searchNews(new NewsFilter(), currentIdentity);
     assertNotNull(news);
     assertEquals(news.size(), 1);
+  }
+
+  @Test
+  public void searchNewsOnlyBuildsFilteredNewsIds() throws Exception {
+    NewsESSearchResult matchingResult = new NewsESSearchResult();
+    matchingResult.setId("1");
+    NewsESSearchResult excludedResult = new NewsESSearchResult();
+    excludedResult.setId("2");
+    when(newsSearchConnector.search(any(), any())).thenReturn(List.of(matchingResult, excludedResult));
+    MetadataItem metadataItem = mock(MetadataItem.class);
+    when(metadataItem.getObjectId()).thenReturn("1");
+    when(metadataItem.getProperties()).thenReturn(Map.of(NEWS_PUBLICATION_STATE, "staged", NEWS_DELETED, String.valueOf(false)));
+    mockBuildArticle(List.of(metadataItem));
+    org.exoplatform.social.core.identity.model.Identity currentIdentity =
+                                                                        mock(org.exoplatform.social.core.identity.model.Identity.class);
+
+    NewsFilter newsFilter = new NewsFilter();
+    newsFilter.setNewsIds(Set.of("1"));
+    List<News> news = newsService.searchNews(newsFilter, currentIdentity);
+
+    assertNotNull(news);
+    assertEquals(1, news.size());
+    verify(noteService, never()).getNoteById("2");
   }
 
   @Test

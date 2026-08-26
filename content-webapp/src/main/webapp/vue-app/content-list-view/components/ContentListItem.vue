@@ -125,6 +125,19 @@
   </a>
 </template>
 <script>
+const categoryPromiseById = {};
+
+function getCategoryOnce(categoryService, id) {
+  if (!categoryPromiseById[id]) {
+    categoryPromiseById[id] = categoryService.getCategory(id)
+      .catch(() => {
+        delete categoryPromiseById[id];
+        return null;
+      });
+  }
+  return categoryPromiseById[id];
+}
+
 export default {
   props: {
     item: {
@@ -198,7 +211,7 @@ export default {
       immediate: true,
       handler() {
         if (this.item.categoryIds?.length) {
-          Promise.all(this.item.categoryIds.map(id => this.$categoryService.getCategory(id).catch(() => null)))
+          Promise.all(this.item.categoryIds.map(id => getCategoryOnce(this.$categoryService, id)))
             .then(categories => this.categories = categories.filter(category => category));
         } else {
           this.categories = [];
