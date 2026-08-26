@@ -35,18 +35,28 @@
           :alt="featuredImageAltText"
           v-bind="isSingleArticle ? {
             aspectRatio: 3/2
-          } : !index? {
-            height: 'calc(100% - 80px)',
-            aspectRatio: 3/2
-          }: {
-            height: `calc(100% - ${isSmallWidth && 36 || 51}px)`,
-            aspectRatio: 16/9
-          }"
-          :class="{
-            'full-width position-absolute l-0 b-0 t-0 r-0': index,
-            'full-width': isSingleArticle
-          }">
+          } : {}"
+          :class="isSingleArticle ? 'full-width' : 'full-width full-height position-absolute l-0 b-0 t-0 r-0'">
+          <div
+            v-if="!isSingleArticle"
+            class="absolute-full-size linear-gradient-black-overlay-background"></div>
           <extension-registry-components
+            v-if="isSingleArticle"
+            :params="{
+              parameters: item?.parameters,
+            }"
+            name="ContentList"
+            type="content-card-event-date-chip"
+            element="span"
+            class="d-flex position-absolute b-0 line-height-normal" />
+        </v-img>
+        <component
+          :is="isSingleArticle ? 'v-sheet' : 'div'"
+          v-bind="isSingleArticle ? { height: 80 } : {}"
+          :class="isSingleArticle ? 'background-transparent' : 'position-absolute b-0 pb-2 z-index-one'"
+          class="article-item-content full-width d-flex flex-column align-stretch flex-grow-1 no-min-width ms-0 px-2">
+          <extension-registry-components
+            v-if="!isSingleArticle"
             :params="index ? {
               parameters: item?.parameters,
               chipSize: 32,
@@ -58,18 +68,12 @@
             name="ContentList"
             type="content-card-event-date-chip"
             element="span"
-            class="d-flex position-absolute b-0 line-height-normal" />
-        </v-img>
-        <component
-          :is="isSingleArticle ? 'v-sheet' : 'div'"
-          v-bind="isSingleArticle ? { height: 80 } : {}"
-          :class="isSingleArticle ? 'background-transparent' : 'position-absolute mb-1 b-0'"
-          class="article-item-content full-width d-flex flex-column align-stretch flex-grow-1 no-min-width ms-0 px-2">
+            class="d-flex line-height-normal" />
           <div
             v-if="showArticleDate && !(index && isSmallWidth)"
             :class="{
               'mt-2': isSingleArticle,
-              'mt-1': !isSingleArticle}"
+              'mt-1 white--text': !isSingleArticle}"
             class="d-flex align-center text-subtitle line-height-normal mb-1">
             <date-format
               :value="displayDate"
@@ -77,7 +81,8 @@
             <v-spacer v-if="firstCategory" />
             <div
               v-if="firstCategory"
-              class="white rounded-pill mt-n6">
+              :class="{ 'mt-n6': isSingleArticle }"
+              class="white rounded-pill">
               <category-chip
                 :category="firstCategory"
                 small
@@ -87,11 +92,13 @@
           <span
             v-if="showArticleTitle"
             :class="{
-              'mt-2': index && isSmallWidth
+              'mt-2': index && isSmallWidth,
+              'white--text': !isSingleArticle
             }"
             class="text-body text-truncate">{{ item.title }}</span>
           <div
             v-if="!index"
+            :class="{ 'white--text': !isSingleArticle }"
             class="d-flex text-subtitle mt-1 mt-auto">
             <v-img
               v-if="showArticleSpace"
@@ -107,6 +114,7 @@
             </span>
             <v-icon
               v-if="showArticleSpace && showArticleAuthor"
+              :class="{ 'white--text': !isSingleArticle }"
               class="mx-1"
               small>
               mdi-chevron-right
@@ -131,6 +139,8 @@
             <news-template-view-item-reactions
               :item="item"
               :show-article-reactions="showArticleReactions"
+              :text-color-class="isSingleArticle ? '' : 'white--text'"
+              :icon-color-class="isSingleArticle ? 'icon-default-color' : 'white--text'"
               class="my-auto" />
           </div>
         </component>
