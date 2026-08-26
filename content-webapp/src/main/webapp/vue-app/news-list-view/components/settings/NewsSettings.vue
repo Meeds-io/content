@@ -22,7 +22,7 @@
   <v-sheet 
     v-if="showSettingsContainer"
     min-height="30"
-    class="background-transparent d-flex flex-row align-center px-2">
+    class="background-transparent d-flex flex-row align-center text-start px-2">
     <div class="d-flex latestNewsTitleContainer flex-column flex-grow-1 my-1 text-truncate">
       <span
         v-if="showHeader"
