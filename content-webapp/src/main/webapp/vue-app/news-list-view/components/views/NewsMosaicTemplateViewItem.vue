@@ -111,22 +111,23 @@
               small>
               mdi-chevron-right
             </v-icon>
-            <span
-              v-if="showArticleAuthor"
+            <div
               :class="{
                 'flex-shrink-1': truncateAuthorName,
                 'flex-shrink-0': !truncateAuthorName
               }"
               class="text-truncate flex-grow-1 flex-shrink-1 my-auto">
-              <v-avatar
-                size="20"
-                class="flex-shrink-0 my-auto me-2">
-                <img
-                  :src="item.authorAvatarUrl"
-                  :alt="item.authorDisplayName">
-              </v-avatar>
-              <span>{{ item.authorDisplayName }}</span>
-            </span>
+              <span v-if="showArticleAuthor">
+                <v-avatar
+                  size="20"
+                  class="flex-shrink-0 my-auto me-2">
+                  <img
+                    :src="item.authorAvatarUrl"
+                    :alt="item.authorDisplayName">
+                </v-avatar>
+                <span>{{ item.authorDisplayName }}</span>
+              </span>
+            </div>
             <news-template-view-item-reactions
               :item="item"
               :show-article-reactions="showArticleReactions"
