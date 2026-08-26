@@ -36,6 +36,7 @@ import java.util.Set;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
@@ -182,6 +183,19 @@ public class NewsContentTypePluginTest {
 
     assertEquals(1, entries.size());
     assertEquals("1", entries.get(0).getId());
+  }
+
+  @Test
+  public void testSearchPushesCategoryLinkedIdsDownToNewsFilter() throws Exception {
+    ContentFilter filter = new ContentFilter();
+    when(newsService.getNews(any(NewsFilter.class), eq(currentIdentity))).thenReturn(Collections.emptyList());
+
+    Set<String> categoryLinkedIds = Collections.singleton("1");
+    plugin.search(filter, 20, currentIdentity, categoryLinkedIds);
+
+    ArgumentCaptor<NewsFilter> newsFilterCaptor = ArgumentCaptor.forClass(NewsFilter.class);
+    verify(newsService).getNews(newsFilterCaptor.capture(), eq(currentIdentity));
+    assertEquals(categoryLinkedIds, newsFilterCaptor.getValue().getNewsIds());
   }
 
   @Test

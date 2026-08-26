@@ -20,8 +20,10 @@ package io.meeds.content.plugin;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
@@ -120,13 +122,16 @@ public class ContentCategoryPlugin implements CategoryPlugin {
     candidateIds.addAll(categoryLinkService.getLinkedIds(ActivityCategoryPlugin.OBJECT_TYPE));
 
     Identity identity = resolveIdentity(username);
+    Map<String, Boolean> visibilityByLinkedObject = new HashMap<>();
     List<Long> categoryIds = new ArrayList<>();
     for (Long categoryId : candidateIds) {
       List<CategoryObject> linkedObjects = categoryLinkService.getLinkedObjects(categoryId,
                                                                                 queryTypes,
                                                                                 0,
                                                                                 LINKED_OBJECTS_FETCH_CAP);
-      if (linkedObjects.stream().anyMatch(object -> stillExistsAndVisible(object, identity))) {
+      if (linkedObjects.stream()
+                       .anyMatch(object -> visibilityByLinkedObject.computeIfAbsent(object.getType() + ":" + object.getId(),
+                                                                                    key -> stillExistsAndVisible(object, identity)))) {
         categoryIds.add(categoryId);
       } else if (linkedObjects.size() >= LINKED_OBJECTS_FETCH_CAP) {
         LOG.debug("Category {} has at least {} linked objects, none of the first {} still exist/are visible - "

@@ -594,18 +594,20 @@ public class NewsService {
       LOG.error("An error occurred while retrieving news with id {}", newsId, exception);
     }
     if (news != null) {
+      boolean canEdit = canEditNews(news, currentIdentity.getUserId());
       if (editMode) {
-        if (!canEditNews(news, currentIdentity.getUserId())) {
+        if (!canEdit) {
           throw new IllegalAccessException("User " + currentIdentity.getUserId() + " is not authorized to edit News");
         }
       } else if (!canViewNews(news, currentIdentity.getUserId())) {
         throw new IllegalAccessException("User " + currentIdentity.getUserId() + " is not authorized to view News");
       }
-      news.setCanEdit(canEditNews(news, currentIdentity.getUserId()));
-      news.setCanDelete(canEditNews(news, currentIdentity.getUserId()));
-      news.setCanPublish(NewsUtils.canPublishNews(news.getSpaceId(), currentIdentity));
-      news.setCanRefer(canReferToNote(news, currentIdentity));
-      news.setCanSchedule(canScheduleNews(news.getSpaceId(), currentIdentity, news));
+      boolean canPublish = NewsUtils.canPublishNews(news.getSpaceId(), currentIdentity);
+      news.setCanEdit(canEdit);
+      news.setCanDelete(canEdit);
+      news.setCanPublish(canPublish);
+      news.setCanRefer(canReferToNote(news, currentIdentity, canEdit));
+      news.setCanSchedule(canEdit || canPublish);
       news.setTargets(newsTargetingService.getTargetsByNews(news));
       ExoSocialActivity activity = null;
       try {
@@ -695,11 +697,13 @@ public class NewsService {
       throw new Exception("Unable to build query, filter is null");
     }
     newsList.stream().filter(Objects::nonNull).forEach(news -> {
-      news.setCanEdit(canEditNews(news, currentIdentity.getUserId()));
-      news.setCanDelete(canEditNews(news, currentIdentity.getUserId()));
-      news.setCanPublish(NewsUtils.canPublishNews(news.getSpaceId(), currentIdentity));
-      news.setCanRefer(canReferToNote(news, currentIdentity));
-      news.setCanSchedule(canScheduleNews(news.getSpaceId(), currentIdentity, news));
+      boolean canEdit = canEditNews(news, currentIdentity.getUserId());
+      boolean canPublish = NewsUtils.canPublishNews(news.getSpaceId(), currentIdentity);
+      news.setCanEdit(canEdit);
+      news.setCanDelete(canEdit);
+      news.setCanPublish(canPublish);
+      news.setCanRefer(canReferToNote(news, currentIdentity, canEdit));
+      news.setCanSchedule(canEdit || canPublish);
       if (StringUtils.isNotBlank(news.getActivityId())) {
         try {
           ExoSocialActivity activity = activityManager.getActivity(news.getActivityId());
@@ -817,14 +821,20 @@ public class NewsService {
    */
   public List<News> searchNews(NewsFilter filter,
                                org.exoplatform.social.core.identity.model.Identity currentIdentity) throws Exception {
-    return newsSearchConnector.search(currentIdentity, filter).stream().map(articleSearchResult -> {
-      try {
-        return buildArticle(articleSearchResult.getId());
-      } catch (Exception e) {
-        LOG.error("Error while building news article", e);
-        return null;
-      }
-    }).filter(Objects::nonNull).toList();
+    return newsSearchConnector.search(currentIdentity, filter)
+                              .stream()
+                              .filter(articleSearchResult -> filter.getNewsIds() == null
+                                  || filter.getNewsIds().contains(articleSearchResult.getId()))
+                              .map(articleSearchResult -> {
+                                try {
+                                  return buildArticle(articleSearchResult.getId());
+                                } catch (Exception e) {
+                                  LOG.error("Error while building news article", e);
+                                  return null;
+                                }
+                              })
+                              .filter(Objects::nonNull)
+                              .toList();
   }
 
   /**
@@ -1502,15 +1512,18 @@ public class NewsService {
   }
 
   private boolean canReferToNote(News article, org.exoplatform.services.security.Identity currentIdentity) {
-    Space space = spaceService.getSpaceById(article.getSpaceId());
-    if (space == null || currentIdentity == null) {
+    return currentIdentity != null && canReferToNote(article, currentIdentity, canEditNews(article, currentIdentity.getUserId()));
+  }
+
+  private boolean canReferToNote(News article, org.exoplatform.services.security.Identity currentIdentity, boolean canEdit) {
+    if (currentIdentity == null || article.isFromExternalPage()) {
       return false;
     }
-    if (article.isFromExternalPage()) {
-      return false;
+    if (canEdit) {
+      return true;
     }
-    return canEditNews(article, currentIdentity.getUserId())
-        || spaceService.canPublishOnSpace(space, currentIdentity.getUserId());
+    Space space = article.getSpaceId() == null ? null : spaceService.getSpaceById(article.getSpaceId());
+    return space != null && spaceService.canPublishOnSpace(space, currentIdentity.getUserId());
   }
 
   private void deleteAllDrafts(Page articlePage, String articleCreator) {
@@ -1867,6 +1880,7 @@ public class NewsService {
                                                         POSTED));
     return metadataService.getMetadataItemsByFilter(metadataFilter, filter.getOffset(), filter.getLimit())
                           .stream()
+                          .filter(article -> matchesFilteredNewsIds(filter, article))
                           .map(article -> {
                             try {
                               return buildArticle(article.getObjectId(), currentIdentity, filter.getLang(), true);
@@ -1900,6 +1914,7 @@ public class NewsService {
                                                         POSTED));
     return metadataService.getMetadataItemsByFilter(metadataFilter, filter.getOffset(), filter.getLimit())
                           .stream()
+                          .filter(article -> matchesFilteredNewsIds(filter, article))
                           .map(article -> {
                             try {
                               return buildArticleWithExpand(article.getObjectId(),
@@ -1927,6 +1942,7 @@ public class NewsService {
     metadataFilter.setMetadataSpaceIds(NewsUtils.getMyFilteredSpacesIds(currentIdentity, filter.getSpaces()));
     return metadataService.getMetadataItemsByFilter(metadataFilter, filter.getOffset(), filter.getLimit())
                           .stream()
+                          .filter(article -> matchesFilteredNewsIds(filter, article))
                           .map(article -> {
                             try {
                               return buildArticle(article.getObjectId(), currentIdentity, filter.getLang(), true);
@@ -1966,6 +1982,7 @@ public class NewsService {
                                                         POSTED));
     return metadataService.getMetadataItemsByFilter(metadataFilter, filter.getOffset(), filter.getLimit())
                           .stream()
+                          .filter(article -> matchesFilteredNewsIds(filter, article))
                           .map(article -> {
                             try {
                               return buildArticle(article.getObjectId(), currentIdentity, filter.getLang(), true);
@@ -1995,12 +2012,17 @@ public class NewsService {
       fetchedCount = metadataItems.size();
       offset += fetchedCount;
       metadataItems.stream()
+                    .filter(draftArticle -> matchesFilteredNewsIds(filter, draftArticle))
                     .map(draftArticle -> buildDraftArticleOrNull(draftArticle, currentIdentity))
                     .filter(article -> article != null && canEditNews(article, currentIdentity.getUserId()))
                     .forEach(drafts::add);
     } while (limit > 0 && drafts.size() < limit && fetchedCount == limit);
 
     return limit > 0 && drafts.size() > limit ? drafts.subList(0, limit) : drafts;
+  }
+
+  private boolean matchesFilteredNewsIds(NewsFilter filter, MetadataItem metadataItem) {
+    return filter.getNewsIds() == null || filter.getNewsIds().contains(metadataItem.getObjectId());
   }
 
   private News buildDraftArticleOrNull(MetadataItem draftArticle, Identity currentIdentity) {
