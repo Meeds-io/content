@@ -131,7 +131,7 @@
             <news-template-view-item-reactions
               :item="item"
               :show-article-reactions="showArticleReactions"
-              class="mt-2" />
+              class="my-auto" />
           </div>
         </component>
       </a>
