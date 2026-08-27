@@ -994,6 +994,13 @@ p.caption-title:after {
 
 #top-news-mosaic {
   overflow: hidden;
+  /* text over the gradient mask stays white whatever color the configured
+     text styles (.text-subtitle/.text-body) enforce with !important */
+  .article-item-content {
+    .white--text {
+      color: white !important;
+    }
+  }
   .mosaic-container {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -1151,10 +1158,14 @@ p.caption-title:after {
   #top-news-mosaic {
     .mosaic-container {
       grid-template-columns: 1fr;
-      grid-auto-rows: 250px 83px 83px;
+      grid-auto-rows: auto;
     }
-    .article:nth-child(1) {
-      grid-row: 1;
+    .article {
+      aspect-ratio: ~"21 / 9";
+      &:nth-child(1) {
+        grid-row: 1;
+        aspect-ratio: ~"16 / 9";
+      }
     }
   }
 }
