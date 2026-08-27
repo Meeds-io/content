@@ -1149,14 +1149,21 @@ p.caption-title:after {
     font-weight: normal;
     margin-bottom: 6px;
   }
-  .mosaic-container.single-article-mosaic {
-    grid-template-columns: 1fr;
-    grid-auto-rows: auto;
-    .article:nth-child(1) {
-      grid-column: 1;
-      grid-row: 1;
+}
+
+/****** MOBILE VIEW ******/
+@media (max-width: 600px) {
+  #top-news-mosaic {
+    .mosaic-container {
+      grid-template-columns: 1fr;
+      grid-auto-rows: auto;
+    }
+    .article {
       aspect-ratio: ~"21 / 9";
-      max-height: 500px;
+      &:nth-child(1) {
+        grid-row: 1;
+        aspect-ratio: ~"16 / 9";
+      }
     }
   }
 }
