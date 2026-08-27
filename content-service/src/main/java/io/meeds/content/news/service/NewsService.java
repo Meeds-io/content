@@ -647,6 +647,41 @@ public class NewsService {
   }
 
   /**
+   * Retrieves the identifier of the activity displaying a news article,
+   * without building the whole article
+   *
+   * @param newsId {@link News} identifier
+   * @return the news activity identifier, or null when the article doesn't
+   *         exist or has no activity
+   */
+  public String getNewsActivityId(String newsId) {
+    if (!StringUtils.isNumeric(newsId)) {
+      return null;
+    }
+    Page newsPage = noteService.getNoteById(newsId);
+    if (newsPage == null) {
+      return null;
+    } else if (StringUtils.isNotBlank(newsPage.getActivityId())) {
+      return newsPage.getActivityId();
+    } else {
+      // Pages created before the activity id was persisted on the page
+      // itself: read the first (original) entry of the news metadata
+      // 'activities' property, like buildArticleProperties does
+      NewsPageObject newsPageObject = new NewsPageObject(NEWS_METADATA_PAGE_OBJECT_TYPE, newsPage.getId(), null, 0);
+      MetadataItem metadataItem = metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY, newsPageObject)
+                                                 .stream()
+                                                 .findFirst()
+                                                 .orElse(null);
+      if (metadataItem == null || MapUtils.isEmpty(metadataItem.getProperties())
+          || StringUtils.isBlank(metadataItem.getProperties().get(NEWS_ACTIVITIES))) {
+        return null;
+      }
+      String[] newsActivityParts = metadataItem.getProperties().get(NEWS_ACTIVITIES).split(";")[0].split(":");
+      return newsActivityParts.length > 1 ? newsActivityParts[1] : null;
+    }
+  }
+
+  /**
    * Retrieves a news identified by its technical identifier
    *
    * @param newsId {@link News} identifier
