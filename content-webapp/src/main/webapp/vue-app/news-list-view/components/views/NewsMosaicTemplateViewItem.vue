@@ -33,30 +33,12 @@
         <v-img
           :src="imgSrc"
           :alt="featuredImageAltText"
-          v-bind="isSingleArticle ? {
-            aspectRatio: 3/2
-          } : {}"
-          :class="isSingleArticle ? 'full-width' : 'full-width full-height position-absolute l-0 b-0 t-0 r-0'">
-          <div
-            v-if="!isSingleArticle"
-            class="absolute-full-size linear-gradient-black-overlay-background"></div>
-          <extension-registry-components
-            v-if="isSingleArticle"
-            :params="{
-              parameters: item?.parameters,
-            }"
-            name="ContentList"
-            type="content-card-event-date-chip"
-            element="span"
-            class="d-flex position-absolute b-0 line-height-normal" />
+          class="full-width full-height position-absolute l-0 b-0 t-0 r-0">
+          <div class="absolute-full-size linear-gradient-black-overlay-background"></div>
         </v-img>
-        <component
-          :is="isSingleArticle ? 'v-sheet' : 'div'"
-          v-bind="isSingleArticle ? { height: 80 } : {}"
-          :class="isSingleArticle ? 'background-transparent' : 'position-absolute b-0 pb-2 z-index-one'"
-          class="article-item-content full-width d-flex flex-column align-stretch flex-grow-1 no-min-width ms-0 px-2">
+        <div
+          class="article-item-content position-absolute b-0 pb-2 z-index-one full-width d-flex flex-column align-stretch flex-grow-1 no-min-width ms-0 px-2">
           <extension-registry-components
-            v-if="!isSingleArticle"
             :params="index ? {
               parameters: item?.parameters,
               chipSize: 32,
@@ -68,20 +50,16 @@
             name="ContentList"
             type="content-card-event-date-chip"
             element="span"
-            class="d-flex line-height-normal" />
+            class="d-flex line-height-normal ms-n2" />
           <div
             v-if="showArticleDate && !(index && isSmallWidth)"
-            :class="{
-              'mt-2': isSingleArticle,
-              'mt-1 white--text': !isSingleArticle}"
-            class="d-flex align-center text-subtitle line-height-normal mb-1">
+            class="d-flex align-center text-subtitle line-height-normal mb-1 mt-1 white--text">
             <date-format
               :value="displayDate"
               :format="dateFormat" />
             <v-spacer v-if="firstCategory" />
             <div
               v-if="firstCategory"
-              :class="{ 'mt-n6': isSingleArticle }"
               class="white rounded-pill">
               <category-chip
                 :category="firstCategory"
@@ -91,15 +69,11 @@
           </div>
           <span
             v-if="showArticleTitle"
-            :class="{
-              'mt-2': index && isSmallWidth,
-              'white--text': !isSingleArticle
-            }"
-            class="text-body text-truncate">{{ item.title }}</span>
+            :class="{ 'mt-2': index && isSmallWidth }"
+            class="text-body text-truncate white--text">{{ item.title }}</span>
           <div
             v-if="!index"
-            :class="{ 'white--text': !isSingleArticle }"
-            class="d-flex text-subtitle mt-1 mt-auto">
+            class="d-flex text-subtitle mt-1 mt-auto white--text">
             <v-img
               v-if="showArticleSpace"
               class="my-auto rounded flex-grow-0"
@@ -114,8 +88,7 @@
             </span>
             <v-icon
               v-if="showArticleSpace && showArticleAuthor"
-              :class="{ 'white--text': !isSingleArticle }"
-              class="mx-1"
+              class="mx-1 white--text"
               small>
               mdi-chevron-right
             </v-icon>
@@ -139,11 +112,11 @@
             <news-template-view-item-reactions
               :item="item"
               :show-article-reactions="showArticleReactions"
-              :text-color-class="isSingleArticle ? '' : 'white--text'"
-              :icon-color-class="isSingleArticle ? 'icon-default-color' : 'white--text'"
+              text-color-class="white--text"
+              icon-color-class="white--text"
               class="my-auto" />
           </div>
-        </component>
+        </div>
       </a>
     </div>
   </v-hover>
@@ -222,9 +195,6 @@ export default {
     },
   },
   computed: {
-    isSingleArticle() {
-      return this.totalCount === 1;
-    },
     firstCategoryId() {
       return this.item?.categories?.[0];
     },
@@ -242,7 +212,7 @@ export default {
           ? `${this.item.illustrationURL}&size=712x404`
           : `${this.item.illustrationURL}&size=712x201`;
       }
-      return `${this.item.illustrationURL}&size=1426x404`;
+      return `${this.item.illustrationURL}&size=1426x612`;
     },
     featuredImageAltText() {
       return this.item?.properties?.featuredImage?.altText || '';
