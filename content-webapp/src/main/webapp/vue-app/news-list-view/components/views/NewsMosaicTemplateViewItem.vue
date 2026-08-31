@@ -33,19 +33,11 @@
         <v-img
           :src="imgSrc"
           :alt="featuredImageAltText"
-          v-bind="isSingleArticle ? {
-            aspectRatio: 3/2
-          } : !index? {
-            height: 'calc(100% - 80px)',
-            aspectRatio: 3/2
-          }: {
-            height: `calc(100% - ${isSmallWidth && 36 || 51}px)`,
-            aspectRatio: 16/9
-          }"
-          :class="{
-            'full-width position-absolute l-0 b-0 t-0 r-0': index,
-            'full-width': isSingleArticle
-          }">
+          class="full-width full-height position-absolute l-0 b-0 t-0 r-0">
+          <div class="absolute-full-size linear-gradient-black-overlay-background"></div>
+        </v-img>
+        <div
+          class="article-item-content position-absolute b-0 pb-2 z-index-one full-width d-flex flex-column align-stretch flex-grow-1 no-min-width ms-0 px-2">
           <extension-registry-components
             :params="index ? {
               parameters: item?.parameters,
@@ -58,32 +50,21 @@
             name="ContentList"
             type="content-card-event-date-chip"
             element="span"
-            class="d-flex position-absolute b-0 line-height-normal" />
-        </v-img>
-        <component
-          :is="isSingleArticle ? 'v-sheet' : 'div'"
-          v-bind="isSingleArticle ? { height: 80 } : {}"
-          :class="isSingleArticle ? 'background-transparent' : 'position-absolute mb-1 b-0'"
-          class="article-item-content full-width d-flex flex-column align-stretch flex-grow-1 no-min-width ms-0 px-2">
-          <div 
+            class="d-flex line-height-normal ms-n2" />
+          <div
             v-if="showArticleDate && !(index && isSmallWidth)"
-            :class="{
-              'mt-2': isSingleArticle,
-              'mt-1': !isSingleArticle}"
-            class="text-subtitle line-height-normal mb-1">
+            class="d-flex align-center text-subtitle line-height-normal mb-1 mt-1 white--text">
             <date-format
               :value="displayDate"
               :format="dateFormat" />
           </div>
           <span
             v-if="showArticleTitle"
-            :class="{
-              'mt-2': index && isSmallWidth
-            }"
-            class="text-body text-truncate">{{ item.title }}</span>
+            :class="{ 'mt-2': index && isSmallWidth }"
+            class="text-body text-truncate white--text">{{ item.title }}</span>
           <div
             v-if="!index"
-            class="d-flex text-subtitle mt-1 mt-auto">
+            class="d-flex text-subtitle mt-1 mt-auto white--text">
             <v-img
               v-if="showArticleSpace"
               class="my-auto rounded flex-grow-0"
@@ -98,7 +79,7 @@
             </span>
             <v-icon
               v-if="showArticleSpace && showArticleAuthor"
-              class="mx-1"
+              class="mx-1 white--text"
               small>
               mdi-chevron-right
             </v-icon>
@@ -122,9 +103,11 @@
             <news-template-view-item-reactions
               :item="item"
               :show-article-reactions="showArticleReactions"
+              text-color-class="white--text"
+              icon-color-class="white--text"
               class="my-auto" />
           </div>
-        </component>
+        </div>
       </a>
     </div>
   </v-hover>
@@ -188,9 +171,6 @@ export default {
     };
   },
   computed: {
-    isSingleArticle() {
-      return this.totalCount === 1;
-    },
     articleUrl() {
       return eXo.env.portal.userName !== ''
         ? this.item.url
@@ -205,7 +185,7 @@ export default {
           ? `${this.item.illustrationURL}&size=712x404`
           : `${this.item.illustrationURL}&size=712x201`;
       }
-      return `${this.item.illustrationURL}&size=1426x404`;
+      return `${this.item.illustrationURL}&size=1426x612`;
     },
     featuredImageAltText() {
       return this.item?.properties?.featuredImage?.altText || '';
