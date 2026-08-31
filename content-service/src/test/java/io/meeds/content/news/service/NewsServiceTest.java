@@ -105,6 +105,7 @@ import org.exoplatform.wiki.service.WikiService;
 
 import io.meeds.content.news.model.News;
 import io.meeds.content.news.model.NewsDraftObject;
+import io.meeds.content.news.model.NewsPageObject;
 import io.meeds.content.news.model.NewsLatestDraftObject;
 import io.meeds.content.news.model.filter.NewsFilter;
 import io.meeds.content.news.plugin.NewsCategoryPlugin;
@@ -1563,5 +1564,39 @@ public class NewsServiceTest {
     when(identity.getUserId()).thenReturn("john");
     NEWS_UTILS.when(() -> NewsUtils.getUserIdentity(anyString())).thenReturn(identity);
     return identity;
+  }
+
+  @Test
+  public void testGetNewsActivityIdFromPage() throws Exception {
+    assertNull(newsService.getNewsActivityId("1"));
+
+    Page newsPage = new Page();
+    newsPage.setId("1");
+    newsPage.setActivityId("11");
+    when(noteService.getNoteById("1")).thenReturn(newsPage);
+
+    assertEquals("11", newsService.getNewsActivityId("1"));
+    verify(metadataService, never()).getMetadataItemsByMetadataAndObject(any(), any(NewsPageObject.class));
+  }
+
+  @Test
+  public void testGetNewsActivityIdFromLegacyPageMetadata() throws Exception {
+    // Pages created before the activity id was persisted on the page carry it
+    // only in the news metadata item 'activities' property
+    Page newsPage = new Page();
+    newsPage.setId("1");
+    when(noteService.getNoteById("1")).thenReturn(newsPage);
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(), any(NewsPageObject.class))).thenReturn(new ArrayList<>());
+
+    assertNull(newsService.getNewsActivityId("1"));
+
+    MetadataItem metadataItem = mock(MetadataItem.class);
+    Map<String, String> properties = new HashMap<>();
+    properties.put("activities", "4:11; 5:12");
+    when(metadataItem.getProperties()).thenReturn(properties);
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(),
+                                                             any(NewsPageObject.class))).thenReturn(List.of(metadataItem));
+
+    assertEquals("11", newsService.getNewsActivityId("1"));
   }
 }
