@@ -26,8 +26,10 @@
     <div class="d-flex latestNewsTitleContainer flex-column flex-grow-1 min-width-0 my-1">
       <span
         v-if="showHeader"
-        class="text-header text-truncate d-block line-height-normal"
-        :title="headerTitle">{{ headerTitle }}</span>
+        :title="headerTitle"
+        class="text-header">
+        <span class="text-truncate">{{ headerTitle }}</span>
+      </span>
     </div>
     <div v-if="showSeeAll && !hideSeeAllButton" class="d-flex flex-column my-auto me-2">
       <v-btn

@@ -32,11 +32,14 @@
             placeholder: $t('content.list.filter.placeholder'),
           }"
           :filters-count="advancedFiltersCount"
+          no-text-truncate
           compact
           @filter-text-input-end-typing="onSearchTextChanged"
           @filter-expand="filterExpanded = $event">
           <template v-if="!compact && showHeader" #left>
-            <span class="text-header text-truncate">{{ headerTitle || $t('content.list.title') }}</span>
+            <span class="text-header">
+              <span class="text-truncate">{{ headerTitle || $t('content.list.title') }}</span>
+            </span>
           </template>
           <template v-if="!filterExpanded" #right>
             <div class="d-flex align-center ms-auto">
