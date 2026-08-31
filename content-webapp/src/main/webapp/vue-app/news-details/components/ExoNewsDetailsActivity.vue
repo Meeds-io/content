@@ -25,6 +25,7 @@
     :key="`activity_${news.id}${news.lang && '_' + news.lang || ''}`"
     :news-id="newsId || sharedNewsId"
     :activity-id="activityId"
+    :activity="activity"
     :show-edit-button="showEditButton"
     :show-publish-button="showPublishButton"
     :show-delete-button="showDeleteButton"

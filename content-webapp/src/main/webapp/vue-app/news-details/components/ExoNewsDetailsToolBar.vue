@@ -36,6 +36,7 @@
       v-if="(showEditButton || showDeleteButton || showPublishButton || showCopyLinkButton || showCategoriesButton)"
       class="pull-right"
       :news="news"
+      :activity="activity"
       :current-app="currentApplication"
       :show-edit-button="showEditButton"
       :show-delete-button="showDeleteButton"
@@ -134,6 +135,11 @@ export default {
       type: Object,
       required: false,
       default: function() { return new Object(); }
+    },
+    activity: {
+      type: Object,
+      required: false,
+      default: null
     },
     newsId: {
       type: String,
