@@ -20,11 +20,14 @@
 -->
 <template>
   <v-hover v-slot="{ hover }">
-    <div id="top-news-mosaic" ref="top-news-mosaic">
+    <div
+      id="top-news-mosaic"
+      ref="top-news-mosaic"
+      :class="{ 'small-width-mosaic': isSmallWidth }">
       <news-settings
         :is-hovering="hover"
         class="mt-3 me-1 position-absolute r-0 z-index-two" />
-      <div :class="`application-border-radius mosaic-container ${smallHeightClass} ${singleArticleClass}`">
+      <div :class="`application-border-radius mosaic-container ${singleArticleClass}`">
         <news-mosaic-template-view-item
           v-for="(item, index) of news"
           :key="index"
@@ -74,31 +77,26 @@ export default {
       return this.news.length === 1;
     },
     singleArticleClass() {
-      return this.isSingleArticle ? 'd-block' : '';
+      return this.isSingleArticle ? 'single-article-mosaic' : '';
     },
     news() {
       return this.newsList?.filter(news => !!news) || [];
-    },
-    isMobile() {
-      return ['xs', 'sm', 'md'].includes(this.$vuetify.breakpoint.name);
-    },
-    isSmallBreakpoint() {
-      return this.$vuetify.breakpoint.width < 651;
-    },
-    smallHeightClass() {
-      return this.isMobile && this.news.length === 1 ? 'small-mosaic-container' : '';
     },
   },
   created() {
     this.init();
   },
   mounted() {
-    this.isSmallWidth = this.$refs?.['top-news-mosaic']?.clientWidth < 600;
-    window.addEventListener('resize', () => {
-      this.isSmallWidth = this.$refs?.['top-news-mosaic']?.clientWidth < 600;
-    });
+    this.computeSmallWidth();
+    window.addEventListener('resize', this.computeSmallWidth);
+  },
+  beforeDestroy() {
+    window.removeEventListener('resize', this.computeSmallWidth);
   },
   methods: {
+    computeSmallWidth() {
+      this.isSmallWidth = this.$refs?.['top-news-mosaic']?.clientWidth < 600;
+    },
     init() {
       this.showArticleTitle = this.$root.showArticleTitle;
       this.showArticleImage = this.$root.showArticleImage;
