@@ -47,6 +47,21 @@
       </span>
     </v-list-item>
     <v-list-item
+      v-if="canReport"
+      :class="hasReported && 'v-list-item--disabled' || ''"
+      :aria-label="hasReported && $t('news.details.header.menu.alreadyReported') || $t('news.details.header.menu.report')"
+      class="ps-2 pe-4 action-menu-item d-flex align-center"
+      @click="!hasReported && reportActivity()">
+      <v-icon
+        size="16"
+        class="clickable icon-menu">
+        fas fa-exclamation-triangle
+      </v-icon>
+      <span class="text-color">
+        {{ hasReported && $t('news.details.header.menu.reported') || $t('news.details.header.menu.report') }}
+      </span>
+    </v-list-item>
+    <v-list-item
       v-if="showCategoriesButton"
       class="ps-2 pe-4 action-menu-item d-flex align-center"
       @click="$emit('manage-categories', news)">
@@ -179,6 +194,11 @@ export default {
       required: false,
       default: null
     },
+    activity: {
+      type: Object,
+      required: false,
+      default: null
+    },
     showShareButton: {
       type: Boolean,
       required: false,
@@ -239,17 +259,38 @@ export default {
     extensionApp: 'news-detail',
     extensionType: 'other-actions',
   }),
+  computed: {
+    canReport() {
+      return this.activity && this.activity.canReport === 'true';
+    },
+    hasReported() {
+      return this.activity && this.activity.hasReported === 'true';
+    },
+  },
   created() {
     document.addEventListener(`extension-${this.extensionApp}-${this.extensionType}-updated`, this.refreshExtensions);
+    document.addEventListener('activity-reported', this.handleActivityReported);
     Vue.prototype.$utils.includeExtensions('NewsDetailExtension');
     this.refreshExtensions();
   },
   beforeDestroy() {
     document.addEventListener(`extension-${this.extensionApp}-${this.extensionType}-updated`, this.refreshExtensions);
+    document.removeEventListener('activity-reported', this.handleActivityReported);
   },
   methods: {
     openPublicationDrawer() {
       this.$root.$emit('open-edit-publishing-drawer');
+    },
+    handleActivityReported(event) {
+      if (this.activity && !event?.detail?.isComment && event?.detail?.activityId === this.activity.id) {
+        this.$set(this.activity, 'hasReported', 'true');
+      }
+    },
+    reportActivity() {
+      document.dispatchEvent(new CustomEvent('activity-report-drawer-open', {detail: {
+        activityId: this.activity.id,
+        isComment: false,
+      }}));
     },
     refreshExtensions() {
       this.menuExtensions = extensionRegistry.loadExtensions(this.extensionApp, this.extensionType);

@@ -29,6 +29,7 @@
         :news-id="newsId"
         :current-user="currentUser"
         :activity-id="activityId"
+        :activity="activity"
         :show-edit-button="showEditButton"
         :show-delete-button="showDeleteButton"
         :show-publish-button="showPublishButton"
@@ -108,6 +109,11 @@ export default {
       default: () => {
         return {};
       }
+    },
+    activity: {
+      type: Object,
+      required: false,
+      default: null
     },
     newsId: {
       type: String,
