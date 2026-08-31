@@ -272,8 +272,6 @@
         <values-param>
           <name>pluginIds</name>
           <value>PostNewsNotificationPlugin</value>
-          <value>MentionInNewsNotificationPlugin</value>
-          <value>PublishNewsNotificationPlugin</value>
         </values-param>
       </init-params>
     </component-plugin>
