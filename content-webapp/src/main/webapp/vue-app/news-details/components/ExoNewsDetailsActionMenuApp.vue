@@ -44,6 +44,7 @@
     <news-action-menu-items
       v-if="!isMobile"
       :news="news"
+      :activity="activity"
       :show-copy-link-button="showCopyLinkButton"
       :show-delete-button="showDeleteButton"
       :show-edit-button="showEditButton"
@@ -68,6 +69,11 @@
 export default {
   props: {
     news: {
+      type: Object,
+      required: false,
+      default: null
+    },
+    activity: {
       type: Object,
       required: false,
       default: null
