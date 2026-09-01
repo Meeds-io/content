@@ -117,6 +117,7 @@ import io.meeds.notes.model.NoteFeaturedImage;
 import io.meeds.notes.model.NotePageProperties;
 import io.meeds.social.category.model.CategoryObject;
 import io.meeds.social.category.service.CategoryLinkService;
+import io.meeds.social.report.service.ActivityReportService;
 
 @RunWith(MockitoJUnitRunner.Silent.class)
 public class NewsServiceTest {
@@ -162,6 +163,9 @@ public class NewsServiceTest {
 
   @Mock
   private CategoryLinkService                          categoryLinkService;
+
+  @Mock
+  private ActivityReportService                        activityReportService;
 
   @InjectMocks
   private NewsService                                  newsService;
@@ -967,6 +971,78 @@ public class NewsServiceTest {
     verify(noteService, times(1)).updateNote(any(Page.class), any(), any(), anyBoolean());
     verify(noteService, times(1)).createVersionOfNote(existingPage, identity.getUserId());
     verify(noteService, times(2)).getPublishedVersionByPageIdAndLang(1L, null);
+  }
+
+  @Test
+  public void testContentEditMarksArticleReportsStale() throws Exception {
+    News news = mockUpdatableArticle();
+    org.exoplatform.social.core.activity.model.ExoSocialActivity activity =
+                                                                          mock(org.exoplatform.social.core.activity.model.ExoSocialActivity.class);
+    when(activityManager.getActivity("38")).thenReturn(activity);
+
+    newsService.updateNews(news, "john", false, false, ARTICLE.name().toLowerCase(), CONTENT_AND_TITLE.name());
+
+    verify(activityReportService, times(1)).markReportsStale(activity);
+  }
+
+  @Test
+  public void testNonContentEditKeepsArticleReportsActive() throws Exception {
+    News news = mockUpdatableArticle();
+    org.exoplatform.social.core.activity.model.ExoSocialActivity activity =
+                                                                          mock(org.exoplatform.social.core.activity.model.ExoSocialActivity.class);
+    when(activityManager.getActivity("38")).thenReturn(activity);
+
+    newsService.updateNews(news, "john", false, false, ARTICLE.name().toLowerCase(), CATEGORIES.name());
+
+    verify(activityReportService, never()).markReportsStale(any());
+  }
+
+  private News mockUpdatableArticle() throws Exception {
+    Page existingPage = mock(Page.class);
+    when(noteService.getNoteById(anyString())).thenReturn(existingPage);
+    when(existingPage.getId()).thenReturn("1");
+    when(existingPage.getWikiOwner()).thenReturn("/space/groupId");
+    when(existingPage.getWikiType()).thenReturn(PortalConfig.GROUP_TYPE);
+    when(existingPage.getAuthor()).thenReturn("john");
+
+    MetadataItem metadataItem = mock(MetadataItem.class);
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+                                                             any(MetadataObject.class))).thenReturn(List.of(metadataItem));
+    when(metadataItem.getProperties()).thenReturn(new HashMap<>());
+
+    mockSpace();
+    mockIdentity();
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(anyString(), any(Identity.class))).thenReturn(false);
+    NEWS_UTILS.when(() -> NewsUtils.processMentions(anyString(), any())).thenReturn(new HashSet<>());
+    when(newsTargetingService.getTargetsByNews(any(News.class))).thenReturn(null);
+    when(spaceService.isSuperManager(any(Space.class), anyString())).thenReturn(true);
+    org.exoplatform.social.core.identity.model.Identity updaterIdentity =
+                                                                        mock(org.exoplatform.social.core.identity.model.Identity.class);
+    when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(updaterIdentity);
+    when(updaterIdentity.getId()).thenReturn("1");
+
+    PageVersion pageVersion = mock(PageVersion.class);
+    when(noteService.getPublishedVersionByPageIdAndLang(1L, null)).thenReturn(pageVersion);
+    DraftPage draftPage = mock(DraftPage.class);
+    when(draftPage.getId()).thenReturn("1");
+    when(noteService.getLatestDraftPageByUserAndTargetPageAndLang(anyLong(),
+                                                                  anyString(),
+                                                                  nullable(String.class))).thenReturn(draftPage);
+    when(pageVersion.getAuthor()).thenReturn("john");
+    when(pageVersion.getUpdatedDate()).thenReturn(new Date());
+    when(pageVersion.getAuthorFullName()).thenReturn("full name");
+    when(noteService.updateNote(any(Page.class), any(), any(), anyBoolean())).thenReturn(existingPage);
+
+    News news = new News();
+    news.setAuthor("john");
+    news.setTitle("new title");
+    news.setBody("new body");
+    news.setId("1");
+    news.setPublicationState(POSTED);
+    news.setSpaceId("1");
+    news.setOriginalBody("body");
+    news.setActivityId("38");
+    return news;
   }
 
   @Test
