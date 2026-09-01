@@ -120,6 +120,7 @@ import io.meeds.content.news.utils.NewsUtils.NewsObjectType;
 import io.meeds.notes.model.NotePageProperties;
 import io.meeds.social.category.model.CategoryObject;
 import io.meeds.social.category.service.CategoryLinkService;
+import io.meeds.social.report.service.ActivityReportService;
 import lombok.SneakyThrows;
 
 @Service
@@ -228,6 +229,14 @@ public class NewsService {
 
   @Autowired
   private ActivityManager          activityManager;
+
+  // required = false + null guard: the bean is a social @Service reached
+  // through the cross-WAR bridge at runtime (content boots after social), but
+  // it is absent from this module's own Spring test contexts, which scan a
+  // closed list of packages (same pattern as the App Center badge
+  // contributors, see eng-standards extensibility norm)
+  @Autowired(required = false)
+  private ActivityReportService    activityReportService;
 
   @Autowired
   private WikiService              wikiService;
@@ -406,6 +415,13 @@ public class NewsService {
     if (!news.getPublicationState().isEmpty() && !DRAFT.equals(news.getPublicationState())) {
       if (post != null) {
         updateNewsActivity(news, post, originalNews.isActivityPosted(), true);
+      }
+      if (CONTENT_AND_TITLE.name().equalsIgnoreCase(newsUpdateType)) {
+        // an article edit never fires the activity update lifecycle event
+        // (updateNewsActivity updates the activity with broadcast=false), so
+        // the report stale flip is delegated explicitly on content edits only:
+        // posting/publishing/categories updates must not reset reports
+        markArticleReportsStale(news);
       }
       NewsUtils.broadcastEvent(NewsUtils.UPDATE_NEWS, updater, news);
       NewsUtils.broadcastEvent(NewsUtils.UPDATE_PUBLISH_CONTENT, updater, new ContentPublishEvent(originalNews, news));
@@ -2769,6 +2785,16 @@ public class NewsService {
       eventData.put("draftPageId", createdDraftId);
       eventData.put("unscheduledPageVersionId", unscheduledPageVersionId);
       NewsUtils.broadcastEvent("note.draft.for.new.page.created", this, eventData);
+    }
+  }
+
+  private void markArticleReportsStale(News news) {
+    if (activityReportService == null || StringUtils.isBlank(news.getActivityId())) {
+      return;
+    }
+    ExoSocialActivity activity = activityManager.getActivity(news.getActivityId());
+    if (activity != null) {
+      activityReportService.markReportsStale(activity);
     }
   }
 
