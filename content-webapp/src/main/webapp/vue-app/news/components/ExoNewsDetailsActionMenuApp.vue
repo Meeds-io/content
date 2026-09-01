@@ -109,15 +109,6 @@ export default {
   data: () => ({
     actionMenu: null,
   }),
-  created() {
-    $(document).mousedown(() => {
-      if (this.actionMenu) {
-        window.setTimeout(() => {
-          this.actionMenu = false;
-        }, 200);
-      }
-    });
-  },
   mounted() {
     $('#UIPortalApplication').parent().click(() => {
       this.actionMenu = false;
