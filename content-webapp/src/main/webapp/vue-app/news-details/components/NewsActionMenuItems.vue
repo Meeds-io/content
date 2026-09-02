@@ -47,21 +47,6 @@
       </span>
     </v-list-item>
     <v-list-item
-      v-if="canReport"
-      :class="hasReported && 'v-list-item--disabled' || ''"
-      :aria-label="hasReported && $t('news.details.header.menu.alreadyReported') || $t('news.details.header.menu.report')"
-      class="ps-2 pe-4 action-menu-item d-flex align-center"
-      @click="!hasReported && reportActivity()">
-      <v-icon
-        size="16"
-        class="clickable icon-menu">
-        fas fa-exclamation-triangle
-      </v-icon>
-      <span class="text-color">
-        {{ hasReported && $t('news.details.header.menu.reported') || $t('news.details.header.menu.report') }}
-      </span>
-    </v-list-item>
-    <v-list-item
       v-if="showCategoriesButton"
       class="ps-2 pe-4 action-menu-item d-flex align-center"
       @click="$emit('manage-categories', news)">
@@ -171,6 +156,22 @@
         </span>
       </v-list-item>
     </template>
+    <!-- just before Delete, per the design -->
+    <v-list-item
+      v-if="canReport"
+      :class="hasReported && 'v-list-item--disabled' || ''"
+      :aria-label="hasReported && $t('news.details.header.menu.alreadyReported') || $t('news.details.header.menu.report')"
+      class="ps-2 pe-4 action-menu-item d-flex align-center"
+      @click="!hasReported && reportActivity()">
+      <v-icon
+        size="16"
+        class="clickable icon-menu">
+        fas fa-exclamation-triangle
+      </v-icon>
+      <span class="text-color">
+        {{ hasReported && $t('news.details.header.menu.reported') || $t('news.details.header.menu.report') }}
+      </span>
+    </v-list-item>
     <v-list-item
       v-if="showDeleteButton"
       class="ps-2 pe-4 action-menu-item d-flex align-center deleteArticleOption"
