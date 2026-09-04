@@ -105,6 +105,27 @@ public class NewsDigestLinePluginTest {
   }
 
   @Test
+  public void testRelativeArticleUrlIsMadeAbsolute() {
+    String previous = System.getProperty("gatein.email.domain.url");
+    System.setProperty("gatein.email.domain.url", "https://platform");
+    try {
+      News news = new News();
+      news.setUrl("/portal/dw/news-detail?newsId=12&type=article");
+      assertEquals("https://platform/portal/dw/news-detail?newsId=12&type=article", NewsDigestLinePlugin.url(news));
+      news.setUrl("https://elsewhere/x");
+      assertEquals("https://elsewhere/x", NewsDigestLinePlugin.url(news));
+      news.setUrl(null);
+      assertNull(NewsDigestLinePlugin.url(news));
+    } finally {
+      if (previous == null) {
+        System.clearProperty("gatein.email.domain.url");
+      } else {
+        System.setProperty("gatein.email.domain.url", previous);
+      }
+    }
+  }
+
+  @Test
   public void testVanishedArticleGivesNoLine() {
     assertNull(plugin.buildLine(item("404"), CONTEXT));
     assertNull(plugin.buildLine(new DigestItem(1, "ayoub", NewsDigestLinePlugin.POST_NEWS_PLUGIN, "news", Instant.now(), Map.of()),
