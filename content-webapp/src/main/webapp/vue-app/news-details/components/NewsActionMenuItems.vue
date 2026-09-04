@@ -156,22 +156,33 @@
         </span>
       </v-list-item>
     </template>
-    <!-- just before Delete, per the design -->
-    <v-list-item
+    <!-- just before Delete, per the design; the disabled entry blocks pointer
+      events (Vuetify), so the tooltip activator lives on a wrapper that still
+      receives the hover, same treatment as the activity/comment menus -->
+    <v-tooltip
       v-if="canReport"
-      :class="hasReported && 'v-list-item--disabled' || ''"
-      :aria-label="hasReported && $t('news.details.header.menu.alreadyReported') || $t('news.details.header.menu.report')"
-      class="ps-2 pe-4 action-menu-item d-flex align-center"
-      @click="!hasReported && reportActivity()">
-      <v-icon
-        size="16"
-        class="clickable icon-menu">
-        fas fa-exclamation-triangle
-      </v-icon>
-      <span class="text-color">
-        {{ hasReported && $t('news.details.header.menu.reported') || $t('news.details.header.menu.report') }}
-      </span>
-    </v-list-item>
+      :disabled="!hasReported"
+      bottom>
+      <template #activator="{ on: tooltipOn }">
+        <div v-on="tooltipOn">
+          <v-list-item
+            :class="hasReported && 'v-list-item--disabled' || ''"
+            :aria-label="hasReported && $t('news.details.header.menu.alreadyReported') || $t('news.details.header.menu.report')"
+            class="ps-2 pe-4 action-menu-item d-flex align-center"
+            @click="!hasReported && reportActivity()">
+            <v-icon
+              :class="hasReported ? 'text-disabled-color' : 'clickable icon-menu'"
+              size="16">
+              fas fa-exclamation-triangle
+            </v-icon>
+            <span :class="hasReported ? 'text-disabled-color' : 'text-color'">
+              {{ hasReported && $t('news.details.header.menu.reported') || $t('news.details.header.menu.report') }}
+            </span>
+          </v-list-item>
+        </div>
+      </template>
+      <span>{{ $t('news.details.header.menu.alreadyReported') }}</span>
+    </v-tooltip>
     <v-list-item
       v-if="showDeleteButton"
       class="ps-2 pe-4 action-menu-item d-flex align-center deleteArticleOption"
