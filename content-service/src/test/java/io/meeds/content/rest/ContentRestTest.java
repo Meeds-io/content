@@ -19,6 +19,7 @@
 package io.meeds.content.rest;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
@@ -33,6 +34,7 @@ import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 
 import org.exoplatform.commons.exception.ObjectNotFoundException;
@@ -69,7 +71,7 @@ public class ContentRestTest {
 
     ResponseEntity<List<ContentType>> response = contentRest.getContentTypes();
 
-    assertEquals(200, response.getStatusCodeValue());
+    assertTrue(response.getStatusCode().isSameCodeAs(HttpStatusCode.valueOf(200)));
     assertEquals(types, response.getBody());
   }
 
@@ -82,7 +84,7 @@ public class ContentRestTest {
 
     ResponseEntity<ContentEntryList> response = contentRest.getContentList(null, null, null, null, null, 0, 20, null, null);
 
-    assertEquals(200, response.getStatusCodeValue());
+    assertTrue(response.getStatusCode().isSameCodeAs(HttpStatusCode.valueOf(200)));
     ContentEntryList body = response.getBody();
     assertEquals(1, body.getSize());
     assertEquals(Arrays.asList(1L, 2L), body.getCategoryIds());
@@ -94,7 +96,7 @@ public class ContentRestTest {
 
     ResponseEntity<ContentEntryList> response = contentRest.getContentList(null, null, null, null, null, 0, 100000, null, null);
 
-    assertEquals(200, response.getStatusCodeValue());
+    assertTrue(response.getStatusCode().isSameCodeAs(HttpStatusCode.valueOf(200)));
     assertEquals(100, response.getBody().getLimit());
   }
 
@@ -106,7 +108,7 @@ public class ContentRestTest {
 
     ResponseEntity<ContentEntryList> response = contentRest.getContentList(null, null, null, null, null, 0, 20, null, null);
 
-    assertEquals(200, response.getStatusCodeValue());
+    assertTrue(response.getStatusCode().isSameCodeAs(HttpStatusCode.valueOf(200)));
     assertEquals(true, response.getBody().isHasMore());
   }
 
@@ -116,7 +118,7 @@ public class ContentRestTest {
 
     ResponseEntity<ContentEntryList> response = contentRest.getContentList(null, null, null, null, null, 0, 20, null, null);
 
-    assertEquals(404, response.getStatusCodeValue());
+    assertTrue(response.getStatusCode().isSameCodeAs(HttpStatusCode.valueOf(404)));
   }
 
   @Test
@@ -125,7 +127,7 @@ public class ContentRestTest {
 
     ResponseEntity<ContentEntryList> response = contentRest.getContentList(null, null, null, null, null, 0, 20, null, null);
 
-    assertEquals(400, response.getStatusCodeValue());
+    assertTrue(response.getStatusCode().isSameCodeAs(HttpStatusCode.valueOf(400)));
   }
 
   @Test
@@ -134,7 +136,7 @@ public class ContentRestTest {
 
     ResponseEntity<ContentEntryList> response = contentRest.getContentList(null, null, null, null, null, 0, 20, null, null);
 
-    assertEquals(403, response.getStatusCodeValue());
+    assertTrue(response.getStatusCode().isSameCodeAs(HttpStatusCode.valueOf(403)));
   }
 
   @Test
@@ -143,14 +145,14 @@ public class ContentRestTest {
 
     ResponseEntity<ContentEntryList> response = contentRest.getContentList(null, null, null, null, null, 0, 20, null, null);
 
-    assertEquals(500, response.getStatusCodeValue());
+    assertTrue(response.getStatusCode().isSameCodeAs(HttpStatusCode.valueOf(500)));
   }
 
   @Test
   public void testDeleteContentSuccess() throws Exception {
     ResponseEntity<Void> response = contentRest.deleteContent("1", "news", "published");
 
-    assertEquals(200, response.getStatusCodeValue());
+    assertTrue(response.getStatusCode().isSameCodeAs(HttpStatusCode.valueOf(200)));
   }
 
   @Test
@@ -159,7 +161,7 @@ public class ContentRestTest {
 
     ResponseEntity<Void> response = contentRest.deleteContent("1", "news", "published");
 
-    assertEquals(404, response.getStatusCodeValue());
+    assertTrue(response.getStatusCode().isSameCodeAs(HttpStatusCode.valueOf(404)));
   }
 
   @Test
@@ -168,7 +170,7 @@ public class ContentRestTest {
 
     ResponseEntity<Void> response = contentRest.deleteContent("1", "news", "published");
 
-    assertEquals(403, response.getStatusCodeValue());
+    assertTrue(response.getStatusCode().isSameCodeAs(HttpStatusCode.valueOf(403)));
   }
 
   @Test
@@ -177,7 +179,7 @@ public class ContentRestTest {
 
     ResponseEntity<Void> response = contentRest.deleteContent("1", "news", "published");
 
-    assertEquals(500, response.getStatusCodeValue());
+    assertTrue(response.getStatusCode().isSameCodeAs(HttpStatusCode.valueOf(500)));
   }
 
 }

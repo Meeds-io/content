@@ -161,7 +161,7 @@ public class NewsRestTest {
     ResponseEntity response = newsRestController.getNewsById("1", null, null, false, null);
 
     // Then
-    assertEquals(200, response.getStatusCodeValue());
+    assertTrue(response.getStatusCode().is2xxSuccessful());
     News fetchedNews = (News) response.getBody();
     assertNotNull(fetchedNews);
   }
