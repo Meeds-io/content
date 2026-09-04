@@ -156,6 +156,33 @@
         </span>
       </v-list-item>
     </template>
+    <!-- just before Delete, per the design; the disabled entry blocks pointer
+      events (Vuetify), so the tooltip activator lives on a wrapper that still
+      receives the hover, same treatment as the activity/comment menus -->
+    <v-tooltip
+      v-if="canReport"
+      :disabled="!hasReported"
+      bottom>
+      <template #activator="{ on: tooltipOn }">
+        <div v-on="tooltipOn">
+          <v-list-item
+            :class="hasReported && 'v-list-item--disabled' || ''"
+            :aria-label="hasReported && $t('news.details.header.menu.alreadyReported') || $t('news.details.header.menu.report')"
+            class="ps-2 pe-4 action-menu-item d-flex align-center"
+            @click="!hasReported && reportActivity()">
+            <v-icon
+              :class="hasReported ? 'text-disabled-color' : 'clickable icon-menu'"
+              size="16">
+              fas fa-exclamation-triangle
+            </v-icon>
+            <span :class="hasReported ? 'text-disabled-color' : 'text-color'">
+              {{ hasReported && $t('news.details.header.menu.reported') || $t('news.details.header.menu.report') }}
+            </span>
+          </v-list-item>
+        </div>
+      </template>
+      <span>{{ $t('news.details.header.menu.alreadyReported') }}</span>
+    </v-tooltip>
     <v-list-item
       v-if="showDeleteButton"
       class="ps-2 pe-4 action-menu-item d-flex align-center deleteArticleOption"
@@ -175,6 +202,11 @@
 export default {
   props: {
     news: {
+      type: Object,
+      required: false,
+      default: null
+    },
+    activity: {
       type: Object,
       required: false,
       default: null
@@ -239,17 +271,38 @@ export default {
     extensionApp: 'news-detail',
     extensionType: 'other-actions',
   }),
+  computed: {
+    canReport() {
+      return !!this.activity?.canReport;
+    },
+    hasReported() {
+      return !!this.activity?.hasReported;
+    },
+  },
   created() {
     document.addEventListener(`extension-${this.extensionApp}-${this.extensionType}-updated`, this.refreshExtensions);
+    document.addEventListener('activity-reported', this.handleActivityReported);
     Vue.prototype.$utils.includeExtensions('NewsDetailExtension');
     this.refreshExtensions();
   },
   beforeDestroy() {
-    document.addEventListener(`extension-${this.extensionApp}-${this.extensionType}-updated`, this.refreshExtensions);
+    document.removeEventListener(`extension-${this.extensionApp}-${this.extensionType}-updated`, this.refreshExtensions);
+    document.removeEventListener('activity-reported', this.handleActivityReported);
   },
   methods: {
     openPublicationDrawer() {
       this.$root.$emit('open-edit-publishing-drawer');
+    },
+    handleActivityReported(event) {
+      if (this.activity && !event?.detail?.isComment && event?.detail?.activityId === this.activity.id) {
+        this.$set(this.activity, 'hasReported', true);
+      }
+    },
+    reportActivity() {
+      document.dispatchEvent(new CustomEvent('activity-report-drawer-open', {detail: {
+        activityId: this.activity.id,
+        isComment: false,
+      }}));
     },
     refreshExtensions() {
       this.menuExtensions = extensionRegistry.loadExtensions(this.extensionApp, this.extensionType);
