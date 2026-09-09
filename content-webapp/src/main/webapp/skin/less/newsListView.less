@@ -1157,6 +1157,11 @@ p.caption-title:after {
     .article:nth-child(1) {
       grid-column: 1;
       grid-row: 1;
+      /* definite inline size: the ratio then drives only the height, and
+         max-height clamps the height alone -- without it the ratio makes the
+         clamped tile shrink back to 500px * 21/9 = 1166px and a blank strip
+         appears on the right of any wider container */
+      width: 100%;
       aspect-ratio: ~"21 / 9";
       max-height: 500px;
     }
