@@ -79,7 +79,7 @@
       <v-icon
         size="16"
         class="clickable icon-menu">
-        fas fa-info-circle
+        fas fa-th-list
       </v-icon>
       <span class="text-color">
         {{ $t('news.details.header.menu.properties') }}
