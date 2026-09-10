@@ -150,7 +150,7 @@
             element="div"
             class="mt-8" />
           <div
-            class="mt-8 content-treeview-processor rich-editor-content extended-rich-content"
+            class="mt-8 flex-grow-1 min-width-0 content-treeview-processor rich-editor-content extended-rich-content"
             v-sanitized-html="newsBody">
           </div>
           <extension-registry-components
@@ -160,7 +160,7 @@
             type="content-event-detail"
             parent-element="div"
             element="div"
-            class="position-sticky t-1 d-flex mt-8 ms-auto" />
+            class="position-sticky t-1 d-flex flex-shrink-0 mt-8 ms-auto" />
         </div>
         <extension-registry-components
           name="NewsDetailsFooter"
