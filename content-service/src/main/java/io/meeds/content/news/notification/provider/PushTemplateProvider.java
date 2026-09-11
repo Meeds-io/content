@@ -18,7 +18,6 @@
  */
 package io.meeds.content.news.notification.provider;
 
-import java.io.Writer;
 import java.util.Calendar;
 import java.util.Locale;
 
@@ -123,11 +122,5 @@ public class PushTemplateProvider extends TemplateProvider {
       messageInfo.subject(activityUrl.toString());
       return messageInfo.body(body).end();
     }
-
-    @Override
-    protected boolean makeDigest(NotificationContext ctx, Writer writer) {
-      return false;
-    }
-
   }
 }
