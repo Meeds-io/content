@@ -25,6 +25,7 @@ import static io.meeds.mcp.server.util.McpToolUtils.markdownToHtml;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -39,6 +40,8 @@ import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.container.PortalContainer;
 import org.exoplatform.portal.config.UserACL;
 import org.exoplatform.portal.config.UserPortalConfigService;
+import org.exoplatform.services.log.ExoLogger;
+import org.exoplatform.services.log.Log;
 import org.exoplatform.social.attachment.AttachmentService;
 import org.exoplatform.social.core.manager.ActivityManager;
 import org.exoplatform.social.core.manager.IdentityManager;
@@ -78,6 +81,8 @@ import lombok.SneakyThrows;
 @Service
 @Profile("mcp-server")
 public class NewsMcpTool implements McpToolPlugin {
+
+  private static final Log        LOG           = ExoLogger.getLogger(NewsMcpTool.class);
 
   private static final String     EDIT_NEWS_URL = "/portal/%s/news-editor?spaceId=%s&newsId=%s&type=latest_draft";
 
@@ -402,10 +407,14 @@ public class NewsMcpTool implements McpToolPlugin {
     checkNewsId(newsId);
     String currentUsername = getCurrentUserName();
     org.exoplatform.services.security.Identity currentIdentity = userAcl.getUserIdentity(currentUsername);
-    News news = newsService.getNewsById(String.valueOf(newsId),
-                                        currentIdentity,
-                                        false,
-                                        NewsObjectType.ARTICLE.name().toLowerCase());
+    String lang = normalizeLanguage(language);
+    // load in the language being written; buildArticle falls back to the default
+    // version when it has none, which is how a new translation inherits it
+    News news = newsService.getNewsByIdAndLang(String.valueOf(newsId),
+                                               currentIdentity,
+                                               false,
+                                               NewsObjectType.ARTICLE.name().toLowerCase(),
+                                               lang);
     if (news == null) {
       throw new ObjectNotFoundException("""
           News with id '%s' doesn't exist. Use 'search_news' to search for a news bi title, summary or content.
@@ -431,8 +440,22 @@ public class NewsMcpTool implements McpToolPlugin {
       news.setBody(markdownToHtml(htmlContent));
       titleOrContentChanged = true;
     }
-    // Persist title/body first (CONTENT_AND_TITLE ignores metadata, so it never
-    // touches the summary).
+    // for a published article news_id == the note page id; a draft/staged
+    // article points at its target page id
+    long pageId = news.getTargetPageId() != null ? Long.parseLong(news.getTargetPageId()) : newsId;
+    boolean isDraft = news.getTargetPageId() != null;
+    NotePageProperties properties = resolveProperties(news, pageId, lang, currentIdentity).properties();
+    if (StringUtils.isNotBlank(summary)) {
+      properties.setSummary(summary);
+      properties.setNoteId(pageId);
+      properties.setDraft(isDraft);
+    }
+    // NewsService#updateNews routes to addNewArticleVersionWithLang only when
+    // news.getLang() is set; without it the translated title and body go
+    // straight into the MAIN article. The properties travel the same way,
+    // because that version write re-saves news.getProperties() under the lang.
+    news.setProperties(properties);
+    news.setLang(lang);
     if (titleOrContentChanged) {
       newsService.updateNews(news,
                              currentIdentity.getUserId(),
@@ -441,28 +464,11 @@ public class NewsMcpTool implements McpToolPlugin {
                              NewsObjectType.ARTICLE.name().toLowerCase(),
                              NewsUpdateType.CONTENT_AND_TITLE.name());
     }
-    // The summary is stored in the note metadata, which NewsUpdateType.* never
-    // writes; persist it the same way the cover image is persisted, basing the
-    // write on the loaded properties so the current featured image is preserved.
+    // the summary lives in the note metadata, which NewsUpdateType.* never writes
     if (StringUtils.isNotBlank(summary)) {
-      // for a published article news_id == the note page id; a draft/staged
-      // article points at its target page id
-      long pageId = news.getTargetPageId() != null ? Long.parseLong(news.getTargetPageId()) : newsId;
-      boolean isDraft = news.getTargetPageId() != null;
-      // base the write on the target language's own metadata so the current
-      // featured image (cover) of that translation is preserved, not clobbered
-      // with the default's
-      NotePageProperties properties = resolveBaseProperties(news, pageId, language, currentIdentity);
-      properties.setSummary(summary);
-      properties.setNoteId(pageId);
-      properties.setDraft(isDraft);
-      String lang = StringUtils.isBlank(language) ? news.getLang() : language;
       noteService.saveNoteMetadata(properties, lang, getUserIdentityId(currentUsername));
     }
-    // Refresh the news lifecycle (re-index + recompute) so the metadata summary
-    // lands on the live article; CONTENT_AND_TITLE ignores metadata, so the
-    // just-saved summary is not reverted.
-    return refreshAndModel(newsId, currentIdentity, space);
+    return refreshAndModel(newsId, currentIdentity, space, lang, properties, titleOrContentChanged);
   }
 
   @SneakyThrows
@@ -537,14 +543,15 @@ public class NewsMcpTool implements McpToolPlugin {
   }
 
   @SneakyThrows
-  public NewsModel getNewsById(long newsId) {
+  public NewsModel getNewsById(long newsId, String language) {
     checkNewsId(newsId);
     String currentUsername = getCurrentUserName();
     org.exoplatform.services.security.Identity currentIdentity = userAcl.getUserIdentity(currentUsername);
-    News news = newsService.getNewsById(String.valueOf(newsId),
-                                        currentIdentity,
-                                        false,
-                                        NewsObjectType.ARTICLE.name().toLowerCase());
+    News news = newsService.getNewsByIdAndLang(String.valueOf(newsId),
+                                               currentIdentity,
+                                               false,
+                                               NewsObjectType.ARTICLE.name().toLowerCase(),
+                                               normalizeLanguage(language));
     if (news == null) {
       throw new ObjectNotFoundException("""
           News with id '%s' wasn't found.
@@ -609,12 +616,18 @@ public class NewsMcpTool implements McpToolPlugin {
     // points at its target page id
     long pageId = news.getTargetPageId() != null ? Long.parseLong(news.getTargetPageId()) : newsId;
     boolean isDraft = news.getTargetPageId() != null;
+    String lang = normalizeLanguage(language);
+    NotePageProperties written;
     try {
-      NotePageProperties properties = resolveBaseProperties(news, pageId, language, currentIdentity);
+      LanguageProperties resolved = resolveProperties(news, pageId, lang, currentIdentity);
+      NotePageProperties properties = resolved.properties();
+      written = properties;
       NoteFeaturedImage featuredImage = new NoteFeaturedImage();
       NoteFeaturedImage existing = properties.getFeaturedImage();
-      if (existing != null && existing.getId() != null && existing.getId() > 0) {
-        featuredImage.setId(existing.getId()); // update the existing cover file in place
+      // Reuse the id only when this language owns the FILE: on a shared id
+      // saveNoteFeaturedImage takes updateFile and replaces the default's binary.
+      if (resolved.ownsCoverFile() && existing != null && existing.getId() != null && existing.getId() > 0) {
+        featuredImage.setId(existing.getId()); // update this language's own cover file in place
       }
       featuredImage.setUploadId(uploadId);
       featuredImage.setMimeType(image.mimeType());
@@ -623,13 +636,12 @@ public class NewsMcpTool implements McpToolPlugin {
       properties.setNoteId(pageId);
       properties.setDraft(isDraft);
       properties.setFeaturedImage(featuredImage);
-      String lang = StringUtils.isBlank(language) ? news.getLang() : language;
       noteService.saveNoteMetadata(properties, lang, getUserIdentityId(currentUsername));
     } catch (Exception e) {
       UploadToolUtils.release(uploadService, uploadId);
       throw new IllegalStateException("Could not set the news cover image: " + e.getMessage());
     }
-    return refreshAndModel(newsId, currentIdentity, space);
+    return refreshAndModel(newsId, currentIdentity, space, lang, written, false);
   }
 
   // Removes a news (article) cover / illustration. Mirrors the note featured
@@ -662,40 +674,98 @@ public class NewsMcpTool implements McpToolPlugin {
     }
     long pageId = news.getTargetPageId() != null ? Long.parseLong(news.getTargetPageId()) : newsId;
     boolean isDraft = news.getTargetPageId() != null;
-    // resolve the existing cover from the target language's own metadata, so a
-    // translation's own cover is removed rather than the default's
-    NotePageProperties properties = resolveBaseProperties(news, pageId, language, currentIdentity);
+    String lang = normalizeLanguage(language);
+    LanguageProperties resolved = resolveProperties(news, pageId, lang, currentIdentity);
+    NotePageProperties properties = resolved.properties();
     NoteFeaturedImage existing = properties.getFeaturedImage();
     if (existing == null || existing.getId() == null || existing.getId() <= 0) {
       throw new ObjectNotFoundException("News with id '%s' has no cover image to remove.".formatted(newsId));
     }
+    // removeNoteFeaturedImage deletes the file unguarded (isDraft is always false
+    // for a published article) and cleans only <pageId>-<lang>, so removing a
+    // cover this language does not own strips the default article's image.
+    if (resolved.coverOwnership() == CoverOwnership.UNDETERMINED) {
+      throw new IllegalStateException(("The default version of the article with id '%s' could not be read, so it is not "
+          + "known whether the cover shown in language '%s' is that translation's own or the default article's. Nothing was "
+          + "changed; try again.").formatted(newsId, lang));
+    }
+    if (!resolved.ownsCoverFile()) {
+      // not pointing at the no-language removal: it would leave every other
+      // translation sharing this id pointing at a deleted file
+      throw new IllegalArgumentException(("News with id '%s' has no cover image of its own in language '%s': it shows the "
+          + "default article's, which other translations may show too. Give '%s' its own cover with set_news_illustration to "
+          + "replace it, or remove the article's cover for every language from the article itself.").formatted(newsId,
+                                                                                                               lang,
+                                                                                                               lang));
+    }
     try {
-      String lang = StringUtils.isBlank(language) ? news.getLang() : language;
       noteService.removeNoteFeaturedImage(pageId, existing.getId(), lang, isDraft, getUserIdentityId(currentUsername));
     } catch (Exception e) {
       throw new IllegalStateException("Could not remove the news cover image: " + e.getMessage());
     }
-    return refreshAndModel(newsId, currentIdentity, space);
+    properties.setFeaturedImage(null);
+    return refreshAndModel(newsId, currentIdentity, space, lang, properties, false);
   }
 
-  // Refreshes the news lifecycle after a cover metadata change (re-index +
-  // linked activity thumbnail + illustrationURL recompute) by going through the
-  // same NewsService#updateNews path the native editor uses, then returns the
-  // up-to-date model.
+  // Refreshes the lifecycle after a metadata change through the same
+  // NewsService#updateNews path the native editor uses. With no language that
+  // re-indexes the article, refreshes the activity thumbnail and recomputes the
+  // illustration URL; with a language updateNews returns before all of those
+  // (pre-existing NewsService behaviour, shared with the native editor).
   private NewsModel refreshAndModel(long newsId,
                                     org.exoplatform.services.security.Identity currentIdentity,
-                                    Space space) throws Exception {
-    News refreshed = newsService.getNewsById(String.valueOf(newsId),
-                                             currentIdentity,
-                                             false,
-                                             NewsObjectType.ARTICLE.name().toLowerCase());
+                                    Space space,
+                                    String lang,
+                                    NotePageProperties written,
+                                    boolean versionAlreadyWritten) throws Exception {
+    News refreshed = newsService.getNewsByIdAndLang(String.valueOf(newsId),
+                                                    currentIdentity,
+                                                    false,
+                                                    NewsObjectType.ARTICLE.name().toLowerCase(),
+                                                    lang);
+    // getNewsByIdAndLang is documented nullable and swallows buildArticle errors,
+    // so say what happened: the write succeeded, the read back did not. An NPE
+    // here surfaces to the model as "check your Tool input types", which invites
+    // a retry that writes a second version.
+    if (refreshed == null) {
+      throw new ObjectNotFoundException(("News with id '%s' was updated but could not be read back.").formatted(newsId));
+    }
+    // every updateNews with a lang creates a page version unconditionally, so a
+    // second one here would duplicate the version the caller just wrote
+    if (versionAlreadyWritten && lang != null) {
+      return toNewsModel(refreshed, space);
+    }
+    // with no lang the refresh would go through updateArticle and refresh the
+    // MAIN article, leaving the translation's illustration URL stale
+    refreshed.setLang(lang);
+    // and it must carry what was just saved: for a language with no version yet
+    // buildArticle falls back to the DEFAULT version, and handing those
+    // properties to the lang write would make it undo itself
+    if (written != null) {
+      refreshed.setProperties(written);
+    }
     News updated = newsService.updateNews(refreshed,
                                           currentIdentity.getUserId(),
                                           false,
                                           refreshed.isPublished(),
                                           NewsObjectType.ARTICLE.name().toLowerCase(),
                                           NewsUpdateType.CONTENT_AND_TITLE.name());
+    // addNewArticleVersionWithLang -- the branch taken when lang is set --
+    // returns null outright if the page vanished between the two calls
+    if (updated == null) {
+      throw new ObjectNotFoundException(("News with id '%s' was updated but could not be read back.").formatted(newsId));
+    }
     return toNewsModel(updated, space);
+  }
+
+  /**
+   * Blank becomes null (the default version), the rest is trimmed and
+   * lower-cased so "fr", " fr " and "FR" name one translation.
+   */
+  private String normalizeLanguage(String language) {
+    String lang = StringUtils.trimToNull(language);
+    // ROOT, not the JVM default: on a Turkish locale "FI" lower-cases to "fı"
+    return lang == null ? null : lang.toLowerCase(Locale.ROOT);
   }
 
   // When a language is provided, the base metadata (summary + cover) must come
@@ -706,23 +776,85 @@ public class NewsMcpTool implements McpToolPlugin {
   // metadata yet) still inherits the default article's properties. The
   // default-language path (blank language) keeps using the loaded article's
   // properties.
-  private NotePageProperties resolveBaseProperties(News news,
-                                                   long pageId,
-                                                   String language,
-                                                   org.exoplatform.services.security.Identity currentIdentity) {
-    NotePageProperties defaultProperties = news.getProperties() != null ? news.getProperties() : new NotePageProperties();
-    if (StringUtils.isBlank(language)) {
-      return defaultProperties;
+  /**
+   * The metadata a language write starts from, plus whether the cover FILE it
+   * names is that language's own. SHARED_WITH_DEFAULT: the default article
+   * points at the same file. UNDETERMINED: the default's metadata could not be
+   * read. Writing or deleting the file must treat both as "not ours".
+   */
+  private record LanguageProperties(NotePageProperties properties, CoverOwnership coverOwnership) {
+    private boolean ownsCoverFile() {
+      return coverOwnership == CoverOwnership.OWN;
+    }
+  }
+
+  private enum CoverOwnership {
+    OWN, SHARED_WITH_DEFAULT, UNDETERMINED
+  }
+
+  /**
+   * Resolves the metadata to write for a language. Takes an already-normalized
+   * language: resolving with a raw code while judging ownership with a
+   * normalized one would let the two disagree.
+   */
+  private LanguageProperties resolveProperties(News news,
+                                               long pageId,
+                                               String lang,
+                                               org.exoplatform.services.security.Identity currentIdentity) {
+    NotePageProperties loaded = news.getProperties() != null ? news.getProperties() : new NotePageProperties();
+    if (lang == null) {
+      return new LanguageProperties(loaded, CoverOwnership.OWN);
+    }
+    NotePageProperties defaultProperties = null;
+    NotePageProperties resolved = null;
+    // caught separately so the verdict can fail CLOSED: without the default's
+    // metadata, ownership is unknowable and its callers delete or overwrite the
+    // file, so a storage error must not read as "ours"
+    boolean defaultRead = false;
+    try {
+      Page defaultNote = noteService.getNoteByIdAndLang(pageId, currentIdentity, null, null);
+      defaultProperties = defaultNote == null ? null : defaultNote.getProperties();
+      // a null page or null properties is as blind as a throw
+      defaultRead = defaultProperties != null;
+    } catch (Exception e) {
+      LOG.warn("Could not read the default version of article {} while resolving the metadata of language '{}'."
+          + " Treating its cover as shared with the default, so it is neither replaced nor deleted.", pageId, lang, e);
     }
     try {
-      Page langNote = noteService.getNoteByIdAndLang(pageId, currentIdentity, null, language);
-      if (langNote != null && langNote.getProperties() != null) {
-        return langNote.getProperties();
+      Page langNote = noteService.getNoteByIdAndLang(pageId, currentIdentity, null, lang);
+      // the lang comes from the published version found, so this is
+      // "that language has a version of its own"
+      if (langNote != null && langNote.getProperties() != null && StringUtils.equalsIgnoreCase(langNote.getLang(), lang)) {
+        resolved = langNote.getProperties();
       }
     } catch (Exception e) {
-      // fall back to the default article's properties (new-translation inheritance)
+      LOG.warn("Could not read article {} in language '{}'; falling back to the metadata already loaded.", pageId, lang, e);
     }
-    return defaultProperties;
+    if (resolved == null) {
+      resolved = defaultProperties != null ? defaultProperties : loaded;
+    }
+    CoverOwnership ownership;
+    if (!defaultRead) {
+      ownership = CoverOwnership.UNDETERMINED;
+    } else {
+      ownership = sharesCoverFile(resolved, defaultProperties) ? CoverOwnership.SHARED_WITH_DEFAULT : CoverOwnership.OWN;
+    }
+    return new LanguageProperties(resolved, ownership);
+  }
+
+  /**
+   * A translation created by update_news carries the default's cover id into its
+   * own metadata item, so "does this language have a version" is NOT the
+   * question — the file id is. Mirrors NoteServiceImpl#isOriginalFeaturedImage.
+   */
+  private boolean sharesCoverFile(NotePageProperties properties, NotePageProperties defaultProperties) {
+    Long coverId = coverFileId(properties);
+    return coverId != null && coverId.equals(coverFileId(defaultProperties));
+  }
+
+  private Long coverFileId(NotePageProperties properties) {
+    NoteFeaturedImage image = properties == null ? null : properties.getFeaturedImage();
+    return image == null || image.getId() == null || image.getId() <= 0 ? null : image.getId();
   }
 
   private long getUserIdentityId(String username) {
