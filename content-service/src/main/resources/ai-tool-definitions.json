@@ -185,11 +185,15 @@
     {
       "name": "get_news_by_id",
       "title": "Get an article",
-      "description": "Get a single news entry by its ID.",
+      "description": "Get a single news entry by its ID, in its default language or in one of its translations.",
       "input_schema": {
         "type": "object",
         "properties": {
-          "news_id": { "type": "integer" }
+          "news_id": { "type": "integer" },
+          "language": {
+            "type": "string",
+            "description": "Optional language/translation to read (e.g. 'fr', 'de'); omit for the article's default content."
+          }
         },
         "required": ["news_id"]
       },
@@ -203,15 +207,15 @@
     {
       "name": "update_news",
       "title": "Update an article",
-      "description": "Update the title, summary and/or HTML content of an existing news (Article). Only the provided fields are changed. The optional 'language' targets the summary translation to update (defaults to the article's default language).",
+      "description": "Update the title, summary and/or HTML content of an existing news (Article). Only the provided fields are changed. With a 'language' it creates or updates THAT translation - title, body and summary alike - and leaves the article's default content untouched; pass the translated fields together in that one call.",
       "input_schema": {
         "type": "object",
         "properties": {
           "news_id": { "type": "integer", "description": "Id of the article (news) to update." },
-          "title": { "type": "string", "description": "New article title. Omit to leave the title unchanged." },
+          "title": { "type": "string", "description": "New article title. Omit to leave the title unchanged. With a 'language' this is the title of that translation, not of the default article." },
           "summary": { "type": "string", "description": "New short summary/abstract shown above the article body. Stored as article metadata — setting it does NOT change the article body. Omit to leave the summary unchanged." },
-          "html_content": { "type": "string", "description": "New article BODY content (markdown/HTML). Use this ONLY to change the main body; never put a summary here. Omit to leave the body unchanged." },
-          "language": { "type": "string", "description": "Optional language code targeting the summary translation to update; defaults to the article's default language." }
+          "html_content": { "type": "string", "description": "New article BODY content (markdown/HTML). Use this ONLY to change the main body; never put a summary here. Omit to leave the body unchanged. With a 'language' this is the body of that translation, not of the default article." },
+          "language": { "type": "string", "description": "Optional language code (e.g. 'en', 'fr') of the translation to create or update; omit to update the article's default content. The article's default content is never modified when a language is given." }
         },
         "required": ["news_id"]
       },
@@ -236,7 +240,7 @@
           "attachment_object_type": { "type": "string", "description": "Type of an existing platform object whose already-attached image to reuse as the cover (paired with attachment_object_id)." },
           "attachment_object_id": { "type": "string", "description": "Id of the existing platform object whose already-attached image to reuse as the cover (paired with attachment_object_type)." },
           "alt_text": { "type": "string", "description": "Alternative text describing the cover image, for accessibility." },
-          "language": { "type": "string", "description": "Optional language code; defaults to the article's default language." }
+          "language": { "type": "string", "description": "Optional language/translation to target (e.g. 'fr', 'de'); omit for the default article. Setting a cover for a translation that had none gives that translation its own image file; the default article's is left untouched." }
         },
         "required": ["news_id"]
       },
@@ -251,12 +255,18 @@
     {
       "name": "remove_news_illustration",
       "title": "Remove an article cover image",
-      "description": "Remove the cover (illustration) image of a news (Article).",
+      "description": "Remove the cover (illustration) image of a news (Article), in its default language or in one of its translations. A translation that was never given a cover of its own SHOWS the default article's image without owning it; removing it there is refused, because deleting that file would take the cover off the default article too.",
       "input_schema": {
         "type": "object",
         "properties": {
-          "news_id": { "type": "integer" },
-          "language": { "type": "string" }
+          "news_id": {
+            "type": "integer",
+            "description": "Id of the article (news) whose cover is removed."
+          },
+          "language": {
+            "type": "string",
+            "description": "Optional language/translation to target (e.g. 'fr', 'de'); omit for the default article. Only a cover this translation owns can be removed: if it merely shows the default article's, the call is refused and says so."
+          }
         },
         "required": ["news_id"]
       },

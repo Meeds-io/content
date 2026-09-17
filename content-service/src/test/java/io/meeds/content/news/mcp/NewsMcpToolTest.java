@@ -20,7 +20,9 @@ package io.meeds.content.news.mcp;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -32,6 +34,7 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -66,6 +69,7 @@ import org.exoplatform.social.core.profileproperty.ProfilePropertyService;
 import org.exoplatform.social.core.space.model.Space;
 import org.exoplatform.social.core.space.spi.SpaceService;
 import org.exoplatform.upload.UploadService;
+import org.exoplatform.wiki.WikiException;
 import org.exoplatform.wiki.model.Page;
 import org.exoplatform.wiki.service.NoteService;
 
@@ -240,11 +244,11 @@ public class NewsMcpToolTest {
 
   @Test(expected = ObjectNotFoundException.class)
   public void updateNewsWhenNewsDoesNotExistShouldThrowException() throws Exception { // NOSONAR
-    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)),
-                                 eq(currentIdentity),
-                                 eq(false),
-                                 eq(NewsObjectType.ARTICLE.name().toLowerCase())))
-                                                                                  .thenReturn(null);
+    when(newsService.getNewsByIdAndLang(eq(String.valueOf(NEWS_ID)),
+                                    eq(currentIdentity),
+                                    eq(false),
+                                    anyString(),
+                                    any())).thenReturn(null);
 
     tool.updateNews(NEWS_ID, TITLE, SUMMARY, CONTENT, "en");
   }
@@ -254,8 +258,11 @@ public class NewsMcpToolTest {
     News news = mockNews();
     Space space = mockSpace();
 
-    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)), eq(currentIdentity), eq(false), anyString()))
-                                                                                                           .thenReturn(news);
+    when(newsService.getNewsByIdAndLang(eq(String.valueOf(NEWS_ID)),
+                                    eq(currentIdentity),
+                                    eq(false),
+                                    anyString(),
+                                    any())).thenReturn(news);
     when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
     when(newsService.canEditNews(news, USER)).thenReturn(false);
 
@@ -268,8 +275,11 @@ public class NewsMcpToolTest {
     Space space = mockSpace();
     mockUserIdentity();
 
-    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)), eq(currentIdentity), eq(false), anyString()))
-                                                                                                           .thenReturn(news);
+    when(newsService.getNewsByIdAndLang(eq(String.valueOf(NEWS_ID)),
+                                    eq(currentIdentity),
+                                    eq(false),
+                                    anyString(),
+                                    any())).thenReturn(news);
     when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
     when(newsService.canEditNews(news, USER)).thenReturn(true);
     when(newsService.updateNews(eq(news), eq(USER), eq(false), anyBoolean(), anyString(), anyString()))
@@ -315,12 +325,15 @@ public class NewsMcpToolTest {
     News news = mockNews();
     Space space = mockSpace();
 
-    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)), eq(currentIdentity), eq(false), anyString()))
-                                                                                                           .thenReturn(news);
+    when(newsService.getNewsByIdAndLang(eq(String.valueOf(NEWS_ID)),
+                                    eq(currentIdentity),
+                                    eq(false),
+                                    anyString(),
+                                    any())).thenReturn(news);
     when(newsService.canViewNews(news, USER)).thenReturn(true);
     when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
 
-    NewsModel result = runWithStaticMocks(() -> tool.getNewsById(NEWS_ID));
+    NewsModel result = runWithStaticMocks(() -> tool.getNewsById(NEWS_ID, null));
 
     assertEquals(NEWS_ID, result.id());
     assertEquals(TITLE, result.title());
@@ -330,11 +343,14 @@ public class NewsMcpToolTest {
   public void getNewsByIdWhenUserCannotViewShouldThrowException() throws Exception { // NOSONAR
     News news = mockNews();
 
-    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)), eq(currentIdentity), eq(false), anyString()))
-                                                                                                           .thenReturn(news);
+    when(newsService.getNewsByIdAndLang(eq(String.valueOf(NEWS_ID)),
+                                    eq(currentIdentity),
+                                    eq(false),
+                                    anyString(),
+                                    any())).thenReturn(news);
     when(newsService.canViewNews(news, USER)).thenReturn(false);
 
-    tool.getNewsById(NEWS_ID);
+    tool.getNewsById(NEWS_ID, null);
   }
 
   @Test
@@ -595,8 +611,11 @@ public class NewsMcpToolTest {
     mockUserIdentity();
     NotePageProperties properties = news.getProperties();
 
-    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)), eq(currentIdentity), eq(false), anyString()))
-                                                                                                           .thenReturn(news);
+    when(newsService.getNewsByIdAndLang(eq(String.valueOf(NEWS_ID)),
+                                    eq(currentIdentity),
+                                    eq(false),
+                                    anyString(),
+                                    any())).thenReturn(news);
     when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
     when(newsService.canEditNews(news, USER)).thenReturn(true);
     when(newsService.updateNews(eq(news), eq(USER), eq(false), anyBoolean(), anyString(), anyString()))
@@ -618,8 +637,11 @@ public class NewsMcpToolTest {
     NoteFeaturedImage cover = new NoteFeaturedImage(500L, null, null, 0L, 0L, null, null);
     properties.setFeaturedImage(cover);
 
-    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)), eq(currentIdentity), eq(false), anyString()))
-                                                                                                           .thenReturn(news);
+    when(newsService.getNewsByIdAndLang(eq(String.valueOf(NEWS_ID)),
+                                    eq(currentIdentity),
+                                    eq(false),
+                                    anyString(),
+                                    any())).thenReturn(news);
     when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
     when(newsService.canEditNews(news, USER)).thenReturn(true);
     when(newsService.updateNews(eq(news), eq(USER), eq(false), anyBoolean(), anyString(), anyString()))
@@ -644,18 +666,27 @@ public class NewsMcpToolTest {
     news.getProperties().setFeaturedImage(new NoteFeaturedImage(500L, null, null, 0L, 0L, null, null));
 
     Page frNote = mock(Page.class);
+    lenient().when(frNote.getLang()).thenReturn("fr");
     NotePageProperties frProperties = new NotePageProperties();
     frProperties.setSummary("fr summary");
     frProperties.setFeaturedImage(new NoteFeaturedImage(600L, null, null, 0L, 0L, null, null));
     lenient().when(frNote.getProperties()).thenReturn(frProperties);
+    Page defaultPage = mock(Page.class);
+    NotePageProperties defaultPageProperties = new NotePageProperties();
+    defaultPageProperties.setFeaturedImage(new NoteFeaturedImage(500L, null, null, 0L, 0L, null, null));
+    lenient().when(defaultPage.getProperties()).thenReturn(defaultPageProperties);
 
-    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)), eq(currentIdentity), eq(false), anyString()))
-                                                                                                           .thenReturn(news);
+    when(newsService.getNewsByIdAndLang(eq(String.valueOf(NEWS_ID)),
+                                    eq(currentIdentity),
+                                    eq(false),
+                                    anyString(),
+                                    any())).thenReturn(news);
     when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
     when(newsService.canEditNews(news, USER)).thenReturn(true);
     when(newsService.updateNews(eq(news), eq(USER), eq(false), anyBoolean(), anyString(), anyString()))
                                                                                                        .thenReturn(news);
     when(noteService.getNoteByIdAndLang(eq(NEWS_ID), eq(currentIdentity), eq(null), eq("fr"))).thenReturn(frNote);
+    lenient().when(noteService.getNoteByIdAndLang(eq(NEWS_ID), eq(currentIdentity), eq(null), eq(null))).thenReturn(defaultPage);
 
     ArgumentCaptor<NotePageProperties> captor = ArgumentCaptor.forClass(NotePageProperties.class);
 
@@ -678,14 +709,22 @@ public class NewsMcpToolTest {
 
     Page frNote = mock(Page.class);
     lenient().when(frNote.getProperties()).thenReturn(null);
+    Page defaultPage = mock(Page.class);
+    NotePageProperties defaultPageProperties = new NotePageProperties();
+    defaultPageProperties.setFeaturedImage(new NoteFeaturedImage(500L, null, null, 0L, 0L, null, null));
+    lenient().when(defaultPage.getProperties()).thenReturn(defaultPageProperties);
 
-    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)), eq(currentIdentity), eq(false), anyString()))
-                                                                                                           .thenReturn(news);
+    when(newsService.getNewsByIdAndLang(eq(String.valueOf(NEWS_ID)),
+                                    eq(currentIdentity),
+                                    eq(false),
+                                    anyString(),
+                                    any())).thenReturn(news);
     when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
     when(newsService.canEditNews(news, USER)).thenReturn(true);
     when(newsService.updateNews(eq(news), eq(USER), eq(false), anyBoolean(), anyString(), anyString()))
                                                                                                        .thenReturn(news);
     lenient().when(noteService.getNoteByIdAndLang(eq(NEWS_ID), eq(currentIdentity), eq(null), eq("fr"))).thenReturn(frNote);
+    lenient().when(noteService.getNoteByIdAndLang(eq(NEWS_ID), eq(currentIdentity), eq(null), eq(null))).thenReturn(defaultPage);
 
     ArgumentCaptor<NotePageProperties> captor = ArgumentCaptor.forClass(NotePageProperties.class);
 
@@ -696,15 +735,25 @@ public class NewsMcpToolTest {
     assertEquals(Long.valueOf(500L), captor.getValue().getFeaturedImage().getId());
   }
 
+  // EXO-90294: a blank language is the article's OWN default version. It used to
+  // fall back to whatever lang the loaded article carried, so an update meant for
+  // the main article could land on a translation.
+  // Unreachable today: buildArticle sets the lang from the version it read, and
+  // the lang-null query matches `p.lang IS NULL`, so getLang() is always null
+  // after a lang-less load. Kept so the tool does not depend on that property of
+  // another class.
   @Test
-  public void updateNewsShouldUseArticleLanguageWhenLanguageBlank() throws Exception { // NOSONAR
+  public void updateNewsWithoutLanguageShouldWriteTheDefaultArticle() throws Exception { // NOSONAR
     News news = mockNews();
     Space space = mockSpace();
     mockUserIdentity();
     lenient().when(news.getLang()).thenReturn("fr");
 
-    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)), eq(currentIdentity), eq(false), anyString()))
-                                                                                                           .thenReturn(news);
+    when(newsService.getNewsByIdAndLang(eq(String.valueOf(NEWS_ID)),
+                                        eq(currentIdentity),
+                                        eq(false),
+                                        anyString(),
+                                        any())).thenReturn(news);
     when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
     when(newsService.canEditNews(news, USER)).thenReturn(true);
     when(newsService.updateNews(eq(news), eq(USER), eq(false), anyBoolean(), anyString(), anyString()))
@@ -712,8 +761,55 @@ public class NewsMcpToolTest {
 
     runWithStaticMocks(() -> tool.updateNews(NEWS_ID, null, "New summary", null, null));
 
-    // blank language falls back to the article's default language
-    verify(noteService).saveNoteMetadata(any(NotePageProperties.class), eq("fr"), eq(1L));
+    verify(noteService).saveNoteMetadata(any(NotePageProperties.class), eq(null), eq(1L));
+    verify(news, atLeastOnce()).setLang(null);
+  }
+
+  // EXO-90294: NewsService#updateNews routes to addNewArticleVersionWithLang only
+  // when news.getLang() is set. The tool never set it, so update_news with a
+  // language wrote the translated title and body into the MAIN article.
+  @Test
+  public void updateNewsInLanguageShouldCarryThatLanguageIntoTheTitleAndBodyWrite() throws Exception { // NOSONAR
+    News news = mockNews();
+    // a distinct object, so the lang set on the refresh cannot stand in
+    News refreshed = mockNews();
+    Space space = mockSpace();
+    mockUserIdentity();
+
+    when(newsService.getNewsByIdAndLang(eq(String.valueOf(NEWS_ID)),
+                                        eq(currentIdentity),
+                                        eq(false),
+                                        anyString(),
+                                        any())).thenReturn(news, refreshed);
+    when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
+    when(newsService.canEditNews(news, USER)).thenReturn(true);
+    when(newsService.updateNews(eq(news), eq(USER), eq(false), anyBoolean(), anyString(), anyString()))
+                                                                                                       .thenReturn(news);
+    // stubbed but not expected, so the mutant fails on times(1) not on an NPE
+    lenient().when(newsService.updateNews(eq(refreshed), eq(USER), eq(false), anyBoolean(), anyString(), anyString()))
+                                                                                                                     .thenReturn(refreshed);
+
+    runWithStaticMocks(() -> tool.updateNews(NEWS_ID, "Titre FR", null, "Contenu FR", "fr"));
+
+    verify(news).setTitle("Titre FR");
+    verify(news).setBody("<p>Contenu FR</p>");
+    // the object the title/body write is made from carries the language
+    verify(news).setLang("fr");
+    verify(newsService).updateNews(eq(news),
+                                   eq(USER),
+                                   eq(false),
+                                   anyBoolean(),
+                                   eq(NewsObjectType.ARTICLE.name().toLowerCase()),
+                                   eq("CONTENT_AND_TITLE"));
+    // EXO-90294: exactly ONE write -- every updateNews with a lang creates a page
+    // version unconditionally, so a second would duplicate the translation's.
+    verify(newsService, times(1)).updateNews(any(News.class),
+                                             anyString(),
+                                             anyBoolean(),
+                                             anyBoolean(),
+                                             anyString(),
+                                             anyString());
+    verify(newsService, never()).updateNews(eq(refreshed), anyString(), anyBoolean(), anyBoolean(), anyString(), anyString());
   }
 
   @Test
@@ -721,12 +817,15 @@ public class NewsMcpToolTest {
     News news = mockNews();
     Space space = mockSpace();
 
-    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)), eq(currentIdentity), eq(false), anyString()))
-                                                                                                           .thenReturn(news);
+    when(newsService.getNewsByIdAndLang(eq(String.valueOf(NEWS_ID)),
+                                    eq(currentIdentity),
+                                    eq(false),
+                                    anyString(),
+                                    any())).thenReturn(news);
     when(newsService.canViewNews(news, USER)).thenReturn(true);
     when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
 
-    NewsModel result = runWithStaticMocks(() -> tool.getNewsById(NEWS_ID));
+    NewsModel result = runWithStaticMocks(() -> tool.getNewsById(NEWS_ID, null));
 
     assertEquals("/portal/rest/notes/illustration/" + NEWS_ID, result.illustrationUrl());
   }
@@ -744,6 +843,398 @@ public class NewsMcpToolTest {
     tool.setNewsIllustration(NEWS_ID, "https://meeds.test/cover.png", null, null, null, "alt", "en");
   }
 
+  // EXO-90294: the refresh re-reads the article, and for a language with no page
+  // version yet buildArticle falls back to the DEFAULT version -- handing those
+  // properties to the lang write made it overwrite the summary just saved.
+  @Test
+  public void updateNewsSummaryOnlyInLanguageShouldNotBeRevertedByTheRefresh() throws Exception { // NOSONAR
+    News news = mockNews();
+    // a language with no version yet re-reads with the DEFAULT's properties
+    News refreshed = mockNews();
+    NotePageProperties defaultProperties = new NotePageProperties();
+    defaultProperties.setSummary("default summary");
+    lenient().when(refreshed.getProperties()).thenReturn(defaultProperties);
+    Space space = mockSpace();
+    mockUserIdentity();
+
+    when(newsService.getNewsByIdAndLang(eq(String.valueOf(NEWS_ID)),
+                                        eq(currentIdentity),
+                                        eq(false),
+                                        anyString(),
+                                        any())).thenReturn(news, refreshed);
+    when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
+    when(newsService.canEditNews(news, USER)).thenReturn(true);
+    when(newsService.updateNews(eq(refreshed), eq(USER), eq(false), anyBoolean(), anyString(), anyString()))
+                                                                                                            .thenReturn(refreshed);
+
+    ArgumentCaptor<NotePageProperties> captor = ArgumentCaptor.forClass(NotePageProperties.class);
+
+    runWithStaticMocks(() -> tool.updateNews(NEWS_ID, null, "resume fr", null, "fr"));
+
+    verify(noteService).saveNoteMetadata(any(NotePageProperties.class), eq("fr"), eq(1L));
+    // the version write carries the summary just saved, not the default's
+    verify(refreshed).setProperties(captor.capture());
+    assertEquals("resume fr", captor.getValue().getSummary());
+    // ACCEPTED by the PO: a metadata-only write for a language with no version
+    // yet creates one, and its title/body are the default's until translated --
+    // the version is what makes the metadata readable at all.
+    verify(refreshed, never()).setTitle(anyString());
+    verify(refreshed, never()).setBody(anyString());
+  }
+
+  // EXO-90294: a language with no version of its own inherits the default's cover
+  // id; reusing it replaces the default article's binary in place.
+  @Test
+  public void setNewsIllustrationOnAnInheritedCoverShouldNotReuseTheDefaultsFileId() throws Exception { // NOSONAR
+    News news = mockNews();
+    Space space = mockSpace();
+    mockUserIdentity();
+    NotePageProperties defaultProperties = news.getProperties();
+    defaultProperties.setFeaturedImage(new NoteFeaturedImage(500L, null, null, 0L, 0L, null, null));
+    // no "de" version: the returned page has no lang
+    Page defaultPage = mock(Page.class);
+    lenient().when(defaultPage.getLang()).thenReturn(null);
+    lenient().when(defaultPage.getProperties()).thenReturn(defaultProperties);
+
+    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)), eq(currentIdentity), eq(false), anyString()))
+                                                                                                       .thenReturn(news);
+    when(newsService.getNewsByIdAndLang(eq(String.valueOf(NEWS_ID)),
+                                        eq(currentIdentity),
+                                        eq(false),
+                                        anyString(),
+                                        any())).thenReturn(news);
+    lenient().when(noteService.getNoteByIdAndLang(eq(NEWS_ID), eq(currentIdentity), eq(null), eq("de")))
+             .thenReturn(defaultPage);
+    lenient().when(noteService.getNoteByIdAndLang(eq(NEWS_ID), eq(currentIdentity), eq(null), eq(null)))
+             .thenReturn(defaultPage);
+    when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
+    when(newsService.canEditNews(news, USER)).thenReturn(true);
+    when(newsService.updateNews(eq(news), eq(USER), eq(false), anyBoolean(), anyString(), anyString()))
+                                                                                                       .thenReturn(news);
+
+    ArgumentCaptor<NotePageProperties> captor = ArgumentCaptor.forClass(NotePageProperties.class);
+
+    runWithUploadMocks(() -> tool.setNewsIllustration(NEWS_ID, "https://meeds.test/cover.png", null, null, null, "alt", "de"));
+
+    verify(noteService).saveNoteMetadata(captor.capture(), eq("de"), eq(1L));
+    assertNull(captor.getValue().getFeaturedImage().getId());
+  }
+
+  // EXO-90294: removing a translation's INHERITED illustration would call
+  // removeNoteFeaturedImage(isDraft=false), whose file deletion is unguarded.
+  @Test
+  public void removeNewsIllustrationOnAnInheritedCoverShouldRefuse() throws Exception { // NOSONAR
+    News news = mockNews();
+    Space space = mockSpace();
+    mockUserIdentity();
+    NotePageProperties defaultProperties = news.getProperties();
+    defaultProperties.setFeaturedImage(new NoteFeaturedImage(500L, null, null, 0L, 0L, null, null));
+    Page defaultPage = mock(Page.class);
+    lenient().when(defaultPage.getLang()).thenReturn(null);
+    lenient().when(defaultPage.getProperties()).thenReturn(defaultProperties);
+
+    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)), eq(currentIdentity), eq(false), anyString()))
+                                                                                                       .thenReturn(news);
+    lenient().when(newsService.getNewsByIdAndLang(eq(String.valueOf(NEWS_ID)),
+                                                  eq(currentIdentity),
+                                                  eq(false),
+                                                  anyString(),
+                                                  any())).thenReturn(news);
+    lenient().when(noteService.getNoteByIdAndLang(eq(NEWS_ID), eq(currentIdentity), eq(null), eq("de")))
+             .thenReturn(defaultPage);
+    lenient().when(noteService.getNoteByIdAndLang(eq(NEWS_ID), eq(currentIdentity), eq(null), eq(null)))
+             .thenReturn(defaultPage);
+    when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
+    when(newsService.canEditNews(news, USER)).thenReturn(true);
+    // the unguarded path is stubbed so the mutant fails on the deletion
+    lenient().when(newsService.updateNews(eq(news), eq(USER), eq(false), anyBoolean(), anyString(), anyString()))
+                                                                                                                .thenReturn(news);
+
+    try {
+      runWithStaticMocks(() -> tool.removeNewsIllustration(NEWS_ID, "de"));
+      fail("removing an inherited illustration must not be accepted");
+    } catch (IllegalArgumentException e) {
+      assertTrue(e.getMessage().contains("de"));
+    }
+    verify(noteService, never()).removeNoteFeaturedImage(anyLong(), anyLong(), anyString(), anyBoolean(), anyLong());
+  }
+
+  // EXO-90294: the code is normalized once at the tool boundary, so the metadata,
+  // the ownership verdict and the write cannot resolve to different languages.
+  @Test
+  public void updateNewsWithAPaddedUpperCaseLanguageShouldTargetTheSameTranslation() throws Exception { // NOSONAR
+    News news = mockNews();
+    Space space = mockSpace();
+    mockUserIdentity();
+
+    when(newsService.getNewsByIdAndLang(eq(String.valueOf(NEWS_ID)),
+                                        eq(currentIdentity),
+                                        eq(false),
+                                        anyString(),
+                                        any())).thenReturn(news);
+    when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
+    when(newsService.canEditNews(news, USER)).thenReturn(true);
+    when(newsService.updateNews(eq(news), eq(USER), eq(false), anyBoolean(), anyString(), anyString()))
+                                                                                                       .thenReturn(news);
+
+    // decoys answering the raw and trimmed codes, so dropping the normalization
+    // fails on the assertions below rather than on an unresolved language
+    Page rawCodePage = mock(Page.class);
+    lenient().when(rawCodePage.getLang()).thenReturn("FR");
+    NotePageProperties rawCodeProperties = new NotePageProperties();
+    rawCodeProperties.setFeaturedImage(new NoteFeaturedImage(700L, null, null, 0L, 0L, null, null));
+    lenient().when(rawCodePage.getProperties()).thenReturn(rawCodeProperties);
+    lenient().when(noteService.getNoteByIdAndLang(eq(NEWS_ID), eq(currentIdentity), eq(null), eq("  FR  ")))
+             .thenReturn(rawCodePage);
+    lenient().when(noteService.getNoteByIdAndLang(eq(NEWS_ID), eq(currentIdentity), eq(null), eq("FR")))
+             .thenReturn(rawCodePage);
+    Page frPage = mock(Page.class);
+    lenient().when(frPage.getLang()).thenReturn("fr");
+    NotePageProperties frPageProperties = new NotePageProperties();
+    frPageProperties.setFeaturedImage(new NoteFeaturedImage(600L, null, null, 0L, 0L, null, null));
+    lenient().when(frPage.getProperties()).thenReturn(frPageProperties);
+    lenient().when(noteService.getNoteByIdAndLang(eq(NEWS_ID), eq(currentIdentity), eq(null), eq("fr"))).thenReturn(frPage);
+    // the default read, so a resolution/write disagreement shows which language
+    // won instead of dying on an NPE
+    Page defaultPage = mock(Page.class);
+    NotePageProperties defaultPageProperties = new NotePageProperties();
+    defaultPageProperties.setFeaturedImage(new NoteFeaturedImage(500L, null, null, 0L, 0L, null, null));
+    lenient().when(defaultPage.getProperties()).thenReturn(defaultPageProperties);
+    lenient().when(noteService.getNoteByIdAndLang(eq(NEWS_ID), eq(currentIdentity), eq(null), eq(null))).thenReturn(defaultPage);
+
+    ArgumentCaptor<NotePageProperties> captor = ArgumentCaptor.forClass(NotePageProperties.class);
+
+    runWithStaticMocks(() -> tool.updateNews(NEWS_ID, null, "resume fr", null, "  FR  "));
+
+    verify(noteService).saveNoteMetadata(captor.capture(), eq("fr"), eq(1L));
+    verify(news, atLeastOnce()).setLang("fr");
+    // and the metadata was resolved from THAT translation, not from the raw code
+    assertEquals(Long.valueOf(600L), captor.getValue().getFeaturedImage().getId());
+  }
+
+  // EXO-90294: a translation may have a version of its OWN and still name the
+  // default's file, so "does a version exist" is the wrong question; the id is.
+  @Test
+  public void setNewsIllustrationOnATranslationSharingTheDefaultsFileShouldNotReuseTheFileId() throws Exception { // NOSONAR
+    News news = mockNews();
+    Space space = mockSpace();
+    mockUserIdentity();
+    Page defaultPage = mock(Page.class);
+    NotePageProperties defaultPageProperties = new NotePageProperties();
+    defaultPageProperties.setFeaturedImage(new NoteFeaturedImage(500L, null, null, 0L, 0L, null, null));
+    lenient().when(defaultPage.getProperties()).thenReturn(defaultPageProperties);
+    // the "fr" version exists but still points at the default's file
+    Page frPage = mock(Page.class);
+    lenient().when(frPage.getLang()).thenReturn("fr");
+    NotePageProperties frPageProperties = new NotePageProperties();
+    frPageProperties.setFeaturedImage(new NoteFeaturedImage(500L, null, null, 0L, 0L, null, null));
+    lenient().when(frPage.getProperties()).thenReturn(frPageProperties);
+
+    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)), eq(currentIdentity), eq(false), anyString()))
+                                                                                                       .thenReturn(news);
+    when(newsService.getNewsByIdAndLang(eq(String.valueOf(NEWS_ID)),
+                                        eq(currentIdentity),
+                                        eq(false),
+                                        anyString(),
+                                        any())).thenReturn(news);
+    lenient().when(noteService.getNoteByIdAndLang(eq(NEWS_ID), eq(currentIdentity), eq(null), eq("fr"))).thenReturn(frPage);
+    lenient().when(noteService.getNoteByIdAndLang(eq(NEWS_ID), eq(currentIdentity), eq(null), eq(null))).thenReturn(defaultPage);
+    when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
+    when(newsService.canEditNews(news, USER)).thenReturn(true);
+    when(newsService.updateNews(eq(news), eq(USER), eq(false), anyBoolean(), anyString(), anyString()))
+                                                                                                       .thenReturn(news);
+
+    ArgumentCaptor<NotePageProperties> captor = ArgumentCaptor.forClass(NotePageProperties.class);
+
+    runWithUploadMocks(() -> tool.setNewsIllustration(NEWS_ID, "https://meeds.test/cover.png", null, null, null, "alt", "fr"));
+
+    verify(noteService).saveNoteMetadata(captor.capture(), eq("fr"), eq(1L));
+    assertNull(captor.getValue().getFeaturedImage().getId());
+  }
+
+  // Same sequence on the removal side: the fr version exists but shares the
+  // default's file, so deleting it would destroy the default article's image.
+  @Test
+  public void removeNewsIllustrationOnATranslationSharingTheDefaultsFileShouldRefuse() throws Exception { // NOSONAR
+    News news = mockNews();
+    Space space = mockSpace();
+    mockUserIdentity();
+    NotePageProperties loaded = news.getProperties();
+    loaded.setFeaturedImage(new NoteFeaturedImage(500L, null, null, 0L, 0L, null, null));
+    Page defaultPage = mock(Page.class);
+    NotePageProperties defaultPageProperties = new NotePageProperties();
+    defaultPageProperties.setFeaturedImage(new NoteFeaturedImage(500L, null, null, 0L, 0L, null, null));
+    lenient().when(defaultPage.getProperties()).thenReturn(defaultPageProperties);
+    Page frPage = mock(Page.class);
+    lenient().when(frPage.getLang()).thenReturn("fr");
+    NotePageProperties frPageProperties = new NotePageProperties();
+    frPageProperties.setFeaturedImage(new NoteFeaturedImage(500L, null, null, 0L, 0L, null, null));
+    lenient().when(frPage.getProperties()).thenReturn(frPageProperties);
+
+    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)), eq(currentIdentity), eq(false), anyString()))
+                                                                                                       .thenReturn(news);
+    lenient().when(newsService.getNewsByIdAndLang(eq(String.valueOf(NEWS_ID)),
+                                                  eq(currentIdentity),
+                                                  eq(false),
+                                                  anyString(),
+                                                  any())).thenReturn(news);
+    lenient().when(noteService.getNoteByIdAndLang(eq(NEWS_ID), eq(currentIdentity), eq(null), eq("fr"))).thenReturn(frPage);
+    lenient().when(noteService.getNoteByIdAndLang(eq(NEWS_ID), eq(currentIdentity), eq(null), eq(null))).thenReturn(defaultPage);
+    when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
+    when(newsService.canEditNews(news, USER)).thenReturn(true);
+    lenient().when(newsService.updateNews(eq(news), eq(USER), eq(false), anyBoolean(), anyString(), anyString()))
+                                                                                                                .thenReturn(news);
+
+    try {
+      runWithStaticMocks(() -> tool.removeNewsIllustration(NEWS_ID, "fr"));
+      fail("removing an illustration shared with the default article must not be accepted");
+    } catch (IllegalArgumentException e) {
+      assertTrue(e.getMessage().contains("fr"));
+    }
+    verify(noteService, never()).removeNoteFeaturedImage(anyLong(), anyLong(), anyString(), anyBoolean(), anyLong());
+  }
+
+  // EXO-90294: without the default's metadata, ownership is unknowable and this
+  // guard's callers delete or replace the file, so a failed read must refuse.
+  @Test
+  public void removeNewsIllustrationShouldRefuseWhenTheDefaultVersionCannotBeRead() throws Exception { // NOSONAR
+    News news = mockNews();
+    Space space = mockSpace();
+    mockUserIdentity();
+    NotePageProperties loaded = news.getProperties();
+    loaded.setFeaturedImage(new NoteFeaturedImage(500L, null, null, 0L, 0L, null, null));
+    Page frPage = mock(Page.class);
+    lenient().when(frPage.getLang()).thenReturn("fr");
+    NotePageProperties frPageProperties = new NotePageProperties();
+    frPageProperties.setFeaturedImage(new NoteFeaturedImage(500L, null, null, 0L, 0L, null, null));
+    lenient().when(frPage.getProperties()).thenReturn(frPageProperties);
+
+    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)), eq(currentIdentity), eq(false), anyString()))
+                                                                                                       .thenReturn(news);
+    lenient().when(newsService.getNewsByIdAndLang(eq(String.valueOf(NEWS_ID)),
+                                                  eq(currentIdentity),
+                                                  eq(false),
+                                                  anyString(),
+                                                  any())).thenReturn(news);
+    lenient().when(noteService.getNoteByIdAndLang(eq(NEWS_ID), eq(currentIdentity), eq(null), eq("fr"))).thenReturn(frPage);
+    when(noteService.getNoteByIdAndLang(eq(NEWS_ID), eq(currentIdentity), eq(null), eq(null)))
+                                                                                              .thenThrow(new WikiException("storage down"));
+    when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
+    when(newsService.canEditNews(news, USER)).thenReturn(true);
+    lenient().when(newsService.updateNews(eq(news), eq(USER), eq(false), anyBoolean(), anyString(), anyString()))
+                                                                                                                .thenReturn(news);
+
+    try {
+      runWithStaticMocks(() -> tool.removeNewsIllustration(NEWS_ID, "fr"));
+      fail("a cover whose ownership could not be established must not be deleted");
+    } catch (IllegalStateException e) {
+      assertTrue(e.getMessage().contains("fr"));
+      // says what happened rather than blaming the default
+      assertTrue(e.getMessage().contains("could not be read"));
+      assertFalse(e.getMessage().contains("set_news_illustration"));
+    }
+    verify(noteService, never()).removeNoteFeaturedImage(anyLong(), anyLong(), anyString(), anyBoolean(), anyLong());
+  }
+
+  // EXO-90294: getNoteByIdAndLang returns null for a missing page rather than
+  // throwing, so a null read is as blind as a throw and must refuse too.
+  @Test
+  public void removeNewsIllustrationShouldRefuseWhenTheDefaultVersionReadsNull() throws Exception { // NOSONAR
+    News news = mockNews();
+    Space space = mockSpace();
+    mockUserIdentity();
+    NotePageProperties loaded = news.getProperties();
+    loaded.setFeaturedImage(new NoteFeaturedImage(500L, null, null, 0L, 0L, null, null));
+    Page frPage = mock(Page.class);
+    lenient().when(frPage.getLang()).thenReturn("fr");
+    NotePageProperties frPageProperties = new NotePageProperties();
+    frPageProperties.setFeaturedImage(new NoteFeaturedImage(500L, null, null, 0L, 0L, null, null));
+    lenient().when(frPage.getProperties()).thenReturn(frPageProperties);
+
+    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)), eq(currentIdentity), eq(false), anyString()))
+                                                                                                       .thenReturn(news);
+    lenient().when(newsService.getNewsByIdAndLang(eq(String.valueOf(NEWS_ID)),
+                                                  eq(currentIdentity),
+                                                  eq(false),
+                                                  anyString(),
+                                                  any())).thenReturn(news);
+    lenient().when(noteService.getNoteByIdAndLang(eq(NEWS_ID), eq(currentIdentity), eq(null), eq("fr"))).thenReturn(frPage);
+    when(noteService.getNoteByIdAndLang(eq(NEWS_ID), eq(currentIdentity), eq(null), eq(null))).thenReturn(null);
+    when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
+    when(newsService.canEditNews(news, USER)).thenReturn(true);
+    // the unguarded path is stubbed so the mutant fails on the deletion
+    lenient().when(newsService.updateNews(eq(news), eq(USER), eq(false), anyBoolean(), anyString(), anyString()))
+                                                                                                                .thenReturn(news);
+
+    try {
+      runWithStaticMocks(() -> tool.removeNewsIllustration(NEWS_ID, "fr"));
+      fail("a cover whose ownership could not be established must not be deleted");
+    } catch (IllegalStateException e) {
+      assertTrue(e.getMessage().contains("could not be read"));
+    }
+    verify(noteService, never()).removeNoteFeaturedImage(anyLong(), anyLong(), anyString(), anyBoolean(), anyLong());
+  }
+
+  // EXO-90294: both reads in refreshAndModel are contractually nullable --
+  // getNewsByIdAndLang is documented so, and addNewArticleVersionWithLang (the
+  // branch taken when lang is set) ends with an explicit `return null`. An NPE
+  // here reaches the model as "check your Tool input types" AFTER the write
+  // succeeded, which invites a retry that writes a second version.
+  @Test
+  public void setNewsIllustrationShouldReportAFailedReadBackRatherThanThrowNpe() throws Exception { // NOSONAR
+    News news = mockNews();
+    Space space = mockSpace();
+    mockUserIdentity();
+
+    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)), eq(currentIdentity), eq(false), anyString()))
+                                                                                                       .thenReturn(news);
+    // the post-write re-read comes back null
+    when(newsService.getNewsByIdAndLang(eq(String.valueOf(NEWS_ID)),
+                                        eq(currentIdentity),
+                                        eq(false),
+                                        anyString(),
+                                        any())).thenReturn(null);
+    when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
+    when(newsService.canEditNews(news, USER)).thenReturn(true);
+
+    try {
+      runWithUploadMocks(() -> tool.setNewsIllustration(NEWS_ID, "https://meeds.test/cover.png", null, null, null, "alt", null));
+      fail("a failed read back must be reported, not dereferenced");
+    } catch (ObjectNotFoundException e) {
+      assertTrue(e.getMessage().contains("could not be read back"));
+    }
+  }
+
+  // Same method, the other nullable: the re-read succeeds but the version write
+  // returns null. A LANGUAGE is required for the fixture to be real -- only then
+  // does updateNews route to addNewArticleVersionWithLang, the branch with the
+  // `return null`; with no language it falls through to `return news`, which
+  // cannot be null on a path that null-checked the argument one frame above.
+  @Test
+  public void setNewsIllustrationShouldReportAFailedVersionWriteRatherThanThrowNpe() throws Exception { // NOSONAR
+    News news = mockNews();
+    Space space = mockSpace();
+    mockUserIdentity();
+
+    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)), eq(currentIdentity), eq(false), anyString()))
+                                                                                                       .thenReturn(news);
+    when(newsService.getNewsByIdAndLang(eq(String.valueOf(NEWS_ID)),
+                                        eq(currentIdentity),
+                                        eq(false),
+                                        anyString(),
+                                        any())).thenReturn(news);
+    when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
+    when(newsService.canEditNews(news, USER)).thenReturn(true);
+    when(newsService.updateNews(eq(news), eq(USER), eq(false), anyBoolean(), anyString(), anyString())).thenReturn(null);
+
+    try {
+      runWithUploadMocks(() -> tool.setNewsIllustration(NEWS_ID, "https://meeds.test/cover.png", null, null, null, "alt", "fr"));
+      fail("a failed version write must be reported, not dereferenced");
+    } catch (ObjectNotFoundException e) {
+      assertTrue(e.getMessage().contains("could not be read back"));
+    }
+  }
+
   @Test
   public void setNewsIllustrationShouldSaveMetadataAndRefresh() throws Exception { // NOSONAR
     News news = mockNews();
@@ -751,7 +1242,13 @@ public class NewsMcpToolTest {
     mockUserIdentity();
 
     when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)), eq(currentIdentity), eq(false), anyString()))
-                                                                                                           .thenReturn(news);
+                                                                                                       .thenReturn(news);
+    // the post-write refresh re-reads the article in the language it wrote
+    when(newsService.getNewsByIdAndLang(eq(String.valueOf(NEWS_ID)),
+                                        eq(currentIdentity),
+                                        eq(false),
+                                        anyString(),
+                                        any())).thenReturn(news);
     when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
     when(newsService.canEditNews(news, USER)).thenReturn(true);
     when(newsService.updateNews(eq(news), eq(USER), eq(false), anyBoolean(), anyString(), anyString()))
@@ -786,12 +1283,29 @@ public class NewsMcpToolTest {
   @Test
   public void removeNewsIllustrationShouldRemoveFeaturedImageAndRefresh() throws Exception { // NOSONAR
     News news = mockNews();
-    news.getProperties().setFeaturedImage(new NoteFeaturedImage(500L, null, null, 0L, 0L, null, null));
+    NotePageProperties ownProperties = news.getProperties();
+    ownProperties.setFeaturedImage(new NoteFeaturedImage(500L, null, null, 0L, 0L, null, null));
     Space space = mockSpace();
     mockUserIdentity();
+    // "en" has a version of its own, so removing its cover is legitimate
+    Page ownPage = mock(Page.class);
+    lenient().when(ownPage.getLang()).thenReturn("en");
+    lenient().when(ownPage.getProperties()).thenReturn(ownProperties);
+    when(noteService.getNoteByIdAndLang(eq(NEWS_ID), eq(currentIdentity), eq(null), eq("en"))).thenReturn(ownPage);
+    Page defaultPage = mock(Page.class);
+    NotePageProperties defaultPageProperties = new NotePageProperties();
+    defaultPageProperties.setFeaturedImage(new NoteFeaturedImage(700L, null, null, 0L, 0L, null, null));
+    lenient().when(defaultPage.getProperties()).thenReturn(defaultPageProperties);
+    lenient().when(noteService.getNoteByIdAndLang(eq(NEWS_ID), eq(currentIdentity), eq(null), eq(null))).thenReturn(defaultPage);
 
     when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)), eq(currentIdentity), eq(false), anyString()))
-                                                                                                           .thenReturn(news);
+                                                                                                       .thenReturn(news);
+    // the post-write refresh re-reads the article in the language it wrote
+    when(newsService.getNewsByIdAndLang(eq(String.valueOf(NEWS_ID)),
+                                        eq(currentIdentity),
+                                        eq(false),
+                                        anyString(),
+                                        any())).thenReturn(news);
     when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
     when(newsService.canEditNews(news, USER)).thenReturn(true);
     when(newsService.updateNews(eq(news), eq(USER), eq(false), anyBoolean(), anyString(), anyString()))
