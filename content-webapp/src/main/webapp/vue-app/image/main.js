@@ -64,6 +64,9 @@ export function init(appId, name, canEdit, files) {
           hasImages() {
             return this.files?.length;
           },
+          imageMaxWidth() {
+            return 2 * Math.max(...Object.values(this.imageDisplayFormats).map(format => format.width));
+          },
           imageUrl() {
             if (this.hasImages) {
               const fileId = this.files?.[0]?.id;
