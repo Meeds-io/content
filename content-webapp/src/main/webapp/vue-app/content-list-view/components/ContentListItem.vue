@@ -154,6 +154,11 @@ export default {
     },
   },
   data: () => ({
+    // Largest box this item draws the illustration in; the request doubles it.
+    illustrationMaxBox: {
+      width: 150,
+      height: 120,
+    },
     categories: [],
     moreCategoriesDrawer: false,
     dateFormat: {
@@ -175,6 +180,15 @@ export default {
     defaultIllustrationUrl() {
       return this.item.contentType === 'notes' ? '/content/images/notes.webp' : '/content/images/news.webp';
     },
+    illustrationUrl() {
+      // Without a `size` the endpoint streams the stored original.
+      if (!this.item.illustrationUrl) {
+        return this.defaultIllustrationUrl;
+      }
+      const size = `${2 * this.illustrationMaxBox.width}x${2 * this.illustrationMaxBox.height}`;
+      const separator = this.item.illustrationUrl.includes('?') && '&' || '?';
+      return `${this.item.illustrationUrl}${separator}size=${size}`;
+    },
     illustrationStyle() {
       const width = this.isCompactDisplay ? '80px' : (!this.compact && '150px' || this.expanded && '112px' || '64px');
       return {
@@ -182,7 +196,7 @@ export default {
         height: this.isCompactDisplay ? '80px' : null,
         minHeight: this.isCompactDisplay ? null : (!this.compact && '120px' || this.expanded && '90px' || '64px'),
         alignSelf: this.isCompactDisplay ? 'flex-start' : 'stretch',
-        backgroundImage: `url(${this.item.illustrationUrl || this.defaultIllustrationUrl})`,
+        backgroundImage: `url(${this.illustrationUrl})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       };
