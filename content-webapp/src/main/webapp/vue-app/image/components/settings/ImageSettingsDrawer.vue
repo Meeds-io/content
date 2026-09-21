@@ -21,6 +21,7 @@
 <template>
   <attachments-image-crop-drawer
     ref="drawer"
+    :max-image-width="$root.imageMaxWidth"
     can-upload
     use-format
     back-icon
