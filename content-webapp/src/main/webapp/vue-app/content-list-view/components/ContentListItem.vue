@@ -175,14 +175,36 @@ export default {
     defaultIllustrationUrl() {
       return this.item.contentType === 'notes' ? '/content/images/notes.webp' : '/content/images/news.webp';
     },
+    illustrationBox() {
+      // The declared box per display variant; the height is a min-height
+      // outside the compact one, where the row can grow taller.
+      if (this.isCompactDisplay) {
+        return {width: 80, height: 80};
+      }
+      return !this.compact && {width: 150, height: 120}
+          || this.expanded && {width: 112, height: 90}
+          || {width: 64, height: 64};
+    },
+    illustrationUrl() {
+      // Without a `size` the endpoint streams the stored original.
+      if (!this.item.illustrationUrl) {
+        return this.defaultIllustrationUrl;
+      }
+      // Twice the drawn box, for HiDPI. Width has to stay above height: on a
+      // square or taller request the server fits to height and can return
+      // something narrower than the box.
+      const height = 2 * this.illustrationBox.height;
+      const width = Math.max(2 * this.illustrationBox.width, height + 1);
+      const separator = this.item.illustrationUrl.includes('?') && '&' || '?';
+      return `${this.item.illustrationUrl}${separator}size=${width}x${height}`;
+    },
     illustrationStyle() {
-      const width = this.isCompactDisplay ? '80px' : (!this.compact && '150px' || this.expanded && '112px' || '64px');
       return {
-        width,
-        height: this.isCompactDisplay ? '80px' : null,
-        minHeight: this.isCompactDisplay ? null : (!this.compact && '120px' || this.expanded && '90px' || '64px'),
+        width: `${this.illustrationBox.width}px`,
+        height: this.isCompactDisplay ? `${this.illustrationBox.height}px` : null,
+        minHeight: this.isCompactDisplay ? null : `${this.illustrationBox.height}px`,
         alignSelf: this.isCompactDisplay ? 'flex-start' : 'stretch',
-        backgroundImage: `url(${this.item.illustrationUrl || this.defaultIllustrationUrl})`,
+        backgroundImage: `url(${this.illustrationUrl})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       };

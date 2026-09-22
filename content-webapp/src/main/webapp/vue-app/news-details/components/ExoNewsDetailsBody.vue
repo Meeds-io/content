@@ -27,13 +27,12 @@
         class="newsDetails-header">
         <v-img
           v-if="illustrationURL"
-          :lazy-src="`${illustrationURL}&size=0x400`"
           :alt="featuredImageAltText"
-          :src="`${illustrationURL}&size=0x400`"
+          :src="illustrationSrc"
+          :max-height="illustrationMaxHeight"
           contain
           class="mt-5"
-          width="100%"
-          max-height="400" />
+          width="100%" />
       </div>
       <div class="newsDetails">
         <div class="news-top-information d-flex">
@@ -217,6 +216,7 @@ export default {
       hour: '2-digit',
       minute: '2-digit',
     },
+    illustrationMaxHeight: 400,
     newsTitleContent: null,
     newsSummaryContent: null,
     newsBodyContent: null,
@@ -258,6 +258,10 @@ export default {
     },
     illustrationURL() {
       return this?.news.illustrationURL;
+    },
+    illustrationSrc() {
+      // Twice the displayed height, for HiDPI. The server never upscales.
+      return `${this.illustrationURL}&size=0x${2 * this.illustrationMaxHeight}`;
     },
     featuredImageAltText() {
       return this.news?.properties?.featuredImage?.altText || null;
