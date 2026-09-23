@@ -221,7 +221,19 @@ export default {
     newsSummaryContent: null,
     newsBodyContent: null,
     hideElementsForSavingPDF: false,
+    mdAndDown: false,
   }),
+  watch: {
+    // A data flag rather than a computed: the render then depends on the
+    // threshold only, not on every pixel of width, which would rebuild the
+    // article body and exit an embedded video's fullscreen (EXO-90272).
+    '$vuetify.breakpoint.width': {
+      immediate: true,
+      handler(width) {
+        this.mdAndDown = width < this.$vuetify.breakpoint.thresholds.md;
+      },
+    },
+  },
   created() {
     this.setNewsTitle(this.news?.title);
     this.setNewsSummary(this.news?.properties?.summary);
@@ -231,9 +243,6 @@ export default {
     this.$root.$on('update-news-body', this.setNewsContent);
   },
   computed: {
-    mdAndDown () {
-      return this.$vuetify.breakpoint.width < this.$vuetify.breakpoint.thresholds.md;
-    },
     contentDetailsExtensionsParams() {
       return {
         eventId: this.news?.parameters?.eventId
