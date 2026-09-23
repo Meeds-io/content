@@ -141,15 +141,20 @@
         </div>
         <div
           :class="{ 'd-flex align-start': !mdAndDown }">
-          <extension-registry-components
-            v-if="mdAndDown"
-            v-show="!hideElementsForSavingPDF"
-            :params="contentDetailsExtensionsParams"
-            name="ContentDetails"
-            type="content-event-detail"
-            parent-element="div"
-            element="div"
-            class="mt-8" />
+          <!-- Always rendered, so that the body stays in place when the
+               breakpoint flips: otherwise Vue re-inserts it, which reloads an
+               embedded iframe and exits its fullscreen (EXO-90272). -->
+          <div>
+            <extension-registry-components
+              v-if="mdAndDown"
+              v-show="!hideElementsForSavingPDF"
+              :params="contentDetailsExtensionsParams"
+              name="ContentDetails"
+              type="content-event-detail"
+              parent-element="div"
+              element="div"
+              class="mt-8" />
+          </div>
           <div
             class="mt-8 flex-grow-1 min-width-0 content-treeview-processor rich-editor-content extended-rich-content"
             v-sanitized-html="newsBody">
