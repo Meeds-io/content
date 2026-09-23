@@ -140,14 +140,19 @@
         </div>
         <div
           :class="{ 'd-flex align-start': !mdAndDown }">
-          <extension-registry-components
-            v-if="mdAndDown"
-            :params="contentDetailsExtensionsParams"
-            name="ContentDetails"
-            type="content-event-detail"
-            parent-element="div"
-            element="div"
-            class="mt-8" />
+          <!-- Always rendered, so that the body stays in place when the
+               breakpoint flips: otherwise Vue re-inserts it, which reloads an
+               embedded iframe and exits its fullscreen (EXO-90272). -->
+          <div>
+            <extension-registry-components
+              v-if="mdAndDown"
+              :params="contentDetailsExtensionsParams"
+              name="ContentDetails"
+              type="content-event-detail"
+              parent-element="div"
+              element="div"
+              class="mt-8" />
+          </div>
           <div
             class="mt-8 flex-grow-1 min-width-0 content-treeview-processor rich-editor-content extended-rich-content"
             v-sanitized-html="newsBody">
@@ -216,7 +221,19 @@ export default {
     newsTitleContent: null,
     newsSummaryContent: null,
     newsBodyContent: null,
+    mdAndDown: false,
   }),
+  watch: {
+    // A data flag rather than a computed: the render then depends on the
+    // threshold only, not on every pixel of width, which would rebuild the
+    // article body and exit an embedded video's fullscreen (EXO-90272).
+    '$vuetify.breakpoint.width': {
+      immediate: true,
+      handler(width) {
+        this.mdAndDown = width < this.$vuetify.breakpoint.thresholds.md;
+      },
+    },
+  },
   created() {
     this.setNewsTitle(this.news?.title);
     this.setNewsSummary(this.news?.properties?.summary);
@@ -226,9 +243,6 @@ export default {
     this.$root.$on('update-news-body', this.setNewsContent);
   },
   computed: {
-    mdAndDown () {
-      return this.$vuetify.breakpoint.width < this.$vuetify.breakpoint.thresholds.md;
-    },
     contentDetailsExtensionsParams() {
       return {
         eventId: this.news?.parameters?.eventId
