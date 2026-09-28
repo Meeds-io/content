@@ -18,15 +18,15 @@
  */
 package io.meeds.content.news.plugin;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.when;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import org.exoplatform.services.security.Identity;
 import org.exoplatform.wiki.model.Page;
@@ -34,8 +34,8 @@ import org.exoplatform.wiki.model.Page;
 import io.meeds.content.news.model.News;
 import io.meeds.content.news.service.NewsService;
 
-@RunWith(MockitoJUnitRunner.class)
-public class NewsNotePublicationPluginTest {
+@ExtendWith(MockitoExtension.class)
+class NewsNotePublicationPluginTest {
 
   private static final String       NOTE_ID     = "12";
 
@@ -51,7 +51,7 @@ public class NewsNotePublicationPluginTest {
   private NewsNotePublicationPlugin plugin;
 
   @Test
-  public void publishNoteShouldReturnTheActivityOfThePostedArticle() throws Exception {
+  void publishNoteShouldReturnTheActivityOfThePostedArticle() throws Exception {
     Page note = note();
     News article = new News();
     article.setId(NOTE_ID);
@@ -62,7 +62,7 @@ public class NewsNotePublicationPluginTest {
   }
 
   @Test
-  public void publishNoteShouldNotHandleANoteThatIsNotPostedAsArticle() throws Exception {
+  void publishNoteShouldNotHandleANoteThatIsNotPostedAsArticle() throws Exception {
     Page note = note();
     when(newsService.postNoteArticle(note, identity)).thenReturn(null);
 
