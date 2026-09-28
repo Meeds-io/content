@@ -234,6 +234,9 @@ public class NewsMcpToolTest {
 
     assertEquals(NEWS_ID, result.id());
     assertEquals(TITLE, result.title());
+    // The article's page link, absolute on this platform, under the field
+    // name link finders read
+    assertEquals("https://meeds.test/news/" + NEWS_ID, result.url());
     verify(newsService).createNewsArticlePage(any(News.class), eq(USER));
   }
 
