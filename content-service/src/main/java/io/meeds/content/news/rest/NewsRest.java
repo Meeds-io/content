@@ -728,6 +728,9 @@ public class NewsRest {
     if (limit < 0) {
       return ResponseEntity.badRequest().build();
     }
+    if (StringUtils.isNotBlank(sortDirection) && !StringUtils.equalsAnyIgnoreCase(sortDirection, "asc", "desc")) {
+      return ResponseEntity.badRequest().build();
+    }
     NewsFilter filter = new NewsFilter();
     filter.setSearchText(query);
     filter.setFavorites(favorites);
