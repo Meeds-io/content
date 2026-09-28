@@ -20,9 +20,6 @@ package io.meeds.content.news.plugin;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import org.junit.Test;
@@ -58,8 +55,8 @@ public class NewsNotePublicationPluginTest {
     Page note = note();
     News article = new News();
     article.setId(NOTE_ID);
-    when(newsService.postNoteArticle(NOTE_ID, identity)).thenReturn(article);
-    when(newsService.getNewsActivityId(NOTE_ID)).thenReturn(ACTIVITY_ID);
+    article.setActivityId(ACTIVITY_ID);
+    when(newsService.postNoteArticle(note, identity)).thenReturn(article);
 
     assertEquals(ACTIVITY_ID, plugin.publishNote(note, identity));
   }
@@ -67,21 +64,9 @@ public class NewsNotePublicationPluginTest {
   @Test
   public void publishNoteShouldNotHandleANoteThatIsNotPostedAsArticle() throws Exception {
     Page note = note();
-    when(newsService.postNoteArticle(NOTE_ID, identity)).thenReturn(null);
+    when(newsService.postNoteArticle(note, identity)).thenReturn(null);
 
     assertNull(plugin.publishNote(note, identity));
-    verify(newsService, never()).getNewsActivityId(anyString());
-  }
-
-  @Test(expected = IllegalStateException.class)
-  public void publishNoteShouldFailWhenThePostedArticleHasNoActivity() throws Exception {
-    Page note = note();
-    News article = new News();
-    article.setId(NOTE_ID);
-    when(newsService.postNoteArticle(NOTE_ID, identity)).thenReturn(article);
-    when(newsService.getNewsActivityId(NOTE_ID)).thenReturn(null);
-
-    plugin.publishNote(note, identity);
   }
 
   private Page note() {

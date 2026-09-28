@@ -184,6 +184,8 @@ public class NewsServiceTest {
 
   private static final MockedStatic<SpaceUtils>        SPACE_UTILS        = mockStatic(SpaceUtils.class);
 
+  private static final String                          ACTIVITY_ID        = "55";
+
   @Before
   public void setUp() {
     when(johnIdentity.getUserId()).thenReturn("john");
@@ -1681,17 +1683,14 @@ public class NewsServiceTest {
   @Test
   public void testPostNoteArticleShouldPostTheSpaceNoteAsANewsArticle() throws Exception {
     Page note = spaceNote();
-    Space space = space();
-    NewsService service = spy(newsService);
+    NewsService service = spaceNoteService(Collections.emptyList());
     News postedArticle = new News();
-    when(noteService.getNoteById("12")).thenReturn(note);
-    when(spaceService.getSpaceByGroupId("/spaces/engineering")).thenReturn(space);
-    when(spaceService.canRedactOnSpace(space, johnIdentity)).thenReturn(true);
-    when(metadataService.getMetadataItemsByMetadataAndObject(eq(NewsService.NEWS_METADATA_KEY), any(NewsPageObject.class))).thenReturn(Collections.emptyList());
     doReturn(postedArticle).when(service).postNews(any(News.class), eq("john"));
 
-    assertEquals(postedArticle, service.postNoteArticle("12", johnIdentity));
+    News result = service.postNoteArticle(note, johnIdentity);
 
+    assertEquals(postedArticle, result);
+    assertEquals(ACTIVITY_ID, result.getActivityId());
     ArgumentCaptor<News> articleCaptor = ArgumentCaptor.forClass(News.class);
     verify(service).postNews(articleCaptor.capture(), eq("john"));
     News article = articleCaptor.getValue();
@@ -1705,26 +1704,76 @@ public class NewsServiceTest {
     assertFalse(article.isFromDraft());
     assertFalse(article.isPublished());
     ArgumentCaptor<NewsPageObject> pageObjectCaptor = ArgumentCaptor.forClass(NewsPageObject.class);
-    verify(metadataService).getMetadataItemsByMetadataAndObject(eq(NewsService.NEWS_METADATA_KEY), pageObjectCaptor.capture());
-    assertEquals("12", pageObjectCaptor.getValue().getId());
-    assertEquals(3L, pageObjectCaptor.getValue().getSpaceId());
+    verify(metadataService, atLeast(1)).getMetadataItemsByMetadataAndObject(eq(NewsService.NEWS_METADATA_KEY),
+                                                                           pageObjectCaptor.capture());
+    assertEquals("12", pageObjectCaptor.getAllValues().get(0).getId());
+    assertEquals(3L, pageObjectCaptor.getAllValues().get(0).getSpaceId());
   }
 
   @Test
-  public void testPostNoteArticleShouldReturnTheExistingArticleWithoutPostingItTwice() throws Exception {
+  public void testPostNoteArticleShouldReturnADisplayedArticleWithoutPostingItTwice() throws Exception {
     Page note = spaceNote();
-    Space space = space();
-    NewsService service = spy(newsService);
-    News existingArticle = new News();
-    when(noteService.getNoteById("12")).thenReturn(note);
-    when(spaceService.getSpaceByGroupId("/spaces/engineering")).thenReturn(space);
-    when(spaceService.canRedactOnSpace(space, johnIdentity)).thenReturn(true);
-    when(metadataService.getMetadataItemsByMetadataAndObject(eq(NewsService.NEWS_METADATA_KEY), any(NewsPageObject.class))).thenReturn(List.of(new MetadataItem()));
+    NewsService service = spaceNoteService(List.of(new MetadataItem()));
+    News existingArticle = existingArticle(NewsService.POSTED, true);
     doReturn(existingArticle).when(service).getNewsArticleById("12");
     doReturn(new News()).when(service).postNews(any(News.class), anyString());
+    doReturn(new News()).when(service).updateNews(any(News.class), anyString(), any(), anyBoolean(), anyString(), anyString());
 
-    assertEquals(existingArticle, service.postNoteArticle("12", johnIdentity));
+    News result = service.postNoteArticle(note, johnIdentity);
+
+    assertEquals(existingArticle, result);
+    assertEquals(ACTIVITY_ID, result.getActivityId());
     verify(service, never()).postNews(any(News.class), anyString());
+    verify(service, never()).updateNews(any(News.class), anyString(), any(), anyBoolean(), anyString(), anyString());
+  }
+
+  @Test
+  public void testPostNoteArticleShouldPostAScheduledArticleNow() throws Exception {
+    Page note = spaceNote();
+    NewsService service = spaceNoteService(List.of(new MetadataItem()));
+    News scheduledArticle = existingArticle(NewsService.STAGED, true);
+    News postedArticle = existingArticle(NewsService.POSTED, true);
+    doReturn(scheduledArticle).when(service).getNewsArticleById("12");
+    doReturn(postedArticle).when(service).postNews(scheduledArticle, "john");
+    doReturn(new News()).when(service).updateNews(any(News.class), anyString(), any(), anyBoolean(), anyString(), anyString());
+
+    News result = service.postNoteArticle(note, johnIdentity);
+
+    assertEquals(postedArticle, result);
+    assertEquals(ACTIVITY_ID, result.getActivityId());
+    verify(service).postNews(scheduledArticle, "john");
+    verify(service, never()).updateNews(any(News.class), anyString(), any(), anyBoolean(), anyString(), anyString());
+  }
+
+  @Test
+  public void testPostNoteArticleShouldDisplayInTheStreamAnArticlePostedWithoutActivity() throws Exception {
+    Page note = spaceNote();
+    NewsService service = spaceNoteService(List.of(new MetadataItem()));
+    News hiddenArticle = existingArticle(NewsService.POSTED, false);
+    News displayedArticle = existingArticle(NewsService.POSTED, true);
+    doReturn(hiddenArticle).when(service).getNewsArticleById("12");
+    doReturn(new News()).when(service).postNews(any(News.class), anyString());
+    doReturn(displayedArticle).when(service)
+                              .updateNews(hiddenArticle, "john", true, false, "article", "POSTING_AND_PUBLISHING");
+
+    News result = service.postNoteArticle(note, johnIdentity);
+
+    assertEquals(displayedArticle, result);
+    assertEquals(ACTIVITY_ID, result.getActivityId());
+    assertTrue(hiddenArticle.isActivityPosted());
+    verify(service).updateNews(hiddenArticle, "john", true, false, "article", "POSTING_AND_PUBLISHING");
+    verify(service, never()).postNews(any(News.class), anyString());
+  }
+
+  @Test(expected = IllegalStateException.class)
+  public void testPostNoteArticleShouldFailWhenThePostedArticleHasNoActivity() throws Exception {
+    Page note = spaceNote();
+    note.setActivityId(null);
+    NewsService service = spaceNoteService(Collections.emptyList());
+    when(noteService.getNoteById("12")).thenReturn(note);
+    doReturn(new News()).when(service).postNews(any(News.class), eq("john"));
+
+    service.postNoteArticle(note, johnIdentity);
   }
 
   @Test(expected = IllegalAccessException.class)
@@ -1732,12 +1781,11 @@ public class NewsServiceTest {
     Page note = spaceNote();
     Space space = space();
     NewsService service = spy(newsService);
-    when(noteService.getNoteById("12")).thenReturn(note);
     when(spaceService.getSpaceByGroupId("/spaces/engineering")).thenReturn(space);
     when(spaceService.canRedactOnSpace(space, johnIdentity)).thenReturn(false);
 
     try {
-      service.postNoteArticle("12", johnIdentity);
+      service.postNoteArticle(note, johnIdentity);
     } finally {
       verify(service, never()).postNews(any(News.class), anyString());
     }
@@ -1750,14 +1798,30 @@ public class NewsServiceTest {
     personalNote.setWikiType("user");
     personalNote.setWikiOwner("john");
     Page orphanSpaceNote = spaceNote();
-    orphanSpaceNote.setId("13");
-    when(noteService.getNoteById("12")).thenReturn(personalNote);
-    when(noteService.getNoteById("13")).thenReturn(orphanSpaceNote);
 
-    assertNull(service.postNoteArticle("12", johnIdentity));
-    assertNull(service.postNoteArticle("13", johnIdentity));
-    assertNull(service.postNoteArticle("14", johnIdentity));
+    assertNull(service.postNoteArticle(personalNote, johnIdentity));
+    assertNull(service.postNoteArticle(orphanSpaceNote, johnIdentity));
+    assertNull(service.postNoteArticle(null, johnIdentity));
     verify(service, never()).postNews(any(News.class), anyString());
+  }
+
+  private NewsService spaceNoteService(List<MetadataItem> newsPageItems) {
+    Space space = space();
+    when(noteService.getNoteById("12")).thenReturn(spaceNote());
+    when(spaceService.getSpaceByGroupId("/spaces/engineering")).thenReturn(space);
+    when(spaceService.canRedactOnSpace(space, johnIdentity)).thenReturn(true);
+    when(metadataService.getMetadataItemsByMetadataAndObject(eq(NewsService.NEWS_METADATA_KEY),
+                                                             any(NewsPageObject.class))).thenReturn(newsPageItems);
+    return spy(newsService);
+  }
+
+  private News existingArticle(String publicationState, boolean activityPosted) {
+    News article = new News();
+    article.setId("12");
+    article.setSpaceId("3");
+    article.setPublicationState(publicationState);
+    article.setActivityPosted(activityPosted);
+    return article;
   }
 
   private Page spaceNote() {
@@ -1767,6 +1831,7 @@ public class NewsServiceTest {
     note.setWikiOwner("/spaces/engineering");
     note.setTitle("Note title");
     note.setContent("<p>Note content</p>");
+    note.setActivityId(ACTIVITY_ID);
     return note;
   }
 
@@ -1777,3 +1842,4 @@ public class NewsServiceTest {
     return space;
   }
 }
+

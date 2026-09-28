@@ -40,15 +40,8 @@ public class NewsNotePublicationPlugin implements NotePublicationPlugin {
 
   @Override
   public String publishNote(Page note, Identity identity) throws Exception { // NOSONAR
-    News article = newsService.postNoteArticle(note.getId(), identity);
-    if (article == null) {
-      return null;
-    }
-    String activityId = newsService.getNewsActivityId(article.getId());
-    if (activityId == null) {
-      throw new IllegalStateException("The news article '%s' was posted without an activity".formatted(article.getId()));
-    }
-    return activityId;
+    News article = newsService.postNoteArticle(note, identity);
+    return article == null ? null : article.getActivityId();
   }
 
 }
