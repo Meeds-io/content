@@ -1288,6 +1288,49 @@ public class NewsService {
   }
 
   /**
+   * Posts an existing space note in its space activity stream as a news
+   * article, following the business rules of the Notes publication drawer. A
+   * note already published as an article is returned as is, so that it isn't
+   * posted twice.
+   *
+   * @param noteId identifier of the note to post
+   * @param currentIdentity identity of the user posting the note
+   * @return the posted article, or null when the note doesn't exist or doesn't
+   *         belong to a space
+   * @throws IllegalAccessException when the user can't create a news in the
+   *           space of the note
+   * @throws Exception when the article can't be posted
+   */
+  public News postNoteArticle(String noteId, Identity currentIdentity) throws Exception {
+    Page note = noteService.getNoteById(noteId);
+    if (note == null || !PortalConfig.GROUP_TYPE.equals(note.getWikiType())) {
+      return null;
+    }
+    Space space = spaceService.getSpaceByGroupId(note.getWikiOwner());
+    if (space == null) {
+      return null;
+    }
+    if (!canCreateNews(space, currentIdentity)) {
+      throw new IllegalAccessException("User " + currentIdentity.getUserId() + " not authorized to post the note " + noteId
+          + " as a news");
+    }
+    NewsPageObject newsPageObject = new NewsPageObject(NEWS_METADATA_PAGE_OBJECT_TYPE, note.getId(), null, space.getSpaceId());
+    if (!metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY, newsPageObject).isEmpty()) {
+      return getNewsArticleById(note.getId());
+    }
+    News article = new News();
+    article.setId(note.getId());
+    article.setSpaceId(space.getId());
+    article.setTitle(note.getTitle());
+    article.setBody(note.getContent());
+    article.setProperties(note.getProperties());
+    article.setPublicationState(POSTED);
+    article.setActivityPosted(true);
+    article.setFromExternalPage(true);
+    return postNews(article, currentIdentity.getUserId());
+  }
+
+  /**
    * @param newsArticle {@link News} news article to be created
    * @param newsArticleCreator
    * @return the created news article
