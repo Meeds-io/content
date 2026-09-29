@@ -44,6 +44,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -185,6 +186,8 @@ public class NewsServiceTest {
   private static final MockedStatic<SpaceUtils>        SPACE_UTILS        = mockStatic(SpaceUtils.class);
 
   private static final String                          ACTIVITY_ID        = "55";
+
+  private static final String                          LEGACY_ACTIVITY_ID = "54";
 
   @Before
   public void setUp() {
@@ -1683,9 +1686,16 @@ public class NewsServiceTest {
   @Test
   public void testPostNoteArticleShouldPostTheSpaceNoteAsANewsArticle() throws Exception {
     Page note = spaceNote();
+    note.setActivityId(LEGACY_ACTIVITY_ID);
     NewsService service = spaceNoteService(Collections.emptyList());
+    Page storedNote = spaceNote();
+    storedNote.setActivityId(LEGACY_ACTIVITY_ID);
+    when(noteService.getNoteById("12")).thenReturn(storedNote);
     News postedArticle = new News();
-    doReturn(postedArticle).when(service).postNews(any(News.class), eq("john"));
+    doAnswer(invocation -> {
+      storedNote.setActivityId(ACTIVITY_ID);
+      return postedArticle;
+    }).when(service).postNews(any(News.class), eq("john"));
 
     News result = service.postNoteArticle(note, johnIdentity);
 
