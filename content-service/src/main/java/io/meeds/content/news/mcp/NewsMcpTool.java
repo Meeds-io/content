@@ -55,6 +55,7 @@ import org.exoplatform.wiki.service.NoteService;
 
 import io.meeds.content.news.mcp.model.NewsModel;
 import io.meeds.content.news.mcp.model.NewsTargetModel;
+import io.meeds.content.news.model.ArticleTarget;
 import io.meeds.content.news.model.News;
 import io.meeds.content.news.model.filter.NewsFilter;
 import io.meeds.content.news.rest.model.NewsTargetingEntity;
@@ -213,8 +214,13 @@ public class NewsMcpTool implements McpToolPlugin {
 
   // Publishes an article to the activity stream AND/OR the given publication
   // targets. When 'targets' is empty it falls back to the plain activity-stream
-  // publish (same path as publish_news_in_activity_stream); otherwise it routes
-  // the article to the given targets via NewsTargetingService#saveNewsTarget.
+  // publish (same path as publish_news_in_activity_stream); otherwise it posts
+  // the article first when it has no activity yet (activityPosted says whether
+  // an activity is visible, not whether one exists, so the activity id
+  // decides), then publishes it with the space audience by default to the
+  // targets through NewsService#updateNews (POSTING_AND_PUBLISHING), the path
+  // the publication drawer uses: it sets PUBLISHED, replaces the targets, fires
+  // PUBLISH_NEWS, updates the permissions and notifies.
   @SneakyThrows
   public NewsModel publishNews(long newsId, List<String> targets) {
     checkNewsId(newsId);
@@ -245,7 +251,25 @@ public class NewsMcpTool implements McpToolPlugin {
       // no explicit target: fall back to plain activity-stream publish
       publishNewsInActivityStream(newsId);
     } else {
-      newsTargetingService.saveNewsTarget(news, true, targets, currentUsername);
+      if (StringUtils.isBlank(news.getActivityId())) {
+        publishNewsInActivityStream(newsId);
+        news = newsService.getNewsById(String.valueOf(newsId),
+                                       currentIdentity,
+                                       false,
+                                       NewsObjectType.ARTICLE.name().toLowerCase());
+      }
+      news.setTargets(targets.stream().map(target -> new ArticleTarget(target, 0)).toList());
+      news.setPublisher(currentUsername);
+      // NewsService#publishNews keeps the stored audience when none is given,
+      // and an unpublished article has none: without one it is published but
+      // listed nowhere
+      news.setAudience(StringUtils.defaultIfBlank(news.getAudience(), NewsUtils.SPACE_NEWS_AUDIENCE));
+      newsService.updateNews(news,
+                             currentUsername,
+                             null,
+                             true,
+                             NewsObjectType.ARTICLE.name().toLowerCase(),
+                             NewsUpdateType.POSTING_AND_PUBLISHING.name());
     }
     news = newsService.getNewsById(String.valueOf(newsId),
                                    currentIdentity,
@@ -304,8 +328,9 @@ public class NewsMcpTool implements McpToolPlugin {
     return toNewsModel(scheduled, space);
   }
 
-  // Unpublishes an article (removes it from the activity stream / targets)
-  // without deleting it. Wraps NewsService#unpublishNews.
+  // Unpublishes an article (removes it from its publication targets and drops
+  // its audience) without deleting it. Wraps NewsService#unpublishNews, like
+  // the UI's unpublish: the space activity stays in the stream.
   @SneakyThrows
   public NewsModel unpublishNews(long newsId) {
     checkNewsId(newsId);
@@ -396,8 +421,9 @@ public class NewsMcpTool implements McpToolPlugin {
   // (CONTENT_AND_TITLE) as before; the summary lives in the note metadata, so it
   // is persisted the same way as the cover image (NoteService#saveNoteMetadata,
   // language-aware), based on the loaded properties so the existing featured
-  // image (cover) is preserved. The article is then refreshed (re-index +
-  // recompute) so the new summary lands on the live article.
+  // image (cover) is preserved. A summary-only change is then refreshed
+  // (re-index + recompute) so the new summary lands on the live article; a
+  // title/body write already did that, so the article is written once.
   @SneakyThrows
   public NewsModel updateNews(long newsId,
                               String title,
@@ -456,6 +482,14 @@ public class NewsMcpTool implements McpToolPlugin {
     // because that version write re-saves news.getProperties() under the lang.
     news.setProperties(properties);
     news.setLang(lang);
+    // the summary lives in the note metadata. For the default version it is
+    // saved before any title/body write, which carries the same properties, so
+    // a summary-only change is then refreshed and a title/body change is
+    // written once
+    boolean summaryChanged = StringUtils.isNotBlank(summary);
+    if (summaryChanged && lang == null) {
+      noteService.saveNoteMetadata(properties, null, getUserIdentityId(currentUsername));
+    }
     if (titleOrContentChanged) {
       newsService.updateNews(news,
                              currentIdentity.getUserId(),
@@ -464,8 +498,7 @@ public class NewsMcpTool implements McpToolPlugin {
                              NewsObjectType.ARTICLE.name().toLowerCase(),
                              NewsUpdateType.CONTENT_AND_TITLE.name());
     }
-    // the summary lives in the note metadata, which NewsUpdateType.* never writes
-    if (StringUtils.isNotBlank(summary)) {
+    if (summaryChanged && lang != null) {
       noteService.saveNoteMetadata(properties, lang, getUserIdentityId(currentUsername));
     }
     return refreshAndModel(newsId, currentIdentity, space, lang, properties, titleOrContentChanged);
@@ -730,9 +763,10 @@ public class NewsMcpTool implements McpToolPlugin {
     if (refreshed == null) {
       throw new ObjectNotFoundException(("News with id '%s' was updated but could not be read back.").formatted(newsId));
     }
-    // every updateNews with a lang creates a page version unconditionally, so a
-    // second one here would duplicate the version the caller just wrote
-    if (versionAlreadyWritten && lang != null) {
+    // the caller's CONTENT_AND_TITLE write already ran the lifecycle: a second
+    // one would write the article again and, with a lang, duplicate the page
+    // version it just created
+    if (versionAlreadyWritten) {
       return toNewsModel(refreshed, space);
     }
     // with no lang the refresh would go through updateArticle and refresh the
