@@ -30,6 +30,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -49,6 +50,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.MockitoJUnitRunner;
@@ -75,12 +77,15 @@ import org.exoplatform.wiki.service.NoteService;
 
 import io.meeds.content.news.mcp.model.NewsModel;
 import io.meeds.content.news.mcp.model.NewsTargetModel;
+import io.meeds.content.news.model.ArticleTarget;
 import io.meeds.content.news.model.News;
 import io.meeds.content.news.model.filter.NewsFilter;
 import io.meeds.content.news.rest.model.NewsTargetingEntity;
 import io.meeds.content.news.service.NewsService;
 import io.meeds.content.news.service.NewsTargetingService;
+import io.meeds.content.news.utils.NewsUtils;
 import io.meeds.content.news.utils.NewsUtils.NewsObjectType;
+import io.meeds.content.news.utils.NewsUtils.NewsUpdateType;
 import io.meeds.mcp.server.tool.model.SpaceModel;
 import io.meeds.mcp.server.tool.model.UserModel;
 import io.meeds.mcp.server.tool.util.SpaceToolUtils;
@@ -476,7 +481,7 @@ public class NewsMcpToolTest {
   }
 
   @Test
-  public void publishNewsWithTargetsShouldCallSaveNewsTarget() throws Exception { // NOSONAR
+  public void publishNewsWithTargetsShouldPublishThroughTheNewsServiceFlow() throws Exception { // NOSONAR
     News news = mockNews();
     Space space = mockSpace();
 
@@ -491,8 +496,90 @@ public class NewsMcpToolTest {
     NewsModel result = runWithStaticMocks(() -> tool.publishNews(NEWS_ID, targets));
 
     assertEquals(NEWS_ID, result.id());
-    verify(newsTargetingService).saveNewsTarget(news, true, targets, USER);
+    // publishing to targets goes through NewsService#updateNews, which sets
+    // PUBLISHED, fires PUBLISH_NEWS, updates permissions and notifies
+    verify(newsService).updateNews(news,
+                                   USER,
+                                   null,
+                                   true,
+                                   NewsObjectType.ARTICLE.name().toLowerCase(),
+                                   NewsUpdateType.POSTING_AND_PUBLISHING.name());
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<List<ArticleTarget>> targetsCaptor = ArgumentCaptor.forClass(List.class);
+    verify(news).setTargets(targetsCaptor.capture());
+    assertEquals(targets, targetsCaptor.getValue().stream().map(ArticleTarget::getName).toList());
+    verify(newsTargetingService, never()).saveNewsTarget(any(News.class), anyBoolean(), anyList(), anyString());
+    // already in the stream: not posted again
     verify(newsService, never()).postNews(any(News.class), anyString());
+  }
+
+  @Test
+  public void publishNewsWithTargetsShouldKeepTheAudienceOrDefaultToTheSpace() throws Exception { // NOSONAR
+    News news = mockNews();
+    Space space = mockSpace();
+    when(news.getAudience()).thenReturn(null);
+
+    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)),
+                                 eq(currentIdentity),
+                                 eq(false),
+                                 eq(NewsObjectType.ARTICLE.name().toLowerCase()))).thenReturn(news);
+    when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
+    when(spaceService.canPublishOnSpace(space, USER)).thenReturn(true);
+
+    runWithStaticMocks(() -> tool.publishNews(NEWS_ID, List.of("slider")));
+
+    verify(news).setAudience(NewsUtils.SPACE_NEWS_AUDIENCE);
+  }
+
+  @Test
+  public void publishNewsWithTargetsShouldNotPostAgainAnArticleWithAHiddenActivity() throws Exception { // NOSONAR
+    News news = mockNews();
+    Space space = mockSpace();
+    // published from the drawer without posting: the activity exists, hidden
+    lenient().when(news.isActivityPosted()).thenReturn(false);
+
+    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)),
+                                 eq(currentIdentity),
+                                 eq(false),
+                                 eq(NewsObjectType.ARTICLE.name().toLowerCase()))).thenReturn(news);
+    when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
+    when(spaceService.canPublishOnSpace(space, USER)).thenReturn(true);
+
+    runWithStaticMocks(() -> tool.publishNews(NEWS_ID, List.of("slider")));
+
+    verify(newsService, never()).postNews(any(), anyString());
+    verify(newsService).updateNews(news,
+                                   USER,
+                                   null,
+                                   true,
+                                   NewsObjectType.ARTICLE.name().toLowerCase(),
+                                   NewsUpdateType.POSTING_AND_PUBLISHING.name());
+  }
+
+  @Test
+  public void publishNewsWithTargetsShouldPostAnArticleNotYetInTheStream() throws Exception { // NOSONAR
+    News news = mockNews();
+    Space space = mockSpace();
+    // created by create_news: activityPosted is set, no activity exists yet
+    when(news.getActivityId()).thenReturn(null);
+
+    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)),
+                                 eq(currentIdentity),
+                                 eq(false),
+                                 eq(NewsObjectType.ARTICLE.name().toLowerCase()))).thenReturn(news);
+    when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
+    when(spaceService.canPublishOnSpace(space, USER)).thenReturn(true);
+    when(newsService.updateNews(eq(news), eq(USER), eq(true), anyBoolean(), anyString(), anyString())).thenReturn(news);
+
+    runWithStaticMocks(() -> tool.publishNews(NEWS_ID, List.of("slider")));
+
+    verify(newsService).postNews(news, USER);
+    verify(newsService).updateNews(news,
+                                   USER,
+                                   null,
+                                   true,
+                                   NewsObjectType.ARTICLE.name().toLowerCase(),
+                                   NewsUpdateType.POSTING_AND_PUBLISHING.name());
   }
 
   @Test
@@ -766,6 +853,41 @@ public class NewsMcpToolTest {
 
     verify(noteService).saveNoteMetadata(any(NotePageProperties.class), eq(null), eq(1L));
     verify(news, atLeastOnce()).setLang(null);
+    // a summary-only change is refreshed by exactly one CONTENT_AND_TITLE write
+    verify(newsService, times(1)).updateNews(any(News.class), eq(USER), eq(false), anyBoolean(), anyString(), anyString());
+  }
+
+  // a title/body change on the default version is written once: the refresh
+  // adds no second CONTENT_AND_TITLE write
+  @Test
+  public void updateNewsWithoutLanguageShouldWriteTheArticleOnce() throws Exception { // NOSONAR
+    News news = mockNews();
+    Space space = mockSpace();
+    mockUserIdentity();
+
+    when(newsService.getNewsByIdAndLang(eq(String.valueOf(NEWS_ID)),
+                                        eq(currentIdentity),
+                                        eq(false),
+                                        anyString(),
+                                        any())).thenReturn(news);
+    when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
+    when(newsService.canEditNews(news, USER)).thenReturn(true);
+    when(newsService.updateNews(eq(news), eq(USER), eq(false), anyBoolean(), anyString(), anyString())).thenReturn(news);
+
+    NewsModel result = runWithStaticMocks(() -> tool.updateNews(NEWS_ID, "Updated", "New summary", "Updated content", null));
+
+    assertEquals(NEWS_ID, result.id());
+    // the summary is saved first, so the single title/body write covers both
+    InOrder order = inOrder(noteService, newsService);
+    order.verify(noteService).saveNoteMetadata(any(NotePageProperties.class), eq(null), eq(1L));
+    order.verify(newsService)
+         .updateNews(news,
+                     USER,
+                     false,
+                     true,
+                     NewsObjectType.ARTICLE.name().toLowerCase(),
+                     NewsUpdateType.CONTENT_AND_TITLE.name());
+    verify(newsService, times(1)).updateNews(any(News.class), eq(USER), eq(false), anyBoolean(), anyString(), anyString());
   }
 
   // EXO-90294: NewsService#updateNews routes to addNewArticleVersionWithLang only

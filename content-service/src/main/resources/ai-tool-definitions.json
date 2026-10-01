@@ -59,7 +59,7 @@
     {
       "name": "publish_news",
       "title": "Publish an article to targets",
-      "description": "Publish a news (Article) to the given publication targets (homepage slider / editorial sections) and/or its space activity stream. Pass the target 'name' values from 'list_news_targets' in 'targets'. When 'targets' is empty, the article is simply published to its space activity stream.",
+      "description": "Publish a news (Article) to the given publication targets (homepage slider / editorial sections) and/or its space activity stream. Pass the target 'name' values from 'list_news_targets' in 'targets'. When 'targets' is empty, the article is simply published to its space activity stream. With 'targets', an article that has no activity-stream post yet is posted first (an existing post is left as it is, even if hidden); it is then published to exactly those targets, which replace the ones it was published to before.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -106,7 +106,7 @@
     {
       "name": "unpublish_news",
       "title": "Unpublish an article",
-      "description": "Unpublish a news (Article), removing it from the activity stream and publication targets without deleting it.",
+      "description": "Unpublish a news (Article): removes it from its publication targets (homepage slider / editorial sections) and drops its publication audience, without deleting it. Its post stays in the space activity stream; use 'delete_news' to remove the article and its post.",
       "input_schema": {
         "type": "object",
         "properties": {
