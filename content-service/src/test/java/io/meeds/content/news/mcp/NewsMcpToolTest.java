@@ -514,7 +514,7 @@ public class NewsMcpToolTest {
   }
 
   @Test
-  public void publishNewsWithTargetsShouldKeepTheAudienceOrDefaultToTheSpace() throws Exception { // NOSONAR
+  public void publishNewsWithTargetsShouldDefaultAMissingAudienceToTheSpace() throws Exception { // NOSONAR
     News news = mockNews();
     Space space = mockSpace();
     when(news.getAudience()).thenReturn(null);
@@ -529,6 +529,26 @@ public class NewsMcpToolTest {
     runWithStaticMocks(() -> tool.publishNews(NEWS_ID, List.of("slider")));
 
     verify(news).setAudience(NewsUtils.SPACE_NEWS_AUDIENCE);
+  }
+
+  @Test
+  public void publishNewsWithTargetsShouldKeepTheStoredAudience() throws Exception { // NOSONAR
+    News news = mockNews();
+    Space space = mockSpace();
+    when(news.getAudience()).thenReturn(NewsUtils.ALL_NEWS_AUDIENCE);
+
+    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)),
+                                 eq(currentIdentity),
+                                 eq(false),
+                                 eq(NewsObjectType.ARTICLE.name().toLowerCase()))).thenReturn(news);
+    when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
+    when(spaceService.canPublishOnSpace(space, USER)).thenReturn(true);
+
+    runWithStaticMocks(() -> tool.publishNews(NEWS_ID, List.of("slider")));
+
+    // re-targeting an article published to everyone must not narrow it to the space
+    verify(news).setAudience(NewsUtils.ALL_NEWS_AUDIENCE);
+    verify(news, never()).setAudience(NewsUtils.SPACE_NEWS_AUDIENCE);
   }
 
   @Test
