@@ -62,4 +62,23 @@ public class LinkSettingRestEntity {
 
   private List<LinkRestEntity> links;
 
+  @JsonProperty("vAlign")
+  public LinkAlignType getVAlign() {
+    return vAlign;
+  }
+
+  @JsonProperty("hAlign")
+  public LinkAlignType getHAlign() {
+    return hAlign;
+  }
+
+  @JsonProperty("vAlign")
+  public void setVAlign(LinkAlignType vAlign) {
+    this.vAlign = vAlign;
+  }
+
+  @JsonProperty("hAlign")
+  public void setHAlign(LinkAlignType hAlign) {
+    this.hAlign = hAlign;
+  }
 }
