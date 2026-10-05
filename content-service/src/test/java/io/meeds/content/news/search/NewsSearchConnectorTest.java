@@ -20,6 +20,7 @@ package io.meeds.content.news.search;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -31,11 +32,15 @@ import static org.mockito.MockitoAnnotations.openMocks;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -322,5 +327,81 @@ public class NewsSearchConnectorTest {
 
     assertNotNull(termQuery);
     assertTrue(termQuery.contains("\"analyze_wildcard\": true"));
+  }
+
+  @Test
+  public void testBuildTermQueryStatementEscapesJsonSpecialCharacters() throws Exception {// NOSONAR
+    // The term lands inside a JSON string: an unescaped quote would close it
+    // and let the searched text rewrite the query around the permissions
+    String term = "a\"b\\c\"}},{\"match_all\":{";
+    String termQuery = ReflectionTestUtils.invokeMethod(newsSearchConnector, "buildTermQueryStatement", term);
+
+    JSONObject parsed = (JSONObject) new JSONParser().parse("{" + termQuery.substring(0, termQuery.lastIndexOf(',')) + "}");
+    JSONObject queryString = (JSONObject) ((JSONObject) parsed.get("must")).get("query_string");
+    assertEquals(term + "*", queryString.get("query"));
+  }
+
+  @Test
+  public void testBuildTagsQueryStatementEscapesJsonSpecialCharacters() throws Exception {// NOSONAR
+    String tag = "tag\"}}],\"must_not\":[{\"x";
+    String tagsQuery = ReflectionTestUtils.invokeMethod(newsSearchConnector,
+                                                        "buildTagsQueryStatement",
+                                                        Collections.singletonList(tag));
+
+    JSONObject parsed = (JSONObject) new JSONParser().parse("{" + tagsQuery.substring(1) + "}");
+    JSONArray should = (JSONArray) parsed.get("should");
+    assertEquals(1, should.size());
+    JSONObject tagTerm = (JSONObject) ((JSONObject) ((JSONObject) should.get(0)).get("term"))
+                                                                              .get("metadatas.tags.metadataName.keyword");
+    assertEquals(tag, tagTerm.get("value"));
+    assertNull(parsed.get("must_not"));
+  }
+
+  @Test
+  public void testBuildQueryStatementDoesNotResubstitutePlaceholdersTypedByTheUser() throws Exception {// NOSONAR
+    String template = IOUtil.getStreamContentAsString(getClass().getClassLoader().getResourceAsStream("news-search-query.json"));
+    ReflectionTestUtils.setField(newsSearchConnector, "searchQuery", template);
+    NewsFilter filter = new NewsFilter();
+    filter.setSearchText("@tags_query@");
+    filter.setTagNames(Collections.singletonList("@sortQuery@"));
+    filter.setLimit(10);
+    Identity identity = mock(Identity.class);
+
+    String query = ReflectionTestUtils.invokeMethod(newsSearchConnector,
+                                                    "buildQueryStatement",
+                                                    identity,
+                                                    new HashSet<>(Arrays.asList(10L, 20L)),
+                                                    filter);
+
+    JSONObject bool = (JSONObject) ((JSONObject) ((JSONObject) new JSONParser().parse(query)).get("query")).get("bool");
+    JSONObject queryString = (JSONObject) ((JSONObject) bool.get("must")).get("query_string");
+    assertEquals("@tags_query@*", queryString.get("query"));
+    JSONObject tagTerm = (JSONObject) ((JSONObject) ((JSONObject) ((JSONArray) bool.get("should")).get(0)).get("term"))
+                                                                                                          .get("metadatas.tags.metadataName.keyword");
+    assertEquals("@sortQuery@", tagTerm.get("value"));
+    JSONObject permissions = (JSONObject) ((JSONObject) ((JSONArray) bool.get("filter")).get(0)).get("terms");
+    assertTrue(((JSONArray) permissions.get("permissions")).containsAll(Arrays.asList(10L, 20L)));
+  }
+
+  @Test
+  public void testBuildSortQueryStatementAcceptsOnlyAscOrDesc() throws Exception {// NOSONAR
+    NewsFilter filter = new NewsFilter();
+    filter.setSortField("date");
+
+    filter.setSortDirection("asc\"}},{\"_script\":{\"x\":\"");
+    assertEquals("desc", getSortOrder(filter));
+    filter.setSortDirection(null);
+    assertEquals("desc", getSortOrder(filter));
+    filter.setSortDirection("ASC");
+    assertEquals("asc", getSortOrder(filter));
+    filter.setSortDirection("desc");
+    assertEquals("desc", getSortOrder(filter));
+  }
+
+  private String getSortOrder(NewsFilter filter) throws Exception {
+    String sortQuery = ReflectionTestUtils.invokeMethod(newsSearchConnector, "buildSortQueryStatement", filter);
+    JSONArray sort = (JSONArray) new JSONParser().parse("[" + sortQuery + "]");
+    assertEquals(2, sort.size());
+    return (String) ((JSONObject) ((JSONObject) sort.get(0)).get("lastUpdatedDate")).get("order");
   }
 }

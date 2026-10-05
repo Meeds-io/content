@@ -33,6 +33,7 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+import org.json.simple.JSONValue;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -148,13 +149,13 @@ public class NewsSearchConnector {
     String favoriteQuery = buildFavoriteQueryStatement(metadataFilters.get(FavoriteService.METADATA_TYPE.getName()));
     String tagsQuery = buildTagsQueryStatement(metadataFilters.get(TagService.METADATA_TYPE.getName()));
     String sortQuery = buildSortQueryStatement(filter);
-    return retrieveSearchQuery().replace("@term_query@", termQuery)
-                                .replace("@favorite_query@", favoriteQuery)
-                                .replace("@tags_query@", tagsQuery)
-                                .replace("@permissions@", StringUtils.join(streamFeedOwnerIds, ","))
-                                .replace("@sortQuery@", sortQuery)
-                                .replace("@offset@", String.valueOf(filter.getOffset()))
-                                .replace("@limit@", String.valueOf(filter.getLimit()));
+    // One pass: a replaced fragment is never scanned again, so a placeholder
+    // name typed in the term or a tag stays text
+    return StringUtils.replaceEach(retrieveSearchQuery(),
+                                   new String[] { "@term_query@", "@favorite_query@", "@tags_query@", "@permissions@",
+                                       "@sortQuery@", "@offset@", "@limit@" },
+                                   new String[] { termQuery, favoriteQuery, tagsQuery, StringUtils.join(streamFeedOwnerIds, ","),
+                                       sortQuery, String.valueOf(filter.getOffset()), String.valueOf(filter.getLimit()) });
   }
 
   @SuppressWarnings("rawtypes")
@@ -218,7 +219,9 @@ public class NewsSearchConnector {
                                 .filter(StringUtils::isNotBlank)
                                 .map(word -> word.trim() + "*")
                                 .collect(Collectors.joining(" "));
-    return SEARCH_QUERY_TERM.replace("@term@", wildcardTerm);
+    // The term is spliced into a JSON string: escape it so that a quote or a
+    // backslash typed by the user can't close the string and alter the query
+    return SEARCH_QUERY_TERM.replace("@term@", JSONValue.escape(wildcardTerm));
   }
 
   private Long parseLong(JSONObject hitSource, String key) {
@@ -264,7 +267,7 @@ public class NewsSearchConnector {
                                       .map(value -> new StringBuilder().append("{\"term\": {\n")
                                                                        .append("            \"metadatas.tags.metadataName.keyword\": {\n")
                                                                        .append("              \"value\": \"")
-                                                                       .append(value)
+                                                                       .append(JSONValue.escape(value))
                                                                        .append("\",\n")
                                                                        .append("              \"case_insensitive\":true\n")
                                                                        .append("            }\n")
@@ -297,10 +300,14 @@ public class NewsSearchConnector {
       return DEFAULT_SORTING_QUERY;
     }
     return switch (sortFiled) {
-      case "date" -> SORTING_QUERY.replace("@sortField@", "lastUpdatedDate").replace("@sortOrder@", sortDirection);
+      case "date" -> SORTING_QUERY.replace("@sortField@", "lastUpdatedDate").replace("@sortOrder@", getSortOrder(sortDirection));
       default -> DEFAULT_SORTING_QUERY;
     };
   }
 
+  private String getSortOrder(String sortDirection) {
+    // Only the two values Elasticsearch knows are spliced into the query
+    return StringUtils.equalsIgnoreCase(sortDirection, "asc") ? "asc" : "desc";
+  }
 
 }
