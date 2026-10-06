@@ -26,7 +26,6 @@
     text
     @click="switchToNews">
     <v-icon
-      color="grey darken-1"
       size="27">
       fa-newspaper
     </v-icon>
