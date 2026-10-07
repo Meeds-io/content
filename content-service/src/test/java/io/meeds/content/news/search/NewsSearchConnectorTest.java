@@ -51,6 +51,9 @@ import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+
 import org.exoplatform.commons.search.es.client.ElasticSearchingClient;
 import org.exoplatform.commons.utils.IOUtil;
 import org.exoplatform.commons.utils.PropertyManager;
@@ -334,11 +337,59 @@ public class NewsSearchConnectorTest {
     // The term lands inside a JSON string: an unescaped quote would close it
     // and let the searched text rewrite the query around the permissions
     String term = "a\"b\\c\"}},{\"match_all\":{";
-    String termQuery = ReflectionTestUtils.invokeMethod(newsSearchConnector, "buildTermQueryStatement", term);
+    assertEquals("a\\\"b\\\\c\\\"\\}\\},\\{\\\"match_all*", queryStringOf(term));
+  }
 
-    JSONObject parsed = (JSONObject) new JSONParser().parse("{" + termQuery.substring(0, termQuery.lastIndexOf(',')) + "}");
-    JSONObject queryString = (JSONObject) ((JSONObject) parsed.get("must")).get("query_string");
-    assertEquals(term + "*", queryString.get("query"));
+  @Test
+  public void testBuildTermQueryStatementSearchesQueryStringSyntaxAsTyped() {
+    // A slash opens a regular expression, an unbalanced quote or parenthesis
+    // fails the query: the engine refuses it and the search shows nothing
+    assertEquals("a\\/b* a\\\"b* a\\(b*", queryStringOf("a/b a\"b a(b"));
+  }
+
+  @Test
+  public void testBuildTermQueryStatementEscapesEachReservedCharacterOnce() {
+    String reserved = "\\+-=&|!(){}[]^\"~*?:/";
+    StringBuilder expected = new StringBuilder("a");
+    reserved.chars().forEach(c -> expected.append('\\').append((char) c));
+    assertEquals(expected + "b*", queryStringOf("a" + reserved + "b"));
+  }
+
+  @Test
+  public void testBuildTermQueryStatementSeparatesWordsOnReservedCharactersAroundThem() {
+    // The title field keeps punctuation in its tokens: a quoted word searched
+    // with its quotes would miss a title holding the word
+    assertEquals("roadmap* roadmap* roadmap* roadmap* roadmap* relea*",
+                 queryStringOf("\"roadmap\" (roadmap) +roadmap -roadmap roadmap? relea*"));
+  }
+
+  @Test
+  public void testBuildTermQueryStatementSplitsWordsOnEveryWhitespace() {
+    // query_string also separates terms on these: OR joined to b by an
+    // ideographic space would reach it as a bare operator
+    assertEquals("OR* b* c* d* e*", queryStringOf("OR\u3000b\tc\nd\r\ne"));
+  }
+
+  @Test
+  public void testBuildTermQueryStatementCutsTheSearchedTextAtItsMaximumLength() {
+    // 256 characters: 85 words "ab", then the first letter of the 86th
+    assertEquals("ab* ".repeat(85) + "a*", queryStringOf("ab ".repeat(200)));
+    // Counted in code points: a character outside the BMP is never split
+    String emoji = new String(Character.toChars(0x1F600));
+    assertEquals(emoji.repeat(256) + "*", queryStringOf(emoji.repeat(300)));
+    // 400 chars but 200 code points: under the maximum length, not cut
+    assertEquals(emoji.repeat(200) + "*", queryStringOf(emoji.repeat(200)));
+  }
+
+  @Test
+  public void testBuildTermQueryStatementDropsWordsMadeOfReservedCharactersOnly() {
+    assertEquals("a* b*", queryStringOf("a - \"\" b"));
+    assertEquals("", queryStringOf("- ( \\ *"));
+  }
+
+  @Test
+  public void testBuildTermQueryStatementSeparatesWordsOnCharactersQueryStringCannotEscape() {
+    assertEquals("a* b* c*", queryStringOf("a<b>c"));
   }
 
   @Test
@@ -396,6 +447,12 @@ public class NewsSearchConnectorTest {
     assertEquals("asc", getSortOrder(filter));
     filter.setSortDirection("desc");
     assertEquals("desc", getSortOrder(filter));
+  }
+
+  private String queryStringOf(String term) {
+    String termQuery = ReflectionTestUtils.invokeMethod(newsSearchConnector, "buildTermQueryStatement", term);
+    JsonNode parsed = new ObjectMapper().readTree("{" + termQuery.substring(0, termQuery.lastIndexOf(',')) + "}");
+    return parsed.path("must").path("query_string").path("query").asString();
   }
 
   private String getSortOrder(NewsFilter filter) throws Exception {
