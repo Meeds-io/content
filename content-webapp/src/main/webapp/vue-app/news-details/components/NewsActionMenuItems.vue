@@ -171,7 +171,7 @@
             class="ps-2 pe-4 action-menu-item d-flex align-center"
             @click="!hasReported && reportActivity()">
             <v-icon
-              :class="hasReported ? 'text-disabled-color' : 'clickable icon-menu'"
+              :class="hasReported ? 'icon-disabled-color' : 'clickable icon-menu'"
               size="16">
               fas fa-exclamation-triangle
             </v-icon>
