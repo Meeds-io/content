@@ -1492,6 +1492,22 @@ public class NewsRestTest {
     assertFalse(newsList.get(1).isFavorite());
   }
 
+  @Test
+  public void shouldRefuseASortDirectionOtherThanAscOrDesc() {
+    setCurrentUser(JOHN);
+    lenient().when(newsService.search(any(org.exoplatform.social.core.identity.model.Identity.class), any(NewsFilter.class)))
+             .thenReturn(new ArrayList<>());
+
+    ResponseEntity response = newsRestController.search("text", "", 0, null, null, 10, false, "date", "desc\"}");
+    assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatusCode().value());
+    verify(newsService, never()).search(any(org.exoplatform.social.core.identity.model.Identity.class), any(NewsFilter.class));
+
+    response = newsRestController.search("text", "", 0, null, null, 10, false, "date", "ASC");
+    assertEquals(Response.Status.OK.getStatusCode(), response.getStatusCode().value());
+    response = newsRestController.search("text", "", 0, null, null, 10, false, "date", null);
+    assertEquals(Response.Status.OK.getStatusCode(), response.getStatusCode().value());
+  }
+
   private void setCurrentUser(final String name) {
     ConversationState.setCurrent(new ConversationState(new org.exoplatform.services.security.Identity(name)));
   }
