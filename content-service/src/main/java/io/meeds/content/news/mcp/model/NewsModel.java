@@ -58,10 +58,8 @@ public record NewsModel(
                         SpaceModel targetSpace,
                         @JsonProperty("illustration_url")
                         String illustrationUrl,
-                        /**
-                         * Absolute URL of the article's page on this
-                         * platform, the one the news application opens it
-                         * with; null when the article has no page URL.
-                         */
+                        // The article's page, absolute on this platform, the one the news
+                        // application opens it with, under the name link finders read; the
+                        // same value as access_url, null when the article has no page URL
                         String url) {
 }

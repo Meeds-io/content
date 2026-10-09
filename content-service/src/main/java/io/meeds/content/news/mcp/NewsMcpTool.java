@@ -900,11 +900,12 @@ public class NewsMcpTool implements McpToolPlugin {
                                                          space,
                                                          currentUserName);
     String baseUrl = CommonsUtils.getCurrentDomain();
+    String pageUrl = StringUtils.isBlank(news.getUrl()) ? null : baseUrl + news.getUrl();
     return new NewsModel(Long.parseLong(news.getId()),
                          news.getTitle(),
                          news.getProperties().getSummary(),
                          news.getBody(),
-                         baseUrl + news.getUrl(),
+                         pageUrl,
                          baseUrl + getNewsEditUrl(news, currentUserName),
                          news.isPublished(),
                          !news.isPublished(),
@@ -917,7 +918,7 @@ public class NewsMcpTool implements McpToolPlugin {
                          publisherUser,
                          targetSpace,
                          news.getIllustrationURL(),
-                         StringUtils.isBlank(news.getUrl()) ? null : baseUrl + news.getUrl());
+                         pageUrl);
   }
 
   private long getActivityId(News news) {
