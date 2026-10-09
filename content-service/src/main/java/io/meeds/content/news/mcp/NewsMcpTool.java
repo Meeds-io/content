@@ -870,6 +870,14 @@ public class NewsMcpTool implements McpToolPlugin {
     }
   }
 
+  /**
+   * Maps an article to the model returned to the agent, with its absolute page
+   * and edit URLs.
+   *
+   * @param news the article
+   * @param space the article's space, resolved from the article when null
+   * @return the news model
+   */
   private NewsModel toNewsModel(News news, Space space) {
     String currentUserName = getCurrentUserName();
     UserModel publisherUser = null;
@@ -892,11 +900,12 @@ public class NewsMcpTool implements McpToolPlugin {
                                                          space,
                                                          currentUserName);
     String baseUrl = CommonsUtils.getCurrentDomain();
+    String pageUrl = StringUtils.isBlank(news.getUrl()) ? null : baseUrl + news.getUrl();
     return new NewsModel(Long.parseLong(news.getId()),
                          news.getTitle(),
                          news.getProperties().getSummary(),
                          news.getBody(),
-                         baseUrl + news.getUrl(),
+                         pageUrl,
                          baseUrl + getNewsEditUrl(news, currentUserName),
                          news.isPublished(),
                          !news.isPublished(),
@@ -908,7 +917,8 @@ public class NewsMcpTool implements McpToolPlugin {
                          getActivityId(news),
                          publisherUser,
                          targetSpace,
-                         news.getIllustrationURL());
+                         news.getIllustrationURL(),
+                         pageUrl);
   }
 
   private long getActivityId(News news) {

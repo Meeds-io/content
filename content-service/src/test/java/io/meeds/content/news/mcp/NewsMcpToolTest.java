@@ -234,7 +234,32 @@ public class NewsMcpToolTest {
 
     assertEquals(NEWS_ID, result.id());
     assertEquals(TITLE, result.title());
+    // The article's page link, absolute on this platform, under the field
+    // name link finders read
+    assertEquals("https://meeds.test/news/" + NEWS_ID, result.url());
     verify(newsService).createNewsArticlePage(any(News.class), eq(USER));
+  }
+
+  /**
+   * An article with no page URL gets neither access_url nor url, instead of
+   * the bare domain in one and nothing in the other.
+   */
+  @Test
+  public void createNewsWhenArticleHasNoPageUrlShouldLeaveBothUrlsOut() throws Exception { // NOSONAR
+    Space space = mockSpace();
+    News createdNews = mockNews();
+    lenient().when(createdNews.getUrl()).thenReturn(null);
+
+    when(spaceService.getSpaceById(SPACE_ID)).thenReturn(space);
+    when(newsService.canCreateNews(space, currentIdentity)).thenReturn(true);
+    when(newsService.createNewsArticlePage(any(News.class), eq(USER))).thenReturn(createdNews);
+    when(newsService.getNewsArticleById(String.valueOf(NEWS_ID))).thenReturn(createdNews);
+
+    NewsModel result = runWithStaticMocks(() -> tool.createNews(TITLE, SUMMARY, "**Content**", SPACE_ID));
+
+    assertEquals(NEWS_ID, result.id());
+    assertNull(result.accessUrl());
+    assertNull(result.url());
   }
 
   @Test(expected = IllegalArgumentException.class)
