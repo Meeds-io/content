@@ -208,9 +208,10 @@ export default {
         return '/content/images/news.png';
       }
       if (this.totalCount > 1) {
+        // half the container: the lead tile spans two 250px rows and their gap
         return this.index === 0
-          ? `${this.item.illustrationURL}&size=712x404`
-          : `${this.item.illustrationURL}&size=712x201`;
+          ? this.$newsListService.illustrationSrc(this.item.illustrationURL, 712, 502)
+          : this.$newsListService.illustrationSrc(this.item.illustrationURL, 712, 250);
       }
       return `${this.item.illustrationURL}&size=1426x612`;
     },
