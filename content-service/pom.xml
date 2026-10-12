@@ -35,6 +35,16 @@
     <rest.api.doc.description>Content addon used Rest endpoints</rest.api.doc.description>
 
     <exo.test.coverage.ratio>0.60</exo.test.coverage.ratio>
+
+    <!--
+      The *IT classes run the news search query against a real engine,
+      under the parent's run-its profile only:
+        mvn verify -Prun-its                      (Testcontainers engine)
+        mvn verify -Prun-its -Des.url=http://127.0.0.1:9200   (an engine you already have;
+                                                  the suite uses its own it_news* index names)
+      Testcontainers' version is managed by the Spring Boot BOM.
+    -->
+    <es.testcontainer.image>docker.elastic.co/elasticsearch/elasticsearch:9.3.4</es.testcontainer.image>
   </properties>
 
   <dependencies>
@@ -78,6 +88,13 @@
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
+
+    <!-- Runs the news search query against a real engine (*IT, run-its profile) -->
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>testcontainers-elasticsearch</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
   <build>
     <plugins>
@@ -105,6 +122,15 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
           <runOrder>alphabetical</runOrder>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <configuration>
+          <systemPropertyVariables>
+            <es.testcontainer.image>${es.testcontainer.image}</es.testcontainer.image>
+          </systemPropertyVariables>
         </configuration>
       </plugin>
       <plugin>

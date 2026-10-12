@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections.CollectionUtils;
@@ -109,6 +110,26 @@ public class NewsSearchConnector {
           },
           "_score"
       """;
+
+  // The query_string reserved characters, the backslash included, see
+  // https://www.elastic.co/docs/reference/query-languages/query-dsl/query-dsl-query-string-query#_reserved_characters
+  private static final Pattern   QUERY_STRING_RESERVED_CHARACTERS = Pattern.compile("[\\\\+\\-=&|!(){}\\[\\]^\"~*?:/]");
+
+  // Around a word, reserved characters are punctuation: quotes, brackets, a
+  // leading operator or a trailing wildcard
+  private static final Pattern   QUERY_STRING_RESERVED_WORD_EDGES =
+                                                                  Pattern.compile("^" + QUERY_STRING_RESERVED_CHARACTERS.pattern()
+                                                                      + "+|" + QUERY_STRING_RESERVED_CHARACTERS.pattern() + "+$");
+
+  // Reserved too, but query_string cannot escape them: they separate words
+  private static final Pattern   QUERY_STRING_UNESCAPABLE_CHARACTERS = Pattern.compile("[<>]");
+
+  // Elasticsearch refuses a query beyond its clause limit, 1024 clauses at
+  // least, more on a larger heap. The costliest searched text, one word of
+  // ideographs or emoji, costs a clause per character in each of the three
+  // fields the standard tokenizer splits, and reaches 1024 clauses at 341
+  // characters
+  private static final int       MAX_SEARCHED_TEXT_LENGTH            = 256;
 
   @PostConstruct
   public void init() {
@@ -210,14 +231,21 @@ public class NewsSearchConnector {
     if (StringUtils.isBlank(term)) {
       return "";
     }
+    if (term.codePointCount(0, term.length()) > MAX_SEARCHED_TEXT_LENGTH) {
+      term = term.substring(0, term.offsetByCodePoints(0, MAX_SEARCHED_TEXT_LENGTH));
+    }
     term = removeSpecialCharacters(term);
     // A trailing wildcard is required on each word for query_string to match
     // a partial/prefix term (e.g. while the user is still typing) - without
     // it, query_string only matches a whole token, so searching by the
     // first few letters of a title/body/summary word returns nothing.
-    String wildcardTerm = Arrays.stream(term.split(" "))
+    // Words are split on every whitespace query_string separates terms on,
+    // tab, line feed and the ideographic space included: a word left joined
+    // to its neighbour by one of them would keep an operator bare
+    String wildcardTerm = Arrays.stream(StringUtils.split(term))
+                                .map(this::toQueryStringWord)
                                 .filter(StringUtils::isNotBlank)
-                                .map(word -> word.trim() + "*")
+                                .map(word -> word + "*")
                                 .collect(Collectors.joining(" "));
     // The term is spliced into a JSON string: escape it so that a quote or a
     // backslash typed by the user can't close the string and alter the query
@@ -244,7 +272,25 @@ public class NewsSearchConnector {
   private String removeSpecialCharacters(String string) {
     string = Normalizer.normalize(string, Normalizer.Form.NFD);
     string = string.replaceAll("[\\p{InCombiningDiacriticalMarks}]", "").replaceAll("'", " ");
-    return string;
+    return QUERY_STRING_UNESCAPABLE_CHARACTERS.matcher(string).replaceAll(" ");
+  }
+
+  /**
+   * Turns a searched word into query_string text searched as typed: a slash
+   * would otherwise open a regular expression, and an unbalanced quote or
+   * parenthesis would make the engine refuse the whole query. The reserved
+   * characters around the word are removed, since the title field keeps them
+   * in its tokens and {@code "word"} would then miss a title holding
+   * {@code word}; those inside the word are escaped once, in a single pass,
+   * so a typed backslash is not escaped twice.
+   *
+   * @param word a searched word, without {@code <} nor {@code >}
+   * @return the query_string text of the word, empty when it holds reserved
+   *         characters only
+   */
+  private String toQueryStringWord(String word) {
+    String innerWord = QUERY_STRING_RESERVED_WORD_EDGES.matcher(word.trim()).replaceAll("");
+    return QUERY_STRING_RESERVED_CHARACTERS.matcher(innerWord).replaceAll("\\\\$0");
   }
 
   private String buildFavoriteQueryStatement(List<String> values) {
