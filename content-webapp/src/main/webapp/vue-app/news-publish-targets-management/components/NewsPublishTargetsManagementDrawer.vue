@@ -83,8 +83,6 @@
               <v-tooltip bottom v-if="!isMobile">
                 <template #activator="{ on, attrs }">
                   <v-icon
-                    color="grey darken-2"
-                    dark
                     v-bind="attrs"
                     v-on="on"
                     size="16"

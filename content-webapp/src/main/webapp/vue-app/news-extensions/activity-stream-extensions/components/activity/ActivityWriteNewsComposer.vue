@@ -30,7 +30,6 @@
       class="d-flex flex-row align-center"
       @click="switchToNews">
       <v-icon
-        color="grey darken-1"
         size="39"
         style="min-height:50px">
         fa-newspaper
