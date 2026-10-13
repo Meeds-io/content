@@ -1,0 +1,288 @@
+/**
+ * This file is part of the Meeds project (https://meeds.io/).
+ *
+ * Copyright (C) 2026 Meeds Association contact@meeds.io
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3 of the License, or (at your option) any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ */
+package io.meeds.content.news.mcp;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import java.io.File;
+import java.net.URL;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import org.junit.Test;
+import org.springframework.beans.factory.ObjectProvider;
+
+import io.meeds.mcp.server.constant.Origin;
+import io.meeds.mcp.server.model.ActingIdentity;
+import io.meeds.mcp.server.model.SimpleToolDefinition;
+import io.meeds.mcp.server.model.SpaceScopeDeclaration;
+import io.meeds.mcp.server.model.SpaceScopeRefusedException;
+import io.meeds.mcp.server.plugin.SpaceScopeResolver;
+import io.meeds.mcp.server.service.McpToolSpaceScopeService;
+import io.meeds.mcp.server.util.McpToolUtils;
+
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
+
+/**
+ * Pins the {@code space_scope} declarations the content add-on ships, parsed
+ * with the MCP server's own parser: which news tools a call limited to one
+ * space may use, on which arguments, and which stay refused.
+ */
+public class NewsToolDefinitionSpaceScopeTest {
+
+  /** The reads declared by the article they reach. */
+  private static final Set<String>         ARTICLE_READS  = Set.of("get_news_by_id");
+
+  /** The writes declared by the article they change. */
+  private static final Set<String>         ARTICLE_WRITES = Set.of("update_news",
+                                                                   "delete_news",
+                                                                   "set_news_illustration",
+                                                                   "remove_news_illustration");
+
+  /** The reads declared by the space they list. */
+  private static final Set<String>         SPACE_READS    = Set.of("get_news_list", "search_news");
+
+  /** The writes declared by the space they create in. */
+  private static final Set<String>         SPACE_WRITES   = Set.of("create_news");
+
+  /**
+   * The tools left undeclared, so refused under a space scope: they reach the
+   * platform's publication targets, or post to the activity stream.
+   */
+  private static final Set<String>         REFUSED        = Set.of("list_news_targets",
+                                                                   "publish_news",
+                                                                   "schedule_news",
+                                                                   "unpublish_news",
+                                                                   "publish_news_in_activity_stream");
+
+  private static final JsonMapper          MAPPER         = JsonMapper.builder().build();
+
+  /**
+   * Exactly eight news tools declare a space scope, each well formed for what
+   * it is, a read or a write, every write keeps its approval, no declaration
+   * carries a false-only argument, and every accepted argument is a property
+   * of the tool's schema. A tool added, or one that stops declaring, fails
+   * here.
+   * Mutants: a declaration dropped or added, an approval dropped.
+   */
+  @Test
+  public void declaredToolsAreTheExpectedOnes() {
+    Map<String, SimpleToolDefinition> tools = shippedTools();
+    Map<String, SimpleToolDefinition> declared = tools.values()
+                                                      .stream()
+                                                      .filter(tool -> tool.getSpaceScope() != null)
+                                                      .collect(Collectors.toMap(SimpleToolDefinition::getName,
+                                                                                Function.identity()));
+
+    assertEquals(union(ARTICLE_READS, ARTICLE_WRITES, SPACE_READS, SPACE_WRITES), declared.keySet());
+    declared.forEach((name, tool) -> {
+      boolean write = ARTICLE_WRITES.contains(name) || SPACE_WRITES.contains(name);
+      SpaceScopeDeclaration scope = tool.getSpaceScope();
+      assertNotNull(name, tool.getAnnotations());
+      assertEquals(name, !write, McpToolSpaceScopeService.isReadTool(tool));
+      assertTrue(name, scope.isWellFormedFor(write));
+      assertNull(name, scope.getIdFormat());
+      assertTrue(name, scope.getFalseOnlyArgs() == null || scope.getFalseOnlyArgs().isEmpty());
+      if (write) {
+        assertTrue(name, tool.isRequireApproval());
+      }
+      JsonNode properties = MAPPER.readTree(tool.getInputSchema()).path("properties");
+      allowed(tool).forEach(argument -> assertTrue(name + " takes " + argument, properties.has(argument)));
+    });
+    REFUSED.forEach(name -> {
+      assertTrue(name, tools.containsKey(name));
+      assertNull(name, tools.get(name).getSpaceScope());
+    });
+    assertEquals(tools.keySet(), union(declared.keySet(), REFUSED));
+  }
+
+  /**
+   * The tools that reach an article do it through {@code news_id} and the
+   * {@value ArticleSpaceScopeResolver#NAME} resolver, with a decimal id,
+   * the one news ids are.
+   * Mutants: another argument, another resolver, or a hex32 id format.
+   */
+  @Test
+  public void articleToolsUseTheArticleResolver() {
+    Map<String, SimpleToolDefinition> tools = shippedTools();
+
+    union(ARTICLE_READS, ARTICLE_WRITES).forEach(name -> {
+      SimpleToolDefinition tool = tools.get(name);
+      SpaceScopeDeclaration scope = tool.getSpaceScope();
+      assertTrue(name, scope.isObjectKind());
+      assertEquals(name, "news_id", scope.getObjectArg());
+      assertEquals(name, ArticleSpaceScopeResolver.NAME, scope.getResolver());
+      assertFalse(name, scope.isHexId());
+      assertEquals(name, "integer", MAPPER.readTree(tool.getInputSchema()).path("properties").path("news_id").path("type").stringValue());
+    });
+    assertEquals(List.of("language"), allowed(tools.get("get_news_by_id")));
+    assertEquals(List.of("title", "summary", "html_content", "language"), allowed(tools.get("update_news")));
+    assertEquals(List.of(), allowed(tools.get("delete_news")));
+    assertEquals(List.of("language"), allowed(tools.get("remove_news_illustration")));
+  }
+
+  /**
+   * A cover is set in a limited call only from bytes the call carries: never
+   * from a URL the server would fetch, nor from a file attached to another
+   * object, which may be in another space.
+   * Mutants: the URL or the attachment reference allowed.
+   */
+  @Test
+  public void coverIsSetFromTheCallBytesOnly() {
+    SimpleToolDefinition tool = shippedTools().get("set_news_illustration");
+
+    assertEquals(List.of("image_base64", "alt_text", "language"), allowed(tool));
+    assertFalse(allowed(tool).contains("image_url"));
+    assertFalse(allowed(tool).contains("attachment_object_type"));
+    assertFalse(allowed(tool).contains("attachment_object_id"));
+  }
+
+  /**
+   * The list and the search read the call's space when they name none, take
+   * it only through {@code target_space_id}, and may carry their paging and,
+   * for the search, its term, nothing else.
+   * Mutants: {@code when_absent} dropped, the space argument renamed, or an
+   * argument added.
+   */
+  @Test
+  public void listingsUseTheScopeSpaceWhenAbsent() {
+    Map<String, SimpleToolDefinition> tools = shippedTools();
+
+    SPACE_READS.forEach(name -> {
+      SpaceScopeDeclaration scope = tools.get(name).getSpaceScope();
+      assertTrue(name, scope.isSpaceKind());
+      assertEquals(name, "target_space_id", scope.getSpaceArg());
+      assertTrue(name, scope.isUseScopeWhenAbsent());
+    });
+    assertEquals(List.of("offset", "limit"), allowed(tools.get("get_news_list")));
+    assertEquals(List.of("query", "offset", "limit"), allowed(tools.get("search_news")));
+  }
+
+  /**
+   * An article is created only in the call's space, named by
+   * {@code target_space_id}, which is never filled in for the write, with its
+   * text only.
+   * Mutants: {@code when_absent} added, or another argument allowed.
+   */
+  @Test
+  public void creationStaysInTheSpace() {
+    SimpleToolDefinition tool = shippedTools().get("create_news");
+    SpaceScopeDeclaration scope = tool.getSpaceScope();
+
+    assertTrue(scope.isSpaceKind());
+    assertEquals("target_space_id", scope.getSpaceArg());
+    assertFalse(scope.isUseScopeWhenAbsent());
+    assertEquals(List.of("title", "summary", "html_content"), allowed(tool));
+  }
+
+  /**
+   * The shipped declarations, run through the MCP server's own space scope
+   * check for a run answering in space 33: an article of that space is read,
+   * one the resolver doesn't tell that space for is refused, a list naming no
+   * space gets the run's space, and a publication tool is refused.
+   * Mutants: the resolver name or the space argument changed, a refused tool
+   * declared.
+   */
+  @Test
+  public void shippedDeclarationsKeepAMentionRunInItsSpace() {
+    Map<String, SimpleToolDefinition> tools = shippedTools();
+    SpaceScopeResolver resolver = mock(SpaceScopeResolver.class);
+    when(resolver.getName()).thenReturn(ArticleSpaceScopeResolver.NAME);
+    when(resolver.spaceOf("12")).thenReturn(33L);
+    when(resolver.spaceOf("13")).thenReturn(null);
+    @SuppressWarnings("unchecked")
+    ObjectProvider<SpaceScopeResolver> resolvers = mock(ObjectProvider.class);
+    when(resolvers.orderedStream()).thenAnswer(invocation -> Stream.of(resolver));
+    McpToolSpaceScopeService service = new McpToolSpaceScopeService(resolvers);
+    ActingIdentity mention = mock(ActingIdentity.class);
+    when(mention.spaceScope()).thenReturn(33L);
+    when(mention.origin()).thenReturn(Origin.MENTION);
+
+    String read = "{\"news_id\":12,\"language\":\"fr\"}";
+    assertEquals(read, service.enforce("get_news_by_id", tools.get("get_news_by_id"), read, mention));
+    assertRefused(() -> service.enforce("get_news_by_id", tools.get("get_news_by_id"), "{\"news_id\":13}", mention));
+    assertEquals(33L,
+                 MAPPER.readTree(service.enforce("get_news_list", tools.get("get_news_list"), "{\"limit\":5}", mention))
+                       .path("target_space_id")
+                       .longValue());
+    assertRefused(() -> service.enforce("search_news",
+                                        tools.get("search_news"),
+                                        "{\"query\":\"x\",\"target_space_id\":44}",
+                                        mention));
+    REFUSED.forEach(name -> assertRefused(() -> service.enforce(name, tools.get(name), "{\"news_id\":12}", mention)));
+  }
+
+  /**
+   * @param call a call expected to be refused under the space scope
+   */
+  private static void assertRefused(Runnable call) {
+    try {
+      call.run();
+    } catch (SpaceScopeRefusedException e) {
+      return;
+    }
+    throw new AssertionError("The call wasn't refused");
+  }
+
+  /**
+   * @param tool a tool declaring a space scope
+   * @return its allowed arguments, empty when it names none
+   */
+  private static List<String> allowed(SimpleToolDefinition tool) {
+    List<String> allowed = tool.getSpaceScope().getAllowedArgs();
+    return allowed == null ? List.of() : allowed;
+  }
+
+  /**
+   * @param sets the sets to join
+   * @return every element of the sets
+   */
+  @SafeVarargs
+  private static Set<String> union(Set<String>... sets) {
+    return Arrays.stream(sets).flatMap(Set::stream).collect(Collectors.toSet());
+  }
+
+  /**
+   * @return the shipped news tools, by name, as the MCP server parses them
+   */
+  private static Map<String, SimpleToolDefinition> shippedTools() {
+    try {
+      URL classes = NewsMcpTool.class.getProtectionDomain().getCodeSource().getLocation();
+      URL url = new File(new File(classes.toURI()), "ai-tool-definitions.json").toURI().toURL();
+      return McpToolUtils.parseToolDefinitions(url)
+                         .stream()
+                         .collect(Collectors.toMap(SimpleToolDefinition::getName, Function.identity()));
+    } catch (Exception e) {
+      throw new IllegalStateException("The news tool definitions couldn't be read", e);
+    }
+  }
+
+}
