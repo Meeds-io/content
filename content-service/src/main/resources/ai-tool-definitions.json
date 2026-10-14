@@ -147,7 +147,7 @@
     {
       "name": "get_news_list",
       "title": "Get articles by space",
-      "description": "Retrieve a paginated list of news for a space.",
+      "description": "Retrieve a paginated list of news for a space. In a run limited to a space, results stop after the first 250 articles scanned, so a short page does not mean the end.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -168,7 +168,7 @@
     {
       "name": "search_news",
       "title": "Search for articles",
-      "description": "Search news by a term within a space.",
+      "description": "Search news by a term within a space. In a run limited to a space, results stop after the first 250 articles scanned, so a short page does not mean the end.",
       "input_schema": {
         "type": "object",
         "properties": {
