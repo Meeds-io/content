@@ -584,13 +584,21 @@ public class NewsMcpToolTest {
 
   /**
    * A search in a space the current user can't view, or that doesn't exist,
-   * finds nothing and searches nothing.
+   * finds nothing and searches nothing, though the space has an identity the
+   * search could filter by.
    * Mutant: the view check or the missing-space guard dropped.
    */
   @Test
   public void searchNewsInASpaceTheUserCantViewIsEmpty() throws Exception { // NOSONAR
     Space space = mockSpace();
     when(identityManager.getOrCreateUserIdentity(USER)).thenReturn(mock(org.exoplatform.social.core.identity.model.Identity.class));
+    lenient().when(space.getPrettyName()).thenReturn("space");
+    org.exoplatform.social.core.identity.model.Identity spaceIdentity =
+                                                                      mock(org.exoplatform.social.core.identity.model.Identity.class);
+    lenient().when(spaceIdentity.getId()).thenReturn("77");
+    lenient().when(identityManager.getOrCreateSpaceIdentity("space")).thenReturn(spaceIdentity);
+    News news = mockNews();
+    lenient().when(newsService.searchNews(any(NewsFilter.class), any())).thenReturn(List.of(news));
     when(spaceService.getSpaceById(SPACE_ID)).thenReturn(space, (Space) null);
     when(spaceService.canViewSpace(space, USER)).thenReturn(false);
 
