@@ -439,16 +439,15 @@ public class NewsMcpToolTest {
   public void getNewsListInASpaceScopedRunKeepsOnlyTheArticlesOfTheSpace() throws Exception { // NOSONAR
     actingIdentity = limitedTo(SPACE_ID);
     Space space = mockSpace();
-    News ofSpace = mockNews("12", SPACE_ID, "of space");
+    News ofSpace = postedInItsSpace(mockNews("12", SPACE_ID, "of space"));
     News publishedElsewhere = mockNews("13", 44L, "published elsewhere");
-    News notViewable = mockNews("14", SPACE_ID, "not viewable");
+    News notViewable = postedInItsSpace(mockNews("14", SPACE_ID, "not viewable"));
     when(spaceService.getSpaceById(SPACE_ID)).thenReturn(space);
     when(newsService.getNews(any(NewsFilter.class), eq(currentIdentity))).thenReturn(List.of(ofSpace,
                                                                                              publishedElsewhere,
                                                                                              notViewable),
                                                                                      List.of());
     when(spaceScopeResolver.spaceOf("12")).thenReturn(SPACE_ID);
-    when(spaceScopeResolver.spaceOf("13")).thenReturn(null);
     when(spaceScopeResolver.spaceOf("14")).thenReturn(SPACE_ID);
     when(newsService.canViewNews(ofSpace, USER)).thenReturn(true);
     when(newsService.canViewNews(notViewable, USER)).thenReturn(false);
@@ -462,6 +461,46 @@ public class NewsMcpToolTest {
     assertEquals(List.of(0, NewsMcpTool.SPACE_SCAN_CHUNK),
                  filters.getAllValues().stream().map(NewsFilter::getOffset).toList());
     assertEquals(NewsMcpTool.SPACE_SCAN_CHUNK, filters.getAllValues().get(0).getLimit());
+  }
+
+  /**
+   * A candidate the listed article already shows the resolver would refuse
+   * (another space, published, deleted, not posted) is dropped before the
+   * resolver is asked; one that passes is still asked, since the targets and
+   * the shares are its to tell.
+   * Mutants: a pre-filter condition dropped, or the resolver skipped for the
+   * candidates that pass.
+   */
+  @Test
+  public void spaceScopedListDropsObviousCandidatesBeforeTheResolver() throws Exception { // NOSONAR
+    actingIdentity = limitedTo(SPACE_ID);
+    Space space = mockSpace();
+    when(spaceService.getSpaceById(SPACE_ID)).thenReturn(space);
+    News otherSpace = postedInItsSpace(mockNews("20", 44L, "other space"));
+    News published = postedInItsSpace(mockNews("21", SPACE_ID, "published"));
+    when(published.isPublished()).thenReturn(true);
+    News deleted = postedInItsSpace(mockNews("22", SPACE_ID, "deleted"));
+    when(deleted.isDeleted()).thenReturn(true);
+    News draft = postedInItsSpace(mockNews("23", SPACE_ID, "draft"));
+    when(draft.getPublicationState()).thenReturn(NewsService.DRAFT);
+    News candidate = postedInItsSpace(mockNews("24", SPACE_ID, "candidate"));
+    when(newsService.getNews(any(NewsFilter.class), eq(currentIdentity))).thenReturn(List.of(otherSpace,
+                                                                                             published,
+                                                                                             deleted,
+                                                                                             draft,
+                                                                                             candidate),
+                                                                                     List.of());
+    when(spaceScopeResolver.spaceOf("24")).thenReturn(SPACE_ID);
+    when(newsService.canViewNews(candidate, USER)).thenReturn(true);
+
+    List<NewsModel> result = runWithStaticMocks(() -> tool.getNewsList(SPACE_ID, 0, 5));
+
+    assertEquals(List.of(24L), result.stream().map(NewsModel::id).toList());
+    verify(spaceScopeResolver).spaceOf("24");
+    verify(spaceScopeResolver, never()).spaceOf("20");
+    verify(spaceScopeResolver, never()).spaceOf("21");
+    verify(spaceScopeResolver, never()).spaceOf("22");
+    verify(spaceScopeResolver, never()).spaceOf("23");
   }
 
   /**
@@ -514,9 +553,10 @@ public class NewsMcpToolTest {
     when(spaceService.getSpaceById(SPACE_ID)).thenReturn(space);
     List<News> firstChunk = new ArrayList<>();
     for (int i = 0; i < NewsMcpTool.SPACE_SCAN_CHUNK; i++) {
-      firstChunk.add(mockNews(String.valueOf(100 + i), 44L, "elsewhere"));
+      firstChunk.add(i == 0 ? postedInItsSpace(mockNews("100", SPACE_ID, "first"))
+                            : mockNews(String.valueOf(100 + i), 44L, "elsewhere"));
     }
-    News second = mockNews("200", SPACE_ID, "second");
+    News second = postedInItsSpace(mockNews("200", SPACE_ID, "second"));
     when(newsService.getNews(any(NewsFilter.class), eq(currentIdentity))).thenReturn(firstChunk, List.of(second));
     when(spaceScopeResolver.spaceOf("100")).thenReturn(SPACE_ID);
     when(spaceScopeResolver.spaceOf("200")).thenReturn(SPACE_ID);
@@ -622,7 +662,7 @@ public class NewsMcpToolTest {
                                                                        mock(org.exoplatform.social.core.identity.model.Identity.class);
     org.exoplatform.social.core.identity.model.Identity spaceIdentity =
                                                                       mock(org.exoplatform.social.core.identity.model.Identity.class);
-    News ofSpace = mockNews("12", SPACE_ID, "of space");
+    News ofSpace = postedInItsSpace(mockNews("12", SPACE_ID, "of space"));
     News publishedElsewhere = mockNews("13", 44L, "published elsewhere");
     when(identityManager.getOrCreateUserIdentity(USER)).thenReturn(socialIdentity);
     when(spaceService.getSpaceById(SPACE_ID)).thenReturn(space);
@@ -1744,6 +1784,18 @@ public class NewsMcpToolTest {
                                                                        mock(org.exoplatform.social.core.identity.model.Identity.class);
     lenient().when(socialIdentity.getId()).thenReturn("1");
     when(identityManager.getOrCreateUserIdentity(USER)).thenReturn(socialIdentity);
+  }
+
+  /**
+   * @param news an article
+   * @return the article, posted, not published to a target and not deleted,
+   *         as the space scope keeps one
+   */
+  private News postedInItsSpace(News news) {
+    lenient().when(news.isPublished()).thenReturn(false);
+    lenient().when(news.isDeleted()).thenReturn(false);
+    lenient().when(news.getPublicationState()).thenReturn(NewsService.POSTED);
+    return news;
   }
 
   private News mockNews() {
