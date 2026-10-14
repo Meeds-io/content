@@ -241,6 +241,70 @@ public class NewsToolDefinitionSpaceScopeTest {
   }
 
   /**
+   * The shipped cover declaration, run through the MCP server's own space
+   * scope check for an approved proposal of a run answering in space 33: a
+   * cover sent as bytes on an article of that space passes unchanged, a cover the server would fetch
+   * from a URL, or take from a file attached to another object, is refused,
+   * and so is a cover on an article the resolver doesn't tell that space for.
+   * Mutants: {@code image_url} or the attachment reference allowed, the
+   * resolver dropped.
+   */
+  @Test
+  public void aSpaceScopedCoverIsSentAsBytesNeverFetched() {
+    SimpleToolDefinition tool = shippedTools().get("set_news_illustration");
+    McpToolSpaceScopeService service = new McpToolSpaceScopeService(articleResolverTelling(12L, 33L));
+    ActingIdentity proposal = limitedTo(33L, Origin.PROPOSAL);
+
+    String bytes = "{\"news_id\":12,\"image_base64\":\"iVBORw0KGgo=\",\"alt_text\":\"a cover\",\"language\":\"fr\"}";
+    assertEquals(bytes, service.enforce("set_news_illustration", tool, bytes, proposal));
+    assertRefused(() -> service.enforce("set_news_illustration",
+                                        tool,
+                                        "{\"news_id\":12,\"image_url\":\"http://169.254.169.254/latest/meta-data\"}",
+                                        proposal));
+    assertRefused(() -> service.enforce("set_news_illustration",
+                                        tool,
+                                        "{\"news_id\":12,\"attachment_object_type\":\"activity\",\"attachment_object_id\":\"5\"}",
+                                        proposal));
+    assertRefused(() -> service.enforce("set_news_illustration",
+                                        tool,
+                                        "{\"news_id\":12,\"image_base64\":\"iVBORw0KGgo=\",\"image_url\":\"http://example.org/a.png\"}",
+                                        proposal));
+    assertRefused(() -> service.enforce("set_news_illustration",
+                                        tool,
+                                        "{\"news_id\":13,\"image_base64\":\"iVBORw0KGgo=\"}",
+                                        proposal));
+  }
+
+  /**
+   * @param articleId the one article the resolver knows
+   * @param spaceId the space it tells for that article
+   * @return the resolvers, holding an {@value ArticleSpaceScopeResolver#NAME}
+   *         resolver telling no space for any other article
+   */
+  private static ObjectProvider<SpaceScopeResolver> articleResolverTelling(long articleId, long spaceId) {
+    SpaceScopeResolver resolver = mock(SpaceScopeResolver.class);
+    when(resolver.getName()).thenReturn(ArticleSpaceScopeResolver.NAME);
+    when(resolver.spaceOf(String.valueOf(articleId))).thenReturn(spaceId);
+    @SuppressWarnings("unchecked")
+    ObjectProvider<SpaceScopeResolver> resolvers = mock(ObjectProvider.class);
+    when(resolvers.orderedStream()).thenAnswer(invocation -> Stream.of(resolver));
+    return resolvers;
+  }
+
+  /**
+   * @param spaceId the space of the run
+   * @param origin what the run answers: a mention, or the approved proposal
+   *          a write runs from
+   * @return the identity of a run limited to that space
+   */
+  private static ActingIdentity limitedTo(long spaceId, Origin origin) {
+    ActingIdentity identity = mock(ActingIdentity.class);
+    when(identity.spaceScope()).thenReturn(spaceId);
+    when(identity.origin()).thenReturn(origin);
+    return identity;
+  }
+
+  /**
    * @param call a call expected to be refused under the space scope
    */
   private static void assertRefused(Runnable call) {
