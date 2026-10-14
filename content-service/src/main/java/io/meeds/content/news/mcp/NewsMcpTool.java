@@ -1034,6 +1034,12 @@ public class NewsMcpTool implements McpToolPlugin {
   }
 
   /**
+   * Candidates are first dropped on the fields the listed article already
+   * carries and that {@link ArticleSpaceScopeResolver} refuses on anyway (an
+   * article of another space, a published, deleted or not posted one), which
+   * saves its lookup; it stays the final word for the publication targets
+   * and the shares.
+   *
    * @param news an article
    * @param spaceId a space id
    * @param username the current user
@@ -1041,6 +1047,12 @@ public class NewsMcpTool implements McpToolPlugin {
    *         the user can view it
    */
   private boolean isArticleOfSpace(News news, long spaceId, String username) {
+    if (!String.valueOf(spaceId).equals(news.getSpaceId())
+        || news.isPublished()
+        || news.isDeleted()
+        || !NewsService.POSTED.equals(news.getPublicationState())) {
+      return false;
+    }
     Long articleSpaceId = spaceScopeResolver.spaceOf(news.getId());
     return articleSpaceId != null && articleSpaceId.longValue() == spaceId && newsService.canViewNews(news, username);
   }
