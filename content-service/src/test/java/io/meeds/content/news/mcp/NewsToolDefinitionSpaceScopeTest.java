@@ -65,7 +65,8 @@ public class NewsToolDefinitionSpaceScopeTest {
   private static final Set<String>         ARTICLE_WRITES = Set.of("update_news",
                                                                    "delete_news",
                                                                    "set_news_illustration",
-                                                                   "remove_news_illustration");
+                                                                   "remove_news_illustration",
+                                                                   "publish_news_in_activity_stream");
 
   /** The reads declared by the space they list. */
   private static final Set<String>         SPACE_READS    = Set.of("get_news_list", "search_news");
@@ -75,18 +76,17 @@ public class NewsToolDefinitionSpaceScopeTest {
 
   /**
    * The tools left undeclared, so refused under a space scope: they reach the
-   * platform's publication targets, or post to the activity stream.
+   * platform's publication targets.
    */
   private static final Set<String>         REFUSED        = Set.of("list_news_targets",
                                                                    "publish_news",
                                                                    "schedule_news",
-                                                                   "unpublish_news",
-                                                                   "publish_news_in_activity_stream");
+                                                                   "unpublish_news");
 
   private static final JsonMapper          MAPPER         = JsonMapper.builder().build();
 
   /**
-   * Exactly eight news tools declare a space scope, each well formed for what
+   * Exactly nine news tools declare a space scope, each well formed for what
    * it is, a read or a write, every write keeps its approval, no declaration
    * carries a false-only argument, and every accepted argument is a property
    * of the tool's schema. A tool added, or one that stops declaring, fails
@@ -147,6 +147,7 @@ public class NewsToolDefinitionSpaceScopeTest {
     assertEquals(List.of("title", "summary", "html_content", "language"), allowed(tools.get("update_news")));
     assertEquals(List.of(), allowed(tools.get("delete_news")));
     assertEquals(List.of("language"), allowed(tools.get("remove_news_illustration")));
+    assertEquals(List.of(), allowed(tools.get("publish_news_in_activity_stream")));
   }
 
   /**
@@ -273,6 +274,35 @@ public class NewsToolDefinitionSpaceScopeTest {
                                         tool,
                                         "{\"news_id\":13,\"image_base64\":\"iVBORw0KGgo=\"}",
                                         proposal));
+  }
+
+  /**
+   * The shipped declaration of the activity stream post, run through the MCP
+   * server's own space scope check for an approved proposal of a run answering
+   * in space 33: the tool takes the article only, so it posts to the space of
+   * the article, which the resolver tells is the run's space. An article of
+   * another space or of no space is refused, and so is every argument that
+   * could name a stream, a space or an audience. A mention (no approval) is
+   * refused as for any write.
+   * Mutants: the declaration dropped, the resolver changed, or an argument
+   * allowed.
+   */
+  @Test
+  public void anArticleIsPostedOnlyToTheStreamOfItsOwnSpace() {
+    SimpleToolDefinition tool = shippedTools().get("publish_news_in_activity_stream");
+    McpToolSpaceScopeService service = new McpToolSpaceScopeService(articleResolverTelling(12L, 33L));
+    ActingIdentity proposal = limitedTo(33L, Origin.PROPOSAL);
+    String name = "publish_news_in_activity_stream";
+
+    assertTrue(tool.isRequireApproval());
+    assertEquals("{\"news_id\":12}", service.enforce(name, tool, "{\"news_id\":12}", proposal));
+    assertRefused(() -> service.enforce(name, tool, "{\"news_id\":13}", proposal));
+    assertRefused(() -> service.enforce(name, tool, "{}", proposal));
+    assertRefused(() -> service.enforce(name, tool, "{\"news_id\":12,\"space_id\":44}", proposal));
+    assertRefused(() -> service.enforce(name, tool, "{\"news_id\":12,\"target_space_id\":44}", proposal));
+    assertRefused(() -> service.enforce(name, tool, "{\"news_id\":12,\"targets\":[\"slider\"]}", proposal));
+    assertRefused(() -> service.enforce(name, tool, "{\"news_id\":12,\"audience\":\"all\"}", proposal));
+    assertRefused(() -> service.enforce(name, tool, "{\"news_id\":12}", limitedTo(33L, Origin.MENTION)));
   }
 
   /**
