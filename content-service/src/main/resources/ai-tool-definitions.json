@@ -40,6 +40,7 @@
         "idempotentHint": false,
         "openWorldHint": false
       },
+      "space_scope": { "object_arg": "news_id", "resolver": "article" },
       "require_approval": true
     },
     {
