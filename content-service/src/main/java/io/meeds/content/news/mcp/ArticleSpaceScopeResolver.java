@@ -38,8 +38,9 @@ import io.meeds.mcp.server.plugin.SpaceScopeResolver;
  * posted (a draft or a scheduled one, which only its author and the space
  * publishers see), a deleted one, one published to the platform's publication
  * targets, one shared into other spaces, one outside any space, a missing
- * article, an id that isn't one and any failure belong to no space. Read as
- * the system, for the space scope decision only.
+ * article, an id that isn't one and any failure belong to no space. The
+ * article is read through {@link NewsService#getNewsArticleById(String)}, and
+ * the decision reads no viewer-dependent field.
  */
 @Service("articleSpaceScopeResolver")
 @Profile("mcp-server")
