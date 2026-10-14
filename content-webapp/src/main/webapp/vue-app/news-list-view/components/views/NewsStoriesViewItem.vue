@@ -111,7 +111,9 @@ export default {
       return this.selectedOption && this.selectedOption.showArticleImage;
     },
     articleImage() {
-      return this.showArticleImage && this.item.illustrationURL !== null ? this.item.illustrationURL.concat('&size=140x210').toString() : '/content/images/news.png';
+      return this.showArticleImage && this.item.illustrationURL !== null
+        ? this.$newsListService.illustrationSrc(this.item.illustrationURL, 140, 210)
+        : '/content/images/news.png';
     },
     articleUrl() {
       return eXo.env.portal.userName !== '' ? this.item.url : `${eXo.env.portal.context}/${eXo.env.portal.portalName}/news-detail?newsId=${this.item.id}&type=article`;

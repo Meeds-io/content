@@ -299,15 +299,21 @@ export default {
       this.seeAllUrl = this.$root.seeAllUrl;
     },
     illustrationURL(){
-      if (this.news.length > 1) {
-        if (this.index === 0){
-          return this.item.illustrationURL?.concat('&size=700x344').toString();
-        } else {
-          return this.item.illustrationURL?.concat('&size=80x80').toString();
-        }
-      } else {
-        return this.item.illustrationURL?.concat('&size=1410x344').toString();
+      if (!this.item.illustrationURL) {
+        return null;
       }
+      if (this.isMobile) {
+        return this.$newsListService.illustrationSrc(this.item.illustrationURL, 80, 80);
+      }
+      if (this.news.length > 1) {
+        if (this.index === 0) {
+          // the lead tile: half the portlet width, the 280px tile less its 80px info band
+          return this.$newsListService.illustrationSrc(this.item.illustrationURL, 700, 200);
+        }
+        const side = this.hasSmallWidthContainer ? 107 : 80;
+        return this.$newsListService.illustrationSrc(this.item.illustrationURL, side, side);
+      }
+      return this.item.illustrationURL.concat('&size=1410x344');
     },
   }
 };

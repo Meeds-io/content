@@ -185,7 +185,9 @@ export default {
       return this.item?.properties?.featuredImage?.altText || '';
     },
     articleImage() {
-      return this.item?.illustrationURL?.concat('&size=80x80').toString() || '/content/images/news.png';
+      return this.item?.illustrationURL
+        && this.$newsListService.illustrationSrc(this.item.illustrationURL, 80, 80)
+        || '/content/images/news.png';
     },
     extraClass() {
       return (!this.showArticleSummary || !this.hasSummary || !this.showArticleTitle ) && 'text-truncate-2' || 'article-title' ;

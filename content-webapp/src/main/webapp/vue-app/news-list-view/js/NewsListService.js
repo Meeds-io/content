@@ -19,6 +19,24 @@
  */
 import {newsConstants} from '../../services/newsConstants.js';
 
+/**
+ * The illustration URL sized for the box a template draws it in: twice the
+ * box, so a HiDPI screen gets one stored pixel per device pixel. The server
+ * never upscales, so a source smaller than the ask comes back as stored. The
+ * width stays above the height: on a square or taller ask the server fits to
+ * height and a portrait source would come back narrower than the box.
+ *
+ * @param {string} illustrationUrl the article's illustration URL, with its query
+ * @param {number} boxWidth the drawn box width, in CSS pixels
+ * @param {number} boxHeight the drawn box height, in CSS pixels
+ * @returns {string} the URL with its `size` ask
+ */
+export function illustrationSrc(illustrationUrl, boxWidth, boxHeight) {
+  const height = 2 * boxHeight;
+  const width = Math.max(2 * boxWidth, height + 1);
+  return `${illustrationUrl}&size=${width}x${height}`;
+}
+
 export function getNewsListByTarget(targetName, offset, limit, returnSize) {
   return fetch(`${newsConstants.CONTENT_API}/contents/byTarget/${targetName}?offset=${offset}&limit=${limit}&returnSize=${returnSize}`, {
     headers: {

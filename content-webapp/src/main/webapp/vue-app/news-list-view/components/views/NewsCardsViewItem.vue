@@ -240,7 +240,7 @@ export default {
     articleImage() {
       return this.showArticleImage && this.item
                                    && this.item.illustrationURL
-                                   && this.item.illustrationURL.concat('&size=235x140').toString()
+                                   && this.$newsListService.illustrationSrc(this.item.illustrationURL, 240, 135)
                                    || '/content/images/news.png';
     },
     isHiddenSpace() {
