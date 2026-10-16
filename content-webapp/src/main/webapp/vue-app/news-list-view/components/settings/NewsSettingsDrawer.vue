@@ -77,7 +77,7 @@
               ref="viewTemplateRefs"
               v-model="viewTemplate"
               :items="displayedViewTemplates"
-              :menu-props="{ bottom: true, offsetY: true}"
+              :menu-props="{ bottom: true, offsetY: true, contentClass: 'application-menu layout-drawer' }"
               item-text="label"
               item-value="name"
               dense
