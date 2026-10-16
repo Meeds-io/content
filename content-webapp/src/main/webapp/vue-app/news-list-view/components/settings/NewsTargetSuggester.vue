@@ -26,7 +26,7 @@
     :items="newsTargetItems"
     :placeholder="$t('news.newsTarget.selector.placeholder')"
     append-icon=""
-    menu-props="closeOnClick, closeOnContentClick, maxHeight = 100"
+    :menu-props="{ closeOnClick: true, closeOnContentClick: true, contentClass: 'application-menu layout-drawer' }"
     class="identitySuggester identitySuggesterInputStyle mt-1"
     content-class="identitySuggesterContent"
     width="100%"
