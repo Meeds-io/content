@@ -20,6 +20,7 @@
         "idempotentHint": false,
         "openWorldHint": false
       },
+      "space_scope": { "space_arg": "target_space_id", "allowed_args": ["title", "summary", "html_content"] },
       "require_approval": true
     },
     {
@@ -39,6 +40,7 @@
         "idempotentHint": false,
         "openWorldHint": false
       },
+      "space_scope": { "object_arg": "news_id", "resolver": "article" },
       "require_approval": true
     },
     {
@@ -139,12 +141,13 @@
         "idempotentHint": false,
         "openWorldHint": false
       },
+      "space_scope": { "object_arg": "news_id", "resolver": "article" },
       "require_approval": true
     },
     {
       "name": "get_news_list",
       "title": "Get articles by space",
-      "description": "Retrieve a paginated list of news for a space.",
+      "description": "Retrieve a paginated list of news for a space. In a run limited to a space, results stop after the first 250 articles scanned, so a short page does not mean the end.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -159,12 +162,13 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": false
-      }
+      },
+      "space_scope": { "space_arg": "target_space_id", "when_absent": "use_scope", "allowed_args": ["offset", "limit"] }
     },
     {
       "name": "search_news",
       "title": "Search for articles",
-      "description": "Search news by a term within a space.",
+      "description": "Search news by a term within a space. In a run limited to a space, results stop after the first 250 articles scanned, so a short page does not mean the end.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -180,7 +184,8 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": false
-      }
+      },
+      "space_scope": { "space_arg": "target_space_id", "when_absent": "use_scope", "allowed_args": ["query", "offset", "limit"] }
     },
     {
       "name": "get_news_by_id",
@@ -202,7 +207,8 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": false
-      }
+      },
+      "space_scope": { "object_arg": "news_id", "resolver": "article", "allowed_args": ["language"] }
     },
     {
       "name": "update_news",
@@ -225,6 +231,7 @@
         "idempotentHint": false,
         "openWorldHint": false
       },
+      "space_scope": { "object_arg": "news_id", "resolver": "article", "allowed_args": ["title", "summary", "html_content", "language"] },
       "require_approval": true
     },
     {
@@ -250,6 +257,7 @@
         "idempotentHint": false,
         "openWorldHint": false
       },
+      "space_scope": { "object_arg": "news_id", "resolver": "article", "allowed_args": ["image_base64", "alt_text", "language"] },
       "require_approval": true
     },
     {
@@ -276,6 +284,7 @@
         "idempotentHint": false,
         "openWorldHint": false
       },
+      "space_scope": { "object_arg": "news_id", "resolver": "article", "allowed_args": ["language"] },
       "require_approval": true
     }
   ]
