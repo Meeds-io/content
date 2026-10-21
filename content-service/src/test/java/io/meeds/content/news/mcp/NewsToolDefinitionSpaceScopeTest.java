@@ -154,7 +154,9 @@ public class NewsToolDefinitionSpaceScopeTest {
    * A cover is set in a limited call only from bytes the call carries: never
    * from a URL the server would fetch, nor from a file attached to another
    * object, which may be in another space.
-   * Mutants: the URL or the attachment reference allowed.
+   * Nor from an upload id: start_upload, which gives one, is not offered in
+   * such a run.
+   * Mutants: the URL, the attachment reference or the upload id allowed.
    */
   @Test
   public void coverIsSetFromTheCallBytesOnly() {
@@ -164,6 +166,7 @@ public class NewsToolDefinitionSpaceScopeTest {
     assertFalse(allowed(tool).contains("image_url"));
     assertFalse(allowed(tool).contains("attachment_object_type"));
     assertFalse(allowed(tool).contains("attachment_object_id"));
+    assertFalse(allowed(tool).contains("upload_id"));
   }
 
   /**
@@ -247,8 +250,9 @@ public class NewsToolDefinitionSpaceScopeTest {
    * cover sent as bytes on an article of that space passes unchanged, a cover the server would fetch
    * from a URL, or take from a file attached to another object, is refused,
    * and so is a cover on an article the resolver doesn't tell that space for.
-   * Mutants: {@code image_url} or the attachment reference allowed, the
-   * resolver dropped.
+   * An upload id is refused too.
+   * Mutants: {@code image_url}, the attachment reference or {@code upload_id}
+   * allowed, the resolver dropped.
    */
   @Test
   public void aSpaceScopedCoverIsSentAsBytesNeverFetched() {
@@ -265,6 +269,11 @@ public class NewsToolDefinitionSpaceScopeTest {
     assertRefused(() -> service.enforce("set_news_illustration",
                                         tool,
                                         "{\"news_id\":12,\"attachment_object_type\":\"activity\",\"attachment_object_id\":\"5\"}",
+                                        proposal));
+    // start_upload, which gives an upload id, is not offered in a run limited to a space
+    assertRefused(() -> service.enforce("set_news_illustration",
+                                        tool,
+                                        "{\"news_id\":12,\"upload_id\":\"0f8fad5b-d9cb-469f-a165-70867728950e\"}",
                                         proposal));
     assertRefused(() -> service.enforce("set_news_illustration",
                                         tool,
