@@ -175,7 +175,8 @@
           type="content-details-extension"
           :params="{
             entityId: news.latestVersionId,
-            entityType: 'WIKI_PAGE_VERSIONS'
+            entityType: 'WIKI_PAGE_VERSIONS',
+            spaceId: news.spaceId
           }"
           element-class="ms-3"
           parent-element="span"
