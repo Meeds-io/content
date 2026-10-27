@@ -237,15 +237,16 @@
     {
       "name": "set_news_illustration",
       "title": "Set an article cover image",
-      "description": "Set the cover (illustration) image of a news (Article) from exactly one of: a public image URL, a base64-encoded image, or a reference to a file already attached to a platform object (attachment_object_type + attachment_object_id).",
+      "description": "Set the cover (illustration) image of a news (Article) from an image (png, jpeg, gif or webp, up to 10 MB). The image comes from exactly one source, in order of choice: an image already attached in the platform (attachment_object_type + attachment_object_id); a public URL that serves it (image_url); an image on your machine, sent with start_upload and its curl command, then passed as upload_id; a small image as image_base64 only when you have no shell. While a run is limited to a space, only image_base64 is taken.",
       "input_schema": {
         "type": "object",
         "properties": {
           "news_id": { "type": "integer", "description": "Id of the article (news) whose cover/illustration image to set." },
-          "image_url": { "type": "string", "description": "Public URL of the image to use as the cover. Provide exactly ONE image source (image_url, image_base64, or attachment_object_type+attachment_object_id)." },
-          "image_base64": { "type": "string", "description": "Base64-encoded image bytes to use as the cover. Provide exactly ONE image source." },
+          "image_url": { "type": "string", "description": "Direct http(s) URL where the image is publicly served, fetched by the server. Use it only for a URL that really serves the image: never guess or invent one. One image source per call: attachment_object_id, image_url, upload_id or image_base64." },
+          "image_base64": { "type": "string", "description": "Base64-encoded image bytes (png, jpeg, gif or webp), optionally as a data: URI. Last resort, for a small image when you have no shell to run start_upload's curl command or curl cannot reach the platform: every byte goes through the conversation. One image source per call." },
           "attachment_object_type": { "type": "string", "description": "Type of an existing platform object whose already-attached image to reuse as the cover (paired with attachment_object_id)." },
-          "attachment_object_id": { "type": "string", "description": "Id of the existing platform object whose already-attached image to reuse as the cover (paired with attachment_object_type)." },
+          "attachment_object_id": { "type": "string", "description": "Id of the existing platform object whose already-attached image to reuse as the cover (paired with attachment_object_type). The first choice when the image is already in the platform. One image source per call: attachment_object_id, image_url, upload_id or image_base64." },
+          "upload_id": { "type": "string", "description": "The upload_id start_upload returned, once its curl command answered {\"status\":\"uploaded\"}: the way to send an image that is on your machine (png, jpeg, gif or webp, up to 10 MB). Only your own uploads are accepted; this call consumes it. One image source per call." },
           "alt_text": { "type": "string", "description": "Alternative text describing the cover image, for accessibility." },
           "language": { "type": "string", "description": "Optional language/translation to target (e.g. 'fr', 'de'); omit for the default article. Setting a cover for a translation that had none gives that translation its own image file; the default article's is left untouched." }
         },
