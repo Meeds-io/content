@@ -61,7 +61,7 @@ public class CollaborativeActivityDeclarationTest {
     assertFalse(declaration.containsKey("browserOperations"));
 
     Map<String, Object> labels = (Map<String, Object>) declaration.get("labels");
-    assertEquals(List.of("content.collaborativeActivity.help.counted.postNews"), labels.get("counted"));
+    assertEquals(List.of("content.collaborativeActivity.help.counted.createNews"), labels.get("counted"));
     assertEquals("one entry per user-facing action that is not counted",
                  List.of("content.collaborativeActivity.help.notCounted.draftNews",
                          "content.collaborativeActivity.help.notCounted.editNews",
