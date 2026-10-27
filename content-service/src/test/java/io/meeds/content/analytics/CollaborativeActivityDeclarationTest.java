@@ -30,7 +30,7 @@ import java.util.Map;
 import org.junit.Test;
 
 import io.meeds.content.news.listener.AnalyticsNewsListener;
-import io.meeds.content.news.listener.NewsActivityListener;
+import io.meeds.content.news.service.NewsService;
 
 import tools.jackson.databind.ObjectMapper;
 
@@ -38,7 +38,8 @@ import tools.jackson.databind.ObjectMapper;
  * The collaborative activity declaration analytics reads from this jar: a
  * news counts once, through the content event its publication records, and
  * the stream post of a news is left out by its activity type. The strings
- * are read from the constants of the listeners that emit them.
+ * are read from the constants of the code that emits them: the analytics
+ * listener for the operation, NewsService for the type it gives the post.
  */
 public class CollaborativeActivityDeclarationTest {
 
@@ -55,13 +56,18 @@ public class CollaborativeActivityDeclarationTest {
 
     assertEquals(List.of("contents"), declaration.get("modules"));
     assertEquals(List.of(AnalyticsNewsListener.CREATE_CONTENT_OPERATION_NAME), declaration.get("operations"));
-    assertEquals(List.of(NewsActivityListener.NEWS_ACTIVITY_TYPE), declaration.get("excludedActivityTypes"));
+    assertEquals(List.of(NewsService.NEWS_ACTIVITY_TYPE), declaration.get("excludedActivityTypes"));
     assertFalse("no name was ever emitted for a news under another operation", declaration.containsKey("legacyOperations"));
     assertFalse(declaration.containsKey("browserOperations"));
 
     Map<String, Object> labels = (Map<String, Object>) declaration.get("labels");
-    assertEquals(List.of("content.collaborativeActivity.help.counted.publishNews"), labels.get("counted"));
-    assertEquals(List.of("content.collaborativeActivity.help.notCounted.editNews"), labels.get("notCounted"));
+    assertEquals(List.of("content.collaborativeActivity.help.counted.postNews"), labels.get("counted"));
+    assertEquals("one entry per user-facing action that is not counted",
+                 List.of("content.collaborativeActivity.help.notCounted.draftNews",
+                         "content.collaborativeActivity.help.notCounted.editNews",
+                         "content.collaborativeActivity.help.notCounted.publishNews",
+                         "content.collaborativeActivity.help.notCounted.likeNews"),
+                 labels.get("notCounted"));
   }
 
 }

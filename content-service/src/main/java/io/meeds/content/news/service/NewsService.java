@@ -135,6 +135,7 @@ public class NewsService {
   public static final MetadataType NEWS_METADATA_TYPE                     = new MetadataType(1000, "news");
 
   public static final String       NEWS_METADATA_NAME                     = "news";
+  public static final String       NEWS_ACTIVITY_TYPE                     = "news";
 
   public static final String       NEWS_METADATA_DRAFT_OBJECT_TYPE        = "newsDraftPage";
 
@@ -2416,7 +2417,7 @@ public class NewsService {
 
     ExoSocialActivity activity = new ExoSocialActivityImpl();
     activity.setTitle(news.getTitle());
-    activity.setType("news");
+    activity.setType(NEWS_ACTIVITY_TYPE);
     activity.setUserId(poster.getId());
     activity.isHidden(!news.isActivityPosted());
     Map<String, String> templateParams = new HashMap<>();
