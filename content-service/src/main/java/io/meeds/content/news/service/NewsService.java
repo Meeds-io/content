@@ -135,6 +135,7 @@ public class NewsService {
   public static final MetadataType NEWS_METADATA_TYPE                     = new MetadataType(1000, "news");
 
   public static final String       NEWS_METADATA_NAME                     = "news";
+
   public static final String       NEWS_ACTIVITY_TYPE                     = "news";
 
   public static final String       NEWS_METADATA_DRAFT_OBJECT_TYPE        = "newsDraftPage";
