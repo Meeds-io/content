@@ -1291,7 +1291,34 @@ public class NewsMcpToolTest {
     when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
     when(newsService.canEditNews(news, USER)).thenReturn(false);
 
-    tool.setNewsIllustration(NEWS_ID, "https://meeds.test/cover.png", null, null, null, "alt", "en");
+    tool.setNewsIllustration(NEWS_ID, "https://meeds.test/cover.png", null, null, null, "alt", "en", null);
+  }
+
+  /**
+   * A user who can't edit the article is refused before an upload id is
+   * resolved, which leaves the user's upload in place.
+   * Mutants: the image resolved before the edit right is checked.
+   *
+   * @throws Exception never
+   */
+  @Test
+  public void setNewsIllustrationRefusedForANonEditorLeavesTheUploadInPlace() throws Exception { // NOSONAR
+    News news = mockNews();
+    Space space = mockSpace();
+    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)), eq(currentIdentity), eq(false), anyString())).thenReturn(news);
+    when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
+    when(newsService.canEditNews(news, USER)).thenReturn(false);
+
+    try (MockedStatic<UploadToolUtils> upload = mockStatic(UploadToolUtils.class)) {
+      try {
+        tool.setNewsIllustration(NEWS_ID, null, null, null, null, "alt", "en", "up-1");
+        fail("a user who can't edit the article must be refused");
+      } catch (Exception e) { // NOSONAR the tool throws it sneakily
+        assertTrue(e.toString(), e instanceof IllegalAccessException);
+      }
+      upload.verify(() -> UploadToolUtils.resolveImage(any(), any(), any(), any(), any(), anyLong()), never());
+    }
+    org.mockito.Mockito.verifyNoInteractions(uploadService);
   }
 
   // EXO-90294: the refresh re-reads the article, and for a language with no page
@@ -1365,7 +1392,7 @@ public class NewsMcpToolTest {
 
     ArgumentCaptor<NotePageProperties> captor = ArgumentCaptor.forClass(NotePageProperties.class);
 
-    runWithUploadMocks(() -> tool.setNewsIllustration(NEWS_ID, "https://meeds.test/cover.png", null, null, null, "alt", "de"));
+    runWithUploadMocks(() -> tool.setNewsIllustration(NEWS_ID, "https://meeds.test/cover.png", null, null, null, "alt", "de", null));
 
     verify(noteService).saveNoteMetadata(captor.capture(), eq("de"), eq(1L));
     assertNull(captor.getValue().getFeaturedImage().getId());
@@ -1497,7 +1524,7 @@ public class NewsMcpToolTest {
 
     ArgumentCaptor<NotePageProperties> captor = ArgumentCaptor.forClass(NotePageProperties.class);
 
-    runWithUploadMocks(() -> tool.setNewsIllustration(NEWS_ID, "https://meeds.test/cover.png", null, null, null, "alt", "fr"));
+    runWithUploadMocks(() -> tool.setNewsIllustration(NEWS_ID, "https://meeds.test/cover.png", null, null, null, "alt", "fr", null));
 
     verify(noteService).saveNoteMetadata(captor.capture(), eq("fr"), eq(1L));
     assertNull(captor.getValue().getFeaturedImage().getId());
@@ -1649,7 +1676,7 @@ public class NewsMcpToolTest {
     when(newsService.canEditNews(news, USER)).thenReturn(true);
 
     try {
-      runWithUploadMocks(() -> tool.setNewsIllustration(NEWS_ID, "https://meeds.test/cover.png", null, null, null, "alt", null));
+      runWithUploadMocks(() -> tool.setNewsIllustration(NEWS_ID, "https://meeds.test/cover.png", null, null, null, "alt", null, null));
       fail("a failed read back must be reported, not dereferenced");
     } catch (ObjectNotFoundException e) {
       assertTrue(e.getMessage().contains("could not be read back"));
@@ -1679,7 +1706,7 @@ public class NewsMcpToolTest {
     when(newsService.updateNews(eq(news), eq(USER), eq(false), anyBoolean(), anyString(), anyString())).thenReturn(null);
 
     try {
-      runWithUploadMocks(() -> tool.setNewsIllustration(NEWS_ID, "https://meeds.test/cover.png", null, null, null, "alt", "fr"));
+      runWithUploadMocks(() -> tool.setNewsIllustration(NEWS_ID, "https://meeds.test/cover.png", null, null, null, "alt", "fr", null));
       fail("a failed version write must be reported, not dereferenced");
     } catch (ObjectNotFoundException e) {
       assertTrue(e.getMessage().contains("could not be read back"));
@@ -1711,11 +1738,61 @@ public class NewsMcpToolTest {
                                                                          null,
                                                                          null,
                                                                          "alt",
-                                                                         "en"));
+                                                                         "en",
+                                                                         null));
 
     assertEquals(NEWS_ID, result.id());
     verify(noteService).saveNoteMetadata(any(NotePageProperties.class), eq("en"), eq(1L));
     verify(newsService).updateNews(eq(news), eq(USER), eq(false), anyBoolean(), anyString(), anyString());
+  }
+
+  /**
+   * A cover sent through an upload link reaches mcp-server's shared resolver
+   * with its upload id and the upload service, which reads it owner-checked
+   * and consumes it; the image staged for the note's metadata is released
+   * once the cover is set, and when setting it fails.
+   * Mutants: the upload id not forwarded, the upload service not passed (the
+   * overload that refuses an upload id), the staged image released only on
+   * a failure, or not at all.
+   *
+   * @throws Exception never
+   */
+  @Test
+  public void setNewsIllustrationFromAnUploadUsesTheSharedResolverAndReleasesTheStagedImage() throws Exception { // NOSONAR
+    News news = mockNews();
+    Space space = mockSpace();
+    mockUserIdentity();
+    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)), eq(currentIdentity), eq(false), anyString())).thenReturn(news);
+    when(newsService.getNewsByIdAndLang(eq(String.valueOf(NEWS_ID)), eq(currentIdentity), eq(false), anyString(), any()))
+                                                                                                                     .thenReturn(news);
+    when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
+    when(newsService.canEditNews(news, USER)).thenReturn(true);
+    when(newsService.updateNews(eq(news), eq(USER), eq(false), anyBoolean(), anyString(), anyString())).thenReturn(news);
+
+    try (MockedStatic<UploadToolUtils> upload = mockStatic(UploadToolUtils.class)) {
+      UploadToolUtils.FetchedContent image = new UploadToolUtils.FetchedContent(new byte[] { 1, 2, 3 }, "image/png", "chart.png");
+      upload.when(() -> UploadToolUtils.resolveImage(any(), any(), any(), any(), any(), anyLong())).thenReturn(image);
+      upload.when(() -> UploadToolUtils.materialize(any(), any(), anyString(), anyString())).thenReturn("staged-1", "staged-2");
+
+      runWithStaticMocks(() -> tool.setNewsIllustration(NEWS_ID, null, null, null, null, "alt", "en", "up-1"));
+
+      upload.verify(() -> UploadToolUtils.resolveImage(org.mockito.ArgumentMatchers.same(attachmentService),
+                                                       org.mockito.ArgumentMatchers.same(fileService),
+                                                       org.mockito.ArgumentMatchers.same(uploadService),
+                                                       any(),
+                                                       eq(new UploadToolUtils.ImageSource(null, null, null, null, "up-1")),
+                                                       eq(UploadToolUtils.DEFAULT_MAX_BYTES)));
+      upload.verify(() -> UploadToolUtils.release(uploadService, "staged-1"));
+
+      when(noteService.saveNoteMetadata(any(NotePageProperties.class), anyString(), anyLong())).thenThrow(new IllegalStateException("boom"));
+      try {
+        runWithStaticMocks(() -> tool.setNewsIllustration(NEWS_ID, null, null, null, null, "alt", "en", "up-2"));
+        fail("a failed metadata write must be reported");
+      } catch (IllegalStateException e) {
+        assertTrue(e.getMessage().contains("Could not set the news cover image"));
+      }
+      upload.verify(() -> UploadToolUtils.release(uploadService, "staged-2"));
+    }
   }
 
   @Test(expected = ObjectNotFoundException.class)
@@ -1884,6 +1961,7 @@ public class NewsMcpToolTest {
     try (MockedStatic<UploadToolUtils> upload = mockStatic(UploadToolUtils.class)) {
       UploadToolUtils.FetchedContent image = new UploadToolUtils.FetchedContent(new byte[] { 1, 2, 3 }, "image/png", "image.png");
       upload.when(() -> UploadToolUtils.resolveImage(any(),
+                                                     any(),
                                                      any(),
                                                      any(),
                                                      any(),
