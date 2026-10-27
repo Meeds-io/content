@@ -684,11 +684,30 @@ public class NewsMcpTool implements McpToolPlugin {
     return toNewsModel(news, space);
   }
 
-  // Sets a news (article) cover / illustration from exactly one of a public
-  // http(s) URL, base64 bytes, or an ACL-checked reference to an existing
-  // platform attachment. The cover is shared with the backing note's featured
-  // image, so it is written onto the article note's metadata and then the news
-  // lifecycle is refreshed (search re-index + linked activity thumbnail).
+  /**
+   * Sets a news (article) cover / illustration from exactly one of a public
+   * http(s) URL, base64 bytes, an ACL-checked reference to an existing
+   * platform attachment, or one of the user's uploads sent through an upload
+   * link. Every source is capped at {@link UploadToolUtils#DEFAULT_MAX_BYTES}
+   * and must hold a png, jpeg, gif or webp image. The cover is shared with the
+   * backing note's featured image, so it is written onto the article note's
+   * metadata and then the news lifecycle is refreshed (search re-index +
+   * linked activity thumbnail). The image is staged in the platform's upload
+   * service for the metadata to read, and released on every path.
+   *
+   * @param newsId the article
+   * @param imageUrl a public http(s) URL serving the image
+   * @param imageBase64 the image bytes, base64-encoded
+   * @param attachmentObjectType the type of the object holding an attached
+   *          image
+   * @param attachmentObjectId the id of the object holding an attached image
+   * @param altText the image's alternative text
+   * @param language the translation to target, blank for the default article
+   * @param uploadId the id start_upload returned, once its curl command sent
+   *          the image: one of the user's own uploads, consumed once read,
+   *          whether the cover is set or not
+   * @return the article
+   */
   @SneakyThrows
   public NewsModel setNewsIllustration(long newsId,
                                        String imageUrl,
@@ -696,7 +715,8 @@ public class NewsMcpTool implements McpToolPlugin {
                                        String attachmentObjectType,
                                        String attachmentObjectId,
                                        String altText,
-                                       String language) {
+                                       String language,
+                                       String uploadId) {
     checkNewsId(newsId);
     String currentUsername = getCurrentUserName();
     org.exoplatform.services.security.Identity currentIdentity = userAcl.getUserIdentity(currentUsername);
@@ -723,13 +743,15 @@ public class NewsMcpTool implements McpToolPlugin {
     }
     UploadToolUtils.FetchedContent image = UploadToolUtils.resolveImage(attachmentService,
                                                                         fileService,
+                                                                        uploadService,
                                                                         getCurrentUserAclIdentity(),
                                                                         new UploadToolUtils.ImageSource(imageUrl,
                                                                                                         imageBase64,
                                                                                                         attachmentObjectType,
-                                                                                                        attachmentObjectId),
+                                                                                                        attachmentObjectId,
+                                                                                                        uploadId),
                                                                         UploadToolUtils.DEFAULT_MAX_BYTES);
-    String uploadId = UploadToolUtils.materialize(uploadService, image.bytes(), image.fileName(), image.mimeType());
+    String imageUploadId = UploadToolUtils.materialize(uploadService, image.bytes(), image.fileName(), image.mimeType());
     // for a published article news_id == the note page id; a draft/staged article
     // points at its target page id
     long pageId = news.getTargetPageId() != null ? Long.parseLong(news.getTargetPageId()) : newsId;
@@ -747,7 +769,7 @@ public class NewsMcpTool implements McpToolPlugin {
       if (resolved.ownsCoverFile() && existing != null && existing.getId() != null && existing.getId() > 0) {
         featuredImage.setId(existing.getId()); // update this language's own cover file in place
       }
-      featuredImage.setUploadId(uploadId);
+      featuredImage.setUploadId(imageUploadId);
       featuredImage.setMimeType(image.mimeType());
       featuredImage.setFileName(image.fileName());
       featuredImage.setAltText(altText);
@@ -756,8 +778,10 @@ public class NewsMcpTool implements McpToolPlugin {
       properties.setFeaturedImage(featuredImage);
       noteService.saveNoteMetadata(properties, lang, getUserIdentityId(currentUsername));
     } catch (Exception e) {
-      UploadToolUtils.release(uploadService, uploadId);
       throw new IllegalStateException("Could not set the news cover image: " + e.getMessage());
+    } finally {
+      // the cover's file is written from it synchronously, which removes it; a path that doesn't reach it releases it here
+      UploadToolUtils.release(uploadService, imageUploadId);
     }
     return refreshAndModel(newsId, currentIdentity, space, lang, written, false);
   }
