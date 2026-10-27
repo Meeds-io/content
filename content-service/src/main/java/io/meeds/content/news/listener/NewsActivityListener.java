@@ -63,7 +63,7 @@ public class NewsActivityListener extends ActivityListenerPlugin {
 
   private static final String NEWS_ID = "newsId";
 
-  private static final String NEWS_ACTIVITY_TYPE = "news";
+  public static final String  NEWS_ACTIVITY_TYPE = "news";
 
   private static final String KUDOS_ACTIVITY_COMMENT_TYPE = "exokudos:activity";
 
