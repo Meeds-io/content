@@ -99,7 +99,7 @@ public class ContentListPortletInstancePreferencePlugin implements PortletInstan
     TranslationField translationField = translationService.getTranslationField(ContentUtils.CONTENT_LIST_VIEW_TYPE,
                                                                                applicationId,
                                                                                ContentUtils.CONTENT_LIST_HEADER_TITLE_FIELD);
-    if (translationField != null && MapUtils.isNotEmpty(translationField.getLabels())) {
+    if (MapUtils.isNotEmpty(translationField.getLabels())) {
       result.add(new PortletInstancePreference(DATA_INIT_PREFERENCE_NAME, JsonUtils.toJsonString(translationField)));
     }
     return result;

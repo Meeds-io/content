@@ -90,7 +90,7 @@ public class NewsListPortletInstancePreferencePlugin implements PortletInstanceP
     TranslationField translationField = translationService.getTranslationField(NewsListViewTranslationPlugin.NEWS_LIST_VIEW_OBJECT_TYPE,
                                                                                applicationId,
                                                                                NewsListViewTranslationPlugin.NEWS_LIST_HEADER_NAME_FIELD);
-    if (translationField != null && MapUtils.isNotEmpty(translationField.getLabels())) {
+    if (MapUtils.isNotEmpty(translationField.getLabels())) {
       result.add(new PortletInstancePreference(DATA_INIT_PREFERENCE_NAME, JsonUtils.toJsonString(translationField)));
     }
     return result;
