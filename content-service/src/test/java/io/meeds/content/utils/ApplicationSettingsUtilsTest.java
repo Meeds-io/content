@@ -60,8 +60,8 @@ class ApplicationSettingsUtilsTest {
   /**
    * Long targets within the bounds Autolinker 3.14.1 links whole are
    * accepted: a path as long as the option allows, a 63-character label, a
-   * 253-character host. A behaviour pin: the earlier pattern, whose repeated
-   * group Sonar java:S5998 flags, did not overflow at this length either.
+   * 253-character host. A behaviour pin, not a regression pin: it pins
+   * acceptance at the bounds, no failure at this length being known.
    */
   @Test
   void testToUrlAcceptsTargetsAsLongAsAllowed() {
