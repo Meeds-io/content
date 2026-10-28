@@ -393,6 +393,8 @@ class LinkApplicationSettingsPluginTest {
     when(linkService.getLinkSettingByName(LIVE_SETTING, null, true)).thenReturn(tiny);
     plugin.validate(context, Map.of("icon_size", 8));
     assertRefused(context, Map.of("icon_size", 9), "value is not accepted for icon_size");
+    tiny.setIconSize(-5);
+    plugin.validate(context, Map.of("icon_size", -5));
   }
 
   @Test
