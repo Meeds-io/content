@@ -253,9 +253,7 @@ public class NewsListApplicationSettingsPlugin extends ListViewApplicationSettin
     settings.put(SELECTED_ARTICLE_IDS, parseIds(preferences.get(SELECTED_IDS_PREFERENCE)));
     settings.put(LIMIT, getLimit(preferences, viewTemplate));
     SWITCHES.forEach((option, preference) -> settings.put(option, !"false".equals(preferences.get(preference))));
-    settings.put(SHOW_SEE_ALL,
-                 !"false".equals(preferences.get(SHOW_SEE_ALL_PREFERENCE))
-                     && StringUtils.isNotBlank(preferences.get(SEE_ALL_URL_PREFERENCE)));
+    settings.put(SHOW_SEE_ALL, isSeeAllShown(preferences));
     settings.put(SEE_ALL_URL, StringUtils.defaultString(preferences.get(SEE_ALL_URL_PREFERENCE)));
     return settings;
   }
@@ -326,7 +324,11 @@ public class NewsListApplicationSettingsPlugin extends ListViewApplicationSettin
         preferences.put(SEE_ALL_URL_PREFERENCE, toUrl(seeAllUrl, SEE_ALL_URL));
       }
     }
-    boolean showSeeAll = !"false".equals(preferences.getOrDefault(SHOW_SEE_ALL_PREFERENCE, stored.get(SHOW_SEE_ALL_PREFERENCE)));
+    boolean showSeeAll = settings.containsKey(SHOW_SEE_ALL) ? Boolean.parseBoolean(preferences.get(SHOW_SEE_ALL_PREFERENCE))
+                                                            : isSeeAllShown(stored);
+    if (settings.containsKey(SEE_ALL_URL) && !settings.containsKey(SHOW_SEE_ALL)) {
+      preferences.put(SHOW_SEE_ALL_PREFERENCE, String.valueOf(showSeeAll));
+    }
     if (showSeeAll && (settings.containsKey(SHOW_SEE_ALL) || settings.containsKey(SEE_ALL_URL))
         && StringUtils.isBlank(preferences.getOrDefault(SEE_ALL_URL_PREFERENCE, stored.get(SEE_ALL_URL_PREFERENCE)))) {
       throw notAccepted(SEE_ALL_URL);
@@ -360,6 +362,15 @@ public class NewsListApplicationSettingsPlugin extends ListViewApplicationSettin
   private String getViewTemplate(Map<String, String> preferences) {
     String viewTemplate = preferences.get(VIEW_TEMPLATE_PREFERENCE);
     return StringUtils.isBlank(viewTemplate) ? DEFAULT_VIEW_TEMPLATE : viewTemplate;
+  }
+
+  /**
+   * @return whether the view shows the see all button, as news-list-view's
+   *         main.js decides it: the switch not off and a target stored
+   */
+  private boolean isSeeAllShown(Map<String, String> preferences) {
+    return !"false".equals(preferences.get(SHOW_SEE_ALL_PREFERENCE))
+           && StringUtils.isNotBlank(preferences.get(SEE_ALL_URL_PREFERENCE));
   }
 
   /**

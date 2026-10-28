@@ -27,6 +27,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -303,6 +304,29 @@ class NewsListApplicationSettingsPluginTest {
                                                            "3"));
     plugin.apply(stored, Map.of("show_header", false));
     verify(applicationSettingsService).updatePreferences(stored, Map.of("showHeader", "false"));
+  }
+
+  /**
+   * A window never configured reads its see all button as off; the values the
+   * read returned are accepted back, and a target given alone keeps the
+   * button off, as the drawer's save stores the switch it shows
+   */
+  @Test
+  void testSeeAllReadIsWrittenBack() throws Exception {
+    ApplicationSettingsContext context = pageContext(Map.of());
+    Map<String, Object> read = plugin.read(context);
+    plugin.apply(context, Map.of("show_see_all", read.get("show_see_all"), "see_all_url", read.get("see_all_url")));
+    verify(applicationSettingsService).updatePreferences(context, Map.of("showSeeAll", "false", "seeAllUrl", ""));
+    clearInvocations(applicationSettingsService);
+
+    ApplicationSettingsContext unset = pageContext(Map.of());
+    plugin.apply(unset, Map.of("see_all_url", ""));
+    verify(applicationSettingsService).updatePreferences(unset, Map.of("seeAllUrl", "", "showSeeAll", "false"));
+    clearInvocations(applicationSettingsService);
+
+    ApplicationSettingsContext target = pageContext(Map.of());
+    plugin.apply(target, Map.of("see_all_url", "/portal/news"));
+    verify(applicationSettingsService).updatePreferences(target, Map.of("seeAllUrl", "/portal/news", "showSeeAll", "false"));
   }
 
   @Test
