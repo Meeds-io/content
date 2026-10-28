@@ -329,8 +329,7 @@ public class NewsListApplicationSettingsPlugin extends ListViewApplicationSettin
     if (settings.containsKey(SEE_ALL_URL) && !settings.containsKey(SHOW_SEE_ALL)) {
       preferences.put(SHOW_SEE_ALL_PREFERENCE, String.valueOf(showSeeAll));
     }
-    if (showSeeAll && (settings.containsKey(SHOW_SEE_ALL) || settings.containsKey(SEE_ALL_URL))
-        && StringUtils.isBlank(preferences.getOrDefault(SEE_ALL_URL_PREFERENCE, stored.get(SEE_ALL_URL_PREFERENCE)))) {
+    if (showSeeAll && StringUtils.isBlank(preferences.getOrDefault(SEE_ALL_URL_PREFERENCE, stored.get(SEE_ALL_URL_PREFERENCE)))) {
       throw notAccepted(SEE_ALL_URL);
     }
     return preferences;
