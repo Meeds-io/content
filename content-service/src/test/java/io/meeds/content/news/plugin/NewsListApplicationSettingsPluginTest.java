@@ -269,11 +269,6 @@ class NewsListApplicationSettingsPluginTest {
                   "value is not accepted for limit");
   }
 
-  /**
-   * A draft window carries the live window's keys verbatim: they resolve to a
-   * setting of the live page, and only the missing ownership marker tells
-   * the plugin they are not its own
-   */
   @Test
   void testSelectedListRespectsTheTemplateMaximum() {
     News news = new News();
@@ -328,6 +323,11 @@ class NewsListApplicationSettingsPluginTest {
                     Map.of("source", "selectedList"));
   }
 
+  /**
+   * A draft window carries the live window's keys verbatim: they resolve to a
+   * setting of the live page, and only the missing ownership marker tells
+   * the plugin they are not its own
+   */
   @Test
   void testFirstHeaderWriteOnADraftRekeysTheWindow() throws Exception {
     org.exoplatform.social.core.identity.model.Identity userIdentity = new org.exoplatform.social.core.identity.model.Identity("9");
