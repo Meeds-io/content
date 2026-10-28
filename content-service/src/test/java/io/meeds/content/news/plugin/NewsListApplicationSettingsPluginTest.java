@@ -431,6 +431,36 @@ class NewsListApplicationSettingsPluginTest {
     assertEquals(false, settings.get("show_article_date"));
     assertEquals(true, settings.get("show_header"));
     assertEquals(Map.of(), settings.get("header_title"));
+    assertEquals(false, settings.get("show_see_all"));
+    assertEquals(true, plugin.read(pageContext(Map.of("seeAllUrl", "/portal/news"))).get("show_see_all"));
+  }
+
+  /**
+   * The drawer stores a cleared target as the text "null", which the view
+   * reads as no target: every window the drawer set to a selected list or to
+   * posted articles carries it
+   */
+  @Test
+  void testStoredNullTargetIsNoTarget() throws Exception {
+    Map<String, String> selectedList = Map.of("viewTemplate",
+                                              "NewsMosaic",
+                                              "articlesSourceOption",
+                                              "selectedList",
+                                              "newsTarget",
+                                              "null",
+                                              "selectedArticleIds",
+                                              "1,2");
+    Map<String, Object> settings = plugin.read(pageContext(selectedList));
+    assertEquals("selectedList", settings.get("source"));
+    assertEquals("", settings.get("news_target"));
+    News news = new News();
+    lenient().when(newsService.getNewsArticleById(anyString())).thenReturn(news);
+    lenient().when(newsService.canViewNews(news, USERNAME)).thenReturn(true);
+    assertRefused(pageContext(selectedList),
+                  Map.of("selected_article_ids", List.of(1, 2, 3, 4)),
+                  "value is not accepted for selected_article_ids");
+    assertRefused(pageContext(selectedList), Map.of("limit", 2), "value is not accepted for limit");
+    assertRefused(pageContext(Map.of("newsTarget", "null")), Map.of("source", "target"), "value is not accepted for news_target");
   }
 
   private void assertRefused(ApplicationSettingsContext context, Map<String, Object> settings, String message) {

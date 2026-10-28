@@ -179,11 +179,18 @@ public class ContentListApplicationSettingsPlugin extends ListViewApplicationSet
                       String.valueOf(toInt(settings.get(CATEGORY_DEPTH), CATEGORY_DEPTH, 0, MAX_CATEGORY_DEPTH)));
     }
     if (settings.containsKey(CATEGORY_IDS)) {
-      preferences.put(CATEGORY_IDS_PREFERENCE, toCategoryIds(settings.get(CATEGORY_IDS), CATEGORY_IDS, context.getUsername()));
+      preferences.put(CATEGORY_IDS_PREFERENCE,
+                      toCategoryIds(settings.get(CATEGORY_IDS),
+                                    CATEGORY_IDS,
+                                    context.getPreferences().get(CATEGORY_IDS_PREFERENCE),
+                                    context.getUsername()));
     }
     if (settings.containsKey(EXCLUDE_CATEGORY_IDS)) {
       preferences.put(EXCLUDE_CATEGORY_IDS_PREFERENCE,
-                      toCategoryIds(settings.get(EXCLUDE_CATEGORY_IDS), EXCLUDE_CATEGORY_IDS, context.getUsername()));
+                      toCategoryIds(settings.get(EXCLUDE_CATEGORY_IDS),
+                                    EXCLUDE_CATEGORY_IDS,
+                                    context.getPreferences().get(EXCLUDE_CATEGORY_IDS_PREFERENCE),
+                                    context.getUsername()));
     }
     return preferences;
   }
@@ -195,10 +202,18 @@ public class ContentListApplicationSettingsPlugin extends ListViewApplicationSet
     return preferences;
   }
 
-  private String toCategoryIds(Object value, String option, String username) throws IllegalAccessException,
-                                                                             ObjectNotFoundException {
+  /**
+   * @return the given ids, each added one an existing category: a stored id
+   *         is kept unchecked, as the drawer keeps reading a list whose
+   *         category was deleted since
+   */
+  private String toCategoryIds(Object value,
+                               String option,
+                               String storedValue,
+                               String username) throws IllegalAccessException, ObjectNotFoundException {
     List<Long> ids = toIds(value, option);
-    for (long id : ids) {
+    List<Long> storedIds = parseIds(storedValue);
+    for (long id : ids.stream().filter(id -> !storedIds.contains(id)).toList()) {
       try {
         categoryService.getCategory(id, username, Locale.ENGLISH);
       } catch (ObjectNotFoundException e) {

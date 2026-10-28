@@ -249,10 +249,13 @@ public class NewsListApplicationSettingsPlugin extends ListViewApplicationSettin
     String viewTemplate = getViewTemplate(preferences);
     settings.put(VIEW_TEMPLATE, viewTemplate);
     settings.put(SOURCE, getSource(preferences));
-    settings.put(NEWS_TARGET, StringUtils.defaultString(preferences.get(NEWS_TARGET_PREFERENCE)));
+    settings.put(NEWS_TARGET, StringUtils.defaultString(getStoredTarget(preferences)));
     settings.put(SELECTED_ARTICLE_IDS, parseIds(preferences.get(SELECTED_IDS_PREFERENCE)));
     settings.put(LIMIT, getLimit(preferences, viewTemplate));
     SWITCHES.forEach((option, preference) -> settings.put(option, !"false".equals(preferences.get(preference))));
+    settings.put(SHOW_SEE_ALL,
+                 !"false".equals(preferences.get(SHOW_SEE_ALL_PREFERENCE))
+                     && StringUtils.isNotBlank(preferences.get(SEE_ALL_URL_PREFERENCE)));
     settings.put(SEE_ALL_URL, StringUtils.defaultString(preferences.get(SEE_ALL_URL_PREFERENCE)));
     return settings;
   }
@@ -282,7 +285,8 @@ public class NewsListApplicationSettingsPlugin extends ListViewApplicationSettin
       preferences.put(NEWS_TARGET_PREFERENCE, toNewsTarget(settings.get(NEWS_TARGET), identity));
     }
     if (SOURCE_TARGET.equals(source)
-        && StringUtils.isBlank(preferences.getOrDefault(NEWS_TARGET_PREFERENCE, stored.get(NEWS_TARGET_PREFERENCE)))) {
+        && StringUtils.isBlank(preferences.containsKey(NEWS_TARGET_PREFERENCE) ? preferences.get(NEWS_TARGET_PREFERENCE)
+                                                                             : getStoredTarget(stored))) {
       throw notAccepted(NEWS_TARGET);
     }
     if (settings.containsKey(SELECTED_ARTICLE_IDS)) {
@@ -358,8 +362,17 @@ public class NewsListApplicationSettingsPlugin extends ListViewApplicationSettin
     return StringUtils.isBlank(viewTemplate) ? DEFAULT_VIEW_TEMPLATE : viewTemplate;
   }
 
+  /**
+   * @return the stored target, null when none: the drawer stores a cleared
+   *         target as the text "null", which the view reads as none
+   */
+  private String getStoredTarget(Map<String, String> preferences) {
+    String target = preferences.get(NEWS_TARGET_PREFERENCE);
+    return StringUtils.isBlank(target) || "null".equals(target) ? null : target;
+  }
+
   private String getSource(Map<String, String> preferences) {
-    if (StringUtils.isNotBlank(preferences.get(NEWS_TARGET_PREFERENCE))) {
+    if (getStoredTarget(preferences) != null) {
       return SOURCE_TARGET;
     }
     String source = preferences.get(SOURCE_PREFERENCE);

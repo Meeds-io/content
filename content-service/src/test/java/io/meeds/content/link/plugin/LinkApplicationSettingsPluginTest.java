@@ -160,6 +160,8 @@ class LinkApplicationSettingsPluginTest {
     assertRefused(context, Map.of("links", List.of(link(null, "en", "Link", "meeds.io"))), "value is not accepted for url");
     assertRefused(context, Map.of("links", List.of(link(null, "en", "Link", "ftp://meeds.io"))), "value is not accepted for url");
     assertRefused(context, Map.of("see_more", "meeds"), "value is not accepted for see_more");
+    assertRefused(context, Map.of("see_more", false), "value is not accepted for see_more");
+    assertRefused(context, Map.of("see_more", 5), "value is not accepted for see_more");
     assertRefused(context, Map.of("links", List.of(Map.of("name", Map.of("en", "Link")))), "value is not accepted for url");
   }
 

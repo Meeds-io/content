@@ -324,7 +324,7 @@ public class LinkApplicationSettingsPlugin implements ApplicationSettingsPlugin 
     }
     if (settings.containsKey(SEE_MORE)) {
       Object seeMore = settings.get(SEE_MORE);
-      if (StringUtils.isEmpty(asText(seeMore))) {
+      if ("".equals(seeMore)) {
         setting.setSeeMore(null);
       } else if (!seeMore.equals(setting.getSeeMore())) {
         setting.setSeeMore(toUrl(seeMore, SEE_MORE));
@@ -448,10 +448,6 @@ public class LinkApplicationSettingsPlugin implements ApplicationSettingsPlugin 
       });
     }
     return result;
-  }
-
-  private static String asText(Object value) {
-    return value instanceof String text ? text : null;
   }
 
   private static <E extends Enum<E>> List<String> enumNames(Class<E> type) {

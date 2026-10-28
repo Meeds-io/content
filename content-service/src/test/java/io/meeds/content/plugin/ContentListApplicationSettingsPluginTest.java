@@ -28,6 +28,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -128,6 +129,21 @@ class ContentListApplicationSettingsPluginTest {
     ObjectNotFoundException e = assertThrows(ObjectNotFoundException.class,
                                              () -> plugin.validate(context(Map.of()), Map.of("category_ids", List.of(9))));
     assertEquals("does not exist: category", e.getMessage());
+  }
+
+  /**
+   * The drawer keeps reading a list whose category was deleted since: the
+   * read returns it, and sending it back keeps it, only an added id must be
+   * an existing category
+   */
+  @Test
+  void testStoredCategoriesAreKeptWithoutCheck() throws Exception {
+    ApplicationSettingsContext context = context(Map.of("categoryIds", "9", "excludeCategoryIds", "8"));
+    plugin.apply(context, Map.of("category_ids", List.of(9, 4), "exclude_category_ids", List.of(8)));
+    verify(categoryService, never()).getCategory(eq(9L), anyString(), any());
+    verify(categoryService, never()).getCategory(eq(8L), anyString(), any());
+    verify(categoryService).getCategory(4L, USERNAME, Locale.ENGLISH);
+    verify(applicationSettingsService).updatePreferences(context, Map.of("categoryIds", "9,4", "excludeCategoryIds", "8"));
   }
 
   @Test
