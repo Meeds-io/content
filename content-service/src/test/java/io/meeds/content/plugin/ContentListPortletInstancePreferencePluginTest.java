@@ -18,9 +18,9 @@
  */
 package io.meeds.content.plugin;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -31,11 +31,11 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import org.exoplatform.portal.pom.spi.portlet.Portlet;
 
@@ -46,8 +46,8 @@ import io.meeds.social.translation.model.TranslationField;
 import io.meeds.social.translation.service.TranslationService;
 import io.meeds.social.util.JsonUtils;
 
-@RunWith(MockitoJUnitRunner.class)
-public class ContentListPortletInstancePreferencePluginTest {
+@ExtendWith(MockitoExtension.class)
+class ContentListPortletInstancePreferencePluginTest {
 
   private static final String APPLICATION_ID = "123456";
 
@@ -58,7 +58,7 @@ public class ContentListPortletInstancePreferencePluginTest {
   private ContentListPortletInstancePreferencePlugin plugin;
 
   @Test
-  public void testGeneratePreferencesCopiesDisplaySettings() throws Exception {
+  void testGeneratePreferencesCopiesDisplaySettings() throws Exception {
     Portlet preferences = new Portlet();
     preferences.setValue("showHeader", "false");
     preferences.setValue("allowFilteringPerCategory", "true");
@@ -81,13 +81,13 @@ public class ContentListPortletInstancePreferencePluginTest {
     assertEquals("2", result.get("categoryDepth"));
     assertEquals("1,2", result.get("categoryIds"));
     assertEquals("3", result.get("excludeCategoryIds"));
-    assertFalse("The copy must not share the original's CMS setting", result.containsKey("name"));
-    assertFalse("The copy must not share the original's header title key", result.containsKey("applicationId"));
+    assertFalse(result.containsKey("name"), "The copy must not share the original's CMS setting");
+    assertFalse(result.containsKey("applicationId"), "The copy must not share the original's header title key");
     assertEquals(JsonUtils.toJsonString(translationField), result.get("data.init"));
   }
 
   @Test
-  public void testGeneratePreferencesWithoutHeaderTitle() throws Exception {
+  void testGeneratePreferencesWithoutHeaderTitle() throws Exception {
     Portlet preferences = new Portlet();
     preferences.setValue("applicationId", APPLICATION_ID);
     preferences.setValue("showHeader", "false");
@@ -96,11 +96,11 @@ public class ContentListPortletInstancePreferencePluginTest {
     Map<String, String> result = toMap(plugin.generatePreferences(null, preferences, new PortletInstanceContext()));
 
     assertEquals("false", result.get("showHeader"));
-    assertFalse("No header title payload without labels", result.containsKey("data.init"));
+    assertFalse(result.containsKey("data.init"), "No header title payload without labels");
   }
 
   @Test
-  public void testGeneratePreferencesWithoutApplicationIdKeepsDataInit() throws Exception {
+  void testGeneratePreferencesWithoutApplicationIdKeepsDataInit() throws Exception {
     Portlet preferences = new Portlet();
     preferences.setValue("showHeader", "false");
     preferences.setValue("allowFilteringPerCategory", "true");
@@ -121,9 +121,37 @@ public class ContentListPortletInstancePreferencePluginTest {
   }
 
   @Test
-  public void testGeneratePreferencesWithoutPreferences() {
+  void testGeneratePreferencesWithoutPreferences() {
     assertTrue(plugin.generatePreferences(null, null, new PortletInstanceContext()).isEmpty());
     assertTrue(plugin.generatePreferences(null, new Portlet(), new PortletInstanceContext()).isEmpty());
+  }
+
+  @Test
+  void testGeneratePreferencesOnExportDropsCategoryIds() {
+    Portlet preferences = new Portlet();
+    preferences.setValue("showHeader", "false");
+    preferences.setValue("categoryIds", "1,2");
+    preferences.setValue("excludeCategoryIds", "3");
+
+    Map<String, String> result = toMap(plugin.generatePreferences(null, preferences, new PortletInstanceContext(true, null)));
+
+    assertEquals("false", result.get("showHeader"));
+    assertFalse(result.containsKey("categoryIds"), "An export must not carry ids of the exporting platform");
+    assertFalse(result.containsKey("excludeCategoryIds"), "An export must not carry ids of the exporting platform");
+  }
+
+  @Test
+  void testGeneratePreferencesWithoutContextKeepsCategoryIds() {
+    Portlet preferences = new Portlet();
+    preferences.setValue("showHeader", "false");
+    preferences.setValue("categoryIds", "1,2");
+    preferences.setValue("excludeCategoryIds", "3");
+
+    Map<String, String> result = toMap(plugin.generatePreferences(null, preferences, null));
+
+    assertEquals("false", result.get("showHeader"));
+    assertEquals("1,2", result.get("categoryIds"));
+    assertEquals("3", result.get("excludeCategoryIds"));
   }
 
   private Map<String, String> toMap(List<PortletInstancePreference> preferences) {
