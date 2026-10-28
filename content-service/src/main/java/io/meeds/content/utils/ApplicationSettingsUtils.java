@@ -45,22 +45,24 @@ public class ApplicationSettingsUtils {
 
   /**
    * The targets the Links views link whole through social's Autolinker
-   * (3.14.1): an http(s) URL whose host is dot-separated labels of letters,
-   * digits and inner hyphens, with an optional port, or a path, which the
+   * (3.14.1), with a margin: an http(s) URL whose host is dot-separated
+   * labels of letters, digits and inner hyphens, with an optional port, and
+   * whose path, query or fragment starts with a slash, or a path, which the
    * views first complete with the platform's origin or, for {@code ./}, the
    * current page's path. A path keeps only the printable ASCII characters
    * Autolinker keeps inside a URL, and ends with one it keeps at the end, a
-   * closing bracket only when balanced: any other target would be stored and
-   * then linked shortened. Autolinker links a bare host, a mailto address or
-   * a phone number only for the top-level domains and the number shapes it
-   * knows, which no pattern here reproduces. The News list opens its see all
-   * target as stored, which the same rule keeps safe.
+   * closing bracket only when balanced. Every target accepted is linked
+   * whole; some refused ones would be too: a query or a fragment right after
+   * the host, which Autolinker skips only when it holds two dots in a row,
+   * and the bare hosts, mailto addresses and phone numbers it links only for
+   * the top-level domains and number shapes it knows. The News list opens its
+   * see all target as stored, which the same rule keeps safe.
    */
   private static final String  URL_HOST          = "[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*(?::[0-9]{1,5})?";
 
   private static final String  URL_PATH_CHAR     = "[!#$%&'()*+,\\-./0-9:;=?@A-Z\\[\\]^_a-z{|}~]";
 
-  private static final Pattern URL_PATTERN       = Pattern.compile("^(?:https?://" + URL_HOST + "(?<path>[/?#]" + URL_PATH_CHAR
+  private static final Pattern URL_PATTERN       = Pattern.compile("^(?:https?://" + URL_HOST + "(?<path>/" + URL_PATH_CHAR
       + "*)?|(?<relative>\\.?/" + URL_PATH_CHAR + "*))$", Pattern.CASE_INSENSITIVE);
 
   /** The characters Autolinker keeps as the last one of a URL */
