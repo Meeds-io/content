@@ -228,6 +228,10 @@ public class ApplicationSettingsUtils {
     return schema("boolean", description);
   }
 
+  public static Map<String, Object> integerSchema(String description) {
+    return schema("integer", description);
+  }
+
   public static Map<String, Object> integerSchema(int min, int max, String description) {
     Map<String, Object> schema = schema("integer", description);
     schema.put("minimum", min);

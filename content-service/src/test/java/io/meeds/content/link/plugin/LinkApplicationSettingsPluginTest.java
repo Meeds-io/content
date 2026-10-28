@@ -130,8 +130,9 @@ class LinkApplicationSettingsPluginTest {
     Map<String, Object> schema = plugin.getSettingsSchema();
     Map<?, ?> properties = (Map<?, ?>) schema.get("properties");
     assertEquals(Arrays.asList("ROW", "CARD", "COLUMN"), ((Map<?, ?>) properties.get("type")).get("enum"));
-    assertEquals(12, ((Map<?, ?>) properties.get("icon_size")).get("minimum"));
-    assertEquals(60, ((Map<?, ?>) properties.get("icon_size")).get("maximum"));
+    assertEquals("integer", ((Map<?, ?>) properties.get("icon_size")).get("type"));
+    assertEquals(null, ((Map<?, ?>) properties.get("icon_size")).get("maximum"),
+                 "a stored size outside the drawer's bounds is read and accepted back");
     assertEquals(false, schema.get("additionalProperties"));
     assertEquals("Links", plugin.getPortletName());
     assertEquals(false, plugin.isConfigurableInSiteContainer());

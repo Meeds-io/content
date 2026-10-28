@@ -188,7 +188,8 @@ public class LinkApplicationSettingsPlugin implements ApplicationSettingsPlugin 
     properties.put(TYPE, enumSchema(enumNames(LinkDisplayType.class), "Display type"));
     properties.put(HEADER, translationsSchema(MAX_TEXT_LENGTH, "Header per language tag, replacing every language; {} removes the header"));
     properties.put(SHOW_ICON, booleanSchema("Shows the link icons"));
-    properties.put(ICON_SIZE, integerSchema(MIN_ICON_SIZE, MAX_ICON_SIZE, "Icon size in pixels"));
+    properties.put(ICON_SIZE,
+                   integerSchema("Icon size in pixels, from 12 to 60; a stored size sent back unchanged is kept"));
     properties.put(SHOW_NAME, booleanSchema("Shows the link names"));
     properties.put(SHOW_DESCRIPTION, booleanSchema("Shows the link descriptions, in the COLUMN type"));
     properties.put(SEE_MORE, stringSchema("See more target: an http(s) URL or a path of the platform; an empty text removes it"));
@@ -412,8 +413,9 @@ public class LinkApplicationSettingsPlugin implements ApplicationSettingsPlugin 
   }
 
   /**
-   * @return the size the Links views show, as their LinksList.vue decides it:
-   *         the stored size, else the legacy large icon flag's size; a
+   * @return the size the Links views show the icons at, as LinksList.vue
+   *         decides it when the icons are shown: the stored size, else the
+   *         legacy large icon flag's size; a
    *         stored size the drawer would not set is returned as is, and kept
    *         when sent back unchanged
    */
