@@ -30,6 +30,7 @@ import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -457,7 +458,7 @@ class LinkApplicationSettingsPluginTest {
   }
 
   private LocaleConfig localeConfig(Locale locale) {
-    LocaleConfig config = org.mockito.Mockito.mock(LocaleConfig.class);
+    LocaleConfig config = mock(LocaleConfig.class);
     lenient().when(config.getLocale()).thenReturn(locale);
     return config;
   }

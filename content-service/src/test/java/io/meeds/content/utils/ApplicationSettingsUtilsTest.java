@@ -21,6 +21,7 @@ package io.meeds.content.utils;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -54,6 +55,20 @@ class ApplicationSettingsUtilsTest {
   })
   void testToUrlAcceptsWhatAutolinkerLinksWhole(String url) {
     assertEquals(url, ApplicationSettingsUtils.toUrl(url, "url"));
+  }
+
+  /**
+   * Targets as long as the option allows, a long path and a host of many
+   * labels, are accepted whole
+   */
+  @Test
+  void testToUrlAcceptsTargetsAsLongAsAllowed() {
+    String path = "https://meeds.io/" + "a/".repeat(990) + "x";
+    assertEquals(path, ApplicationSettingsUtils.toUrl(path, "url"));
+    String host = "https://" + "a.".repeat(995) + "io";
+    assertEquals(host, ApplicationSettingsUtils.toUrl(host, "url"));
+    String relative = "/" + "(a)".repeat(666);
+    assertEquals(relative, ApplicationSettingsUtils.toUrl(relative, "url"));
   }
 
   @ParameterizedTest

@@ -36,6 +36,7 @@ import static io.meeds.content.utils.ApplicationSettingsUtils.translationsSchema
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -124,17 +125,17 @@ public class NewsListApplicationSettingsPlugin extends ListViewApplicationSettin
 
   public static final int           MAX_LIMIT                  = 1000;
 
-  public static final List<String>  VIEW_TEMPLATES             = Arrays.asList("NewsSlider",
+  public static final List<String>  VIEW_TEMPLATES             = Collections.unmodifiableList(Arrays.asList("NewsSlider",
                                                                                LATEST_VIEW_TEMPLATE,
                                                                                "NewsAlert",
                                                                                "NewsList",
                                                                                MOSAIC_VIEW_TEMPLATE,
                                                                                "NewsStories",
-                                                                               DEFAULT_VIEW_TEMPLATE);
+                                                                               DEFAULT_VIEW_TEMPLATE));
 
-  public static final List<String>  SOURCES                    = Arrays.asList(SOURCE_POSTED,
+  public static final List<String>  SOURCES                    = Collections.unmodifiableList(Arrays.asList(SOURCE_POSTED,
                                                                                SOURCE_TARGET,
-                                                                               SOURCE_SELECTED_LIST);
+                                                                               SOURCE_SELECTED_LIST));
 
   private static final String       VIEW_TEMPLATE_PREFERENCE   = "viewTemplate";
 

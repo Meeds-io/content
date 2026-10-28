@@ -58,12 +58,20 @@ public class ApplicationSettingsUtils {
    * the top-level domains and number shapes it knows. The News list opens its
    * see all target as stored, which the same rule keeps safe.
    */
-  private static final String  URL_HOST          = "[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*(?::[0-9]{1,5})?";
+  private static final String  URL_PATH_CHAR     = "[!#$%&'()*+,\\-./\\d:;=?@\\[\\]^_a-z{|}~]";
 
-  private static final String  URL_PATH_CHAR     = "[!#$%&'()*+,\\-./0-9:;=?@A-Z\\[\\]^_a-z{|}~]";
+  /**
+   * A flat pattern that repeats no group, only possessive character classes
+   * (Sonar java:S5998: a repeated group recurses in the matcher, once per
+   * repetition); the host's labels are checked one by one in
+   * {@link #isHost(String)}
+   */
+  private static final Pattern URL_PATTERN       = Pattern.compile("^(?:https?://(?<host>[a-z\\d.-]++)(?::\\d{1,5})?(?<path>/"
+      + URL_PATH_CHAR + "*+)?|(?<relative>\\.?/" + URL_PATH_CHAR + "*+))$", Pattern.CASE_INSENSITIVE);
 
-  private static final Pattern URL_PATTERN       = Pattern.compile("^(?:https?://" + URL_HOST + "(?<path>/" + URL_PATH_CHAR
-      + "*)?|(?<relative>\\.?/" + URL_PATH_CHAR + "*))$", Pattern.CASE_INSENSITIVE);
+  /** One host label: letters and digits, with inner hyphens */
+  private static final Pattern URL_HOST_LABEL    = Pattern.compile("^[a-z\\d](?:[a-z\\d-]*[a-z\\d])?$",
+                                                                   Pattern.CASE_INSENSITIVE);
 
   /** The characters Autolinker keeps as the last one of a URL */
   private static final String  URL_LAST_CHARS    = "#$%&'(*+-/=@[_{|~";
@@ -134,14 +142,24 @@ public class ApplicationSettingsUtils {
   public static String toUrl(Object value, String option) {
     String url = toText(value, option, MAX_URL_LENGTH);
     Matcher matcher = URL_PATTERN.matcher(url);
-    if (!matcher.matches()) {
+    if (!matcher.matches() || (matcher.group("host") != null && !isHost(matcher.group("host")))) {
       throw notAccepted(option);
     }
-    String path = matcher.group("path") == null ? matcher.group("relative") : matcher.group("path");
+    String path = matcher.group(matcher.group("path") == null ? "relative" : "path");
     if (path != null && !isLinkedLastChar(url)) {
       throw notAccepted(option);
     }
     return url;
+  }
+
+  private static boolean isHost(String host) {
+    String[] labels = host.split("\\.", -1);
+    for (String label : labels) {
+      if (!URL_HOST_LABEL.matcher(label).matches()) {
+        return false;
+      }
+    }
+    return true;
   }
 
   private static boolean isLinkedLastChar(String url) {
