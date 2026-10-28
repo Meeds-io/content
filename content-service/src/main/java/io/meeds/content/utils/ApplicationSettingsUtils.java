@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -43,22 +44,27 @@ import org.exoplatform.services.resources.LocaleConfigService;
 public class ApplicationSettingsUtils {
 
   /**
-   * The targets the Links views link whole, through social's Autolinker
-   * (3.14.1): an http(s) URL whose host is made of letters, digits, dots and
-   * hyphens, with an optional port, or a path, which they first complete
-   * with the platform's origin or, for {@code ./}, the current page's path.
-   * Autolinker cuts a URL at a quote, an angle bracket, a backslash or a
-   * backtick, and drops a trailing dot, comma or unbalanced closing
-   * parenthesis, so those are refused rather than stored as a target the
-   * view shortens. Autolinker links a bare host, a mailto address or a phone
-   * number only for the top-level domains and the number shapes it knows,
-   * which no pattern here reproduces. The News list opens its see all target
-   * as stored, which the same rule keeps safe.
+   * The targets the Links views link whole through social's Autolinker
+   * (3.14.1): an http(s) URL whose host is dot-separated labels of letters,
+   * digits and inner hyphens, with an optional port, or a path, which the
+   * views first complete with the platform's origin or, for {@code ./}, the
+   * current page's path. A path keeps only the printable ASCII characters
+   * Autolinker keeps inside a URL, and ends with one it keeps at the end, a
+   * closing bracket only when balanced: any other target would be stored and
+   * then linked shortened. Autolinker links a bare host, a mailto address or
+   * a phone number only for the top-level domains and the number shapes it
+   * knows, which no pattern here reproduces. The News list opens its see all
+   * target as stored, which the same rule keeps safe.
    */
-  private static final Pattern URL_PATTERN       =
-                                           Pattern.compile("^(?:https?://[a-z0-9][a-z0-9.-]*(?::[0-9]+)?(?:[/?#][^\\s\"<>\\\\`]*)?"
-                                               + "|\\.?/[^\\s\"<>\\\\`]*)$",
-                                                           Pattern.CASE_INSENSITIVE);
+  private static final String  URL_HOST          = "[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*(?::[0-9]{1,5})?";
+
+  private static final String  URL_PATH_CHAR     = "[!#$%&'()*+,\\-./0-9:;=?@A-Z\\[\\]^_a-z{|}~]";
+
+  private static final Pattern URL_PATTERN       = Pattern.compile("^(?:https?://" + URL_HOST + "(?<path>[/?#]" + URL_PATH_CHAR
+      + "*)?|(?<relative>\\.?/" + URL_PATH_CHAR + "*))$", Pattern.CASE_INSENSITIVE);
+
+  /** The characters Autolinker keeps as the last one of a URL */
+  private static final String  URL_LAST_CHARS    = "#$%&'(*+-/=@[_{|~";
 
   private static final int         MAX_URL_LENGTH    = 2000;
 
@@ -125,11 +131,24 @@ public class ApplicationSettingsUtils {
    */
   public static String toUrl(Object value, String option) {
     String url = toText(value, option, MAX_URL_LENGTH);
-    if (!URL_PATTERN.matcher(url).matches() || StringUtils.endsWithAny(url, ".", ",")
-        || (url.endsWith(")") && StringUtils.countMatches(url, '(') < StringUtils.countMatches(url, ')'))) {
+    Matcher matcher = URL_PATTERN.matcher(url);
+    if (!matcher.matches()) {
+      throw notAccepted(option);
+    }
+    String path = matcher.group("path") == null ? matcher.group("relative") : matcher.group("path");
+    if (path != null && !isLinkedLastChar(url)) {
       throw notAccepted(option);
     }
     return url;
+  }
+
+  private static boolean isLinkedLastChar(String url) {
+    char last = url.charAt(url.length() - 1);
+    if (Character.isLetterOrDigit(last) || URL_LAST_CHARS.indexOf(last) >= 0) {
+      return true;
+    }
+    int closer = ")]}".indexOf(last);
+    return closer >= 0 && StringUtils.countMatches(url, "([{".charAt(closer)) >= StringUtils.countMatches(url, last);
   }
 
   /**
