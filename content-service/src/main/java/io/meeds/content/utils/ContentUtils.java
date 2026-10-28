@@ -82,4 +82,7 @@ public class ContentUtils {
 
   public static final String  CONTENT_LIST_HEADER_TITLE_FIELD = "headerTitleInput";
 
+  /** CMS setting type of the Content List portlet, its content-type */
+  public static final String  CONTENT_LIST_VIEW_CMS_TYPE      = "contentListViewPortlet";
+
 }
