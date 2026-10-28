@@ -24,6 +24,8 @@ import static io.meeds.content.utils.ApplicationSettingsUtils.idsSchema;
 import static io.meeds.content.utils.ApplicationSettingsUtils.integerSchema;
 import static io.meeds.content.utils.ApplicationSettingsUtils.notAccepted;
 import static io.meeds.content.utils.ApplicationSettingsUtils.objectSchema;
+import static io.meeds.content.utils.ApplicationSettingsUtils.parseIds;
+import static io.meeds.content.utils.ApplicationSettingsUtils.parseInt;
 import static io.meeds.content.utils.ApplicationSettingsUtils.stringSchema;
 import static io.meeds.content.utils.ApplicationSettingsUtils.toBoolean;
 import static io.meeds.content.utils.ApplicationSettingsUtils.toIds;
@@ -248,7 +250,7 @@ public class NewsListApplicationSettingsPlugin extends ListViewApplicationSettin
     settings.put(VIEW_TEMPLATE, viewTemplate);
     settings.put(SOURCE, getSource(preferences));
     settings.put(NEWS_TARGET, StringUtils.defaultString(preferences.get(NEWS_TARGET_PREFERENCE)));
-    settings.put(SELECTED_ARTICLE_IDS, toIdList(preferences.get(SELECTED_IDS_PREFERENCE)));
+    settings.put(SELECTED_ARTICLE_IDS, parseIds(preferences.get(SELECTED_IDS_PREFERENCE)));
     settings.put(LIMIT, getLimit(preferences, viewTemplate));
     SWITCHES.forEach((option, preference) -> settings.put(option, !"false".equals(preferences.get(preference))));
     settings.put(SEE_ALL_URL, StringUtils.defaultString(preferences.get(SEE_ALL_URL_PREFERENCE)));
@@ -285,10 +287,11 @@ public class NewsListApplicationSettingsPlugin extends ListViewApplicationSettin
     }
     if (settings.containsKey(SELECTED_ARTICLE_IDS)) {
       List<Long> ids = toIds(settings.get(SELECTED_ARTICLE_IDS), SELECTED_ARTICLE_IDS);
-      requireViewableArticles(ids, context.getUsername());
+      List<Long> storedIds = parseIds(stored.get(SELECTED_IDS_PREFERENCE));
+      requireViewableArticles(ids.stream().filter(id -> !storedIds.contains(id)).toList(), context.getUsername());
       preferences.put(SELECTED_IDS_PREFERENCE, StringUtils.join(ids, ","));
     }
-    List<Long> selectedIds = toIdList(preferences.getOrDefault(SELECTED_IDS_PREFERENCE, stored.get(SELECTED_IDS_PREFERENCE)));
+    List<Long> selectedIds = parseIds(preferences.getOrDefault(SELECTED_IDS_PREFERENCE, stored.get(SELECTED_IDS_PREFERENCE)));
     if (SOURCE_SELECTED_LIST.equals(source)) {
       if (settings.containsKey(LIMIT)) {
         throw notAccepted(LIMIT);
@@ -355,11 +358,7 @@ public class NewsListApplicationSettingsPlugin extends ListViewApplicationSettin
   }
 
   private int getLimit(Map<String, String> preferences, String viewTemplate) {
-    String limit = preferences.get(LIMIT_PREFERENCE);
-    if (StringUtils.isNumeric(limit) && StringUtils.isNotBlank(limit)) {
-      return Integer.parseInt(limit);
-    }
-    return MOSAIC_VIEW_TEMPLATE.equals(viewTemplate) ? MOSAIC_MAX_LIMIT : DEFAULT_LIMIT;
+    return parseInt(preferences.get(LIMIT_PREFERENCE), MOSAIC_VIEW_TEMPLATE.equals(viewTemplate) ? MOSAIC_MAX_LIMIT : DEFAULT_LIMIT);
   }
 
   private int getMaxLimit(String viewTemplate) {
@@ -370,16 +369,6 @@ public class NewsListApplicationSettingsPlugin extends ListViewApplicationSettin
     } else {
       return MAX_LIMIT;
     }
-  }
-
-  private List<Long> toIdList(String value) {
-    List<Long> ids = new ArrayList<>();
-    for (String id : StringUtils.split(StringUtils.defaultString(value), ',')) {
-      if (StringUtils.isNumeric(id.trim()) && StringUtils.isNotBlank(id)) {
-        ids.add(Long.parseLong(id.trim()));
-      }
-    }
-    return ids;
   }
 
 }

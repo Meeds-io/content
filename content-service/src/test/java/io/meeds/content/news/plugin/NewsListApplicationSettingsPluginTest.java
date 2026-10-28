@@ -186,6 +186,35 @@ class NewsListApplicationSettingsPluginTest {
     assertEquals("does not exist: article", e.getMessage());
   }
 
+  /**
+   * The read returns every stored id, an article another editor selected
+   * included: sending it back keeps that article, only the added ones need
+   * the user's view right
+   */
+  @Test
+  void testStoredArticlesAreKeptWithoutTheUsersViewRight() throws Exception {
+    News added = new News();
+    when(newsService.getNewsArticleById("3")).thenReturn(added);
+    when(newsService.canViewNews(added, USERNAME)).thenReturn(true);
+    ApplicationSettingsContext context = pageContext(Map.of("articlesSourceOption", "selectedList", "selectedArticleIds", "5"));
+
+    plugin.apply(context, Map.of("selected_article_ids", List.of(5, 3)));
+
+    verify(newsService, never()).getNewsArticleById("5");
+    verify(applicationSettingsService).updatePreferences(context, Map.of("selectedArticleIds", "5,3", "limit", "2"));
+  }
+
+  @Test
+  void testUnreadableNumbersAreRefusedOrIgnored() throws Exception {
+    assertRefused(pageContext(Map.of()),
+                  Map.of("source", "selectedList", "selected_article_ids", List.of("99999999999999999999")),
+                  "value is not accepted for selected_article_ids");
+    Map<String, Object> settings = plugin.read(pageContext(Map.of("limit", "99999999999999999999",
+                                                                  "selectedArticleIds", "4,99999999999999999999,x")));
+    assertEquals(4, settings.get("limit"));
+    assertEquals(List.of(4L), settings.get("selected_article_ids"));
+  }
+
   @Test
   void testValidateRefusesAPageNonEditor() {
     when(cmsService.hasEditPermission(identity, LIVE_PAGE, SPACE_ID)).thenReturn(false);

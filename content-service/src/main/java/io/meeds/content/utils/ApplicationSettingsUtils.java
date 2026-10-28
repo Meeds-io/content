@@ -31,6 +31,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.math.NumberUtils;
 
 import org.exoplatform.services.resources.LocaleConfigService;
 
@@ -41,9 +42,16 @@ import org.exoplatform.services.resources.LocaleConfigService;
  */
 public class ApplicationSettingsUtils {
 
-  private static final Pattern URL_SCHEME_PATTERN = Pattern.compile("^[a-zA-Z][a-zA-Z0-9+.-]*:.*");
-
-  private static final Set<String> URL_SCHEMES       = Set.of("http", "https", "mailto", "tel");
+  /**
+   * The targets the drawers' link check, social's Autolinker, turns into a
+   * link: an http(s) URL with a host, a mailto address, a phone number, or a
+   * path of the platform. A bare host is refused, Autolinker accepting it
+   * only when its top-level domain is one it knows.
+   */
+  private static final Pattern URL_PATTERN       = Pattern.compile("^(?:https?://[^/?#]+.*"
+      + "|mailto:[^@]+@[^@.]+(?:\\.[^@.]+)+"
+      + "|tel:\\+?[0-9][0-9().-]{4,}"
+      + "|\\.?/.*)$", Pattern.CASE_INSENSITIVE);
 
   private static final int         MAX_URL_LENGTH    = 2000;
 
@@ -106,16 +114,12 @@ public class ApplicationSettingsUtils {
   }
 
   /**
-   * @return the URL as given: a relative path, a host, or an http(s),
-   *         mailto or tel URL, as the drawers accept it
+   * @return the URL as given: an http(s) URL, a mailto or tel URL, or a path
+   *         of the platform
    */
   public static String toUrl(Object value, String option) {
     String url = toText(value, option, MAX_URL_LENGTH);
-    if (StringUtils.isBlank(url) || StringUtils.containsWhitespace(url)) {
-      throw notAccepted(option);
-    }
-    if (URL_SCHEME_PATTERN.matcher(url).matches()
-        && !URL_SCHEMES.contains(StringUtils.substringBefore(url, ":").toLowerCase(Locale.ENGLISH))) {
+    if (StringUtils.containsWhitespace(url) || !URL_PATTERN.matcher(url).matches()) {
       throw notAccepted(option);
     }
     return url;
@@ -143,8 +147,8 @@ public class ApplicationSettingsUtils {
     if (value instanceof Number number && number.doubleValue() == Math.rint(number.doubleValue())
         && number.longValue() > 0) {
       return number.longValue();
-    } else if (value instanceof String text && StringUtils.isNumeric(text) && Long.parseLong(text) > 0) {
-      return Long.parseLong(text);
+    } else if (value instanceof String text && NumberUtils.toLong(text) > 0) {
+      return NumberUtils.toLong(text);
     }
     throw notAccepted(option);
   }
@@ -231,6 +235,28 @@ public class ApplicationSettingsUtils {
     text.put("maxLength", maxLength);
     schema.put("additionalProperties", text);
     return schema;
+  }
+
+  /**
+   * @return the positive ids of a stored comma separated list, in order, an
+   *         unreadable item ignored
+   */
+  public static List<Long> parseIds(String value) {
+    List<Long> ids = new ArrayList<>();
+    for (String id : StringUtils.split(StringUtils.defaultString(value), ',')) {
+      long parsed = NumberUtils.toLong(id.trim());
+      if (parsed > 0) {
+        ids.add(parsed);
+      }
+    }
+    return ids;
+  }
+
+  /**
+   * @return the stored number, the default when it is absent or unreadable
+   */
+  public static int parseInt(String value, int defaultValue) {
+    return NumberUtils.toInt(StringUtils.trim(value), defaultValue);
   }
 
   public static Map<Locale, String> toLocaleLabels(Map<String, String> translations) {

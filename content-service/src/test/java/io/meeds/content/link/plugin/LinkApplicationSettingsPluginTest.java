@@ -152,6 +152,12 @@ class LinkApplicationSettingsPluginTest {
     assertRefused(context, Map.of("unknown", true), "value is not accepted for unknown");
     assertRefused(context, Map.of("links", List.of(link(null, "fr", "Lien", "/portal"))), "value is not accepted for name");
     assertRefused(context, Map.of("links", List.of(link(null, "en", "Link", "a b"))), "value is not accepted for url");
+    assertRefused(context, Map.of("links", List.of(link(null, "en", "Link", "intranet"))), "value is not accepted for url");
+    assertRefused(context, Map.of("links", List.of(link(null, "en", "Link", "foo.invalidtld"))), "value is not accepted for url");
+    assertRefused(context, Map.of("links", List.of(link(null, "en", "Link", "mailto:team"))), "value is not accepted for url");
+    assertRefused(context, Map.of("links", List.of(link(null, "en", "Link", "tel:abc"))), "value is not accepted for url");
+    assertRefused(context, Map.of("links", List.of(link(null, "en", "Link", "ftp://meeds.io"))), "value is not accepted for url");
+    assertRefused(context, Map.of("see_more", "meeds"), "value is not accepted for see_more");
     assertRefused(context, Map.of("links", List.of(Map.of("name", Map.of("en", "Link")))), "value is not accepted for url");
   }
 
@@ -166,7 +172,9 @@ class LinkApplicationSettingsPluginTest {
                  List.of(link(null, "en", "Mail", "mailto:team@meeds.io"),
                          link(null, "en", "Call", "tel:+33100000000"),
                          link(null, "en", "Path", "/portal/dw"),
-                         link(null, "en", "Site", "https://meeds.io")));
+                         link(null, "en", "Site", "https://meeds.io"),
+                         link(null, "en", "Host", "https://intranet"),
+                         link(null, "en", "Relative", "./news")));
     plugin.validate(context, settings);
   }
 

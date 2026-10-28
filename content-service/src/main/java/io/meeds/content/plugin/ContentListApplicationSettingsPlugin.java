@@ -22,12 +22,13 @@ import static io.meeds.content.utils.ApplicationSettingsUtils.booleanSchema;
 import static io.meeds.content.utils.ApplicationSettingsUtils.idsSchema;
 import static io.meeds.content.utils.ApplicationSettingsUtils.integerSchema;
 import static io.meeds.content.utils.ApplicationSettingsUtils.objectSchema;
+import static io.meeds.content.utils.ApplicationSettingsUtils.parseIds;
+import static io.meeds.content.utils.ApplicationSettingsUtils.parseInt;
 import static io.meeds.content.utils.ApplicationSettingsUtils.toBoolean;
 import static io.meeds.content.utils.ApplicationSettingsUtils.toIds;
 import static io.meeds.content.utils.ApplicationSettingsUtils.toInt;
 import static io.meeds.content.utils.ApplicationSettingsUtils.translationsSchema;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -155,11 +156,9 @@ public class ContentListApplicationSettingsPlugin extends ListViewApplicationSet
     Map<String, Object> settings = new LinkedHashMap<>();
     settings.put(SHOW_HEADER, !"false".equals(preferences.get(SHOW_HEADER_PREFERENCE)));
     settings.put(ALLOW_FILTERING_PER_CATEGORY, !"false".equals(preferences.get(ALLOW_FILTERING_PREFERENCE)));
-    String depth = preferences.get(CATEGORY_DEPTH_PREFERENCE);
-    settings.put(CATEGORY_DEPTH,
-                 StringUtils.isNotBlank(depth) && StringUtils.isNumeric(depth) ? Integer.parseInt(depth) : DEFAULT_CATEGORY_DEPTH);
-    settings.put(CATEGORY_IDS, toIdList(preferences.get(CATEGORY_IDS_PREFERENCE)));
-    settings.put(EXCLUDE_CATEGORY_IDS, toIdList(preferences.get(EXCLUDE_CATEGORY_IDS_PREFERENCE)));
+    settings.put(CATEGORY_DEPTH, parseInt(preferences.get(CATEGORY_DEPTH_PREFERENCE), DEFAULT_CATEGORY_DEPTH));
+    settings.put(CATEGORY_IDS, parseIds(preferences.get(CATEGORY_IDS_PREFERENCE)));
+    settings.put(EXCLUDE_CATEGORY_IDS, parseIds(preferences.get(EXCLUDE_CATEGORY_IDS_PREFERENCE)));
     return settings;
   }
 
@@ -207,16 +206,6 @@ public class ContentListApplicationSettingsPlugin extends ListViewApplicationSet
       }
     }
     return StringUtils.join(ids, ",");
-  }
-
-  private List<Long> toIdList(String value) {
-    List<Long> ids = new ArrayList<>();
-    for (String id : StringUtils.split(StringUtils.defaultString(value), ',')) {
-      if (StringUtils.isNotBlank(id) && StringUtils.isNumeric(id.trim())) {
-        ids.add(Long.parseLong(id.trim()));
-      }
-    }
-    return ids;
   }
 
 }
