@@ -43,15 +43,15 @@ import org.exoplatform.services.resources.LocaleConfigService;
 public class ApplicationSettingsUtils {
 
   /**
-   * The targets the drawers' link check, social's Autolinker, turns into a
-   * link: an http(s) URL with a host, a mailto address, a phone number, or a
-   * path of the platform. A bare host is refused, Autolinker accepting it
-   * only when its top-level domain is one it knows.
+   * The targets social's Autolinker, which the drawers and the views link
+   * with, always turns into a link: an http(s) URL whose host starts with a
+   * letter or a digit, or a path of the platform, which the views prefix
+   * with the platform's origin. Autolinker links a bare host, a mailto
+   * address or a phone number only for the top-level domains and the number
+   * shapes it knows, which no pattern here reproduces.
    */
-  private static final Pattern URL_PATTERN       = Pattern.compile("^(?:https?://[^/?#]+.*"
-      + "|mailto:[^@]+@[^@.]+(?:\\.[^@.]+)+"
-      + "|tel:\\+?[0-9][0-9().-]{4,}"
-      + "|\\.?/.*)$", Pattern.CASE_INSENSITIVE);
+  private static final Pattern URL_PATTERN       = Pattern.compile("^(?:https?://[a-z0-9][^/?#]*(?:[/?#].*)?|\\.?/.*)$",
+                                                                   Pattern.CASE_INSENSITIVE);
 
   private static final int         MAX_URL_LENGTH    = 2000;
 
@@ -114,8 +114,7 @@ public class ApplicationSettingsUtils {
   }
 
   /**
-   * @return the URL as given: an http(s) URL, a mailto or tel URL, or a path
-   *         of the platform
+   * @return the URL as given: an http(s) URL or a path of the platform
    */
   public static String toUrl(Object value, String option) {
     String url = toText(value, option, MAX_URL_LENGTH);

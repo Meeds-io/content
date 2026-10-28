@@ -154,8 +154,10 @@ class LinkApplicationSettingsPluginTest {
     assertRefused(context, Map.of("links", List.of(link(null, "en", "Link", "a b"))), "value is not accepted for url");
     assertRefused(context, Map.of("links", List.of(link(null, "en", "Link", "intranet"))), "value is not accepted for url");
     assertRefused(context, Map.of("links", List.of(link(null, "en", "Link", "foo.invalidtld"))), "value is not accepted for url");
-    assertRefused(context, Map.of("links", List.of(link(null, "en", "Link", "mailto:team"))), "value is not accepted for url");
-    assertRefused(context, Map.of("links", List.of(link(null, "en", "Link", "tel:abc"))), "value is not accepted for url");
+    assertRefused(context, Map.of("links", List.of(link(null, "en", "Link", "mailto:team@meeds.io"))), "value is not accepted for url");
+    assertRefused(context, Map.of("links", List.of(link(null, "en", "Link", "tel:+33612345678"))), "value is not accepted for url");
+    assertRefused(context, Map.of("links", List.of(link(null, "en", "Link", "https://-x"))), "value is not accepted for url");
+    assertRefused(context, Map.of("links", List.of(link(null, "en", "Link", "meeds.io"))), "value is not accepted for url");
     assertRefused(context, Map.of("links", List.of(link(null, "en", "Link", "ftp://meeds.io"))), "value is not accepted for url");
     assertRefused(context, Map.of("see_more", "meeds"), "value is not accepted for see_more");
     assertRefused(context, Map.of("links", List.of(Map.of("name", Map.of("en", "Link")))), "value is not accepted for url");
@@ -169,9 +171,7 @@ class LinkApplicationSettingsPluginTest {
     settings.put("header", Map.of("en", "x".repeat(50), "fr", ""));
     settings.put("see_more", "");
     settings.put("links",
-                 List.of(link(null, "en", "Mail", "mailto:team@meeds.io"),
-                         link(null, "en", "Call", "tel:+33100000000"),
-                         link(null, "en", "Path", "/portal/dw"),
+                 List.of(link(null, "en", "Path", "/portal/dw"),
                          link(null, "en", "Site", "https://meeds.io"),
                          link(null, "en", "Host", "https://intranet"),
                          link(null, "en", "Relative", "./news")));
@@ -204,6 +204,25 @@ class LinkApplicationSettingsPluginTest {
     assertRefused(context,
                   Map.of("links", List.of(link(7L, "en", "Link", "/a"), link(7L, "en", "Again", "/b"))),
                   "value is not accepted for id");
+  }
+
+  /**
+   * The drawer stores what Autolinker links, a bare host or a mailto address
+   * included: the read returns it, and sending it back unchanged keeps it
+   */
+  @Test
+  void testStoredTargetsSentBackUnchangedAreKept() throws Exception {
+    Link stored = storedLink(7, 0);
+    stored.setUrl("mailto:team@meeds.io");
+    mockSource(LIVE_PAGE, stored);
+    LinkSetting setting = liveSetting(LIVE_PAGE);
+    setting.setSeeMore("meeds.io");
+    when(linkService.getLinkSettingByName(LIVE_SETTING, null, true)).thenReturn(setting);
+    ApplicationSettingsContext context = context(false, Map.of("name", LIVE_SETTING));
+
+    plugin.validate(context, Map.of("see_more", "meeds.io", "links", List.of(link(7L, "en", "Mail", "mailto:team@meeds.io"))));
+    assertRefused(context, Map.of("see_more", "www.meeds.io"), "value is not accepted for see_more");
+    assertRefused(context, Map.of("links", List.of(link(7L, "en", "Mail", "mailto:other@meeds.io"))), "value is not accepted for url");
   }
 
   @Test

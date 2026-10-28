@@ -176,7 +176,7 @@ public class LinkApplicationSettingsPlugin implements ApplicationSettingsPlugin 
     link.put(LINK_ID, integerSchema(1, Integer.MAX_VALUE, "Id of a link the read returned, to keep it and its icon; omitted for a new link"));
     link.put(LINK_NAME, translationsSchema(MAX_TEXT_LENGTH, "Name per language tag, required in the default language"));
     link.put(LINK_DESCRIPTION, translationsSchema(MAX_TEXT_LENGTH, "Description per language tag, shown in the COLUMN type"));
-    link.put(LINK_URL, stringSchema("Target: a path of the platform, or an http(s), mailto or tel URL"));
+    link.put(LINK_URL, stringSchema("Target: an http(s) URL or a path of the platform; a stored target sent back unchanged is kept"));
     link.put(LINK_SAME_TAB, booleanSchema("Opens the link in the same tab"));
     Map<String, Object> properties = new LinkedHashMap<>();
     properties.put(TYPE, enumSchema(enumNames(LinkDisplayType.class), "Display type"));
@@ -185,7 +185,7 @@ public class LinkApplicationSettingsPlugin implements ApplicationSettingsPlugin 
     properties.put(ICON_SIZE, integerSchema(MIN_ICON_SIZE, MAX_ICON_SIZE, "Icon size in pixels"));
     properties.put(SHOW_NAME, booleanSchema("Shows the link names"));
     properties.put(SHOW_DESCRIPTION, booleanSchema("Shows the link descriptions, in the COLUMN type"));
-    properties.put(SEE_MORE, stringSchema("See more URL; an empty text removes it"));
+    properties.put(SEE_MORE, stringSchema("See more target: an http(s) URL or a path of the platform; an empty text removes it"));
     properties.put(H_ALIGN, enumSchema(enumNames(LinkAlignType.class), "Horizontal alignment"));
     properties.put(V_ALIGN, enumSchema(enumNames(LinkAlignType.class), "Vertical alignment"));
     properties.put(LINKS, arraySchema(objectSchema(link), "The links, in order, replacing the stored list; [] removes them all"));
@@ -323,7 +323,12 @@ public class LinkApplicationSettingsPlugin implements ApplicationSettingsPlugin 
       setting.setShowDescription(toBoolean(settings.get(SHOW_DESCRIPTION), SHOW_DESCRIPTION));
     }
     if (settings.containsKey(SEE_MORE)) {
-      setting.setSeeMore(StringUtils.isEmpty(asText(settings.get(SEE_MORE))) ? null : toUrl(settings.get(SEE_MORE), SEE_MORE));
+      Object seeMore = settings.get(SEE_MORE);
+      if (StringUtils.isEmpty(asText(seeMore))) {
+        setting.setSeeMore(null);
+      } else if (!seeMore.equals(setting.getSeeMore())) {
+        setting.setSeeMore(toUrl(seeMore, SEE_MORE));
+      }
     }
     if (settings.containsKey(H_ALIGN)) {
       setting.setHAlign(toEnum(settings.get(H_ALIGN), H_ALIGN, LinkAlignType.class));
@@ -382,7 +387,7 @@ public class LinkApplicationSettingsPlugin implements ApplicationSettingsPlugin 
       if (values.containsKey(LINK_DESCRIPTION)) {
         link.setDescription(toTranslations(values.get(LINK_DESCRIPTION), LINK_DESCRIPTION, MAX_TEXT_LENGTH, languages));
       }
-      if (values.containsKey(LINK_URL)) {
+      if (values.containsKey(LINK_URL) && !values.get(LINK_URL).equals(link.getUrl())) {
         link.setUrl(toUrl(values.get(LINK_URL), LINK_URL));
       }
       if (values.containsKey(LINK_SAME_TAB)) {

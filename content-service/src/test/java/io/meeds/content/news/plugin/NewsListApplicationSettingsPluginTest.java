@@ -282,9 +282,39 @@ class NewsListApplicationSettingsPluginTest {
     assertRefused(pageContext(Map.of("viewTemplate", "NewsMosaic")),
                   Map.of("source", "selectedList", "selected_article_ids", List.of(1, 2, 3, 4)),
                   "value is not accepted for selected_article_ids");
-    assertRefused(pageContext(Map.of("articlesSourceOption", "selectedList", "selectedArticleIds", "1,2,3,4,5")),
-                  Map.of("view_template", "NewsLatest"),
-                  "value is not accepted for view_template");
+    assertRefused(pageContext(Map.of("viewTemplate", "NewsLatest", "selectedArticleIds", "1,2,3,4,5")),
+                  Map.of("source", "selectedList"),
+                  "value is not accepted for source");
+  }
+
+  /**
+   * The drawer keeps every selected article when the template changes and
+   * clamps the limit only, so a stored list longer than the template's
+   * maximum is valid and blocks no other option
+   */
+  @Test
+  void testStoredSelectedListLongerThanTheTemplateMaximumIsKept() throws Exception {
+    ApplicationSettingsContext mosaic = pageContext(Map.of("articlesSourceOption", "selectedList", "selectedArticleIds", "1,2,3,4,5"));
+    plugin.apply(mosaic, Map.of("view_template", "NewsMosaic"));
+    verify(applicationSettingsService).updatePreferences(mosaic, Map.of("viewTemplate", "NewsMosaic", "limit", "3"));
+
+    ApplicationSettingsContext stored = pageContext(Map.of("viewTemplate",
+                                                           "NewsMosaic",
+                                                           "articlesSourceOption",
+                                                           "selectedList",
+                                                           "selectedArticleIds",
+                                                           "1,2,3,4,5",
+                                                           "limit",
+                                                           "3"));
+    plugin.apply(stored, Map.of("show_header", false));
+    verify(applicationSettingsService).updatePreferences(stored, Map.of("showHeader", "false"));
+  }
+
+  @Test
+  void testStoredSeeAllTargetSentBackUnchangedIsKept() throws Exception {
+    ApplicationSettingsContext context = pageContext(Map.of("seeAllUrl", "meeds.io"));
+    plugin.validate(context, Map.of("see_all_url", "meeds.io", "show_see_all", true));
+    assertRefused(context, Map.of("see_all_url", "news.meeds.io"), "value is not accepted for see_all_url");
   }
 
   @Test
@@ -294,8 +324,8 @@ class NewsListApplicationSettingsPluginTest {
     when(newsService.canViewNews(news, USERNAME)).thenReturn(true);
     plugin.validate(pageContext(Map.of("viewTemplate", "NewsMosaic")),
                     Map.of("source", "selectedList", "selected_article_ids", List.of(1, 2, 3)));
-    plugin.validate(pageContext(Map.of("articlesSourceOption", "selectedList", "selectedArticleIds", "1,2,3,4")),
-                    Map.of("view_template", "NewsLatest"));
+    plugin.validate(pageContext(Map.of("viewTemplate", "NewsLatest", "selectedArticleIds", "1,2,3,4")),
+                    Map.of("source", "selectedList"));
   }
 
   @Test

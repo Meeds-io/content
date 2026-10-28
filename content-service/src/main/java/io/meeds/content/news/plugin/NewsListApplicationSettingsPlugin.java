@@ -182,11 +182,11 @@ public class NewsListApplicationSettingsPlugin extends ListViewApplicationSettin
     properties.put(VIEW_TEMPLATE, enumSchema(VIEW_TEMPLATES, "Display template"));
     properties.put(SOURCE, enumSchema(SOURCES, "Articles shown: posted ones, those of news_target, or selected_article_ids"));
     properties.put(NEWS_TARGET, stringSchema("Name of a publication target the user may use, for the target source"));
-    properties.put(SELECTED_ARTICLE_IDS, idsSchema("Article ids, in order, for the selectedList source, at most 3 for NewsMosaic and 4 for NewsLatest; the limit follows their count"));
+    properties.put(SELECTED_ARTICLE_IDS, idsSchema("Article ids, in order, for the selectedList source, at most 3 for NewsMosaic and 4 for NewsLatest when given; the limit follows their count"));
     properties.put(LIMIT, integerSchema(1, MAX_LIMIT, "Number of articles, at most 3 for NewsMosaic and 4 for NewsLatest"));
     properties.put(SHOW_HEADER, booleanSchema("Shows the header"));
     properties.put(SHOW_SEE_ALL, booleanSchema("Shows the see all button, which needs see_all_url"));
-    properties.put(SEE_ALL_URL, stringSchema("See all URL; an empty text removes it"));
+    properties.put(SEE_ALL_URL, stringSchema("See all target: an http(s) URL or a path of the platform; an empty text removes it"));
     properties.put(SHOW_ARTICLE_TITLE, booleanSchema("Shows the article titles"));
     properties.put(SHOW_ARTICLE_SUMMARY, booleanSchema("Shows the article summaries"));
     properties.put(SHOW_ARTICLE_IMAGE, booleanSchema("Shows the article images"));
@@ -297,10 +297,13 @@ public class NewsListApplicationSettingsPlugin extends ListViewApplicationSettin
         throw notAccepted(LIMIT);
       } else if (selectedIds.isEmpty()) {
         throw notAccepted(SELECTED_ARTICLE_IDS);
-      } else if (selectedIds.size() > getMaxLimit(viewTemplate)) {
-        throw notAccepted(settings.containsKey(SELECTED_ARTICLE_IDS) ? SELECTED_ARTICLE_IDS : VIEW_TEMPLATE);
+      } else if ((settings.containsKey(SELECTED_ARTICLE_IDS) || settings.containsKey(SOURCE))
+                 && selectedIds.size() > getMaxLimit(viewTemplate)) {
+        throw notAccepted(settings.containsKey(SELECTED_ARTICLE_IDS) ? SELECTED_ARTICLE_IDS : SOURCE);
       }
-      preferences.put(LIMIT_PREFERENCE, String.valueOf(selectedIds.size()));
+      if (settings.containsKey(SELECTED_ARTICLE_IDS) || settings.containsKey(SOURCE) || settings.containsKey(VIEW_TEMPLATE)) {
+        preferences.put(LIMIT_PREFERENCE, String.valueOf(Math.min(selectedIds.size(), getMaxLimit(viewTemplate))));
+      }
     } else if (settings.containsKey(LIMIT)) {
       preferences.put(LIMIT_PREFERENCE, String.valueOf(toInt(settings.get(LIMIT), LIMIT, 1, getMaxLimit(viewTemplate))));
     } else if (settings.containsKey(VIEW_TEMPLATE) && getLimit(stored, viewTemplate) > getMaxLimit(viewTemplate)) {
@@ -313,7 +316,11 @@ public class NewsListApplicationSettingsPlugin extends ListViewApplicationSettin
     }
     if (settings.containsKey(SEE_ALL_URL)) {
       Object seeAllUrl = settings.get(SEE_ALL_URL);
-      preferences.put(SEE_ALL_URL_PREFERENCE, "".equals(seeAllUrl) ? "" : toUrl(seeAllUrl, SEE_ALL_URL));
+      if ("".equals(seeAllUrl)) {
+        preferences.put(SEE_ALL_URL_PREFERENCE, "");
+      } else if (!seeAllUrl.equals(stored.get(SEE_ALL_URL_PREFERENCE))) {
+        preferences.put(SEE_ALL_URL_PREFERENCE, toUrl(seeAllUrl, SEE_ALL_URL));
+      }
     }
     boolean showSeeAll = !"false".equals(preferences.getOrDefault(SHOW_SEE_ALL_PREFERENCE, stored.get(SHOW_SEE_ALL_PREFERENCE)));
     if (showSeeAll && (settings.containsKey(SHOW_SEE_ALL) || settings.containsKey(SEE_ALL_URL))
