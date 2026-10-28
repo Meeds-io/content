@@ -118,6 +118,15 @@ public class NewsUtils {
 
   public static final Scope   NEWS_LIST_VIEW_SCOPE          = Scope.APPLICATION.id(NEWS_LIST_VIEW_SCOPE_NAME);
 
+  /** CMS setting type of the News List portlet, its content-type */
+  public static final String  NEWS_LIST_VIEW_CMS_TYPE       = "newsListViewPortlet";
+
+  /**
+   * Translation field name of the News List header, as
+   * {@code NewsSettingsDrawer.vue} and {@code news-list-view/main.js} spell it
+   */
+  public static final String  NEWS_LIST_HEADER_NAME_FIELD   = "headerNameInput";
+
 
   private static SpaceService       spaceService;
 
