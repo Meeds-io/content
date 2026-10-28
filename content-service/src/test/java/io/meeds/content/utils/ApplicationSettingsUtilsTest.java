@@ -1,0 +1,82 @@
+/**
+ * This file is part of the Meeds project (https://meeds.io/).
+ *
+ * Copyright (C) 2026 Meeds Association contact@meeds.io
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3 of the License, or (at your option) any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ */
+package io.meeds.content.utils;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+
+/**
+ * The cases are what social's Autolinker 3.14.1 does with each value: the
+ * accepted ones it links whole, the refused ones it links shortened or not
+ * at all
+ */
+class ApplicationSettingsUtilsTest {
+
+  @ParameterizedTest
+  @ValueSource(strings = {
+      "https://meeds.io/a?b=c#d",
+      "http://localhost:8080/portal",
+      "https://meeds.io:443",
+      "https://a-b.c-d.io/x",
+      "https://1.2.3.4/x",
+      "https://intranet",
+      "https://meeds.io/x/",
+      "https://meeds.io/a%20b",
+      "https://meeds.io/(x)",
+      "/portal/dw",
+      "./news",
+  })
+  void testToUrlAcceptsWhatAutolinkerLinksWhole(String url) {
+    assertEquals(url, ApplicationSettingsUtils.toUrl(url, "url"));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {
+      "https://my_server.corp/x",
+      "https://intranet.corp_lan/x",
+      "https://a!x",
+      "https://-x",
+      "https://meeds.io/x\"y",
+      "https://meeds.io/x<y",
+      "https://meeds.io/x>y",
+      "https://meeds.io/x\\y",
+      "https://meeds.io/x`y",
+      "https://meeds.io/x?a=\"b",
+      "https://meeds.io/x.",
+      "https://meeds.io/x,",
+      "https://meeds.io/x)",
+      "https://meeds.io/a b",
+      "/a<b",
+      "meeds.io",
+      "intranet",
+      "mailto:team@meeds.io",
+      "tel:+33612345678",
+      "ftp://meeds.io",
+      "javascript:alert(1)",
+      "",
+  })
+  void testToUrlRefusesWhatAutolinkerShortensOrSkips(String url) {
+    IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> ApplicationSettingsUtils.toUrl(url, "url"));
+    assertEquals("value is not accepted for url", e.getMessage());
+  }
+
+}

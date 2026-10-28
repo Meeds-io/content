@@ -43,15 +43,22 @@ import org.exoplatform.services.resources.LocaleConfigService;
 public class ApplicationSettingsUtils {
 
   /**
-   * The targets social's Autolinker, which the drawers and the views link
-   * with, always turns into a link: an http(s) URL whose host starts with a
-   * letter or a digit, or a path of the platform, which the views prefix
-   * with the platform's origin. Autolinker links a bare host, a mailto
-   * address or a phone number only for the top-level domains and the number
-   * shapes it knows, which no pattern here reproduces.
+   * The targets the Links views link whole, through social's Autolinker
+   * (3.14.1): an http(s) URL whose host is made of letters, digits, dots and
+   * hyphens, with an optional port, or a path, which they first complete
+   * with the platform's origin or, for {@code ./}, the current page's path.
+   * Autolinker cuts a URL at a quote, an angle bracket, a backslash or a
+   * backtick, and drops a trailing dot, comma or unbalanced closing
+   * parenthesis, so those are refused rather than stored as a target the
+   * view shortens. Autolinker links a bare host, a mailto address or a phone
+   * number only for the top-level domains and the number shapes it knows,
+   * which no pattern here reproduces. The News list opens its see all target
+   * as stored, which the same rule keeps safe.
    */
-  private static final Pattern URL_PATTERN       = Pattern.compile("^(?:https?://[a-z0-9][^/?#]*(?:[/?#].*)?|\\.?/.*)$",
-                                                                   Pattern.CASE_INSENSITIVE);
+  private static final Pattern URL_PATTERN       =
+                                           Pattern.compile("^(?:https?://[a-z0-9][a-z0-9.-]*(?::[0-9]+)?(?:[/?#][^\\s\"<>\\\\`]*)?"
+                                               + "|\\.?/[^\\s\"<>\\\\`]*)$",
+                                                           Pattern.CASE_INSENSITIVE);
 
   private static final int         MAX_URL_LENGTH    = 2000;
 
@@ -118,7 +125,8 @@ public class ApplicationSettingsUtils {
    */
   public static String toUrl(Object value, String option) {
     String url = toText(value, option, MAX_URL_LENGTH);
-    if (StringUtils.containsWhitespace(url) || !URL_PATTERN.matcher(url).matches()) {
+    if (!URL_PATTERN.matcher(url).matches() || StringUtils.endsWithAny(url, ".", ",")
+        || (url.endsWith(")") && StringUtils.countMatches(url, '(') < StringUtils.countMatches(url, ')'))) {
       throw notAccepted(option);
     }
     return url;
