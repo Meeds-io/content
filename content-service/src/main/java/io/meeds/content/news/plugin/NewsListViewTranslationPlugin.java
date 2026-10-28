@@ -38,6 +38,8 @@ import jakarta.annotation.PostConstruct;
 public class NewsListViewTranslationPlugin extends TranslationPlugin {
 
   public static final String        NEWS_LIST_VIEW_OBJECT_TYPE      = "newsListView";
+
+  public static final String        NEWS_LIST_HEADER_NAME_FIELD     = "headerNameInput";
   
   @Autowired
   private TranslationService  translationService;
