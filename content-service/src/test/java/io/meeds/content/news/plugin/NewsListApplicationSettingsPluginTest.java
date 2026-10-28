@@ -238,11 +238,19 @@ class NewsListApplicationSettingsPluginTest {
                   "value is not accepted for limit");
   }
 
+  /**
+   * A draft window carries the live window's keys verbatim: they resolve to a
+   * setting of the live page, and only the missing ownership marker tells
+   * the plugin they are not its own
+   */
   @Test
   void testFirstHeaderWriteOnADraftRekeysTheWindow() throws Exception {
     org.exoplatform.social.core.identity.model.Identity userIdentity = new org.exoplatform.social.core.identity.model.Identity("9");
     when(identityManager.getOrCreateUserIdentity(USERNAME)).thenReturn(userIdentity);
     when(applicationSettingsService.isOwner(any())).thenReturn(false);
+    lenient().when(settingService.get(NewsUtils.NEWS_LIST_VIEW_CONTEXT, NewsUtils.NEWS_LIST_VIEW_SCOPE, LIVE_APP_ID))
+             .thenAnswer(i -> SettingValue.create(LIVE_NAME));
+    lenient().when(cmsService.getSetting(NewsUtils.NEWS_LIST_VIEW_CMS_TYPE, LIVE_NAME)).thenReturn(cmsSetting(LIVE_PAGE));
     ApplicationSettingsContext context = pageContext(Map.of("name", LIVE_NAME, "applicationId", LIVE_APP_ID));
 
     plugin.apply(context, Map.of("header_title", Map.of("en", "News", "fr", "Actualités")));
