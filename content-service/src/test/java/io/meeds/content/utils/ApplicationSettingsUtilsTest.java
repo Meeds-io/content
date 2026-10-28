@@ -58,15 +58,23 @@ class ApplicationSettingsUtilsTest {
   }
 
   /**
-   * Targets as long as the option allows, a long path and a host of many
-   * labels, are accepted whole
+   * Long targets within the bounds Autolinker 3.14.1 links whole are
+   * accepted: a path as long as the option allows, a 63-character label, a
+   * 253-character host. A behaviour pin: the earlier pattern, whose repeated
+   * group Sonar java:S5998 flags, did not overflow at this length either.
    */
   @Test
   void testToUrlAcceptsTargetsAsLongAsAllowed() {
     String path = "https://meeds.io/" + "a/".repeat(990) + "x";
     assertEquals(path, ApplicationSettingsUtils.toUrl(path, "url"));
-    String host = "https://" + "a.".repeat(995) + "io";
+    String label = "https://" + "a".repeat(63) + ".io/x";
+    assertEquals(label, ApplicationSettingsUtils.toUrl(label, "url"));
+    String host = "https://" + "a.".repeat(125) + "abc/x";
     assertEquals(host, ApplicationSettingsUtils.toUrl(host, "url"));
+    String longerHost = "https://" + "a.".repeat(125) + "abcd/x";
+    IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                                              () -> ApplicationSettingsUtils.toUrl(longerHost, "url"));
+    assertEquals("value is not accepted for url", e.getMessage());
     String relative = "/" + "(a)".repeat(666);
     assertEquals(relative, ApplicationSettingsUtils.toUrl(relative, "url"));
   }
@@ -74,6 +82,7 @@ class ApplicationSettingsUtilsTest {
   @ParameterizedTest
   @ValueSource(strings = {
       "https://my_server.corp/x",
+      "https://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.io/x",
       "https://intranet.corp_lan/x",
       "https://a!x",
       "https://-x",

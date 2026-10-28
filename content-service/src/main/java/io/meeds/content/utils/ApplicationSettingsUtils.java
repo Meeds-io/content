@@ -69,14 +69,16 @@ public class ApplicationSettingsUtils {
   private static final Pattern URL_PATTERN       = Pattern.compile("^(?:https?://(?<host>[a-z\\d.-]++)(?::\\d{1,5})?(?<path>/"
       + URL_PATH_CHAR + "*+)?|(?<relative>\\.?/" + URL_PATH_CHAR + "*+))$", Pattern.CASE_INSENSITIVE);
 
-  /** One host label: letters and digits, with inner hyphens */
-  private static final Pattern URL_HOST_LABEL    = Pattern.compile("^[a-z\\d](?:[a-z\\d-]*[a-z\\d])?$",
+  /** One host label: letters and digits, with inner hyphens, 63 at most */
+  private static final Pattern URL_HOST_LABEL    = Pattern.compile("^[a-z\\d](?:[a-z\\d-]{0,61}[a-z\\d])?$",
                                                                    Pattern.CASE_INSENSITIVE);
 
   /** The characters Autolinker keeps as the last one of a URL */
   private static final String  URL_LAST_CHARS    = "#$%&'(*+-/=@[_{|~";
 
   private static final int         MAX_URL_LENGTH    = 2000;
+
+  private static final int         MAX_HOST_LENGTH   = 253;
 
   private ApplicationSettingsUtils() {
     // Utility class
@@ -152,7 +154,15 @@ public class ApplicationSettingsUtils {
     return url;
   }
 
+  /**
+   * @return whether the host is dot-separated labels of letters, digits and
+   *         inner hyphens, within the DNS bounds Autolinker links whole: at
+   *         most 63 characters per label and 253 in all
+   */
   private static boolean isHost(String host) {
+    if (host.length() > MAX_HOST_LENGTH) {
+      return false;
+    }
     String[] labels = host.split("\\.", -1);
     for (String label : labels) {
       if (!URL_HOST_LABEL.matcher(label).matches()) {
