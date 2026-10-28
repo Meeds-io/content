@@ -364,6 +364,35 @@ class LinkApplicationSettingsPluginTest {
     setting.setIconSize(0);
     when(linkService.getLinkSettingByName(LIVE_SETTING, null, identity)).thenReturn(setting);
     assertEquals(34, plugin.read(context(true, Map.of("name", LIVE_SETTING))).get("icon_size"));
+    setting.setLargeIcon(true);
+    assertEquals(48, plugin.read(context(true, Map.of("name", LIVE_SETTING))).get("icon_size"));
+  }
+
+  /**
+   * The REST save stores any size: one outside the drawer's bounds is read as
+   * stored and kept when sent back unchanged, a changed one must be in bounds
+   */
+  @Test
+  void testStoredIconSizeSentBackUnchangedIsKept() throws Exception {
+    LinkSetting stored = liveSetting(LIVE_PAGE);
+    stored.setIconSize(0);
+    stored.setLargeIcon(true);
+    mockSource(LIVE_PAGE);
+    when(linkService.getLinkSettingByName(LIVE_SETTING, null, true)).thenReturn(stored);
+    when(applicationSettingsService.isOwner(any())).thenReturn(true);
+    ApplicationSettingsContext context = context(true, Map.of("name", LIVE_SETTING));
+
+    plugin.apply(context, Map.of("icon_size", 48));
+
+    ArgumentCaptor<LinkSetting> setting = ArgumentCaptor.forClass(LinkSetting.class);
+    verify(linkService).saveLinkSetting(setting.capture(), any(), eq(identity));
+    assertEquals(0, setting.getValue().getIconSize());
+
+    LinkSetting tiny = liveSetting(LIVE_PAGE);
+    tiny.setIconSize(8);
+    when(linkService.getLinkSettingByName(LIVE_SETTING, null, true)).thenReturn(tiny);
+    plugin.validate(context, Map.of("icon_size", 8));
+    assertRefused(context, Map.of("icon_size", 9), "value is not accepted for icon_size");
   }
 
   @Test

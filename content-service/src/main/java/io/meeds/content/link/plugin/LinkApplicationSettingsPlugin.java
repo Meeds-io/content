@@ -124,8 +124,11 @@ public class LinkApplicationSettingsPlugin implements ApplicationSettingsPlugin 
 
   public static final int     MAX_ICON_SIZE          = 60;
 
-  /** The size the drawer shows for a setting stored before the size existed */
+  /** The size the views show for a setting stored before the size existed */
   public static final int     DEFAULT_ICON_SIZE      = 34;
+
+  /** The size the views show for such a setting marked with a large icon */
+  public static final int     LARGE_ICON_SIZE        = 48;
 
   private static final String SETTING_NAME_PREFIX    = "Untitled";
 
@@ -209,7 +212,7 @@ public class LinkApplicationSettingsPlugin implements ApplicationSettingsPlugin 
     settings.put(TYPE, setting.getType() == null ? null : setting.getType().name());
     settings.put(HEADER, withoutBlankTexts(setting.getHeader()));
     settings.put(SHOW_ICON, setting.isShowIcon());
-    settings.put(ICON_SIZE, setting.getIconSize() > 0 ? setting.getIconSize() : DEFAULT_ICON_SIZE);
+    settings.put(ICON_SIZE, getShownIconSize(setting));
     settings.put(SHOW_NAME, setting.isShowName());
     settings.put(SHOW_DESCRIPTION, setting.isShowDescription());
     settings.put(SEE_MORE, StringUtils.defaultString(setting.getSeeMore()));
@@ -316,7 +319,7 @@ public class LinkApplicationSettingsPlugin implements ApplicationSettingsPlugin 
     if (settings.containsKey(SHOW_ICON)) {
       setting.setShowIcon(toBoolean(settings.get(SHOW_ICON), SHOW_ICON));
     }
-    if (settings.containsKey(ICON_SIZE)) {
+    if (settings.containsKey(ICON_SIZE) && !settings.get(ICON_SIZE).equals(getShownIconSize(setting))) {
       setting.setIconSize(toInt(settings.get(ICON_SIZE), ICON_SIZE, MIN_ICON_SIZE, MAX_ICON_SIZE));
     }
     if (settings.containsKey(SHOW_NAME)) {
@@ -406,6 +409,20 @@ public class LinkApplicationSettingsPlugin implements ApplicationSettingsPlugin 
       links.add(link);
     }
     return links;
+  }
+
+  /**
+   * @return the size the Links views show, as their LinksList.vue decides it:
+   *         the stored size, else the legacy large icon flag's size; a
+   *         stored size the drawer would not set is returned as is, and kept
+   *         when sent back unchanged
+   */
+  @SuppressWarnings("deprecation")
+  private static int getShownIconSize(LinkSetting setting) {
+    if (setting.getIconSize() != 0) {
+      return setting.getIconSize();
+    }
+    return setting.isLargeIcon() ? LARGE_ICON_SIZE : DEFAULT_ICON_SIZE;
   }
 
   private Map<String, Object> toLinkSettings(Link link) {
