@@ -26,7 +26,7 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
       :loading="loadingSuggestions"
       :hide-no-data="hideNoData"
       append-icon=""
-      menu-props="closeOnClick, closeOnContentClick, maxHeight = 100"
+      :menu-props="{ closeOnClick: true, closeOnContentClick: true, contentClass: 'application-menu layout-drawer' }"
       class="identitySuggester identitySuggesterInputStyle mt-0"
       :class="selectedArticles?.length && 'mb-0' || 'mb-2'"
       content-class="identitySuggesterContent"
