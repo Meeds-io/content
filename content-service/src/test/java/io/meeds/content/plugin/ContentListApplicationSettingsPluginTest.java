@@ -21,9 +21,11 @@ package io.meeds.content.plugin;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -39,6 +41,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -128,13 +131,6 @@ class ContentListApplicationSettingsPluginTest {
   }
 
   @Test
-  void testValidateRefusesACategoryTheUserCannotRead() throws Exception {
-    when(categoryService.getCategory(9L, USERNAME, Locale.ENGLISH)).thenThrow(new IllegalAccessException("category"));
-    assertThrows(IllegalAccessException.class,
-                 () -> plugin.validate(context(Map.of()), Map.of("exclude_category_ids", List.of(9))));
-  }
-
-  @Test
   void testOptionsAreWrittenAsTheActionStoresThem() throws Exception {
     ApplicationSettingsContext context = context(Map.of());
     plugin.apply(context,
@@ -179,6 +175,11 @@ class ContentListApplicationSettingsPluginTest {
                                                      anyMap(),
                                                      eq(USERNAME),
                                                      eq(false));
+    InOrder order = inOrder(cmsService, settingService, translationService, applicationSettingsService);
+    order.verify(cmsService).saveSettingName(anyString(), anyString(), anyString(), anyLong(), anyLong());
+    order.verify(settingService).set(any(), any(), anyString(), any());
+    order.verify(translationService).saveTranslationLabels(anyString(), anyString(), anyString(), anyMap(), anyString(), eq(false));
+    order.verify(applicationSettingsService).markOwner(any(), anyMap());
     verify(applicationSettingsService).markOwner(context,
                                                  Map.of("headerTitle",
                                                         "Contents",

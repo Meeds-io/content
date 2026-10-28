@@ -176,7 +176,7 @@ public class LinkApplicationSettingsPlugin implements ApplicationSettingsPlugin 
     link.put(LINK_ID, integerSchema(1, Integer.MAX_VALUE, "Id of a link the read returned, to keep it and its icon; omitted for a new link"));
     link.put(LINK_NAME, translationsSchema(MAX_TEXT_LENGTH, "Name per language tag, required in the default language"));
     link.put(LINK_DESCRIPTION, translationsSchema(MAX_TEXT_LENGTH, "Description per language tag, shown in the COLUMN type"));
-    link.put(LINK_URL, stringSchema("Target: a path, a host, or an http(s), mailto or tel URL"));
+    link.put(LINK_URL, stringSchema("Target: a path of the platform, or an http(s), mailto or tel URL"));
     link.put(LINK_SAME_TAB, booleanSchema("Opens the link in the same tab"));
     Map<String, Object> properties = new LinkedHashMap<>();
     properties.put(TYPE, enumSchema(enumNames(LinkDisplayType.class), "Display type"));
@@ -365,7 +365,10 @@ public class LinkApplicationSettingsPlugin implements ApplicationSettingsPlugin 
       Link link;
       if (values.containsKey(LINK_ID)) {
         long id = toId(values.get(LINK_ID), LINK_ID);
-        link = givenIds.contains(id) ? null : baseLinks.stream().filter(l -> l.getId() == id).findFirst().orElse(null);
+        if (givenIds.contains(id)) {
+          throw notAccepted(LINK_ID);
+        }
+        link = baseLinks.stream().filter(l -> l.getId() == id).findFirst().orElse(null);
         if (link == null) {
           throw new ObjectNotFoundException(LINK_NOT_FOUND);
         }

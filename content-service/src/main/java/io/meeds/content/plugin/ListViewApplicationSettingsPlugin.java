@@ -237,7 +237,8 @@ public abstract class ListViewApplicationSettingsPlugin implements ApplicationSe
     if (!settings.containsKey(HEADER_TITLE)) {
       return null; // NOSONAR
     } else if (context.isSiteContainer()) {
-      throw notAccepted(HEADER_TITLE);
+      throw new IllegalArgumentException(String.format(ApplicationSettingsService.NOT_CONFIGURABLE_IN_SITE_CONTAINER,
+                                                       HEADER_TITLE));
     }
     Map<String, String> header = toTranslations(settings.get(HEADER_TITLE),
                                                 HEADER_TITLE,

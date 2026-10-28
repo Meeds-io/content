@@ -182,7 +182,7 @@ public class NewsListApplicationSettingsPlugin extends ListViewApplicationSettin
     properties.put(VIEW_TEMPLATE, enumSchema(VIEW_TEMPLATES, "Display template"));
     properties.put(SOURCE, enumSchema(SOURCES, "Articles shown: posted ones, those of news_target, or selected_article_ids"));
     properties.put(NEWS_TARGET, stringSchema("Name of a publication target the user may use, for the target source"));
-    properties.put(SELECTED_ARTICLE_IDS, idsSchema("Article ids, in order, for the selectedList source; the limit follows their count"));
+    properties.put(SELECTED_ARTICLE_IDS, idsSchema("Article ids, in order, for the selectedList source, at most 3 for NewsMosaic and 4 for NewsLatest; the limit follows their count"));
     properties.put(LIMIT, integerSchema(1, MAX_LIMIT, "Number of articles, at most 3 for NewsMosaic and 4 for NewsLatest"));
     properties.put(SHOW_HEADER, booleanSchema("Shows the header"));
     properties.put(SHOW_SEE_ALL, booleanSchema("Shows the see all button, which needs see_all_url"));
@@ -297,6 +297,8 @@ public class NewsListApplicationSettingsPlugin extends ListViewApplicationSettin
         throw notAccepted(LIMIT);
       } else if (selectedIds.isEmpty()) {
         throw notAccepted(SELECTED_ARTICLE_IDS);
+      } else if (selectedIds.size() > getMaxLimit(viewTemplate)) {
+        throw notAccepted(settings.containsKey(SELECTED_ARTICLE_IDS) ? SELECTED_ARTICLE_IDS : VIEW_TEMPLATE);
       }
       preferences.put(LIMIT_PREFERENCE, String.valueOf(selectedIds.size()));
     } else if (settings.containsKey(LIMIT)) {

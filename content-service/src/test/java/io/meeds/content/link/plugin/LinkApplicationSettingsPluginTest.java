@@ -201,6 +201,9 @@ class LinkApplicationSettingsPluginTest {
                                              () -> plugin.validate(context,
                                                                    Map.of("links", List.of(link(8L, "en", "Link", "/a")))));
     assertEquals("does not exist: link", e.getMessage());
+    assertRefused(context,
+                  Map.of("links", List.of(link(7L, "en", "Link", "/a"), link(7L, "en", "Again", "/b"))),
+                  "value is not accepted for id");
   }
 
   @Test

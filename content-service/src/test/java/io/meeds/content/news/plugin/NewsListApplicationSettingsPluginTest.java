@@ -27,6 +27,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -43,6 +44,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -226,7 +228,7 @@ class NewsListApplicationSettingsPluginTest {
     ApplicationSettingsContext context = siteContext();
     plugin.validate(context, Map.of("limit", 2));
     verify(cmsService, never()).hasEditPermission(any(Identity.class), anyString(), anyLong());
-    assertRefused(context, Map.of("header_title", Map.of("en", "News")), "value is not accepted for header_title");
+    assertRefused(context, Map.of("header_title", Map.of("en", "News")), "not configurable in a site container: header_title");
   }
 
   @Test
@@ -273,6 +275,30 @@ class NewsListApplicationSettingsPluginTest {
    * the plugin they are not its own
    */
   @Test
+  void testSelectedListRespectsTheTemplateMaximum() {
+    News news = new News();
+    lenient().when(newsService.getNewsArticleById(anyString())).thenReturn(news);
+    lenient().when(newsService.canViewNews(news, USERNAME)).thenReturn(true);
+    assertRefused(pageContext(Map.of("viewTemplate", "NewsMosaic")),
+                  Map.of("source", "selectedList", "selected_article_ids", List.of(1, 2, 3, 4)),
+                  "value is not accepted for selected_article_ids");
+    assertRefused(pageContext(Map.of("articlesSourceOption", "selectedList", "selectedArticleIds", "1,2,3,4,5")),
+                  Map.of("view_template", "NewsLatest"),
+                  "value is not accepted for view_template");
+  }
+
+  @Test
+  void testSelectedListWithinTheTemplateMaximumIsAccepted() throws Exception {
+    News news = new News();
+    when(newsService.getNewsArticleById(anyString())).thenReturn(news);
+    when(newsService.canViewNews(news, USERNAME)).thenReturn(true);
+    plugin.validate(pageContext(Map.of("viewTemplate", "NewsMosaic")),
+                    Map.of("source", "selectedList", "selected_article_ids", List.of(1, 2, 3)));
+    plugin.validate(pageContext(Map.of("articlesSourceOption", "selectedList", "selectedArticleIds", "1,2,3,4")),
+                    Map.of("view_template", "NewsLatest"));
+  }
+
+  @Test
   void testFirstHeaderWriteOnADraftRekeysTheWindow() throws Exception {
     org.exoplatform.social.core.identity.model.Identity userIdentity = new org.exoplatform.social.core.identity.model.Identity("9");
     when(identityManager.getOrCreateUserIdentity(USERNAME)).thenReturn(userIdentity);
@@ -309,6 +335,11 @@ class NewsListApplicationSettingsPluginTest {
                                                               eq(false));
     verify(applicationSettingsService).markOwner(context,
                                                  Map.of("name", name.getValue(), "applicationId", applicationId.getValue()));
+    InOrder order = inOrder(cmsService, settingService, translationService, applicationSettingsService);
+    order.verify(cmsService).saveSettingName(anyString(), anyString(), anyString(), anyLong(), anyLong());
+    order.verify(settingService).set(any(), any(), anyString(), any());
+    order.verify(translationService).saveTranslationLabels(anyString(), anyString(), anyString(), anyMap(), anyString(), eq(false));
+    order.verify(applicationSettingsService).markOwner(any(), anyMap());
   }
 
   @Test
