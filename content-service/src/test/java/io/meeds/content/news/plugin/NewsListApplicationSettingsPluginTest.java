@@ -329,6 +329,26 @@ class NewsListApplicationSettingsPluginTest {
     verify(applicationSettingsService).updatePreferences(target, Map.of("seeAllUrl", "/portal/news", "showSeeAll", "false"));
   }
 
+  /**
+   * The read returns no target as an empty name, and a target another editor
+   * chose as stored: both are accepted back unchanged, as the drawer keeps
+   * them
+   */
+  @Test
+  void testReadTargetIsWrittenBack() throws Exception {
+    ApplicationSettingsContext posted = pageContext(Map.of("newsTarget", "null"));
+    Map<String, Object> read = plugin.read(posted);
+    plugin.apply(posted, Map.of("source", read.get("source"), "news_target", read.get("news_target"), "limit", 2));
+    verify(applicationSettingsService).updatePreferences(posted,
+                                                         Map.of("articlesSourceOption", "posted", "newsTarget", "", "limit", "2"));
+
+    ApplicationSettingsContext targeted = pageContext(Map.of("newsTarget", "board"));
+    plugin.validate(targeted, Map.of("source", "target", "news_target", "board"));
+    verify(newsTargetingService, never()).getAllowedTargets(any());
+    assertRefused(targeted, Map.of("source", "target", "news_target", ""), "value is not accepted for news_target");
+    assertRefused(posted, Map.of("news_target", "board"), "value is not accepted for news_target");
+  }
+
   @Test
   void testStoredSeeAllTargetSentBackUnchangedIsKept() throws Exception {
     ApplicationSettingsContext context = pageContext(Map.of("seeAllUrl", "meeds.io"));

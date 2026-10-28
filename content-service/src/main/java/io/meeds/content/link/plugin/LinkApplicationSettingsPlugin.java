@@ -124,6 +124,9 @@ public class LinkApplicationSettingsPlugin implements ApplicationSettingsPlugin 
 
   public static final int     MAX_ICON_SIZE          = 60;
 
+  /** The size the drawer shows for a setting stored before the size existed */
+  public static final int     DEFAULT_ICON_SIZE      = 34;
+
   private static final String SETTING_NAME_PREFIX    = "Untitled";
 
   private static final List<String> OPTIONS          = Arrays.asList(TYPE,
@@ -206,7 +209,7 @@ public class LinkApplicationSettingsPlugin implements ApplicationSettingsPlugin 
     settings.put(TYPE, setting.getType() == null ? null : setting.getType().name());
     settings.put(HEADER, withoutBlankTexts(setting.getHeader()));
     settings.put(SHOW_ICON, setting.isShowIcon());
-    settings.put(ICON_SIZE, setting.getIconSize());
+    settings.put(ICON_SIZE, setting.getIconSize() > 0 ? setting.getIconSize() : DEFAULT_ICON_SIZE);
     settings.put(SHOW_NAME, setting.isShowName());
     settings.put(SHOW_DESCRIPTION, setting.isShowDescription());
     settings.put(SEE_MORE, StringUtils.defaultString(setting.getSeeMore()));
@@ -421,7 +424,7 @@ public class LinkApplicationSettingsPlugin implements ApplicationSettingsPlugin 
     setting.setHAlign(LinkAlignType.CENTER);
     setting.setVAlign(LinkAlignType.CENTER);
     setting.setShowIcon(true);
-    setting.setIconSize(34);
+    setting.setIconSize(DEFAULT_ICON_SIZE);
     setting.setHeader(Collections.emptyMap());
     return setting;
   }

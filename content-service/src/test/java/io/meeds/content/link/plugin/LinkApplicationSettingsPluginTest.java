@@ -359,6 +359,14 @@ class LinkApplicationSettingsPluginTest {
   }
 
   @Test
+  void testReadOfASettingStoredBeforeTheIconSizeShowsTheDrawersSize() throws Exception {
+    LinkSetting setting = liveSetting(LIVE_PAGE);
+    setting.setIconSize(0);
+    when(linkService.getLinkSettingByName(LIVE_SETTING, null, identity)).thenReturn(setting);
+    assertEquals(34, plugin.read(context(true, Map.of("name", LIVE_SETTING))).get("icon_size"));
+  }
+
+  @Test
   void testReadOfANeverRenderedWindowIsEmpty() throws Exception {
     assertEquals(null, plugin.read(context(true, Collections.emptyMap())));
   }

@@ -181,7 +181,7 @@ public class NewsListApplicationSettingsPlugin extends ListViewApplicationSettin
     Map<String, Object> properties = new LinkedHashMap<>();
     properties.put(VIEW_TEMPLATE, enumSchema(VIEW_TEMPLATES, "Display template"));
     properties.put(SOURCE, enumSchema(SOURCES, "Articles shown: posted ones, those of news_target, or selected_article_ids"));
-    properties.put(NEWS_TARGET, stringSchema("Name of a publication target the user may use, for the target source"));
+    properties.put(NEWS_TARGET, stringSchema("Name of a publication target the user may use, for the target source; empty for the other sources; a stored target sent back unchanged is kept"));
     properties.put(SELECTED_ARTICLE_IDS, idsSchema("Article ids, in order, for the selectedList source, at most 3 for NewsMosaic and 4 for NewsLatest when given; the limit follows their count"));
     properties.put(LIMIT, integerSchema(1, MAX_LIMIT, "Number of articles, at most 3 for NewsMosaic and 4 for NewsLatest"));
     properties.put(SHOW_HEADER, booleanSchema("Shows the header"));
@@ -277,10 +277,15 @@ public class NewsListApplicationSettingsPlugin extends ListViewApplicationSettin
       }
     }
     if (settings.containsKey(NEWS_TARGET)) {
+      Object target = settings.get(NEWS_TARGET);
       if (!SOURCE_TARGET.equals(source)) {
-        throw notAccepted(NEWS_TARGET);
+        if (!"".equals(target)) {
+          throw notAccepted(NEWS_TARGET);
+        }
+        preferences.put(NEWS_TARGET_PREFERENCE, "");
+      } else if (!target.equals(getStoredTarget(stored))) {
+        preferences.put(NEWS_TARGET_PREFERENCE, toNewsTarget(target, identity));
       }
-      preferences.put(NEWS_TARGET_PREFERENCE, toNewsTarget(settings.get(NEWS_TARGET), identity));
     }
     if (SOURCE_TARGET.equals(source)
         && StringUtils.isBlank(preferences.containsKey(NEWS_TARGET_PREFERENCE) ? preferences.get(NEWS_TARGET_PREFERENCE)
