@@ -18,8 +18,8 @@
  */
 package io.meeds.content.news.mcp;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -29,11 +29,11 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import io.meeds.content.news.model.ArticleTarget;
 import io.meeds.content.news.model.News;
@@ -43,8 +43,8 @@ import io.meeds.content.news.service.NewsService;
  * Pins which space {@link ArticleSpaceScopeResolver} tells for an article, and
  * every case it fails closed on.
  */
-@RunWith(MockitoJUnitRunner.class)
-public class ArticleSpaceScopeResolverTest {
+@ExtendWith(MockitoExtension.class)
+class ArticleSpaceScopeResolverTest {
 
   private static final String       ARTICLE_ID = "12";
 
@@ -61,7 +61,7 @@ public class ArticleSpaceScopeResolverTest {
    * Mutant: another name.
    */
   @Test
-  public void nameIsArticle() {
+  void nameIsArticle() {
     assertEquals("article", resolver.getName());
     assertEquals(ArticleSpaceScopeResolver.NAME, resolver.getName());
   }
@@ -71,7 +71,7 @@ public class ArticleSpaceScopeResolverTest {
    * belongs to that space, read without any user.
    */
   @Test
-  public void postedArticleOfASpaceBelongsToIt() {
+  void postedArticleOfASpaceBelongsToIt() {
     News article = article();
     when(newsService.getNewsArticleById(ARTICLE_ID)).thenReturn(article);
 
@@ -83,7 +83,7 @@ public class ArticleSpaceScopeResolverTest {
    * Mutant: the numeric guard dropped.
    */
   @Test
-  public void nonNumericIdBelongsToNoSpace() {
+  void nonNumericIdBelongsToNoSpace() {
     assertNull(resolver.spaceOf(null));
     assertNull(resolver.spaceOf(""));
     assertNull(resolver.spaceOf("12a"));
@@ -97,7 +97,7 @@ public class ArticleSpaceScopeResolverTest {
    * Mutant: the null guard dropped.
    */
   @Test
-  public void missingArticleBelongsToNoSpace() {
+  void missingArticleBelongsToNoSpace() {
     when(newsService.getNewsArticleById(ARTICLE_ID)).thenReturn(null);
 
     assertNull(resolver.spaceOf(ARTICLE_ID));
@@ -108,7 +108,7 @@ public class ArticleSpaceScopeResolverTest {
    * Mutant: the catch narrowed or removed.
    */
   @Test
-  public void failingLookupBelongsToNoSpace() {
+  void failingLookupBelongsToNoSpace() {
     when(newsService.getNewsArticleById(ARTICLE_ID)).thenThrow(new IllegalStateException("broken"));
 
     assertNull(resolver.spaceOf(ARTICLE_ID));
@@ -120,13 +120,13 @@ public class ArticleSpaceScopeResolverTest {
    * Mutant: the posted check dropped or inverted.
    */
   @Test
-  public void unpostedArticleBelongsToNoSpace() {
+  void unpostedArticleBelongsToNoSpace() {
     for (String state : new String[] { NewsService.DRAFT, NewsService.STAGED, null }) {
       News article = article();
       when(article.getPublicationState()).thenReturn(state);
       when(newsService.getNewsArticleById(ARTICLE_ID)).thenReturn(article);
 
-      assertNull(state, resolver.spaceOf(ARTICLE_ID));
+      assertNull(resolver.spaceOf(ARTICLE_ID), state);
     }
   }
 
@@ -135,7 +135,7 @@ public class ArticleSpaceScopeResolverTest {
    * Mutant: the deleted check dropped.
    */
   @Test
-  public void deletedArticleBelongsToNoSpace() {
+  void deletedArticleBelongsToNoSpace() {
     News article = article();
     when(article.isDeleted()).thenReturn(true);
     when(newsService.getNewsArticleById(ARTICLE_ID)).thenReturn(article);
@@ -149,7 +149,7 @@ public class ArticleSpaceScopeResolverTest {
    * Mutants: the published check or the targets check dropped.
    */
   @Test
-  public void publishedArticleBelongsToNoSpace() {
+  void publishedArticleBelongsToNoSpace() {
     News published = article();
     when(published.isPublished()).thenReturn(true);
     News targeted = article();
@@ -165,7 +165,7 @@ public class ArticleSpaceScopeResolverTest {
    * Mutant: the shared check dropped.
    */
   @Test
-  public void sharedArticleBelongsToNoSpace() {
+  void sharedArticleBelongsToNoSpace() {
     News article = article();
     when(article.getSharedInSpacesList()).thenReturn(List.of("44"));
     when(newsService.getNewsArticleById(ARTICLE_ID)).thenReturn(article);
@@ -179,13 +179,13 @@ public class ArticleSpaceScopeResolverTest {
    * Mutant: the space id check dropped.
    */
   @Test
-  public void articleOutsideASpaceBelongsToNoSpace() {
+  void articleOutsideASpaceBelongsToNoSpace() {
     for (String spaceId : new String[] { null, "", "x" }) {
       News article = article();
       when(article.getSpaceId()).thenReturn(spaceId);
       when(newsService.getNewsArticleById(ARTICLE_ID)).thenReturn(article);
 
-      assertNull(spaceId, resolver.spaceOf(ARTICLE_ID));
+      assertNull(resolver.spaceOf(ARTICLE_ID), spaceId);
     }
   }
 
