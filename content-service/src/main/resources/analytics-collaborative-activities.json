@@ -3,6 +3,7 @@
   "operations": ["createContent"],
   "excludedActivityTypes": ["news"],
   "labels": {
-    "counted": ["content.collaborativeActivity.help.counted.createNews"]
+    "title": "content.collaborativeActivity.help.title",
+    "counted": ["content.collaborativeActivity.help.counted"]
   }
 }
