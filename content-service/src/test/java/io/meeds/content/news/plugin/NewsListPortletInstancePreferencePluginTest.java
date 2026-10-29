@@ -138,6 +138,31 @@ class NewsListPortletInstancePreferencePluginTest {
   }
 
   @Test
+  void testGeneratePreferencesOnExportDropsSelectedArticlesSource() {
+    Portlet preferences = new Portlet();
+    preferences.setValue("articlesSourceOption", "selectedList");
+    preferences.setValue("selectedArticleIds", "4,5");
+
+    Map<String, String> result = toMap(plugin.generatePreferences(null, preferences, new PortletInstanceContext(true, null)));
+
+    assertFalse(result.containsKey("articlesSourceOption"),
+                "A selected articles source without its ids must not be exported, the imported list falls back to posted articles");
+    assertFalse(result.containsKey("selectedArticleIds"));
+  }
+
+  @Test
+  void testGeneratePreferencesOnExportKeepsOtherArticlesSource() {
+    Portlet preferences = new Portlet();
+    preferences.setValue("articlesSourceOption", "target");
+    preferences.setValue("newsTarget", "homeTarget");
+
+    Map<String, String> result = toMap(plugin.generatePreferences(null, preferences, new PortletInstanceContext(true, null)));
+
+    assertEquals("target", result.get("articlesSourceOption"));
+    assertEquals("homeTarget", result.get("newsTarget"));
+  }
+
+  @Test
   void testGeneratePreferencesWithoutContextKeepsArticleIds() {
     Portlet preferences = new Portlet();
     preferences.setValue("viewTemplate", "NewsMosaic");
@@ -146,6 +171,18 @@ class NewsListPortletInstancePreferencePluginTest {
     Map<String, String> result = toMap(plugin.generatePreferences(null, preferences, null));
 
     assertEquals("NewsMosaic", result.get("viewTemplate"));
+    assertEquals("4,5", result.get("selectedArticleIds"));
+  }
+
+  @Test
+  void testGeneratePreferencesOnCopyKeepsSelectedArticlesSource() {
+    Portlet preferences = new Portlet();
+    preferences.setValue("articlesSourceOption", "selectedList");
+    preferences.setValue("selectedArticleIds", "4,5");
+
+    Map<String, String> result = toMap(plugin.generatePreferences(null, preferences, new PortletInstanceContext()));
+
+    assertEquals("selectedList", result.get("articlesSourceOption"));
     assertEquals("4,5", result.get("selectedArticleIds"));
   }
 

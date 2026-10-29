@@ -21,6 +21,7 @@ package io.meeds.content.plugin;
 import java.util.List;
 
 import io.meeds.social.translation.service.TranslationService;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -82,8 +83,9 @@ public class ContentListPortletInstancePreferencePlugin implements PortletInstan
                                                        translationService,
                                                        ContentUtils.CONTENT_LIST_VIEW_TYPE,
                                                        ContentUtils.CONTENT_LIST_HEADER_TITLE_FIELD,
-                                                       CATEGORY_IDS_PREFERENCE_NAME,
-                                                       EXCLUDE_CATEGORY_IDS_PREFERENCE_NAME);
+                                                       preference -> StringUtils.equalsAny(preference.getName(),
+                                                                                           CATEGORY_IDS_PREFERENCE_NAME,
+                                                                                           EXCLUDE_CATEGORY_IDS_PREFERENCE_NAME));
   }
 
 }

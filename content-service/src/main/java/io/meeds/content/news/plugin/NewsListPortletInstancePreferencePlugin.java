@@ -21,6 +21,7 @@ package io.meeds.content.news.plugin;
 import java.util.List;
 
 import io.meeds.social.translation.service.TranslationService;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -28,6 +29,7 @@ import org.springframework.stereotype.Component;
 import org.exoplatform.container.ExoContainerContext;
 import org.exoplatform.portal.config.model.Application;
 import org.exoplatform.portal.pom.spi.portlet.Portlet;
+import org.exoplatform.portal.pom.spi.portlet.Preference;
 
 import io.meeds.content.utils.ListViewPreferenceUtils;
 import io.meeds.layout.model.PortletInstanceContext;
@@ -42,6 +44,10 @@ import jakarta.annotation.PostConstruct;
 public class NewsListPortletInstancePreferencePlugin implements PortletInstancePreferencePlugin {
 
   private static final String    SELECTED_ARTICLE_IDS_PREFERENCE_NAME = "selectedArticleIds";
+
+  private static final String    ARTICLES_SOURCE_PREFERENCE_NAME      = "articlesSourceOption";
+
+  private static final String    SELECTED_LIST_ARTICLES_SOURCE        = "selectedList";
 
   @Autowired
   private TranslationService    translationService;
@@ -71,7 +77,18 @@ public class NewsListPortletInstancePreferencePlugin implements PortletInstanceP
                                                        translationService,
                                                        NewsListViewTranslationPlugin.NEWS_LIST_VIEW_OBJECT_TYPE,
                                                        NewsListViewTranslationPlugin.NEWS_LIST_HEADER_NAME_FIELD,
-                                                       SELECTED_ARTICLE_IDS_PREFERENCE_NAME);
+                                                       NewsListPortletInstancePreferencePlugin::isExportExcluded);
+  }
+
+  /**
+   * An export leaves out the selected article ids, which only exist on the
+   * exporting platform, and the selected articles source that cannot work
+   * without them, so the imported list shows the posted articles
+   */
+  private static boolean isExportExcluded(Preference preference) {
+    return StringUtils.equals(preference.getName(), SELECTED_ARTICLE_IDS_PREFERENCE_NAME)
+           || (StringUtils.equals(preference.getName(), ARTICLES_SOURCE_PREFERENCE_NAME)
+               && StringUtils.equals(preference.getValue(), SELECTED_LIST_ARTICLES_SOURCE));
   }
 
 }
