@@ -18,11 +18,11 @@
  */
 package io.meeds.content.news.mcp;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -36,7 +36,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.ObjectProvider;
 
 import io.meeds.mcp.server.constant.Origin;
@@ -56,7 +56,7 @@ import tools.jackson.databind.json.JsonMapper;
  * with the MCP server's own parser: which news tools a call limited to one
  * space may use, on which arguments, and which stay refused.
  */
-public class NewsToolDefinitionSpaceScopeTest {
+class NewsToolDefinitionSpaceScopeTest {
 
   /** The reads declared by the article they reach. */
   private static final Set<String>         ARTICLE_READS  = Set.of("get_news_by_id");
@@ -94,7 +94,7 @@ public class NewsToolDefinitionSpaceScopeTest {
    * Mutants: a declaration dropped or added, an approval dropped.
    */
   @Test
-  public void declaredToolsAreTheExpectedOnes() {
+  void declaredToolsAreTheExpectedOnes() {
     Map<String, SimpleToolDefinition> tools = shippedTools();
     Map<String, SimpleToolDefinition> declared = tools.values()
                                                       .stream()
@@ -106,20 +106,20 @@ public class NewsToolDefinitionSpaceScopeTest {
     declared.forEach((name, tool) -> {
       boolean write = ARTICLE_WRITES.contains(name) || SPACE_WRITES.contains(name);
       SpaceScopeDeclaration scope = tool.getSpaceScope();
-      assertNotNull(name, tool.getAnnotations());
-      assertEquals(name, !write, McpToolSpaceScopeService.isReadTool(tool));
-      assertTrue(name, scope.isWellFormedFor(write));
-      assertNull(name, scope.getIdFormat());
-      assertTrue(name, scope.getFalseOnlyArgs() == null || scope.getFalseOnlyArgs().isEmpty());
+      assertNotNull(tool.getAnnotations(), name);
+      assertEquals(!write, McpToolSpaceScopeService.isReadTool(tool), name);
+      assertTrue(scope.isWellFormedFor(write), name);
+      assertNull(scope.getIdFormat(), name);
+      assertTrue(scope.getFalseOnlyArgs() == null || scope.getFalseOnlyArgs().isEmpty(), name);
       if (write) {
-        assertTrue(name, tool.isRequireApproval());
+        assertTrue(tool.isRequireApproval(), name);
       }
       JsonNode properties = MAPPER.readTree(tool.getInputSchema()).path("properties");
-      allowed(tool).forEach(argument -> assertTrue(name + " takes " + argument, properties.has(argument)));
+      allowed(tool).forEach(argument -> assertTrue(properties.has(argument), name + " takes " + argument));
     });
     REFUSED.forEach(name -> {
-      assertTrue(name, tools.containsKey(name));
-      assertNull(name, tools.get(name).getSpaceScope());
+      assertTrue(tools.containsKey(name), name);
+      assertNull(tools.get(name).getSpaceScope(), name);
     });
     assertEquals(tools.keySet(), union(declared.keySet(), REFUSED));
   }
@@ -131,17 +131,17 @@ public class NewsToolDefinitionSpaceScopeTest {
    * Mutants: another argument, another resolver, or a hex32 id format.
    */
   @Test
-  public void articleToolsUseTheArticleResolver() {
+  void articleToolsUseTheArticleResolver() {
     Map<String, SimpleToolDefinition> tools = shippedTools();
 
     union(ARTICLE_READS, ARTICLE_WRITES).forEach(name -> {
       SimpleToolDefinition tool = tools.get(name);
       SpaceScopeDeclaration scope = tool.getSpaceScope();
-      assertTrue(name, scope.isObjectKind());
-      assertEquals(name, "news_id", scope.getObjectArg());
-      assertEquals(name, ArticleSpaceScopeResolver.NAME, scope.getResolver());
-      assertFalse(name, scope.isHexId());
-      assertEquals(name, "integer", MAPPER.readTree(tool.getInputSchema()).path("properties").path("news_id").path("type").stringValue());
+      assertTrue(scope.isObjectKind(), name);
+      assertEquals("news_id", scope.getObjectArg(), name);
+      assertEquals(ArticleSpaceScopeResolver.NAME, scope.getResolver(), name);
+      assertFalse(scope.isHexId(), name);
+      assertEquals("integer", MAPPER.readTree(tool.getInputSchema()).path("properties").path("news_id").path("type").stringValue(), name);
     });
     assertEquals(List.of("language"), allowed(tools.get("get_news_by_id")));
     assertEquals(List.of("title", "summary", "html_content", "language"), allowed(tools.get("update_news")));
@@ -157,7 +157,7 @@ public class NewsToolDefinitionSpaceScopeTest {
    * Mutants: the URL or the attachment reference allowed.
    */
   @Test
-  public void coverIsSetFromTheCallBytesOnly() {
+  void coverIsSetFromTheCallBytesOnly() {
     SimpleToolDefinition tool = shippedTools().get("set_news_illustration");
 
     assertEquals(List.of("image_base64", "alt_text", "language"), allowed(tool));
@@ -174,14 +174,14 @@ public class NewsToolDefinitionSpaceScopeTest {
    * argument added.
    */
   @Test
-  public void listingsUseTheScopeSpaceWhenAbsent() {
+  void listingsUseTheScopeSpaceWhenAbsent() {
     Map<String, SimpleToolDefinition> tools = shippedTools();
 
     SPACE_READS.forEach(name -> {
       SpaceScopeDeclaration scope = tools.get(name).getSpaceScope();
-      assertTrue(name, scope.isSpaceKind());
-      assertEquals(name, "target_space_id", scope.getSpaceArg());
-      assertTrue(name, scope.isUseScopeWhenAbsent());
+      assertTrue(scope.isSpaceKind(), name);
+      assertEquals("target_space_id", scope.getSpaceArg(), name);
+      assertTrue(scope.isUseScopeWhenAbsent(), name);
     });
     assertEquals(List.of("offset", "limit"), allowed(tools.get("get_news_list")));
     assertEquals(List.of("query", "offset", "limit"), allowed(tools.get("search_news")));
@@ -194,7 +194,7 @@ public class NewsToolDefinitionSpaceScopeTest {
    * Mutants: {@code when_absent} added, or another argument allowed.
    */
   @Test
-  public void creationStaysInTheSpace() {
+  void creationStaysInTheSpace() {
     SimpleToolDefinition tool = shippedTools().get("create_news");
     SpaceScopeDeclaration scope = tool.getSpaceScope();
 
@@ -213,7 +213,7 @@ public class NewsToolDefinitionSpaceScopeTest {
    * declared.
    */
   @Test
-  public void shippedDeclarationsKeepAMentionRunInItsSpace() {
+  void shippedDeclarationsKeepAMentionRunInItsSpace() {
     Map<String, SimpleToolDefinition> tools = shippedTools();
     SpaceScopeResolver resolver = mock(SpaceScopeResolver.class);
     when(resolver.getName()).thenReturn(ArticleSpaceScopeResolver.NAME);
@@ -251,7 +251,7 @@ public class NewsToolDefinitionSpaceScopeTest {
    * resolver dropped.
    */
   @Test
-  public void aSpaceScopedCoverIsSentAsBytesNeverFetched() {
+  void aSpaceScopedCoverIsSentAsBytesNeverFetched() {
     SimpleToolDefinition tool = shippedTools().get("set_news_illustration");
     McpToolSpaceScopeService service = new McpToolSpaceScopeService(articleResolverTelling(12L, 33L));
     ActingIdentity proposal = limitedTo(33L, Origin.PROPOSAL);
@@ -288,7 +288,7 @@ public class NewsToolDefinitionSpaceScopeTest {
    * allowed.
    */
   @Test
-  public void anArticleIsPostedOnlyToTheStreamOfItsOwnSpace() {
+  void anArticleIsPostedOnlyToTheStreamOfItsOwnSpace() {
     SimpleToolDefinition tool = shippedTools().get("publish_news_in_activity_stream");
     McpToolSpaceScopeService service = new McpToolSpaceScopeService(articleResolverTelling(12L, 33L));
     ActingIdentity proposal = limitedTo(33L, Origin.PROPOSAL);
