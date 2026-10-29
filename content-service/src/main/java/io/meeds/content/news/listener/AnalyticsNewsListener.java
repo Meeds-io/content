@@ -56,7 +56,7 @@ import jakarta.annotation.PostConstruct;
 @Profile("analytics")
 public class AnalyticsNewsListener extends Listener<Object, News> {
 
-  private static final String   CREATE_CONTENT_OPERATION_NAME     = "createContent";
+  public static final String    CREATE_CONTENT_OPERATION_NAME     = "createContent";
 
   private static final String   UPDATE_CONTENT_OPERATION_NAME     = "updateContent";
 
