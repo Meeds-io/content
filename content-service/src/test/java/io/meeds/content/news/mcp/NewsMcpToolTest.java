@@ -552,6 +552,33 @@ public class NewsMcpToolTest {
   }
 
   /**
+   * Outside a run limited to a space, the list of a space also holds the
+   * articles of other spaces published to everyone, which the article list
+   * adds: such an article is labelled with its own space, read by its id,
+   * while an article of the listed space takes the space already loaded.
+   * Mutants: every article labelled with the listed space, or every article's
+   * space read again.
+   */
+  @Test
+  public void getNewsListOfASpaceLabelsAnArticleOfAnotherSpaceWithItsOwn() throws Exception { // NOSONAR
+    actingIdentity = limitedTo(null);
+    Space space = mockSpace();
+    Space otherSpace = mock(Space.class);
+    News ofSpace = mockNews("12", SPACE_ID, "of space");
+    News publishedElsewhere = mockNews("13", 44L, "published elsewhere");
+    when(newsService.getNews(any(NewsFilter.class), eq(currentIdentity))).thenReturn(List.of(ofSpace, publishedElsewhere));
+    when(spaceService.getSpaceById(SPACE_ID)).thenReturn(space);
+    when(spaceService.canViewSpace(space, USER)).thenReturn(true);
+    when(spaceService.getSpaceById("44")).thenReturn(otherSpace);
+
+    List<NewsModel> result = runWithStaticMocks(() -> tool.getNewsList(SPACE_ID, 0, 5));
+
+    assertEquals(List.of(12L, 13L), result.stream().map(NewsModel::id).toList());
+    verify(spaceService).getSpaceById("44");
+    verify(spaceService, never()).getSpaceById(String.valueOf(SPACE_ID));
+  }
+
+  /**
    * Outside a run limited to a space, a list of a space the current user
    * can't view, or that doesn't exist, is empty and reads nothing: the
    * article list takes a given space as it is, so the tool is the one check
