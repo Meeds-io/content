@@ -151,6 +151,25 @@ class NewsToolDefinitionSpaceScopeTest {
   }
 
   /**
+   * Deleting an article administers the space, as deleting a post does: a
+   * manager, a redactor or a publisher of the space may delete another
+   * member's article (NewsService#canEditNews), so a deletion limited to a
+   * space runs as the manager who approves it, and no standing grant of a
+   * digital worker covers it. No other news tool administers the space.
+   * Mutants: the flag dropped from delete_news, or added to another tool.
+   */
+  @Test
+  void deletionAdministersTheSpace() {
+    Map<String, SimpleToolDefinition> tools = shippedTools();
+
+    assertTrue(tools.get("delete_news").getSpaceScope().isSpaceAdmin());
+    tools.values()
+         .stream()
+         .filter(tool -> tool.getSpaceScope() != null && !"delete_news".equals(tool.getName()))
+         .forEach(tool -> assertFalse(tool.getSpaceScope().isSpaceAdmin(), tool.getName()));
+  }
+
+  /**
    * A cover is set in a limited call only from bytes the call carries: never
    * from a URL the server would fetch, nor from a file attached to another
    * object, which may be in another space.
