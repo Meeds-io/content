@@ -552,7 +552,9 @@ public class NewsMcpTool implements McpToolPlugin {
 
   /**
    * Lists the posted articles of a space, or of the spaces of the current
-   * user when no space is given, most recently updated first.
+   * user when no space is given, most recently updated first. A space that
+   * doesn't exist, or that the current user can't view, gives no article:
+   * the article list reads a given space as it is, without checking it.
    * <p>
    * In a run limited to a space (a space scope on the call), the list holds
    * only the articles the space scope accepts for the given space, those
@@ -596,12 +598,16 @@ public class NewsMcpTool implements McpToolPlugin {
                                                                                     .map(news -> toNewsModel(news, space))
                                                                                     .toList();
     }
+    boolean spaceGiven = targetSpaceId != null && targetSpaceId.longValue() > 0;
+    Space space = spaceGiven ? spaceService.getSpaceById(targetSpaceId) : null;
+    if (spaceGiven && (space == null || !spaceService.canViewSpace(space, username))) {
+      return List.of();
+    }
     NewsFilter filter = newsFilter(null,
-                                   targetSpaceId != null && targetSpaceId.longValue() > 0 ? String.valueOf(targetSpaceId) : null,
+                                   spaceGiven ? String.valueOf(targetSpaceId) : null,
                                    getInteger(offset, DEFAULT_OFFSET),
                                    getInteger(limit, DEFAULT_LIMIT));
     List<News> newsList = newsService.getNews(filter, currentIdentity);
-    Space space = targetSpaceId == null ? null : spaceService.getSpaceById(targetSpaceId);
     return newsList.stream().map(news -> toNewsModel(news, space)).toList();
   }
 
