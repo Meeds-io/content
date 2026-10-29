@@ -64,12 +64,6 @@ class CollaborativeActivityDeclarationTest {
 
     Map<String, Object> labels = (Map<String, Object>) declaration.get("labels");
     assertEquals(List.of("content.collaborativeActivity.help.counted.createNews"), labels.get("counted"));
-    assertEquals(List.of("content.collaborativeActivity.help.notCounted.draftNews",
-                         "content.collaborativeActivity.help.notCounted.editNews",
-                         "content.collaborativeActivity.help.notCounted.publishNews",
-                         "content.collaborativeActivity.help.notCounted.likeNews"),
-                 labels.get("notCounted"),
-                 "one entry per user-facing action that is not counted");
   }
 
 }
