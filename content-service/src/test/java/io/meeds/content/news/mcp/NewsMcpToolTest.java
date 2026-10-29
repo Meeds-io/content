@@ -857,9 +857,13 @@ public class NewsMcpToolTest {
 
   /**
    * An article whose activity is hidden, one published from the drawer
-   * without posting, is never posted again either: it is marked posted and
-   * updated through the service, which shows its activity.
-   * Mutants: the activity guard dropped, or the posted flag not set.
+   * without posting, is never posted again either: the tool marks it posted
+   * and updates it through the service, whose {@code updateNewsActivity}
+   * (mocked here) shows the activity. Among the cases with an activity, this
+   * is the one that kills a guard reading {@code isActivityPosted()} instead
+   * of {@code getActivityId()}.
+   * Mutants: the activity guard dropped or read from the posted flag, or the
+   * posted flag not set.
    */
   @Test
   public void publishNewsInActivityStreamShowsAgainAnArticleWithAHiddenActivity() throws Exception { // NOSONAR
