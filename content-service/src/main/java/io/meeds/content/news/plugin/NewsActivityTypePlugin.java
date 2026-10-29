@@ -96,7 +96,7 @@ public class NewsActivityTypePlugin extends ActivityTypePlugin {
     InitParams initParams = new InitParams();
     ValueParam typeParam = new ValueParam();
     typeParam.setName(ACTIVITY_TYPE_PARAM);
-    typeParam.setValue("news");
+    typeParam.setValue(NewsService.NEWS_ACTIVITY_TYPE);
     initParams.addParameter(typeParam);
     ValueParam enableNotificationParam = new ValueParam();
     enableNotificationParam.setName(ENABLE_NOTIFICATION_PARAM);
