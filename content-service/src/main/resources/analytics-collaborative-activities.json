@@ -1,0 +1,9 @@
+{
+  "modules": ["contents"],
+  "operations": ["createContent"],
+  "excludedActivityTypes": ["news"],
+  "labels": {
+    "title": "content.collaborativeActivity.help.title",
+    "counted": ["content.collaborativeActivity.help.counted"]
+  }
+}
