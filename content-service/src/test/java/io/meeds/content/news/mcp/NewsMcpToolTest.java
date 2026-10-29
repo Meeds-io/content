@@ -431,10 +431,12 @@ public class NewsMcpToolTest {
    * In a run limited to a space, the list keeps only the articles the space
    * scope tells that space for and the current user can view: an article of
    * another space published to the whole platform, which the plain list adds,
-   * and one the user can't view are dropped. The articles are read from the
-   * first one, a chunk at a time, until a chunk is empty.
-   * Mutants: the narrowing skipped, the resolver check or the view check
-   * dropped.
+   * and one the user can't view are dropped, and so are the posted articles
+   * of the space the resolver tells no space for (a targeted or shared one)
+   * or another space for. The articles are read from the first one, a chunk
+   * at a time, until a chunk is empty.
+   * Mutants: the narrowing skipped, the resolver's verdict dropped, its
+   * space not compared to the run's, or the view check dropped.
    */
   @Test
   public void getNewsListInASpaceScopedRunKeepsOnlyTheArticlesOfTheSpace() throws Exception { // NOSONAR
@@ -443,15 +445,23 @@ public class NewsMcpToolTest {
     News ofSpace = postedInItsSpace(mockNews("12", SPACE_ID, "of space"));
     News publishedElsewhere = mockNews("13", 44L, "published elsewhere");
     News notViewable = postedInItsSpace(mockNews("14", SPACE_ID, "not viewable"));
+    News targeted = postedInItsSpace(mockNews("15", SPACE_ID, "targeted"));
+    News toldElsewhere = postedInItsSpace(mockNews("16", SPACE_ID, "told another space"));
     when(spaceService.getSpaceById(SPACE_ID)).thenReturn(space);
     when(newsService.getNews(any(NewsFilter.class), eq(currentIdentity))).thenReturn(List.of(ofSpace,
                                                                                              publishedElsewhere,
-                                                                                             notViewable),
+                                                                                             notViewable,
+                                                                                             targeted,
+                                                                                             toldElsewhere),
                                                                                      List.of());
     when(spaceScopeResolver.spaceOf("12")).thenReturn(SPACE_ID);
     when(spaceScopeResolver.spaceOf("14")).thenReturn(SPACE_ID);
+    when(spaceScopeResolver.spaceOf("15")).thenReturn(null);
+    when(spaceScopeResolver.spaceOf("16")).thenReturn(44L);
     when(newsService.canViewNews(ofSpace, USER)).thenReturn(true);
     when(newsService.canViewNews(notViewable, USER)).thenReturn(false);
+    lenient().when(newsService.canViewNews(targeted, USER)).thenReturn(true);
+    lenient().when(newsService.canViewNews(toldElsewhere, USER)).thenReturn(true);
 
     List<NewsModel> result = runWithStaticMocks(() -> tool.getNewsList(SPACE_ID, 0, 5));
 
@@ -682,9 +692,11 @@ public class NewsMcpToolTest {
 
   /**
    * In a run limited to a space, the search keeps only the articles the space
-   * scope tells that space for and the user can view, and a search without a
-   * space is empty.
-   * Mutants: the narrowing skipped, or the no-space guard dropped.
+   * scope tells that space for and the user can view: a posted article of
+   * the space the resolver tells no space for (a targeted or shared one) or
+   * another space for is dropped. A search without a space is empty.
+   * Mutants: the narrowing skipped, the resolver's verdict dropped, its
+   * space not compared to the run's, or the no-space guard dropped.
    */
   @Test
   public void searchNewsInASpaceScopedRunKeepsOnlyTheArticlesOfTheSpace() throws Exception { // NOSONAR
@@ -696,16 +708,25 @@ public class NewsMcpToolTest {
                                                                       mock(org.exoplatform.social.core.identity.model.Identity.class);
     News ofSpace = postedInItsSpace(mockNews("12", SPACE_ID, "of space"));
     News publishedElsewhere = mockNews("13", 44L, "published elsewhere");
+    News targeted = postedInItsSpace(mockNews("15", SPACE_ID, "targeted"));
+    News toldElsewhere = postedInItsSpace(mockNews("16", SPACE_ID, "told another space"));
     when(identityManager.getOrCreateUserIdentity(USER)).thenReturn(socialIdentity);
     when(spaceService.getSpaceById(SPACE_ID)).thenReturn(space);
     when(space.getPrettyName()).thenReturn("space");
     when(spaceService.canViewSpace(space, USER)).thenReturn(true);
     when(identityManager.getOrCreateSpaceIdentity("space")).thenReturn(spaceIdentity);
     when(spaceIdentity.getId()).thenReturn("77");
-    when(newsService.searchNews(any(NewsFilter.class), eq(socialIdentity))).thenReturn(List.of(ofSpace, publishedElsewhere),
+    when(newsService.searchNews(any(NewsFilter.class), eq(socialIdentity))).thenReturn(List.of(ofSpace,
+                                                                                               publishedElsewhere,
+                                                                                               targeted,
+                                                                                               toldElsewhere),
                                                                                        List.of());
     when(spaceScopeResolver.spaceOf("12")).thenReturn(SPACE_ID);
+    when(spaceScopeResolver.spaceOf("15")).thenReturn(null);
+    when(spaceScopeResolver.spaceOf("16")).thenReturn(44L);
     when(newsService.canViewNews(ofSpace, USER)).thenReturn(true);
+    lenient().when(newsService.canViewNews(targeted, USER)).thenReturn(true);
+    lenient().when(newsService.canViewNews(toldElsewhere, USER)).thenReturn(true);
 
     List<NewsModel> result = runWithStaticMocks(() -> tool.searchNews("title", SPACE_ID, 0, 5));
 
