@@ -755,9 +755,16 @@ public class NewsMcpToolTest {
     tool.publishNewsInActivityStream(NEWS_ID);
   }
 
+  /**
+   * An article with no activity yet, one {@code create_news} made, takes its
+   * latest draft's title and body, is marked posted and is posted, which
+   * creates its activity.
+   * Mutant: the activity guard inverted.
+   */
   @Test
   public void publishNewsShouldUpdatePostAndReturnActivity() throws Exception { // NOSONAR
     News article = mockNews();
+    when(article.getActivityId()).thenReturn(null);
     News draft = mockNews("13", SPACE_ID, "Draft title");
     Space space = mockSpace();
 
@@ -781,8 +788,72 @@ public class NewsMcpToolTest {
 
     verify(article).setPublicationState(NewsService.POSTED);
     verify(article).setPublisher(USER);
+    verify(article).setActivityPosted(true);
     verify(article).setTitle("Draft title");
     verify(newsService).postNews(article, USER);
+  }
+
+  /**
+   * An article that already has a visible activity is never posted again: it
+   * is marked posted and updated through the service, and its activity is
+   * answered.
+   * Mutant: the activity guard dropped.
+   */
+  @Test
+  public void publishNewsInActivityStreamNeverPostsAgainAnArticleWithAVisibleActivity() throws Exception { // NOSONAR
+    News article = mockNews();
+    lenient().when(article.isActivityPosted()).thenReturn(true);
+
+    publishInActivityStreamAnArticleWithAnActivity(article);
+  }
+
+  /**
+   * An article whose activity is hidden, one published from the drawer
+   * without posting, is never posted again either: it is marked posted and
+   * updated through the service, which shows its activity.
+   * Mutants: the activity guard dropped, or the posted flag not set.
+   */
+  @Test
+  public void publishNewsInActivityStreamShowsAgainAnArticleWithAHiddenActivity() throws Exception { // NOSONAR
+    News article = mockNews();
+    lenient().when(article.isActivityPosted()).thenReturn(false);
+
+    publishInActivityStreamAnArticleWithAnActivity(article);
+  }
+
+  /**
+   * Posts to the stream an article that has activity {@code 99}, and checks
+   * that the article is marked posted, updated through the service with the
+   * post flag, and never posted again.
+   *
+   * @param article the article
+   * @throws Exception when the call fails
+   */
+  private void publishInActivityStreamAnArticleWithAnActivity(News article) throws Exception {
+    Space space = mockSpace();
+    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)),
+                                 eq(currentIdentity),
+                                 eq(false),
+                                 eq(NewsObjectType.ARTICLE.name().toLowerCase()))).thenReturn(article);
+    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)),
+                                 eq(currentIdentity),
+                                 eq(false),
+                                 eq(NewsObjectType.LATEST_DRAFT.name().toLowerCase()))).thenReturn(null);
+    when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
+    when(spaceService.canPublishOnSpace(space, USER)).thenReturn(true);
+    when(newsService.updateNews(eq(article), eq(USER), eq(true), anyBoolean(), anyString(), anyString())).thenReturn(article);
+
+    runWithStaticMocks(() -> tool.publishNewsInActivityStream(NEWS_ID));
+
+    verify(article).setPublicationState(NewsService.POSTED);
+    verify(article).setActivityPosted(true);
+    verify(newsService).updateNews(article,
+                                   USER,
+                                   true,
+                                   true,
+                                   NewsObjectType.ARTICLE.name().toLowerCase(),
+                                   NewsUpdateType.POSTING_AND_PUBLISHING.name());
+    verify(newsService, never()).postNews(any(), anyString());
   }
 
   @Test
@@ -943,6 +1014,8 @@ public class NewsMcpToolTest {
   @Test
   public void publishNewsWithEmptyTargetsShouldFallBackToStreamPublish() throws Exception { // NOSONAR
     News article = mockNews();
+    // not in the stream yet: the fallback posts it
+    when(article.getActivityId()).thenReturn(null);
     Space space = mockSpace();
 
     when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)),

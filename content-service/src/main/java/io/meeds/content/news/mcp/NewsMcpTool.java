@@ -152,6 +152,17 @@ public class NewsMcpTool implements McpToolPlugin {
     this.newsTargetingService = container.getComponentInstanceOfType(NewsTargetingService.class);
   }
 
+  /**
+   * Shows an article in the activity stream of its space. An article that
+   * already has an activity, visible or hidden, is marked posted and updated
+   * through {@link NewsService#updateNews}, which shows that activity; it is
+   * never posted again, since a post creates a second activity and sends the
+   * post notification and the post events again. An article with no activity
+   * yet, one {@code create_news} made, is posted, which creates its activity.
+   *
+   * @param newsId the article
+   * @return the activity of the article
+   */
   @SneakyThrows
   public ActivityModel publishNewsInActivityStream(long newsId) {
     String currentUsername = getCurrentUserName();
@@ -176,8 +187,10 @@ public class NewsMcpTool implements McpToolPlugin {
           The current user can't publish a news on the designated space '%s' with id '%s'.
           """.formatted(space.getDisplayName(), space.getSpaceId()));
     }
+    boolean hasActivity = StringUtils.isNotBlank(news.getActivityId());
     news.setPublicationState(NewsService.POSTED);
     news.setPublisher(currentUsername);
+    news.setActivityPosted(true);
     News draft = newsService.getNewsById(String.valueOf(newsId),
                                          userAcl.getUserIdentity(getCurrentUserName()),
                                          false,
@@ -200,7 +213,9 @@ public class NewsMcpTool implements McpToolPlugin {
                                     NewsObjectType.ARTICLE.name().toLowerCase(),
                                     NewsUpdateType.POSTING_AND_PUBLISHING.name());
     }
-    newsService.postNews(news, currentUsername);
+    if (!hasActivity) {
+      newsService.postNews(news, currentUsername);
+    }
     news = newsService.getNewsById(String.valueOf(newsId),
                                    currentIdentity,
                                    false,
