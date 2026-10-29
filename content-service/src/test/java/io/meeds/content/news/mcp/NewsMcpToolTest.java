@@ -399,6 +399,7 @@ public class NewsMcpToolTest {
     when(newsService.getNews(any(NewsFilter.class), eq(currentIdentity)))
                                                                          .thenReturn(Collections.singletonList(news));
     when(spaceService.getSpaceById(SPACE_ID)).thenReturn(space);
+    when(spaceService.canViewSpace(space, USER)).thenReturn(true);
 
     List<NewsModel> result = runWithStaticMocks(() -> tool.getNewsList(SPACE_ID, null, null));
 
@@ -532,11 +533,42 @@ public class NewsMcpToolTest {
     when(newsService.getNews(any(NewsFilter.class), eq(currentIdentity))).thenReturn(List.of(publishedElsewhere));
     Space space = mockSpace();
     when(spaceService.getSpaceById(SPACE_ID)).thenReturn(space);
+    when(spaceService.canViewSpace(space, USER)).thenReturn(true);
 
     List<NewsModel> result = runWithStaticMocks(() -> tool.getNewsList(SPACE_ID, 0, 5));
 
     assertEquals(List.of(13L), result.stream().map(NewsModel::id).toList());
     verify(spaceScopeResolver, never()).spaceOf(anyString());
+  }
+
+  /**
+   * Outside a run limited to a space, a list of a space the current user
+   * can't view, or that doesn't exist, is empty and reads nothing: the
+   * article list takes a given space as it is, so the tool is the one check
+   * between the caller and that space's posted articles. A list without a
+   * space still reads the spaces of the user.
+   * Mutants: the view check or the missing-space guard dropped, or the check
+   * applied to a list without a space.
+   */
+  @Test
+  public void getNewsListOfASpaceTheUserCantViewIsEmpty() throws Exception { // NOSONAR
+    actingIdentity = limitedTo(null);
+    Space space = mockSpace();
+    News news = mockNews();
+    when(newsService.getNews(any(NewsFilter.class), eq(currentIdentity))).thenReturn(List.of(news));
+    when(spaceService.getSpaceById(SPACE_ID)).thenReturn(space, (Space) null);
+    when(spaceService.canViewSpace(space, USER)).thenReturn(false);
+    // a missing space is refused on its own, whatever the view check answers
+    lenient().when(spaceService.canViewSpace((Space) null, USER)).thenReturn(true);
+
+    assertEquals(List.of(), runWithStaticMocks(() -> tool.getNewsList(SPACE_ID, 0, 5)));
+    assertEquals(List.of(), runWithStaticMocks(() -> tool.getNewsList(SPACE_ID, 0, 5)));
+    verify(newsService, never()).getNews(any(NewsFilter.class), any());
+
+    assertEquals(1, runWithStaticMocks(() -> tool.getNewsList(null, 0, 5)).size());
+    ArgumentCaptor<NewsFilter> filter = ArgumentCaptor.forClass(NewsFilter.class);
+    verify(newsService).getNews(filter.capture(), eq(currentIdentity));
+    assertNull(filter.getValue().getSpaces());
   }
 
   /**
