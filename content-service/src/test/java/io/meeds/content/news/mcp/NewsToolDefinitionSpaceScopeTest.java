@@ -29,6 +29,7 @@ import static org.mockito.Mockito.when;
 import java.io.File;
 import java.net.URL;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -84,6 +85,14 @@ class NewsToolDefinitionSpaceScopeTest {
                                                                    "unpublish_news");
 
   private static final JsonMapper          MAPPER         = JsonMapper.builder().build();
+
+  /** The role each space-scoped write declares in {@code space_role}. */
+  private static final Map<String, String> SPACE_ROLES = Map.of("create_news", "redactor",
+                                                                "delete_news", "manager",
+                                                                "publish_news_in_activity_stream", "publisher",
+                                                                "remove_news_illustration", "redactor",
+                                                                "set_news_illustration", "redactor",
+                                                                "update_news", "redactor");
 
   /**
    * Exactly nine news tools declare a space scope, each well formed for what
@@ -396,6 +405,44 @@ class NewsToolDefinitionSpaceScopeTest {
     } catch (Exception e) {
       throw new IllegalStateException("The news tool definitions couldn't be read", e);
     }
+  }
+
+  /**
+   * Each space-scoped write declares in {@code space_role} the role the member
+   * who asks a digital worker for it must hold in the call's space
+   * (EXO-91405), and no space-scoped read declares one: writing an article is
+   * {@code canRedactOnSpace} ({@code NewsService#canCreateNews},
+   * {@code #canEditNews}), so {@code redactor}; posting it to the stream is
+   * {@code canPublishOnSpace}
+   * ({@code NewsMcpTool#publishNewsInActivityStream}), so {@code publisher};
+   * deleting one is moderation, so {@code manager}. A {@code space_admin}
+   * write declares {@code manager}.
+   * Mutants: a write's role dropped or changed, or a read given one.
+   *
+   * @throws Exception when the shipped definitions can't be read
+   */
+  @Test
+  void spaceScopedWritesDeclareTheAskersSpaceRole() throws Exception {
+    Map<String, String> roles = new HashMap<>();
+    URL classes = NewsMcpTool.class.getProtectionDomain().getCodeSource().getLocation();
+    JsonNode definitions = MAPPER.readTree(new File(new File(classes.toURI()), "ai-tool-definitions.json"));
+    for (JsonNode tool : definitions.path("tools")) {
+      String name = tool.path("name").asString();
+      JsonNode scope = tool.path("space_scope");
+      if (!scope.isObject()) {
+        continue;
+      }
+      if (tool.path("annotations").path("readOnlyHint").asBoolean(false)) {
+        assertFalse(scope.has("space_role"), name);
+      } else {
+        assertTrue(scope.has("space_role"), name);
+        roles.put(name, scope.path("space_role").asString());
+        if (scope.path("space_admin").asBoolean(false)) {
+          assertEquals("manager", roles.get(name), name);
+        }
+      }
+    }
+    assertEquals(SPACE_ROLES, roles);
   }
 
 }
