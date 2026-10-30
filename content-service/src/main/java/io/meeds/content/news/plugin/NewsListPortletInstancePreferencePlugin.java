@@ -18,10 +18,8 @@
  */
 package io.meeds.content.news.plugin;
 
-import java.util.Collections;
 import java.util.List;
 
-import io.meeds.social.translation.model.TranslationField;
 import io.meeds.social.translation.service.TranslationService;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,22 +31,23 @@ import org.exoplatform.portal.config.model.Application;
 import org.exoplatform.portal.pom.spi.portlet.Portlet;
 import org.exoplatform.portal.pom.spi.portlet.Preference;
 
+import io.meeds.content.utils.ListViewPreferenceUtils;
 import io.meeds.layout.model.PortletInstanceContext;
 import io.meeds.layout.model.PortletInstancePreference;
 import io.meeds.layout.plugin.PortletInstancePreferencePlugin;
 import io.meeds.layout.service.PortletInstanceService;
-import io.meeds.social.util.JsonUtils;
 
 import jakarta.annotation.PostConstruct;
-import lombok.SneakyThrows;
 
 @Component
 @Profile("layout")
 public class NewsListPortletInstancePreferencePlugin implements PortletInstancePreferencePlugin {
 
-  private static final String    APPLICATION_ID_PREFERENCE_NAME = "applicationId";
+  private static final String    SELECTED_ARTICLE_IDS_PREFERENCE_NAME = "selectedArticleIds";
 
-  private static final String    DATA_INIT_PREFERENCE_NAME   = "data.init";
+  private static final String    ARTICLES_SOURCE_PREFERENCE_NAME      = "articlesSourceOption";
+
+  private static final String    SELECTED_LIST_ARTICLES_SOURCE        = "selectedList";
 
   @Autowired
   private TranslationService    translationService;
@@ -70,35 +69,26 @@ public class NewsListPortletInstancePreferencePlugin implements PortletInstanceP
   }
 
   @Override
-  @SneakyThrows
   public List<PortletInstancePreference> generatePreferences(Application application,
                                                              Portlet preferences,
                                                              PortletInstanceContext portletInstanceContext) {
-    String settingName = getCmsSettingName(preferences);
-    if (StringUtils.isBlank(settingName)) {
-      if (preferences != null && preferences.getPreference(DATA_INIT_PREFERENCE_NAME) != null) {
-        return Collections.singletonList(new PortletInstancePreference(DATA_INIT_PREFERENCE_NAME,
-                                                                       preferences.getPreference(DATA_INIT_PREFERENCE_NAME)
-                                                                                  .getValue()));
-      } else {
-        return Collections.emptyList();
-      }
-    }
-    TranslationField translationField = translationService.getTranslationField("newsListView", settingName, "headerNameInput");
-    if (translationField != null) {
-      return Collections.singletonList(new PortletInstancePreference(DATA_INIT_PREFERENCE_NAME,
-                                                                     JsonUtils.toJsonString(translationField)));
-    } else {
-      return Collections.emptyList();
-    }
+    return ListViewPreferenceUtils.generatePreferences(preferences,
+                                                       portletInstanceContext,
+                                                       translationService,
+                                                       NewsListViewTranslationPlugin.NEWS_LIST_VIEW_OBJECT_TYPE,
+                                                       NewsListViewTranslationPlugin.NEWS_LIST_HEADER_NAME_FIELD,
+                                                       NewsListPortletInstancePreferencePlugin::isExportExcluded);
   }
 
-  private String getCmsSettingName(Portlet preferences) {
-    if (preferences == null) {
-      return null;
-    }
-    Preference settingNamePreference = preferences.getPreference(APPLICATION_ID_PREFERENCE_NAME);
-    return settingNamePreference == null ? null : settingNamePreference.getValue();
+  /**
+   * An export leaves out the selected article ids, which only exist on the
+   * exporting platform, and the selected articles source that cannot work
+   * without them, so the imported list shows the posted articles
+   */
+  private static boolean isExportExcluded(Preference preference) {
+    return StringUtils.equals(preference.getName(), SELECTED_ARTICLE_IDS_PREFERENCE_NAME)
+           || (StringUtils.equals(preference.getName(), ARTICLES_SOURCE_PREFERENCE_NAME)
+               && StringUtils.equals(preference.getValue(), SELECTED_LIST_ARTICLES_SOURCE));
   }
 
 }

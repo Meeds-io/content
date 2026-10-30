@@ -18,10 +18,8 @@
  */
 package io.meeds.content.plugin;
 
-import java.util.Collections;
 import java.util.List;
 
-import io.meeds.social.translation.model.TranslationField;
 import io.meeds.social.translation.service.TranslationService;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,19 +29,17 @@ import org.springframework.stereotype.Component;
 import org.exoplatform.container.ExoContainerContext;
 import org.exoplatform.portal.config.model.Application;
 import org.exoplatform.portal.pom.spi.portlet.Portlet;
-import org.exoplatform.portal.pom.spi.portlet.Preference;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
 
 import io.meeds.content.utils.ContentUtils;
+import io.meeds.content.utils.ListViewPreferenceUtils;
 import io.meeds.layout.model.PortletInstanceContext;
 import io.meeds.layout.model.PortletInstancePreference;
 import io.meeds.layout.plugin.PortletInstancePreferencePlugin;
 import io.meeds.layout.service.PortletInstanceService;
-import io.meeds.social.util.JsonUtils;
 
 import jakarta.annotation.PostConstruct;
-import lombok.SneakyThrows;
 
 @Component
 @Profile("layout")
@@ -51,9 +47,9 @@ public class ContentListPortletInstancePreferencePlugin implements PortletInstan
 
   private static final Log       LOG                            = ExoLogger.getLogger(ContentListPortletInstancePreferencePlugin.class);
 
-  private static final String    APPLICATION_ID_PREFERENCE_NAME = "applicationId";
+  private static final String    CATEGORY_IDS_PREFERENCE_NAME = "categoryIds";
 
-  private static final String    DATA_INIT_PREFERENCE_NAME   = "data.init";
+  private static final String    EXCLUDE_CATEGORY_IDS_PREFERENCE_NAME = "excludeCategoryIds";
 
   @Autowired
   private TranslationService    translationService;
@@ -79,37 +75,17 @@ public class ContentListPortletInstancePreferencePlugin implements PortletInstan
   }
 
   @Override
-  @SneakyThrows
   public List<PortletInstancePreference> generatePreferences(Application application,
                                                              Portlet preferences,
                                                              PortletInstanceContext portletInstanceContext) {
-    String settingName = getCmsSettingName(preferences);
-    if (StringUtils.isBlank(settingName)) {
-      if (preferences != null && preferences.getPreference(DATA_INIT_PREFERENCE_NAME) != null) {
-        return Collections.singletonList(new PortletInstancePreference(DATA_INIT_PREFERENCE_NAME,
-                                                                       preferences.getPreference(DATA_INIT_PREFERENCE_NAME)
-                                                                                  .getValue()));
-      } else {
-        return Collections.emptyList();
-      }
-    }
-    TranslationField translationField = translationService.getTranslationField(ContentUtils.CONTENT_LIST_VIEW_TYPE,
-                                                                               settingName,
-                                                                               ContentUtils.CONTENT_LIST_HEADER_TITLE_FIELD);
-    if (translationField != null) {
-      return Collections.singletonList(new PortletInstancePreference(DATA_INIT_PREFERENCE_NAME,
-                                                                     JsonUtils.toJsonString(translationField)));
-    } else {
-      return Collections.emptyList();
-    }
-  }
-
-  private String getCmsSettingName(Portlet preferences) {
-    if (preferences == null) {
-      return null;
-    }
-    Preference settingNamePreference = preferences.getPreference(APPLICATION_ID_PREFERENCE_NAME);
-    return settingNamePreference == null ? null : settingNamePreference.getValue();
+    return ListViewPreferenceUtils.generatePreferences(preferences,
+                                                       portletInstanceContext,
+                                                       translationService,
+                                                       ContentUtils.CONTENT_LIST_VIEW_TYPE,
+                                                       ContentUtils.CONTENT_LIST_HEADER_TITLE_FIELD,
+                                                       preference -> StringUtils.equalsAny(preference.getName(),
+                                                                                           CATEGORY_IDS_PREFERENCE_NAME,
+                                                                                           EXCLUDE_CATEGORY_IDS_PREFERENCE_NAME));
   }
 
 }
