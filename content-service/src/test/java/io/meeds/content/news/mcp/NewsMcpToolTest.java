@@ -39,6 +39,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -86,6 +87,7 @@ import io.meeds.content.news.service.NewsTargetingService;
 import io.meeds.content.news.utils.NewsUtils;
 import io.meeds.content.news.utils.NewsUtils.NewsObjectType;
 import io.meeds.content.news.utils.NewsUtils.NewsUpdateType;
+import io.meeds.mcp.server.model.ActingIdentity;
 import io.meeds.mcp.server.tool.model.SpaceModel;
 import io.meeds.mcp.server.tool.model.UserModel;
 import io.meeds.mcp.server.tool.util.SpaceToolUtils;
@@ -162,6 +164,15 @@ public class NewsMcpToolTest {
 
   @Mock
   private Identity                currentIdentity;
+
+  @Mock
+  private ArticleSpaceScopeResolver spaceScopeResolver;
+
+  /** The acting identity the static mocks give, null for none. */
+  private ActingIdentity          actingIdentity;
+
+  /** True when the static mocks fail to read the acting identity. */
+  private boolean                 actingIdentityUnreadable;
 
   private NewsMcpTool             tool;
 
@@ -299,9 +310,36 @@ public class NewsMcpToolTest {
     tool.updateNews(NEWS_ID, TITLE, SUMMARY, CONTENT, "en");
   }
 
+  /**
+   * Outside a run limited to a space, an article another member owns is updated as before, on the edit right alone.
+   * Mutant: the owner guard applied outside a run limited to a space.
+   */
   @Test
   public void updateNewsShouldUpdateTitleSummaryAndContent() throws Exception { // NOSONAR
+    actingIdentity = limitedTo(null);
+    updateTitleSummaryAndContent("someone");
+  }
+
+  /**
+   * In a run limited to a space, the user's own article is updated.
+   * Mutant: the guard refusing the user's own article.
+   */
+  @Test
+  public void updateNewsShouldUpdateTitleSummaryAndContentOnTheUsersOwnArticleInASpaceScopedRun() throws Exception { // NOSONAR
+    actingIdentity = limitedTo(SPACE_ID);
+    updateTitleSummaryAndContent(USER);
+  }
+
+  /**
+   * Runs the edit on an article of the given owner, which the current user
+   * may edit, and checks it is written.
+   *
+   * @param owner the owner of the article
+   * @throws Exception when the edit fails
+   */
+  private void updateTitleSummaryAndContent(String owner) throws Exception {
     News news = mockNews();
+    lenient().when(news.getOwner()).thenReturn(owner);
     Space space = mockSpace();
     mockUserIdentity();
 
@@ -391,6 +429,7 @@ public class NewsMcpToolTest {
     when(newsService.getNews(any(NewsFilter.class), eq(currentIdentity)))
                                                                          .thenReturn(Collections.singletonList(news));
     when(spaceService.getSpaceById(SPACE_ID)).thenReturn(space);
+    when(spaceService.canViewSpace(space, USER)).thenReturn(true);
 
     List<NewsModel> result = runWithStaticMocks(() -> tool.getNewsList(SPACE_ID, null, null));
 
@@ -418,6 +457,361 @@ public class NewsMcpToolTest {
     verify(newsService).searchNews(any(NewsFilter.class), eq(socialIdentity));
   }
 
+  /**
+   * In a run limited to a space, the list keeps only the articles the space
+   * scope tells that space for and the current user can view: an article of
+   * another space published to the whole platform, which the plain list adds,
+   * and one the user can't view are dropped, and so are the posted articles
+   * of the space the resolver tells no space for (a targeted or shared one)
+   * or another space for. The articles are read from the first one, a chunk
+   * at a time, until a chunk is empty.
+   * Mutants: the narrowing skipped, the resolver's verdict dropped, its
+   * space not compared to the run's, or the view check dropped.
+   */
+  @Test
+  public void getNewsListInASpaceScopedRunKeepsOnlyTheArticlesOfTheSpace() throws Exception { // NOSONAR
+    actingIdentity = limitedTo(SPACE_ID);
+    Space space = mockSpace();
+    News ofSpace = postedInItsSpace(mockNews("12", SPACE_ID, "of space"));
+    News publishedElsewhere = mockNews("13", 44L, "published elsewhere");
+    News notViewable = postedInItsSpace(mockNews("14", SPACE_ID, "not viewable"));
+    News targeted = postedInItsSpace(mockNews("15", SPACE_ID, "targeted"));
+    News toldElsewhere = postedInItsSpace(mockNews("16", SPACE_ID, "told another space"));
+    when(spaceService.getSpaceById(SPACE_ID)).thenReturn(space);
+    when(newsService.getNews(any(NewsFilter.class), eq(currentIdentity))).thenReturn(List.of(ofSpace,
+                                                                                             publishedElsewhere,
+                                                                                             notViewable,
+                                                                                             targeted,
+                                                                                             toldElsewhere),
+                                                                                     List.of());
+    when(spaceScopeResolver.spaceOf("12")).thenReturn(SPACE_ID);
+    when(spaceScopeResolver.spaceOf("14")).thenReturn(SPACE_ID);
+    when(spaceScopeResolver.spaceOf("15")).thenReturn(null);
+    when(spaceScopeResolver.spaceOf("16")).thenReturn(44L);
+    when(newsService.canViewNews(ofSpace, USER)).thenReturn(true);
+    when(newsService.canViewNews(notViewable, USER)).thenReturn(false);
+    lenient().when(newsService.canViewNews(targeted, USER)).thenReturn(true);
+    lenient().when(newsService.canViewNews(toldElsewhere, USER)).thenReturn(true);
+
+    List<NewsModel> result = runWithStaticMocks(() -> tool.getNewsList(SPACE_ID, 0, 5));
+
+    assertEquals(List.of(12L), result.stream().map(NewsModel::id).toList());
+    ArgumentCaptor<NewsFilter> filters = ArgumentCaptor.forClass(NewsFilter.class);
+    verify(newsService, times(2)).getNews(filters.capture(), eq(currentIdentity));
+    assertEquals(List.of(String.valueOf(SPACE_ID)), filters.getAllValues().get(0).getSpaces());
+    assertEquals(List.of(0, NewsMcpTool.SPACE_SCAN_CHUNK),
+                 filters.getAllValues().stream().map(NewsFilter::getOffset).toList());
+    assertEquals(NewsMcpTool.SPACE_SCAN_CHUNK, filters.getAllValues().get(0).getLimit());
+  }
+
+  /**
+   * A candidate the listed article already shows the resolver would refuse
+   * (another space, published, deleted, not posted) is dropped before the
+   * resolver is asked; one that passes is still asked, since the targets and
+   * the shares are its to tell.
+   * Mutants: a pre-filter condition dropped, or the resolver skipped for the
+   * candidates that pass.
+   */
+  @Test
+  public void spaceScopedListDropsObviousCandidatesBeforeTheResolver() throws Exception { // NOSONAR
+    actingIdentity = limitedTo(SPACE_ID);
+    Space space = mockSpace();
+    when(spaceService.getSpaceById(SPACE_ID)).thenReturn(space);
+    News otherSpace = postedInItsSpace(mockNews("20", 44L, "other space"));
+    News published = postedInItsSpace(mockNews("21", SPACE_ID, "published"));
+    when(published.isPublished()).thenReturn(true);
+    News deleted = postedInItsSpace(mockNews("22", SPACE_ID, "deleted"));
+    when(deleted.isDeleted()).thenReturn(true);
+    News draft = postedInItsSpace(mockNews("23", SPACE_ID, "draft"));
+    when(draft.getPublicationState()).thenReturn(NewsService.DRAFT);
+    News candidate = postedInItsSpace(mockNews("24", SPACE_ID, "candidate"));
+    when(newsService.getNews(any(NewsFilter.class), eq(currentIdentity))).thenReturn(List.of(otherSpace,
+                                                                                             published,
+                                                                                             deleted,
+                                                                                             draft,
+                                                                                             candidate),
+                                                                                     List.of());
+    when(spaceScopeResolver.spaceOf("24")).thenReturn(SPACE_ID);
+    when(newsService.canViewNews(candidate, USER)).thenReturn(true);
+
+    List<NewsModel> result = runWithStaticMocks(() -> tool.getNewsList(SPACE_ID, 0, 5));
+
+    assertEquals(List.of(24L), result.stream().map(NewsModel::id).toList());
+    verify(spaceScopeResolver).spaceOf("24");
+    verify(spaceScopeResolver, never()).spaceOf("20");
+    verify(spaceScopeResolver, never()).spaceOf("21");
+    verify(spaceScopeResolver, never()).spaceOf("22");
+    verify(spaceScopeResolver, never()).spaceOf("23");
+  }
+
+  /**
+   * In a run limited to a space, a list without a space, or of a space that
+   * doesn't exist, is empty and reads nothing: the run never falls back to the
+   * spaces of the user.
+   * Mutant: the no-space guard or the missing-space guard dropped.
+   */
+  @Test
+  public void getNewsListInASpaceScopedRunWithoutAKnownSpaceIsEmpty() throws Exception { // NOSONAR
+    actingIdentity = limitedTo(SPACE_ID);
+    when(spaceService.getSpaceById(SPACE_ID)).thenReturn(null);
+
+    assertEquals(List.of(), runWithStaticMocks(() -> tool.getNewsList(null, 0, 5)));
+    assertEquals(List.of(), runWithStaticMocks(() -> tool.getNewsList(0L, 0, 5)));
+    assertEquals(List.of(), runWithStaticMocks(() -> tool.getNewsList(SPACE_ID, 0, 5)));
+    verify(newsService, never()).getNews(any(NewsFilter.class), any());
+  }
+
+  /**
+   * Outside a run limited to a space, the list is the plain one: the space
+   * scope resolver is never asked.
+   * Mutant: the narrowing applied to every call.
+   */
+  @Test
+  public void getNewsListOutsideASpaceScopedRunIsNotNarrowed() throws Exception { // NOSONAR
+    actingIdentity = limitedTo(null);
+    News publishedElsewhere = mockNews("13", 44L, "published elsewhere");
+    when(newsService.getNews(any(NewsFilter.class), eq(currentIdentity))).thenReturn(List.of(publishedElsewhere));
+    Space space = mockSpace();
+    when(spaceService.getSpaceById(SPACE_ID)).thenReturn(space);
+    when(spaceService.canViewSpace(space, USER)).thenReturn(true);
+
+    List<NewsModel> result = runWithStaticMocks(() -> tool.getNewsList(SPACE_ID, 0, 5));
+
+    assertEquals(List.of(13L), result.stream().map(NewsModel::id).toList());
+    verify(spaceScopeResolver, never()).spaceOf(anyString());
+  }
+
+  /**
+   * Outside a run limited to a space, the list of a space also holds the
+   * articles of other spaces published to everyone, which the article list
+   * adds: such an article is labelled with its own space, read by its id,
+   * while an article of the listed space takes the space already loaded.
+   * Mutants: every article labelled with the listed space, or every article's
+   * space read again.
+   */
+  @Test
+  public void getNewsListOfASpaceLabelsAnArticleOfAnotherSpaceWithItsOwn() throws Exception { // NOSONAR
+    actingIdentity = limitedTo(null);
+    Space space = mockSpace();
+    Space otherSpace = mock(Space.class);
+    News ofSpace = mockNews("12", SPACE_ID, "of space");
+    News publishedElsewhere = mockNews("13", 44L, "published elsewhere");
+    when(newsService.getNews(any(NewsFilter.class), eq(currentIdentity))).thenReturn(List.of(ofSpace, publishedElsewhere));
+    when(spaceService.getSpaceById(SPACE_ID)).thenReturn(space);
+    when(spaceService.canViewSpace(space, USER)).thenReturn(true);
+    when(spaceService.getSpaceById("44")).thenReturn(otherSpace);
+
+    List<NewsModel> result = runWithStaticMocks(() -> tool.getNewsList(SPACE_ID, 0, 5));
+
+    assertEquals(List.of(12L, 13L), result.stream().map(NewsModel::id).toList());
+    verify(spaceService).getSpaceById("44");
+    verify(spaceService, never()).getSpaceById(String.valueOf(SPACE_ID));
+  }
+
+  /**
+   * Outside a run limited to a space, a list of a space the current user
+   * can't view, or that doesn't exist, is empty and reads nothing: the
+   * article list takes a given space as it is, so the tool is the one check
+   * between the caller and that space's posted articles. A list without a
+   * space still reads the spaces of the user.
+   * Mutants: the view check or the missing-space guard dropped, or the check
+   * applied to a list without a space.
+   */
+  @Test
+  public void getNewsListOfASpaceTheUserCantViewIsEmpty() throws Exception { // NOSONAR
+    actingIdentity = limitedTo(null);
+    Space space = mockSpace();
+    News news = mockNews();
+    when(newsService.getNews(any(NewsFilter.class), eq(currentIdentity))).thenReturn(List.of(news));
+    when(spaceService.getSpaceById(SPACE_ID)).thenReturn(space, (Space) null);
+    when(spaceService.canViewSpace(space, USER)).thenReturn(false);
+    // a missing space is refused on its own, whatever the view check answers
+    lenient().when(spaceService.canViewSpace((Space) null, USER)).thenReturn(true);
+
+    assertEquals(List.of(), runWithStaticMocks(() -> tool.getNewsList(SPACE_ID, 0, 5)));
+    assertEquals(List.of(), runWithStaticMocks(() -> tool.getNewsList(SPACE_ID, 0, 5)));
+    verify(newsService, never()).getNews(any(NewsFilter.class), any());
+
+    assertEquals(1, runWithStaticMocks(() -> tool.getNewsList(null, 0, 5)).size());
+    ArgumentCaptor<NewsFilter> filter = ArgumentCaptor.forClass(NewsFilter.class);
+    verify(newsService).getNews(filter.capture(), eq(currentIdentity));
+    assertNull(filter.getValue().getSpaces());
+  }
+
+  /**
+   * The scan reads chunk after chunk until the page is full, then stops: the
+   * second article of the space is the second chunk's first, and no third
+   * chunk is read.
+   * Mutants: the scan stops after one chunk, or reads on once the page is
+   * full.
+   */
+  @Test
+  public void spaceScopedListReadsChunksUntilThePageIsFull() throws Exception { // NOSONAR
+    actingIdentity = limitedTo(SPACE_ID);
+    Space space = mockSpace();
+    when(spaceService.getSpaceById(SPACE_ID)).thenReturn(space);
+    List<News> firstChunk = new ArrayList<>();
+    for (int i = 0; i < NewsMcpTool.SPACE_SCAN_CHUNK; i++) {
+      firstChunk.add(i == 0 ? postedInItsSpace(mockNews("100", SPACE_ID, "first"))
+                            : mockNews(String.valueOf(100 + i), 44L, "elsewhere"));
+    }
+    News second = postedInItsSpace(mockNews("200", SPACE_ID, "second"));
+    when(newsService.getNews(any(NewsFilter.class), eq(currentIdentity))).thenReturn(firstChunk, List.of(second));
+    when(spaceScopeResolver.spaceOf("100")).thenReturn(SPACE_ID);
+    when(spaceScopeResolver.spaceOf("200")).thenReturn(SPACE_ID);
+    when(newsService.canViewNews(any(News.class), eq(USER))).thenReturn(true);
+
+    List<NewsModel> result = runWithStaticMocks(() -> tool.getNewsList(SPACE_ID, 1, 1));
+
+    assertEquals(List.of(200L), result.stream().map(NewsModel::id).toList());
+    verify(newsService, times(2)).getNews(any(NewsFilter.class), eq(currentIdentity));
+  }
+
+  /**
+   * The scan reads at most {@value NewsMcpTool#SPACE_SCAN_MAX} articles: a
+   * space whose articles never come back gives an empty page after that many
+   * reads, not an endless scan.
+   * Mutant: the bound dropped, which loops until the timeout.
+   */
+  @Test(timeout = 20000)
+  public void spaceScopedListStopsAtTheScanBound() throws Exception { // NOSONAR
+    actingIdentity = limitedTo(SPACE_ID);
+    Space space = mockSpace();
+    when(spaceService.getSpaceById(SPACE_ID)).thenReturn(space);
+    List<News> rejected = new ArrayList<>();
+    for (int i = 0; i < NewsMcpTool.SPACE_SCAN_CHUNK; i++) {
+      rejected.add(mockNews(String.valueOf(100 + i), 44L, "elsewhere"));
+    }
+    when(newsService.getNews(any(NewsFilter.class), eq(currentIdentity))).thenReturn(rejected);
+
+    List<NewsModel> result = runWithStaticMocks(() -> tool.getNewsList(SPACE_ID, 0, 5));
+
+    assertEquals(List.of(), result);
+    verify(newsService, times(NewsMcpTool.SPACE_SCAN_MAX / NewsMcpTool.SPACE_SCAN_CHUNK)).getNews(any(NewsFilter.class),
+                                                                                                eq(currentIdentity));
+  }
+
+  /**
+   * A search in a space filters the article streams by the identity of the
+   * space, the id the article search reads, not by the space id.
+   * Mutant: the space id passed as it is.
+   */
+  @Test
+  public void searchNewsInASpaceFiltersByTheSpaceIdentity() throws Exception { // NOSONAR
+    Space space = mockSpace();
+    org.exoplatform.social.core.identity.model.Identity socialIdentity =
+                                                                       mock(org.exoplatform.social.core.identity.model.Identity.class);
+    org.exoplatform.social.core.identity.model.Identity spaceIdentity =
+                                                                      mock(org.exoplatform.social.core.identity.model.Identity.class);
+    when(identityManager.getOrCreateUserIdentity(USER)).thenReturn(socialIdentity);
+    when(spaceService.getSpaceById(SPACE_ID)).thenReturn(space);
+    when(space.getPrettyName()).thenReturn("space");
+    when(spaceService.canViewSpace(space, USER)).thenReturn(true);
+    when(identityManager.getOrCreateSpaceIdentity("space")).thenReturn(spaceIdentity);
+    when(spaceIdentity.getId()).thenReturn("77");
+    News news = mockNews();
+    when(newsService.searchNews(any(NewsFilter.class), eq(socialIdentity))).thenReturn(List.of(news));
+
+    List<NewsModel> result = runWithStaticMocks(() -> tool.searchNews("title", SPACE_ID, 0, 5));
+
+    assertEquals(1, result.size());
+    ArgumentCaptor<NewsFilter> filter = ArgumentCaptor.forClass(NewsFilter.class);
+    verify(newsService).searchNews(filter.capture(), eq(socialIdentity));
+    assertEquals(List.of("77"), filter.getValue().getSpaces());
+    assertEquals("title", filter.getValue().getSearchText());
+  }
+
+  /**
+   * A search in a space the current user can't view, or that doesn't exist,
+   * finds nothing and searches nothing, though the space has an identity the
+   * search could filter by.
+   * Mutant: the view check or the missing-space guard dropped.
+   */
+  @Test
+  public void searchNewsInASpaceTheUserCantViewIsEmpty() throws Exception { // NOSONAR
+    Space space = mockSpace();
+    when(identityManager.getOrCreateUserIdentity(USER)).thenReturn(mock(org.exoplatform.social.core.identity.model.Identity.class));
+    lenient().when(space.getPrettyName()).thenReturn("space");
+    org.exoplatform.social.core.identity.model.Identity spaceIdentity =
+                                                                      mock(org.exoplatform.social.core.identity.model.Identity.class);
+    lenient().when(spaceIdentity.getId()).thenReturn("77");
+    lenient().when(identityManager.getOrCreateSpaceIdentity("space")).thenReturn(spaceIdentity);
+    News news = mockNews();
+    lenient().when(newsService.searchNews(any(NewsFilter.class), any())).thenReturn(List.of(news));
+    when(spaceService.getSpaceById(SPACE_ID)).thenReturn(space, (Space) null);
+    when(spaceService.canViewSpace(space, USER)).thenReturn(false);
+
+    assertEquals(List.of(), runWithStaticMocks(() -> tool.searchNews("title", SPACE_ID, 0, 5)));
+    assertEquals(List.of(), runWithStaticMocks(() -> tool.searchNews("title", SPACE_ID, 0, 5)));
+    verify(newsService, never()).searchNews(any(NewsFilter.class), any());
+    verify(identityManager, never()).getOrCreateSpaceIdentity(anyString());
+  }
+
+  /**
+   * In a run limited to a space, the search keeps only the articles the space
+   * scope tells that space for and the user can view: a posted article of
+   * the space the resolver tells no space for (a targeted or shared one) or
+   * another space for is dropped. A search without a space is empty.
+   * Mutants: the narrowing skipped, the resolver's verdict dropped, its
+   * space not compared to the run's, or the no-space guard dropped.
+   */
+  @Test
+  public void searchNewsInASpaceScopedRunKeepsOnlyTheArticlesOfTheSpace() throws Exception { // NOSONAR
+    actingIdentity = limitedTo(SPACE_ID);
+    Space space = mockSpace();
+    org.exoplatform.social.core.identity.model.Identity socialIdentity =
+                                                                       mock(org.exoplatform.social.core.identity.model.Identity.class);
+    org.exoplatform.social.core.identity.model.Identity spaceIdentity =
+                                                                      mock(org.exoplatform.social.core.identity.model.Identity.class);
+    News ofSpace = postedInItsSpace(mockNews("12", SPACE_ID, "of space"));
+    News publishedElsewhere = mockNews("13", 44L, "published elsewhere");
+    News targeted = postedInItsSpace(mockNews("15", SPACE_ID, "targeted"));
+    News toldElsewhere = postedInItsSpace(mockNews("16", SPACE_ID, "told another space"));
+    when(identityManager.getOrCreateUserIdentity(USER)).thenReturn(socialIdentity);
+    when(spaceService.getSpaceById(SPACE_ID)).thenReturn(space);
+    when(space.getPrettyName()).thenReturn("space");
+    when(spaceService.canViewSpace(space, USER)).thenReturn(true);
+    when(identityManager.getOrCreateSpaceIdentity("space")).thenReturn(spaceIdentity);
+    when(spaceIdentity.getId()).thenReturn("77");
+    when(newsService.searchNews(any(NewsFilter.class), eq(socialIdentity))).thenReturn(List.of(ofSpace,
+                                                                                               publishedElsewhere,
+                                                                                               targeted,
+                                                                                               toldElsewhere),
+                                                                                       List.of());
+    when(spaceScopeResolver.spaceOf("12")).thenReturn(SPACE_ID);
+    when(spaceScopeResolver.spaceOf("15")).thenReturn(null);
+    when(spaceScopeResolver.spaceOf("16")).thenReturn(44L);
+    when(newsService.canViewNews(ofSpace, USER)).thenReturn(true);
+    lenient().when(newsService.canViewNews(targeted, USER)).thenReturn(true);
+    lenient().when(newsService.canViewNews(toldElsewhere, USER)).thenReturn(true);
+
+    List<NewsModel> result = runWithStaticMocks(() -> tool.searchNews("title", SPACE_ID, 0, 5));
+
+    assertEquals(List.of(12L), result.stream().map(NewsModel::id).toList());
+    assertEquals(List.of(), runWithStaticMocks(() -> tool.searchNews("title", null, 0, 5)));
+    verify(newsService, times(2)).searchNews(any(NewsFilter.class), eq(socialIdentity));
+  }
+
+  /**
+   * A call is limited to a space when its acting identity carries a space
+   * scope, and also when that identity can't be read; it isn't when the
+   * identity carries none or there is no identity.
+   * Mutant: a failing read taken for an unlimited call.
+   */
+  @Test
+  public void isSpaceScopedReadsTheActingIdentity() throws Exception { // NOSONAR
+    actingIdentity = limitedTo(SPACE_ID);
+    assertTrue(runWithStaticMocks(() -> tool.isSpaceScoped()));
+    actingIdentity = limitedTo(null);
+    assertFalse(runWithStaticMocks(() -> tool.isSpaceScoped()));
+    actingIdentity = null;
+    assertFalse(runWithStaticMocks(() -> tool.isSpaceScoped()));
+    try (MockedStatic<McpToolUtils> mcp = mockStatic(McpToolUtils.class)) {
+      mcp.when(McpToolUtils::getCurrentActingIdentity).thenThrow(new IllegalStateException("unreadable"));
+      assertTrue(tool.isSpaceScoped());
+    }
+  }
+
   @Test(expected = ObjectNotFoundException.class)
   public void publishNewsWhenNewsDoesNotExistShouldThrowException() throws Exception { // NOSONAR
     when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)), eq(currentIdentity), eq(false), anyString()))
@@ -439,9 +833,16 @@ public class NewsMcpToolTest {
     tool.publishNewsInActivityStream(NEWS_ID);
   }
 
+  /**
+   * An article with no activity yet, one {@code create_news} made, takes its
+   * latest draft's title and body, is marked posted and is posted, which
+   * creates its activity.
+   * Mutant: the activity guard inverted.
+   */
   @Test
   public void publishNewsShouldUpdatePostAndReturnActivity() throws Exception { // NOSONAR
     News article = mockNews();
+    when(article.getActivityId()).thenReturn(null);
     News draft = mockNews("13", SPACE_ID, "Draft title");
     Space space = mockSpace();
 
@@ -465,8 +866,76 @@ public class NewsMcpToolTest {
 
     verify(article).setPublicationState(NewsService.POSTED);
     verify(article).setPublisher(USER);
+    verify(article).setActivityPosted(true);
     verify(article).setTitle("Draft title");
     verify(newsService).postNews(article, USER);
+  }
+
+  /**
+   * An article that already has a visible activity is never posted again: it
+   * is marked posted and updated through the service, and its activity is
+   * answered.
+   * Mutant: the activity guard dropped.
+   */
+  @Test
+  public void publishNewsInActivityStreamNeverPostsAgainAnArticleWithAVisibleActivity() throws Exception { // NOSONAR
+    News article = mockNews();
+    lenient().when(article.isActivityPosted()).thenReturn(true);
+
+    publishInActivityStreamAnArticleWithAnActivity(article);
+  }
+
+  /**
+   * An article whose activity is hidden, one published from the drawer
+   * without posting, is never posted again either: the tool marks it posted
+   * and updates it through the service, whose {@code updateNewsActivity}
+   * (mocked here) shows the activity. Among the cases with an activity, this
+   * is the one that kills a guard reading {@code isActivityPosted()} instead
+   * of {@code getActivityId()}.
+   * Mutants: the activity guard dropped or read from the posted flag, or the
+   * posted flag not set.
+   */
+  @Test
+  public void publishNewsInActivityStreamShowsAgainAnArticleWithAHiddenActivity() throws Exception { // NOSONAR
+    News article = mockNews();
+    lenient().when(article.isActivityPosted()).thenReturn(false);
+
+    publishInActivityStreamAnArticleWithAnActivity(article);
+  }
+
+  /**
+   * Posts to the stream an article that has activity {@code 99}, and checks
+   * that the article is marked posted, updated through the service with the
+   * post flag, and never posted again.
+   *
+   * @param article the article
+   * @throws Exception when the call fails
+   */
+  private void publishInActivityStreamAnArticleWithAnActivity(News article) throws Exception {
+    Space space = mockSpace();
+    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)),
+                                 eq(currentIdentity),
+                                 eq(false),
+                                 eq(NewsObjectType.ARTICLE.name().toLowerCase()))).thenReturn(article);
+    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)),
+                                 eq(currentIdentity),
+                                 eq(false),
+                                 eq(NewsObjectType.LATEST_DRAFT.name().toLowerCase()))).thenReturn(null);
+    when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
+    when(spaceService.canPublishOnSpace(space, USER)).thenReturn(true);
+    when(newsService.updateNews(eq(article), eq(USER), eq(true), anyBoolean(), anyString(), anyString())).thenReturn(article);
+
+    runWithStaticMocks(() -> tool.publishNewsInActivityStream(NEWS_ID));
+
+    verify(article).setPublicationState(NewsService.POSTED);
+    verify(article).setActivityPosted(true);
+    verify(newsService).updateNews(article,
+                                   USER,
+                                   true,
+                                   true,
+                                   NewsObjectType.ARTICLE.name().toLowerCase(),
+                                   NewsUpdateType.POSTING_AND_PUBLISHING.name());
+    verify(newsService, never()).postNews(any(), anyString());
   }
 
   @Test
@@ -627,6 +1096,8 @@ public class NewsMcpToolTest {
   @Test
   public void publishNewsWithEmptyTargetsShouldFallBackToStreamPublish() throws Exception { // NOSONAR
     News article = mockNews();
+    // not in the stream yet: the fallback posts it
+    when(article.getActivityId()).thenReturn(null);
     Space space = mockSpace();
 
     when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)),
@@ -1402,9 +1873,36 @@ public class NewsMcpToolTest {
     }
   }
 
+  /**
+   * Outside a run limited to a space, a cover is set on an article another member owns as before, on the edit right alone.
+   * Mutant: the owner guard applied outside a run limited to a space.
+   */
   @Test
   public void setNewsIllustrationShouldSaveMetadataAndRefresh() throws Exception { // NOSONAR
+    actingIdentity = limitedTo(null);
+    setIllustrationAndRefresh("someone");
+  }
+
+  /**
+   * In a run limited to a space, a cover is set on the user's own article.
+   * Mutant: the guard refusing the user's own article.
+   */
+  @Test
+  public void setNewsIllustrationShouldSaveMetadataAndRefreshOnTheUsersOwnArticleInASpaceScopedRun() throws Exception { // NOSONAR
+    actingIdentity = limitedTo(SPACE_ID);
+    setIllustrationAndRefresh(USER);
+  }
+
+  /**
+   * Runs the edit on an article of the given owner, which the current user
+   * may edit, and checks it is written.
+   *
+   * @param owner the owner of the article
+   * @throws Exception when the edit fails
+   */
+  private void setIllustrationAndRefresh(String owner) throws Exception {
     News news = mockNews();
+    lenient().when(news.getOwner()).thenReturn(owner);
     Space space = mockSpace();
     mockUserIdentity();
 
@@ -1447,9 +1945,36 @@ public class NewsMcpToolTest {
     tool.removeNewsIllustration(NEWS_ID, "en");
   }
 
+  /**
+   * Outside a run limited to a space, the cover of an article another member owns is removed as before, on the edit right alone.
+   * Mutant: the owner guard applied outside a run limited to a space.
+   */
   @Test
   public void removeNewsIllustrationShouldRemoveFeaturedImageAndRefresh() throws Exception { // NOSONAR
+    actingIdentity = limitedTo(null);
+    removeIllustrationAndRefresh("someone");
+  }
+
+  /**
+   * In a run limited to a space, the cover of the user's own article is removed.
+   * Mutant: the guard refusing the user's own article.
+   */
+  @Test
+  public void removeNewsIllustrationShouldRemoveFeaturedImageAndRefreshOnTheUsersOwnArticleInASpaceScopedRun() throws Exception { // NOSONAR
+    actingIdentity = limitedTo(SPACE_ID);
+    removeIllustrationAndRefresh(USER);
+  }
+
+  /**
+   * Runs the edit on an article of the given owner, which the current user
+   * may edit, and checks it is written.
+   *
+   * @param owner the owner of the article
+   * @throws Exception when the edit fails
+   */
+  private void removeIllustrationAndRefresh(String owner) throws Exception {
     News news = mockNews();
+    lenient().when(news.getOwner()).thenReturn(owner);
     NotePageProperties ownProperties = news.getProperties();
     ownProperties.setFeaturedImage(new NoteFeaturedImage(500L, null, null, 0L, 0L, null, null));
     Space space = mockSpace();
@@ -1485,11 +2010,151 @@ public class NewsMcpToolTest {
     verify(newsService).updateNews(eq(news), eq(USER), eq(false), anyBoolean(), anyString(), anyString());
   }
 
+  /**
+   * In a run limited to a space, none of the three article edits, nor the
+   * post to the space's stream, reaches an article another member owns, nor
+   * one with no owner, though the current user's space role lets them write
+   * it: each is refused before any write. A run whose identity can't be read
+   * is taken for a limited one.
+   * Mutants: the guard dropped from one of the tools, moved after the cover
+   * is fetched and uploaded, moved after the stream post's setters and draft
+   * read, the owner comparison inverted, or an unreadable identity taken for
+   * an unlimited run.
+   */
+  @Test
+  public void articleEditsInASpaceScopedRunRefuseAnArticleOfAnotherOwner() throws Exception { // NOSONAR
+    for (String owner : new String[] { "someone", null }) {
+      actingIdentity = limitedTo(SPACE_ID);
+      assertEditsRefused(owner);
+    }
+    actingIdentity = null;
+    actingIdentityUnreadable = true;
+    assertEditsRefused("someone");
+  }
+
+  /**
+   * @param owner the owner of the article, never the current user
+   * @throws Exception when the setup fails
+   */
+  private void assertEditsRefused(String owner) throws Exception {
+    News news = mockNews();
+    lenient().when(news.getOwner()).thenReturn(owner);
+    Space space = mockSpace();
+    lenient().when(newsService.getNewsByIdAndLang(eq(String.valueOf(NEWS_ID)), eq(currentIdentity), eq(false), anyString(), any()))
+             .thenReturn(news);
+    lenient().when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)), eq(currentIdentity), eq(false), anyString()))
+             .thenReturn(news);
+    lenient().when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
+    lenient().when(newsService.canEditNews(news, USER)).thenReturn(true);
+
+    lenient().when(spaceService.canPublishOnSpace(space, USER)).thenReturn(true);
+
+    List<CheckedSupplier<?>> edits = List.of(() -> tool.updateNews(NEWS_ID, "Updated", "Updated summary", "Updated content", "en"),
+                                             () -> tool.publishNewsInActivityStream(NEWS_ID),
+                                             () -> tool.setNewsIllustration(NEWS_ID, null, "iVBORw0KGgo=", null, null, "alt", "en"),
+                                             () -> tool.removeNewsIllustration(NEWS_ID, "en"));
+    for (CheckedSupplier<?> edit : edits) {
+      Exception refusal = null;
+      try (MockedStatic<UploadToolUtils> upload = mockStatic(UploadToolUtils.class)) {
+        try {
+          runWithStaticMocks(edit);
+        } catch (Exception e) {
+          refusal = e;
+        }
+        // refused before the cover is fetched or uploaded, not only before it is saved
+        upload.verifyNoInteractions();
+      }
+      // any other outcome, a later failure included, means the edit went past the guard
+      assertTrue("The edit of an article of " + owner + " wasn't refused by the owner guard: " + refusal,
+                 refusal instanceof IllegalAccessException
+                     && refusal.getMessage().contains("only an article of the current user"));
+    }
+    verify(newsService, never()).updateNews(any(), anyString(), any(), anyBoolean(), anyString(), anyString());
+    verify(noteService, never()).saveNoteMetadata(any(), any(), anyLong());
+    verify(noteService, never()).removeNoteFeaturedImage(anyLong(), anyLong(), any(), anyBoolean(), anyLong());
+    verify(newsService, never()).postNews(any(), anyString());
+    verify(newsService, never()).getNewsById(anyString(), any(), anyBoolean(), eq(NewsObjectType.LATEST_DRAFT.name().toLowerCase()));
+    verify(news, never()).setPublisher(anyString());
+  }
+
+  /**
+   * In a run limited to a space, the user's own article is posted to its
+   * space's stream.
+   * Mutant: the owner guard refusing the user's own article.
+   */
+  @Test
+  public void publishNewsInActivityStreamPostsTheUsersOwnArticleInASpaceScopedRun() throws Exception { // NOSONAR
+    actingIdentity = limitedTo(SPACE_ID);
+    postToStreamAnArticleOf(USER);
+  }
+
+  /**
+   * Outside a run limited to a space, another member's article is posted to
+   * its space's stream as before, on the publisher's right alone.
+   * Mutant: the owner guard applied outside a run limited to a space.
+   */
+  @Test
+  public void publishNewsInActivityStreamPostsAnotherMembersArticleOutsideASpaceScopedRun() throws Exception { // NOSONAR
+    actingIdentity = limitedTo(null);
+    postToStreamAnArticleOf("someone");
+  }
+
+  /**
+   * Posts to the stream an article with no activity yet, of the given owner,
+   * and checks it is posted.
+   *
+   * @param owner the owner of the article
+   * @throws Exception when the post fails
+   */
+  private void postToStreamAnArticleOf(String owner) throws Exception {
+    News article = mockNews();
+    when(article.getActivityId()).thenReturn(null);
+    lenient().when(article.getOwner()).thenReturn(owner);
+    Space space = mockSpace();
+    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)),
+                                 eq(currentIdentity),
+                                 eq(false),
+                                 eq(NewsObjectType.ARTICLE.name().toLowerCase()))).thenReturn(article);
+    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)),
+                                 eq(currentIdentity),
+                                 eq(false),
+                                 eq(NewsObjectType.LATEST_DRAFT.name().toLowerCase()))).thenReturn(null);
+    when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
+    when(spaceService.canPublishOnSpace(space, USER)).thenReturn(true);
+    when(newsService.updateNews(eq(article), eq(USER), eq(true), anyBoolean(), anyString(), anyString())).thenReturn(article);
+
+    runWithStaticMocks(() -> tool.publishNewsInActivityStream(NEWS_ID));
+
+    verify(newsService).postNews(article, USER);
+  }
+
+  /**
+   * @param spaceScope the space the call is limited to, null for none
+   * @return an acting identity carrying that space scope
+   */
+  private ActingIdentity limitedTo(Long spaceScope) {
+    ActingIdentity identity = mock(ActingIdentity.class);
+    lenient().when(identity.spaceScope()).thenReturn(spaceScope);
+    return identity;
+  }
+
   private void mockUserIdentity() {
     org.exoplatform.social.core.identity.model.Identity socialIdentity =
                                                                        mock(org.exoplatform.social.core.identity.model.Identity.class);
     lenient().when(socialIdentity.getId()).thenReturn("1");
     when(identityManager.getOrCreateUserIdentity(USER)).thenReturn(socialIdentity);
+  }
+
+  /**
+   * @param news an article
+   * @return the article, posted, not published to a target and not deleted,
+   *         as the space scope keeps one
+   */
+  private News postedInItsSpace(News news) {
+    lenient().when(news.isPublished()).thenReturn(false);
+    lenient().when(news.isDeleted()).thenReturn(false);
+    lenient().when(news.getPublicationState()).thenReturn(NewsService.POSTED);
+    return news;
   }
 
   private News mockNews() {
@@ -1541,6 +2206,11 @@ public class NewsMcpToolTest {
         MockedStatic<SpaceToolUtils> spaces = mockStatic(SpaceToolUtils.class)) {
 
       mcp.when(McpToolUtils::getUserTimeZone).thenReturn(TimeZone.getTimeZone("UTC"));
+      if (actingIdentityUnreadable) {
+        mcp.when(McpToolUtils::getCurrentActingIdentity).thenThrow(new IllegalStateException("unreadable"));
+      } else {
+        mcp.when(McpToolUtils::getCurrentActingIdentity).thenReturn(actingIdentity);
+      }
       mcp.when(() -> McpToolUtils.formatDate(any(Date.class))).thenReturn("2024-01-01T00:00:00Z");
       mcp.when(() -> McpToolUtils.markdownToHtml(anyString()))
          .thenAnswer(invocation -> "<p>" + invocation.getArgument(0) + "</p>");
@@ -1590,7 +2260,7 @@ public class NewsMcpToolTest {
   private class TestableNewsMcpTool extends NewsMcpTool {
 
     TestableNewsMcpTool(PortalContainer container) {
-      super(container);
+      super(container, spaceScopeResolver);
     }
 
     @Override

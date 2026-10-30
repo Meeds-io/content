@@ -24,6 +24,7 @@ import static io.meeds.mcp.server.util.McpToolUtils.markdownToHtml;
 
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -64,6 +65,7 @@ import io.meeds.content.news.service.NewsTargetingService;
 import io.meeds.content.news.utils.NewsUtils;
 import io.meeds.content.news.utils.NewsUtils.NewsObjectType;
 import io.meeds.content.news.utils.NewsUtils.NewsUpdateType;
+import io.meeds.mcp.server.model.ActingIdentity;
 import io.meeds.mcp.server.plugin.McpToolPlugin;
 import io.meeds.mcp.server.tool.model.ActivityModel;
 import io.meeds.mcp.server.tool.model.SpaceModel;
@@ -72,6 +74,7 @@ import io.meeds.mcp.server.tool.util.ActivityToolUtils;
 import io.meeds.mcp.server.tool.util.SpaceToolUtils;
 import io.meeds.mcp.server.tool.util.UploadToolUtils;
 import io.meeds.mcp.server.tool.util.UserToolUtils;
+import io.meeds.mcp.server.util.McpToolUtils;
 import io.meeds.notes.model.NoteFeaturedImage;
 import io.meeds.notes.model.NotePageProperties;
 import io.meeds.portal.permlink.service.PermanentLinkService;
@@ -82,6 +85,12 @@ import lombok.SneakyThrows;
 @Service
 @Profile("mcp-server")
 public class NewsMcpTool implements McpToolPlugin {
+
+  /** How many articles a scan of the articles of a space reads at a time. */
+  static final int                SPACE_SCAN_CHUNK = 50;
+
+  /** The most articles a scan of the articles of a space reads in all. */
+  static final int                SPACE_SCAN_MAX   = 250;
 
   private static final Log        LOG           = ExoLogger.getLogger(NewsMcpTool.class);
 
@@ -117,7 +126,15 @@ public class NewsMcpTool implements McpToolPlugin {
 
   private NewsTargetingService    newsTargetingService;
 
-  public NewsMcpTool(PortalContainer container) {
+  private ArticleSpaceScopeResolver spaceScopeResolver;
+
+  /**
+   * @param container the portal container the platform services are read from
+   * @param spaceScopeResolver tells the space of an article, for a run limited
+   *          to a space
+   */
+  public NewsMcpTool(PortalContainer container, ArticleSpaceScopeResolver spaceScopeResolver) {
+    this.spaceScopeResolver = spaceScopeResolver;
     this.spaceService = container.getComponentInstanceOfType(SpaceService.class);
     this.activityManager = container.getComponentInstanceOfType(ActivityManager.class);
     this.permanentLinkService = container.getComponentInstanceOfType(PermanentLinkService.class);
@@ -135,6 +152,17 @@ public class NewsMcpTool implements McpToolPlugin {
     this.newsTargetingService = container.getComponentInstanceOfType(NewsTargetingService.class);
   }
 
+  /**
+   * Shows an article in the activity stream of its space. An article that
+   * already has an activity, visible or hidden, is marked posted and updated
+   * through {@link NewsService#updateNews}, which shows that activity; it is
+   * never posted again, since a post creates a second activity and sends the
+   * post notification and the post events again. An article with no activity
+   * yet, one {@code create_news} made, is posted, which creates its activity.
+   *
+   * @param newsId the article
+   * @return the activity of the article
+   */
   @SneakyThrows
   public ActivityModel publishNewsInActivityStream(long newsId) {
     String currentUsername = getCurrentUserName();
@@ -159,8 +187,11 @@ public class NewsMcpTool implements McpToolPlugin {
           The current user can't publish a news on the designated space '%s' with id '%s'.
           """.formatted(space.getDisplayName(), space.getSpaceId()));
     }
+    checkOwnArticleInSpaceScopedRun(news, currentUsername);
+    boolean hasActivity = StringUtils.isNotBlank(news.getActivityId());
     news.setPublicationState(NewsService.POSTED);
     news.setPublisher(currentUsername);
+    news.setActivityPosted(true);
     News draft = newsService.getNewsById(String.valueOf(newsId),
                                          userAcl.getUserIdentity(getCurrentUserName()),
                                          false,
@@ -183,7 +214,9 @@ public class NewsMcpTool implements McpToolPlugin {
                                     NewsObjectType.ARTICLE.name().toLowerCase(),
                                     NewsUpdateType.POSTING_AND_PUBLISHING.name());
     }
-    newsService.postNews(news, currentUsername);
+    if (!hasActivity) {
+      newsService.postNews(news, currentUsername);
+    }
     news = newsService.getNewsById(String.valueOf(newsId),
                                    currentIdentity,
                                    false,
@@ -457,6 +490,7 @@ public class NewsMcpTool implements McpToolPlugin {
           The current user doesn't have priviledges to update the news with id '%s'.
           """.formatted(space.getDisplayName(), space.getSpaceId()));
     }
+    checkOwnArticleInSpaceScopedRun(news, currentUsername);
     boolean titleOrContentChanged = false;
     if (StringUtils.isNotBlank(title)) {
       news.setTitle(title);
@@ -533,42 +567,124 @@ public class NewsMcpTool implements McpToolPlugin {
     newsService.deleteNews(news.getId(), currentIdentity, NewsObjectType.ARTICLE.name());
   }
 
+  /**
+   * Lists the posted articles of a space, or of the spaces of the current
+   * user when no space is given, most recently updated first. A space that
+   * doesn't exist, or that the current user can't view, gives no article:
+   * the article list reads a given space as it is, without checking it. The
+   * list of a space also holds the articles of other spaces published to
+   * everyone, each labelled with its own space.
+   * <p>
+   * In a run limited to a space (a space scope on the call), the list holds
+   * only the articles the space scope accepts for the given space, those
+   * {@link ArticleSpaceScopeResolver} tells that space for, and that the
+   * current user can view: never an article of another space published to
+   * the whole platform, which the plain list adds. Without a space, such a
+   * run gets an empty list. The selection is read in chunks of
+   * {@value #SPACE_SCAN_CHUNK} articles, in the order of the plain list, and
+   * stops once the page is full, a chunk comes back empty or
+   * {@value #SPACE_SCAN_MAX} articles are read: past that bound, the page
+   * holds the articles kept so far, possibly fewer than exist.
+   *
+   * @param targetSpaceId the space whose articles are listed, null or not
+   *          positive for the spaces of the current user
+   * @param offset the first article returned
+   * @param limit the most articles returned
+   * @return the articles
+   */
   @SneakyThrows
   public List<NewsModel> getNewsList(Long targetSpaceId,
                                      Integer offset,
                                      Integer limit) {
-    NewsFilter filter = new NewsFilter();
-    filter.setOffset(getInteger(offset, DEFAULT_OFFSET));
-    filter.setLimit(getInteger(limit, DEFAULT_LIMIT));
-    if (targetSpaceId != null && targetSpaceId.longValue() > 0) {
-      filter.setSpaces(List.of(String.valueOf(targetSpaceId)));
-    }
-    filter.setSortField("UPDATED_DATE");
-    filter.setSortDirection("desc");
     String username = getCurrentUserName();
     org.exoplatform.services.security.Identity currentIdentity = userAcl.getUserIdentity(username);
+    if (isSpaceScoped()) {
+      if (targetSpaceId == null || targetSpaceId.longValue() <= 0) {
+        return List.of();
+      }
+      Space space = spaceService.getSpaceById(targetSpaceId);
+      if (space == null) {
+        return List.of();
+      }
+      return scanSpaceArticles(targetSpaceId,
+                               getInteger(offset, DEFAULT_OFFSET),
+                               getInteger(limit, DEFAULT_LIMIT),
+                               (from, size) -> newsService.getNews(newsFilter(null,
+                                                                              String.valueOf(targetSpaceId),
+                                                                              from,
+                                                                              size),
+                                                                   currentIdentity)).stream()
+                                                                                    .map(news -> toNewsModel(news, space))
+                                                                                    .toList();
+    }
+    boolean spaceGiven = targetSpaceId != null && targetSpaceId.longValue() > 0;
+    Space space = spaceGiven ? spaceService.getSpaceById(targetSpaceId) : null;
+    if (spaceGiven && (space == null || !spaceService.canViewSpace(space, username))) {
+      return List.of();
+    }
+    NewsFilter filter = newsFilter(null,
+                                   spaceGiven ? String.valueOf(targetSpaceId) : null,
+                                   getInteger(offset, DEFAULT_OFFSET),
+                                   getInteger(limit, DEFAULT_LIMIT));
     List<News> newsList = newsService.getNews(filter, currentIdentity);
-    Space space = targetSpaceId == null ? null : spaceService.getSpaceById(targetSpaceId);
-    return newsList.stream().map(news -> toNewsModel(news, space)).toList();
+    // the plain list of a space adds the articles of other spaces published
+    // to everyone: each article is labelled with its own space
+    return newsList.stream()
+                   .map(news -> toNewsModel(news,
+                                            space != null && String.valueOf(targetSpaceId).equals(news.getSpaceId()) ? space
+                                                                                                                      : null))
+                   .toList();
   }
 
+  /**
+   * Searches the articles matching a term, in a space or in the spaces of the
+   * current user when no space is given. A space is searched through its
+   * identity, the one the article search filters the streams by; a space that
+   * doesn't exist, or that the current user can't view, gives no article.
+   * <p>
+   * In a run limited to a space (a space scope on the call), the result holds
+   * only the articles the space scope accepts for the given space, and that
+   * the current user can view, as for {@link #getNewsList(Long, Integer,
+   * Integer)}. Without a space, such a run gets an empty list.
+   *
+   * @param query the search term
+   * @param targetSpaceId the space searched, null or not positive for the
+   *          spaces of the current user
+   * @param offset the first article returned
+   * @param limit the most articles returned
+   * @return the matching articles
+   */
   @SneakyThrows
   public List<NewsModel> searchNews(String query,
                                     Long targetSpaceId,
                                     Integer offset,
                                     Integer limit) {
-    NewsFilter filter = new NewsFilter();
-    filter.setSearchText(query);
-    filter.setOffset(getInteger(offset, DEFAULT_OFFSET));
-    filter.setLimit(getInteger(limit, DEFAULT_LIMIT));
-    if (targetSpaceId != null && targetSpaceId.longValue() > 0) {
-      filter.setSpaces(List.of(String.valueOf(targetSpaceId)));
-    }
-    filter.setSortField("UPDATED_DATE");
-    filter.setSortDirection("desc");
     String currentUsername = getCurrentUserName();
-    List<News> newsList = newsService.searchNews(filter, identityManager.getOrCreateUserIdentity(currentUsername));
-    Space space = targetSpaceId == null ? null : spaceService.getSpaceById(targetSpaceId);
+    org.exoplatform.social.core.identity.model.Identity userIdentity = identityManager.getOrCreateUserIdentity(currentUsername);
+    boolean spaceGiven = targetSpaceId != null && targetSpaceId.longValue() > 0;
+    boolean spaceScoped = isSpaceScoped();
+    if (spaceScoped && !spaceGiven) {
+      return List.of();
+    }
+    Space space = spaceGiven ? spaceService.getSpaceById(targetSpaceId) : null;
+    String spaceIdentityId = space == null ? null : getSpaceIdentityId(space, currentUsername);
+    if (spaceGiven && spaceIdentityId == null) {
+      return List.of();
+    }
+    List<News> newsList;
+    if (spaceScoped) {
+      newsList = scanSpaceArticles(targetSpaceId,
+                                   getInteger(offset, DEFAULT_OFFSET),
+                                   getInteger(limit, DEFAULT_LIMIT),
+                                   (from, size) -> newsService.searchNews(newsFilter(query, spaceIdentityId, from, size),
+                                                                          userIdentity));
+    } else {
+      newsList = newsService.searchNews(newsFilter(query,
+                                                   spaceIdentityId,
+                                                   getInteger(offset, DEFAULT_OFFSET),
+                                                   getInteger(limit, DEFAULT_LIMIT)),
+                                        userIdentity);
+    }
     return newsList.stream()
                    .map(news -> toNewsModel(news,
                                             space == null ? spaceService.getSpaceById(news.getSpaceId()) : space))
@@ -636,6 +752,7 @@ public class NewsMcpTool implements McpToolPlugin {
           The current user doesn't have priviledges to update the news with id '%s'.
           """.formatted(newsId));
     }
+    checkOwnArticleInSpaceScopedRun(news, currentUsername);
     UploadToolUtils.FetchedContent image = UploadToolUtils.resolveImage(attachmentService,
                                                                         fileService,
                                                                         getCurrentUserAclIdentity(),
@@ -705,6 +822,7 @@ public class NewsMcpTool implements McpToolPlugin {
           The current user doesn't have priviledges to update the news with id '%s'.
           """.formatted(newsId));
     }
+    checkOwnArticleInSpaceScopedRun(news, currentUsername);
     long pageId = news.getTargetPageId() != null ? Long.parseLong(news.getTargetPageId()) : newsId;
     boolean isDraft = news.getTargetPageId() != null;
     String lang = normalizeLanguage(language);
@@ -893,6 +1011,139 @@ public class NewsMcpTool implements McpToolPlugin {
 
   private long getUserIdentityId(String username) {
     return Long.parseLong(identityManager.getOrCreateUserIdentity(username).getId());
+  }
+
+  /**
+   * @return true when the current call is limited to a space; also true when
+   *         its identity can't be read, which a limited call must never be
+   *         taken for the opposite of
+   */
+  protected boolean isSpaceScoped() {
+    try {
+      ActingIdentity identity = McpToolUtils.getCurrentActingIdentity();
+      return identity != null && identity.spaceScope() != null;
+    } catch (IllegalStateException e) {
+      return true;
+    }
+  }
+
+  /**
+   * Reads the articles of a space a run limited to that space may see: those
+   * the given reader returns, in its order, that
+   * {@link ArticleSpaceScopeResolver} tells that space for and that the
+   * current user can view. The reader is called in chunks of
+   * {@value #SPACE_SCAN_CHUNK} articles, until one returns none, enough
+   * articles are kept for the page, or {@value #SPACE_SCAN_MAX} articles are
+   * read: past that bound, the page holds what was kept so far, possibly
+   * fewer articles than exist.
+   *
+   * @param spaceId the space of the run
+   * @param offset the first kept article returned
+   * @param limit the most kept articles returned
+   * @param reader reads a chunk of candidate articles
+   * @return the page of kept articles
+   * @throws Exception when the reader fails
+   */
+  private List<News> scanSpaceArticles(long spaceId, int offset, int limit, ArticleChunkReader reader) throws Exception {
+    int usedOffset = Math.max(offset, 0);
+    int wanted = usedOffset + Math.max(limit, 0);
+    String username = getCurrentUserName();
+    List<News> kept = new ArrayList<>();
+    int from = 0;
+    boolean finished = false;
+    while (!finished && kept.size() < wanted && from < SPACE_SCAN_MAX) {
+      List<News> chunk = reader.read(from, SPACE_SCAN_CHUNK);
+      int read = chunk == null ? 0 : chunk.size();
+      finished = read == 0;
+      from += SPACE_SCAN_CHUNK;
+      for (int i = 0; i < read && kept.size() < wanted; i++) {
+        News news = chunk.get(i);
+        if (news != null && isArticleOfSpace(news, spaceId, username)) {
+          kept.add(news);
+        }
+      }
+    }
+    return kept.stream().skip(usedOffset).toList();
+  }
+
+  /**
+   * Candidates are first dropped on the fields the listed article already
+   * carries and that {@link ArticleSpaceScopeResolver} refuses on anyway (an
+   * article of another space, a published, deleted or not posted one), which
+   * saves its lookup; it stays the final word for the publication targets
+   * and the shares.
+   *
+   * @param news an article
+   * @param spaceId a space id
+   * @param username the current user
+   * @return true when the space scope tells that space for the article and
+   *         the user can view it
+   */
+  private boolean isArticleOfSpace(News news, long spaceId, String username) {
+    if (!String.valueOf(spaceId).equals(news.getSpaceId())
+        || news.isPublished()
+        || news.isDeleted()
+        || !NewsService.POSTED.equals(news.getPublicationState())) {
+      return false;
+    }
+    Long articleSpaceId = spaceScopeResolver.spaceOf(news.getId());
+    return articleSpaceId != null && articleSpaceId.longValue() == spaceId && newsService.canViewNews(news, username);
+  }
+
+  /**
+   * @param space a space
+   * @param username the current user
+   * @return the id of the identity of the space, or null when the user can't
+   *         view the space or it has no identity
+   */
+  private String getSpaceIdentityId(Space space, String username) {
+    if (!spaceService.canViewSpace(space, username)) {
+      return null;
+    }
+    org.exoplatform.social.core.identity.model.Identity spaceIdentity =
+                                                                      identityManager.getOrCreateSpaceIdentity(space.getPrettyName());
+    return spaceIdentity == null ? null : spaceIdentity.getId();
+  }
+
+  /**
+   * @param query the search term, null for a plain list
+   * @param spaceFilter the space filter value, null for none
+   * @param offset the first article read
+   * @param limit the most articles read
+   * @return the filter, most recently updated first
+   */
+  private NewsFilter newsFilter(String query, String spaceFilter, int offset, int limit) {
+    NewsFilter filter = new NewsFilter();
+    filter.setSearchText(query);
+    filter.setOffset(offset);
+    filter.setLimit(limit);
+    if (spaceFilter != null) {
+      filter.setSpaces(List.of(spaceFilter));
+    }
+    filter.setSortField("UPDATED_DATE");
+    filter.setSortDirection("desc");
+    return filter;
+  }
+
+  /**
+   * In a run limited to a space, an article is edited, or posted to its
+   * space's stream, only by the user who owns it: the space roles that let
+   * {@link NewsService#canEditNews} or a publisher's right write another
+   * member's article (manager, redactor, publisher) are never lent to a
+   * write someone else approved. Outside such a run, nothing more than the
+   * tool's own permission check is checked.
+   *
+   * @param news the article to edit or post
+   * @param username the current user
+   * @throws IllegalAccessException when the run is limited to a space and the
+   *           article isn't the current user's
+   */
+  private void checkOwnArticleInSpaceScopedRun(News news, String username) throws IllegalAccessException {
+    if (isSpaceScoped() && (StringUtils.isBlank(news.getOwner()) || !news.getOwner().equals(username))) {
+      throw new IllegalAccessException("""
+          In a run limited to a space, only an article of the current user can be edited or posted: the article with id '%s' isn't.
+          """.formatted(news.getId()));
+    }
   }
 
   private void checkNewsId(long newsId) {
