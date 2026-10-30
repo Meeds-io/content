@@ -2011,13 +2011,15 @@ public class NewsMcpToolTest {
   }
 
   /**
-   * In a run limited to a space, none of the three article edits reaches an
-   * article another member owns, nor one with no owner, though the current
-   * user's space role lets them edit it: each is refused before any write.
-   * A run whose identity can't be read is taken for a limited one.
+   * In a run limited to a space, none of the three article edits, nor the
+   * post to the space's stream, reaches an article another member owns, nor
+   * one with no owner, though the current user's space role lets them write
+   * it: each is refused before any write. A run whose identity can't be read
+   * is taken for a limited one.
    * Mutants: the guard dropped from one of the tools, moved after the cover
-   * is fetched and uploaded, the owner comparison inverted, or an unreadable
-   * identity taken for an unlimited run.
+   * is fetched and uploaded, moved after the stream post's setters and draft
+   * read, the owner comparison inverted, or an unreadable identity taken for
+   * an unlimited run.
    */
   @Test
   public void articleEditsInASpaceScopedRunRefuseAnArticleOfAnotherOwner() throws Exception { // NOSONAR
@@ -2045,10 +2047,13 @@ public class NewsMcpToolTest {
     lenient().when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
     lenient().when(newsService.canEditNews(news, USER)).thenReturn(true);
 
-    List<CheckedSupplier<NewsModel>> edits = List.of(() -> tool.updateNews(NEWS_ID, "Updated", "Updated summary", "Updated content", "en"),
-                                                     () -> tool.setNewsIllustration(NEWS_ID, null, "iVBORw0KGgo=", null, null, "alt", "en"),
-                                                     () -> tool.removeNewsIllustration(NEWS_ID, "en"));
-    for (CheckedSupplier<NewsModel> edit : edits) {
+    lenient().when(spaceService.canPublishOnSpace(space, USER)).thenReturn(true);
+
+    List<CheckedSupplier<?>> edits = List.of(() -> tool.updateNews(NEWS_ID, "Updated", "Updated summary", "Updated content", "en"),
+                                             () -> tool.publishNewsInActivityStream(NEWS_ID),
+                                             () -> tool.setNewsIllustration(NEWS_ID, null, "iVBORw0KGgo=", null, null, "alt", "en"),
+                                             () -> tool.removeNewsIllustration(NEWS_ID, "en"));
+    for (CheckedSupplier<?> edit : edits) {
       Exception refusal = null;
       try (MockedStatic<UploadToolUtils> upload = mockStatic(UploadToolUtils.class)) {
         try {
@@ -2067,6 +2072,60 @@ public class NewsMcpToolTest {
     verify(newsService, never()).updateNews(any(), anyString(), any(), anyBoolean(), anyString(), anyString());
     verify(noteService, never()).saveNoteMetadata(any(), any(), anyLong());
     verify(noteService, never()).removeNoteFeaturedImage(anyLong(), anyLong(), any(), anyBoolean(), anyLong());
+    verify(newsService, never()).postNews(any(), anyString());
+    verify(newsService, never()).getNewsById(anyString(), any(), anyBoolean(), eq(NewsObjectType.LATEST_DRAFT.name().toLowerCase()));
+    verify(news, never()).setPublisher(anyString());
+  }
+
+  /**
+   * In a run limited to a space, the user's own article is posted to its
+   * space's stream.
+   * Mutant: the owner guard refusing the user's own article.
+   */
+  @Test
+  public void publishNewsInActivityStreamPostsTheUsersOwnArticleInASpaceScopedRun() throws Exception { // NOSONAR
+    actingIdentity = limitedTo(SPACE_ID);
+    postToStreamAnArticleOf(USER);
+  }
+
+  /**
+   * Outside a run limited to a space, another member's article is posted to
+   * its space's stream as before, on the publisher's right alone.
+   * Mutant: the owner guard applied outside a run limited to a space.
+   */
+  @Test
+  public void publishNewsInActivityStreamPostsAnotherMembersArticleOutsideASpaceScopedRun() throws Exception { // NOSONAR
+    actingIdentity = limitedTo(null);
+    postToStreamAnArticleOf("someone");
+  }
+
+  /**
+   * Posts to the stream an article with no activity yet, of the given owner,
+   * and checks it is posted.
+   *
+   * @param owner the owner of the article
+   * @throws Exception when the post fails
+   */
+  private void postToStreamAnArticleOf(String owner) throws Exception {
+    News article = mockNews();
+    when(article.getActivityId()).thenReturn(null);
+    lenient().when(article.getOwner()).thenReturn(owner);
+    Space space = mockSpace();
+    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)),
+                                 eq(currentIdentity),
+                                 eq(false),
+                                 eq(NewsObjectType.ARTICLE.name().toLowerCase()))).thenReturn(article);
+    when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)),
+                                 eq(currentIdentity),
+                                 eq(false),
+                                 eq(NewsObjectType.LATEST_DRAFT.name().toLowerCase()))).thenReturn(null);
+    when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
+    when(spaceService.canPublishOnSpace(space, USER)).thenReturn(true);
+    when(newsService.updateNews(eq(article), eq(USER), eq(true), anyBoolean(), anyString(), anyString())).thenReturn(article);
+
+    runWithStaticMocks(() -> tool.publishNewsInActivityStream(NEWS_ID));
+
+    verify(newsService).postNews(article, USER);
   }
 
   /**
