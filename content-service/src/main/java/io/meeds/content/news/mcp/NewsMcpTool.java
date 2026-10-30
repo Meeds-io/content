@@ -187,6 +187,7 @@ public class NewsMcpTool implements McpToolPlugin {
           The current user can't publish a news on the designated space '%s' with id '%s'.
           """.formatted(space.getDisplayName(), space.getSpaceId()));
     }
+    checkOwnArticleInSpaceScopedRun(news, currentUsername);
     boolean hasActivity = StringUtils.isNotBlank(news.getActivityId());
     news.setPublicationState(NewsService.POSTED);
     news.setPublisher(currentUsername);
@@ -1125,13 +1126,14 @@ public class NewsMcpTool implements McpToolPlugin {
   }
 
   /**
-   * In a run limited to a space, an article is edited only by the user who
-   * owns it: the space roles that let {@link NewsService#canEditNews} edit
-   * another member's article (manager, redactor, publisher) are never lent
-   * to an edit someone else approved. Outside such a run, nothing more than
-   * {@link NewsService#canEditNews} is checked.
+   * In a run limited to a space, an article is edited, or posted to its
+   * space's stream, only by the user who owns it: the space roles that let
+   * {@link NewsService#canEditNews} or a publisher's right write another
+   * member's article (manager, redactor, publisher) are never lent to a
+   * write someone else approved. Outside such a run, nothing more than the
+   * tool's own permission check is checked.
    *
-   * @param news the article to edit
+   * @param news the article to edit or post
    * @param username the current user
    * @throws IllegalAccessException when the run is limited to a space and the
    *           article isn't the current user's
@@ -1139,7 +1141,7 @@ public class NewsMcpTool implements McpToolPlugin {
   private void checkOwnArticleInSpaceScopedRun(News news, String username) throws IllegalAccessException {
     if (isSpaceScoped() && (StringUtils.isBlank(news.getOwner()) || !news.getOwner().equals(username))) {
       throw new IllegalAccessException("""
-          In a run limited to a space, only an article of the current user can be edited: the article with id '%s' isn't.
+          In a run limited to a space, only an article of the current user can be edited or posted: the article with id '%s' isn't.
           """.formatted(news.getId()));
     }
   }
