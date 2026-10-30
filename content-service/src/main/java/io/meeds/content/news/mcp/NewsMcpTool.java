@@ -489,6 +489,7 @@ public class NewsMcpTool implements McpToolPlugin {
           The current user doesn't have priviledges to update the news with id '%s'.
           """.formatted(space.getDisplayName(), space.getSpaceId()));
     }
+    checkOwnArticleInSpaceScopedRun(news, currentUsername);
     boolean titleOrContentChanged = false;
     if (StringUtils.isNotBlank(title)) {
       news.setTitle(title);
@@ -750,6 +751,7 @@ public class NewsMcpTool implements McpToolPlugin {
           The current user doesn't have priviledges to update the news with id '%s'.
           """.formatted(newsId));
     }
+    checkOwnArticleInSpaceScopedRun(news, currentUsername);
     UploadToolUtils.FetchedContent image = UploadToolUtils.resolveImage(attachmentService,
                                                                         fileService,
                                                                         getCurrentUserAclIdentity(),
@@ -819,6 +821,7 @@ public class NewsMcpTool implements McpToolPlugin {
           The current user doesn't have priviledges to update the news with id '%s'.
           """.formatted(newsId));
     }
+    checkOwnArticleInSpaceScopedRun(news, currentUsername);
     long pageId = news.getTargetPageId() != null ? Long.parseLong(news.getTargetPageId()) : newsId;
     boolean isDraft = news.getTargetPageId() != null;
     String lang = normalizeLanguage(language);
@@ -1119,6 +1122,26 @@ public class NewsMcpTool implements McpToolPlugin {
     filter.setSortField("UPDATED_DATE");
     filter.setSortDirection("desc");
     return filter;
+  }
+
+  /**
+   * In a run limited to a space, an article is edited only by the user who
+   * owns it: the space roles that let {@link NewsService#canEditNews} edit
+   * another member's article (manager, redactor, publisher) are never lent
+   * to an edit someone else approved. Outside such a run, nothing more than
+   * {@link NewsService#canEditNews} is checked.
+   *
+   * @param news the article to edit
+   * @param username the current user
+   * @throws IllegalAccessException when the run is limited to a space and the
+   *           article isn't the current user's
+   */
+  private void checkOwnArticleInSpaceScopedRun(News news, String username) throws IllegalAccessException {
+    if (isSpaceScoped() && (StringUtils.isBlank(news.getOwner()) || !news.getOwner().equals(username))) {
+      throw new IllegalAccessException("""
+          In a run limited to a space, only an article of the current user can be edited: the article with id '%s' isn't.
+          """.formatted(news.getId()));
+    }
   }
 
   private void checkNewsId(long newsId) {

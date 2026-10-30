@@ -171,6 +171,9 @@ public class NewsMcpToolTest {
   /** The acting identity the static mocks give, null for none. */
   private ActingIdentity          actingIdentity;
 
+  /** True when the static mocks fail to read the acting identity. */
+  private boolean                 actingIdentityUnreadable;
+
   private NewsMcpTool             tool;
 
   @Before
@@ -307,9 +310,36 @@ public class NewsMcpToolTest {
     tool.updateNews(NEWS_ID, TITLE, SUMMARY, CONTENT, "en");
   }
 
+  /**
+   * Outside a run limited to a space, an article another member owns is updated as before, on the edit right alone.
+   * Mutant: the owner guard applied outside a run limited to a space.
+   */
   @Test
   public void updateNewsShouldUpdateTitleSummaryAndContent() throws Exception { // NOSONAR
+    actingIdentity = limitedTo(null);
+    updateTitleSummaryAndContent("someone");
+  }
+
+  /**
+   * In a run limited to a space, the user's own article is updated.
+   * Mutant: the guard refusing the user's own article.
+   */
+  @Test
+  public void updateNewsShouldUpdateTitleSummaryAndContentOnTheUsersOwnArticleInASpaceScopedRun() throws Exception { // NOSONAR
+    actingIdentity = limitedTo(SPACE_ID);
+    updateTitleSummaryAndContent(USER);
+  }
+
+  /**
+   * Runs the edit on an article of the given owner, which the current user
+   * may edit, and checks it is written.
+   *
+   * @param owner the owner of the article
+   * @throws Exception when the edit fails
+   */
+  private void updateTitleSummaryAndContent(String owner) throws Exception {
     News news = mockNews();
+    lenient().when(news.getOwner()).thenReturn(owner);
     Space space = mockSpace();
     mockUserIdentity();
 
@@ -1843,9 +1873,36 @@ public class NewsMcpToolTest {
     }
   }
 
+  /**
+   * Outside a run limited to a space, a cover is set on an article another member owns as before, on the edit right alone.
+   * Mutant: the owner guard applied outside a run limited to a space.
+   */
   @Test
   public void setNewsIllustrationShouldSaveMetadataAndRefresh() throws Exception { // NOSONAR
+    actingIdentity = limitedTo(null);
+    setIllustrationAndRefresh("someone");
+  }
+
+  /**
+   * In a run limited to a space, a cover is set on the user's own article.
+   * Mutant: the guard refusing the user's own article.
+   */
+  @Test
+  public void setNewsIllustrationShouldSaveMetadataAndRefreshOnTheUsersOwnArticleInASpaceScopedRun() throws Exception { // NOSONAR
+    actingIdentity = limitedTo(SPACE_ID);
+    setIllustrationAndRefresh(USER);
+  }
+
+  /**
+   * Runs the edit on an article of the given owner, which the current user
+   * may edit, and checks it is written.
+   *
+   * @param owner the owner of the article
+   * @throws Exception when the edit fails
+   */
+  private void setIllustrationAndRefresh(String owner) throws Exception {
     News news = mockNews();
+    lenient().when(news.getOwner()).thenReturn(owner);
     Space space = mockSpace();
     mockUserIdentity();
 
@@ -1888,9 +1945,36 @@ public class NewsMcpToolTest {
     tool.removeNewsIllustration(NEWS_ID, "en");
   }
 
+  /**
+   * Outside a run limited to a space, the cover of an article another member owns is removed as before, on the edit right alone.
+   * Mutant: the owner guard applied outside a run limited to a space.
+   */
   @Test
   public void removeNewsIllustrationShouldRemoveFeaturedImageAndRefresh() throws Exception { // NOSONAR
+    actingIdentity = limitedTo(null);
+    removeIllustrationAndRefresh("someone");
+  }
+
+  /**
+   * In a run limited to a space, the cover of the user's own article is removed.
+   * Mutant: the guard refusing the user's own article.
+   */
+  @Test
+  public void removeNewsIllustrationShouldRemoveFeaturedImageAndRefreshOnTheUsersOwnArticleInASpaceScopedRun() throws Exception { // NOSONAR
+    actingIdentity = limitedTo(SPACE_ID);
+    removeIllustrationAndRefresh(USER);
+  }
+
+  /**
+   * Runs the edit on an article of the given owner, which the current user
+   * may edit, and checks it is written.
+   *
+   * @param owner the owner of the article
+   * @throws Exception when the edit fails
+   */
+  private void removeIllustrationAndRefresh(String owner) throws Exception {
     News news = mockNews();
+    lenient().when(news.getOwner()).thenReturn(owner);
     NotePageProperties ownProperties = news.getProperties();
     ownProperties.setFeaturedImage(new NoteFeaturedImage(500L, null, null, 0L, 0L, null, null));
     Space space = mockSpace();
@@ -1924,6 +2008,65 @@ public class NewsMcpToolTest {
     assertEquals(NEWS_ID, result.id());
     verify(noteService).removeNoteFeaturedImage(eq(NEWS_ID), eq(500L), eq("en"), eq(false), eq(1L));
     verify(newsService).updateNews(eq(news), eq(USER), eq(false), anyBoolean(), anyString(), anyString());
+  }
+
+  /**
+   * In a run limited to a space, none of the three article edits reaches an
+   * article another member owns, nor one with no owner, though the current
+   * user's space role lets them edit it: each is refused before any write.
+   * A run whose identity can't be read is taken for a limited one.
+   * Mutants: the guard dropped from one of the tools, moved after the cover
+   * is fetched and uploaded, the owner comparison inverted, or an unreadable
+   * identity taken for an unlimited run.
+   */
+  @Test
+  public void articleEditsInASpaceScopedRunRefuseAnArticleOfAnotherOwner() throws Exception { // NOSONAR
+    for (String owner : new String[] { "someone", null }) {
+      actingIdentity = limitedTo(SPACE_ID);
+      assertEditsRefused(owner);
+    }
+    actingIdentity = null;
+    actingIdentityUnreadable = true;
+    assertEditsRefused("someone");
+  }
+
+  /**
+   * @param owner the owner of the article, never the current user
+   * @throws Exception when the setup fails
+   */
+  private void assertEditsRefused(String owner) throws Exception {
+    News news = mockNews();
+    lenient().when(news.getOwner()).thenReturn(owner);
+    Space space = mockSpace();
+    lenient().when(newsService.getNewsByIdAndLang(eq(String.valueOf(NEWS_ID)), eq(currentIdentity), eq(false), anyString(), any()))
+             .thenReturn(news);
+    lenient().when(newsService.getNewsById(eq(String.valueOf(NEWS_ID)), eq(currentIdentity), eq(false), anyString()))
+             .thenReturn(news);
+    lenient().when(spaceService.getSpaceById(String.valueOf(SPACE_ID))).thenReturn(space);
+    lenient().when(newsService.canEditNews(news, USER)).thenReturn(true);
+
+    List<CheckedSupplier<NewsModel>> edits = List.of(() -> tool.updateNews(NEWS_ID, "Updated", "Updated summary", "Updated content", "en"),
+                                                     () -> tool.setNewsIllustration(NEWS_ID, null, "iVBORw0KGgo=", null, null, "alt", "en"),
+                                                     () -> tool.removeNewsIllustration(NEWS_ID, "en"));
+    for (CheckedSupplier<NewsModel> edit : edits) {
+      Exception refusal = null;
+      try (MockedStatic<UploadToolUtils> upload = mockStatic(UploadToolUtils.class)) {
+        try {
+          runWithStaticMocks(edit);
+        } catch (Exception e) {
+          refusal = e;
+        }
+        // refused before the cover is fetched or uploaded, not only before it is saved
+        upload.verifyNoInteractions();
+      }
+      // any other outcome, a later failure included, means the edit went past the guard
+      assertTrue("The edit of an article of " + owner + " wasn't refused by the owner guard: " + refusal,
+                 refusal instanceof IllegalAccessException
+                     && refusal.getMessage().contains("only an article of the current user"));
+    }
+    verify(newsService, never()).updateNews(any(), anyString(), any(), anyBoolean(), anyString(), anyString());
+    verify(noteService, never()).saveNoteMetadata(any(), any(), anyLong());
+    verify(noteService, never()).removeNoteFeaturedImage(anyLong(), anyLong(), any(), anyBoolean(), anyLong());
   }
 
   /**
@@ -2004,7 +2147,11 @@ public class NewsMcpToolTest {
         MockedStatic<SpaceToolUtils> spaces = mockStatic(SpaceToolUtils.class)) {
 
       mcp.when(McpToolUtils::getUserTimeZone).thenReturn(TimeZone.getTimeZone("UTC"));
-      mcp.when(McpToolUtils::getCurrentActingIdentity).thenReturn(actingIdentity);
+      if (actingIdentityUnreadable) {
+        mcp.when(McpToolUtils::getCurrentActingIdentity).thenThrow(new IllegalStateException("unreadable"));
+      } else {
+        mcp.when(McpToolUtils::getCurrentActingIdentity).thenReturn(actingIdentity);
+      }
       mcp.when(() -> McpToolUtils.formatDate(any(Date.class))).thenReturn("2024-01-01T00:00:00Z");
       mcp.when(() -> McpToolUtils.markdownToHtml(anyString()))
          .thenAnswer(invocation -> "<p>" + invocation.getArgument(0) + "</p>");
