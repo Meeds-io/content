@@ -20,7 +20,7 @@
         "idempotentHint": false,
         "openWorldHint": false
       },
-      "space_scope": { "space_arg": "target_space_id", "allowed_args": ["title", "summary", "html_content"] },
+      "space_scope": { "space_arg": "target_space_id", "allowed_args": ["title", "summary", "html_content"], "space_role": "redactor" },
       "require_approval": true
     },
     {
@@ -40,7 +40,7 @@
         "idempotentHint": false,
         "openWorldHint": false
       },
-      "space_scope": { "object_arg": "news_id", "resolver": "article" },
+      "space_scope": { "object_arg": "news_id", "resolver": "article", "space_role": "publisher" },
       "require_approval": true
     },
     {
@@ -141,7 +141,7 @@
         "idempotentHint": false,
         "openWorldHint": false
       },
-      "space_scope": { "object_arg": "news_id", "resolver": "article", "space_admin": true },
+      "space_scope": { "object_arg": "news_id", "resolver": "article", "space_admin": true, "space_role": "manager" },
       "require_approval": true
     },
     {
@@ -231,7 +231,7 @@
         "idempotentHint": false,
         "openWorldHint": false
       },
-      "space_scope": { "object_arg": "news_id", "resolver": "article", "allowed_args": ["title", "summary", "html_content", "language"] },
+      "space_scope": { "object_arg": "news_id", "resolver": "article", "allowed_args": ["title", "summary", "html_content", "language"], "space_role": "redactor" },
       "require_approval": true
     },
     {
@@ -257,7 +257,7 @@
         "idempotentHint": false,
         "openWorldHint": false
       },
-      "space_scope": { "object_arg": "news_id", "resolver": "article", "allowed_args": ["image_base64", "alt_text", "language"] },
+      "space_scope": { "object_arg": "news_id", "resolver": "article", "allowed_args": ["image_base64", "alt_text", "language"], "space_role": "redactor" },
       "require_approval": true
     },
     {
@@ -284,7 +284,7 @@
         "idempotentHint": false,
         "openWorldHint": false
       },
-      "space_scope": { "object_arg": "news_id", "resolver": "article", "allowed_args": ["language"] },
+      "space_scope": { "object_arg": "news_id", "resolver": "article", "allowed_args": ["language"], "space_role": "redactor" },
       "require_approval": true
     }
   ]
