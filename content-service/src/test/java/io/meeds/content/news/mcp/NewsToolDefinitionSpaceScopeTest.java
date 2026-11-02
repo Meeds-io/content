@@ -414,9 +414,12 @@ class NewsToolDefinitionSpaceScopeTest {
    * {@code canRedactOnSpace} ({@code NewsService#canCreateNews},
    * {@code #canEditNews}), so {@code redactor}; posting it to the stream is
    * {@code canPublishOnSpace}
-   * ({@code NewsMcpTool#publishNewsInActivityStream}), so {@code publisher};
-   * deleting one is moderation, so {@code manager}. A {@code space_admin}
-   * write declares {@code manager}.
+   * ({@code NewsMcpTool#publishNewsInActivityStream}), so {@code publisher}.
+   * {@code delete_news} is {@code space_admin}, since the tool checks
+   * {@code canEditNews} alone and has no owner guard, so {@code manager} is
+   * the only role its declaration allows: stricter than in person, where a
+   * redactor may delete their own article. A {@code space_admin} write
+   * declares {@code manager}.
    * Mutants: a write's role dropped or changed, or a read given one.
    *
    * @throws Exception when the shipped definitions can't be read
