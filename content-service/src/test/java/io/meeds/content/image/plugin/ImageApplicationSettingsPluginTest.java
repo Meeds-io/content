@@ -390,6 +390,30 @@ class ImageApplicationSettingsPluginTest {
   }
 
   @Test
+  void testReadWithoutImageReportsTheFormatANewImageTakes() throws Exception {
+    storeLiveSetting();
+
+    assertEquals("custom", plugin.read(context(LIVE_NAME, false)).get("format"));
+  }
+
+  @Test
+  void testApplyKeepsAStoredAltTextSentBackUnchanged() throws Exception {
+    storeLiveSetting();
+    storeImage(LIVE_NAME, "file-1", "Revenue <10%", "landscape", null, null);
+    ApplicationSettingsContext context = context(LIVE_NAME, true);
+    when(applicationSettingsService.isOwner(context)).thenReturn(true);
+
+    plugin.apply(context, Map.of("alt_text", "Revenue <10%", "link_url", "/portal/classic/news"));
+
+    ArgumentCaptor<FileAttachmentResourceList> list = ArgumentCaptor.forClass(FileAttachmentResourceList.class);
+    verify(attachmentService).saveAttachments(list.capture(), eq(identity));
+    assertEquals(List.of(new FileAttachmentObject("file-1", null, "Revenue <10%", "landscape", "/portal/classic/news", null)),
+                 list.getValue().getAttachedFiles());
+    Map<String, Object> changed = Map.of("alt_text", "Revenue <20%");
+    assertThrows(IllegalArgumentException.class, () -> plugin.validate(context, changed));
+  }
+
+  @Test
   void testValidateLeavesTheUploadUsable() throws Exception {
     ApplicationSettingsContext context = context(null, true);
 

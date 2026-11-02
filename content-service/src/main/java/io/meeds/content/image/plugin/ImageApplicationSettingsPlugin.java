@@ -164,7 +164,7 @@ public class ImageApplicationSettingsPlugin implements ApplicationSettingsPlugin
                    enumSchema(FORMATS,
                               "The box the image is shown in: custom (the default for a new image) keeps the image's own ratio; landscape (8:1), portrait (3:4) and square (1:1) stretch the image to that ratio, so send an image already cropped to it"));
     properties.put(ALT_TEXT,
-                   stringSchema("The alternative text read by screen readers, at most 1000 characters, without '<'; an empty text removes it"));
+                   stringSchema("The alternative text read by screen readers, at most 1000 characters, without '<' unless sent back unchanged; an empty text removes it"));
     properties.put(LINK_URL,
                    stringSchema("The link opened on a click: an http(s) URL or a path of the platform; an empty text removes it"));
     properties.put(LINK_TARGET, enumSchema(LINK_TARGETS, "Where the link opens: same_tab (default) or new_tab"));
@@ -180,7 +180,7 @@ public class ImageApplicationSettingsPlugin implements ApplicationSettingsPlugin
     ObjectAttachmentDetail image = getImage(setting.getName());
     Map<String, Object> settings = new LinkedHashMap<>();
     settings.put(IMAGE_URL, image == null ? "" : getImageUrl(setting.getName(), image));
-    settings.put(FORMAT, image == null ? DEFAULT_FORMAT : StringUtils.defaultIfBlank(image.getFormat(), DEFAULT_FORMAT));
+    settings.put(FORMAT, image == null ? CUSTOM_FORMAT : StringUtils.defaultIfBlank(image.getFormat(), DEFAULT_FORMAT));
     settings.put(ALT_TEXT, image == null ? "" : StringUtils.defaultString(image.getAltText()));
     settings.put(LINK_URL, image == null ? "" : StringUtils.defaultString(image.getLinkUrl()));
     settings.put(LINK_TARGET, image != null && BLANK_TARGET.equals(image.getLinkTarget()) ? NEW_TAB : SAME_TAB);
@@ -297,7 +297,7 @@ public class ImageApplicationSettingsPlugin implements ApplicationSettingsPlugin
     }
     if (settings.containsKey(ALT_TEXT)) {
       String altText = toText(settings.get(ALT_TEXT), ALT_TEXT, MAX_ALT_TEXT_LENGTH);
-      if (altText.contains("<")) {
+      if (altText.contains("<") && !altText.equals(merged.getAltText())) {
         throw notAccepted(ALT_TEXT);
       }
       merged.setAltText(StringUtils.trimToNull(altText));
