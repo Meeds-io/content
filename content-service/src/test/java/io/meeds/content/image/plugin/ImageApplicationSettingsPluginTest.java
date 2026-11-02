@@ -386,6 +386,16 @@ class ImageApplicationSettingsPluginTest {
     verify(uploadService).removeUploadResource(UPLOAD_ID);
   }
 
+  @Test
+  void testValidateLeavesTheUploadUsable() throws Exception {
+    ApplicationSettingsContext context = context(null, true);
+
+    plugin.validate(context, Map.of("image_upload_id", UPLOAD_ID, "format", "square"));
+
+    verify(uploadService, never()).removeUploadResource(anyString());
+    verify(attachmentService, never()).saveAttachments(any(), any());
+  }
+
   private void storeLiveSetting() {
     lenient().when(cmsService.getSetting(OBJECT_TYPE, LIVE_NAME)).thenReturn(new CMSSetting(OBJECT_TYPE, LIVE_NAME, LIVE_PAGE, 0L));
   }

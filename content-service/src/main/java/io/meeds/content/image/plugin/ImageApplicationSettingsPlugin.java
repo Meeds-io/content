@@ -155,7 +155,7 @@ public class ImageApplicationSettingsPlugin implements ApplicationSettingsPlugin
   public Map<String, Object> getSettingsSchema() {
     Map<String, Object> properties = new LinkedHashMap<>();
     properties.put(IMAGE_UPLOAD_ID,
-                   stringSchema("The upload_id upload_layout_image returned, replacing the image shown, the id consumed and released by this call once it has resolved it, whether it succeeds or fails; an empty text removes the image"));
+                   stringSchema("The upload_id upload_layout_image returned, replacing the image shown; the id is consumed and released by the call that writes this application, whether the write succeeds or fails, and stays usable when the call is refused before that write; an empty text removes the image"));
     properties.put(IMAGE_URL,
                    stringSchema("The url of the image shown, read only: the stored url sent back unchanged is kept"));
     properties.put(FORMAT,
