@@ -414,6 +414,22 @@ class ImageApplicationSettingsPluginTest {
   }
 
   @Test
+  void testApplyCarriesTheStoredFormatOfAnImageWithoutAltText() throws Exception {
+    storeLiveSetting();
+    storeImage(LIVE_NAME, "file-1", null, "custom", null, null);
+    ApplicationSettingsContext context = context(LIVE_NAME, true);
+    when(applicationSettingsService.isOwner(context)).thenReturn(true);
+
+    assertEquals("custom", plugin.read(context).get("format"));
+    plugin.apply(context, Map.of("link_url", "/portal/classic/news"));
+
+    ArgumentCaptor<FileAttachmentResourceList> list = ArgumentCaptor.forClass(FileAttachmentResourceList.class);
+    verify(attachmentService).saveAttachments(list.capture(), eq(identity));
+    assertEquals(List.of(new FileAttachmentObject("file-1", null, null, "custom", "/portal/classic/news", null)),
+                 list.getValue().getAttachedFiles());
+  }
+
+  @Test
   void testValidateLeavesTheUploadUsable() throws Exception {
     ApplicationSettingsContext context = context(null, true);
 
