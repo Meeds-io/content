@@ -162,7 +162,7 @@ public class ImageApplicationSettingsPlugin implements ApplicationSettingsPlugin
                    stringSchema("The url of the image shown, read only: the stored url sent back unchanged is kept"));
     properties.put(FORMAT,
                    enumSchema(FORMATS,
-                              "The box the image is shown in: custom (the default for a new image) keeps the image's own ratio; landscape (8:1), portrait (3:4) and square (1:1) stretch the image to that ratio, so send an image already cropped to it"));
+                              "The box the image is shown in: custom (the default whenever image_upload_id is given without format) keeps the image's own ratio; landscape (8:1), portrait (3:4) and square (1:1) stretch the image to that ratio, so send an image already cropped to it"));
     properties.put(ALT_TEXT,
                    stringSchema("The alternative text read by screen readers, at most 1000 characters, without '<' unless sent back unchanged; an empty text removes it"));
     properties.put(LINK_URL,
@@ -287,7 +287,7 @@ public class ImageApplicationSettingsPlugin implements ApplicationSettingsPlugin
     FileAttachmentObject merged = new FileAttachmentObject(uploadId == null ? image.getId() : null,
                                                            uploadId,
                                                            image == null ? null : image.getAltText(),
-                                                           image == null ? CUSTOM_FORMAT
+                                                           image == null || uploadId != null ? CUSTOM_FORMAT
                                                                          : StringUtils.defaultIfBlank(image.getFormat(),
                                                                                                       DEFAULT_FORMAT),
                                                            image == null ? null : image.getLinkUrl(),

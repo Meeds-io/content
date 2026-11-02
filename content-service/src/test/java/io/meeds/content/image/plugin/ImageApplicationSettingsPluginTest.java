@@ -430,6 +430,21 @@ class ImageApplicationSettingsPluginTest {
   }
 
   @Test
+  void testApplyGivesAReplacingUploadTheCustomFormat() throws Exception {
+    storeLiveSetting();
+    storeImage(LIVE_NAME, "file-1", "kept alt", "portrait", null, null);
+    ApplicationSettingsContext context = context(LIVE_NAME, true);
+    when(applicationSettingsService.isOwner(context)).thenReturn(true);
+
+    plugin.apply(context, Map.of("image_upload_id", UPLOAD_ID));
+
+    ArgumentCaptor<FileAttachmentResourceList> list = ArgumentCaptor.forClass(FileAttachmentResourceList.class);
+    verify(attachmentService).saveAttachments(list.capture(), eq(identity));
+    assertEquals(List.of(new FileAttachmentObject(null, UPLOAD_ID, "kept alt", "custom", null, null)),
+                 list.getValue().getUploadedFiles());
+  }
+
+  @Test
   void testValidateLeavesTheUploadUsable() throws Exception {
     ApplicationSettingsContext context = context(null, true);
 
