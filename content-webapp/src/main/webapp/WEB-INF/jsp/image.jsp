@@ -20,6 +20,7 @@
 %>
 <%@page import="org.exoplatform.social.attachment.model.ObjectAttachmentDetail"%>
 <%@page import="org.apache.commons.lang3.StringUtils"%>
+<%@page import="org.apache.commons.text.StringEscapeUtils"%>
 <%@page import="java.util.List"%>
 <%@page import="org.exoplatform.web.PortalHttpServletResponseWrapper"%>
 <%@page import="org.exoplatform.portal.application.PortalRequestContext"%>
@@ -42,7 +43,7 @@
     class="v-application transparent v-application--is-ltr theme--light" flat=""
     id="<%=id%>">
     <script type="text/javascript">
-      require(['PORTLET/content/Image'], app => app.init('<%=id%>', '<%=name%>', <%=canEdit%>, [<%=StringUtils.join(files.stream().map(ObjectAttachmentDetail::toString).toList(), ",")%>]));
+      require(['PORTLET/content/Image'], app => app.init('<%=id%>', '<%=StringEscapeUtils.escapeEcmaScript(name)%>', <%=canEdit%>, [<%=StringUtils.join(files.stream().map(ObjectAttachmentDetail::toString).map(json -> json.replace("<", "\\u003c").replace("/", "\\u002f")).toList(), ",")%>]));
     </script>
   </div>
 </div>
