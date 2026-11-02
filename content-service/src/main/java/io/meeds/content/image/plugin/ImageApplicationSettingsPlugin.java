@@ -99,11 +99,13 @@ public class ImageApplicationSettingsPlugin implements ApplicationSettingsPlugin
 
   public static final String        DEFAULT_FORMAT      = "landscape";
 
+  public static final String        CUSTOM_FORMAT       = "custom";
+
   public static final int           MAX_ALT_TEXT_LENGTH = 1000;
 
   public static final String        IMAGE_URL_FORMAT    = "/portal/rest/v1/social/attachments/%s/%s/%s";
 
-  public static final List<String>  FORMATS             = Arrays.asList(DEFAULT_FORMAT, "portrait", "square", "custom");
+  public static final List<String>  FORMATS             = Arrays.asList(DEFAULT_FORMAT, "portrait", "square", CUSTOM_FORMAT);
 
   public static final List<String>  LINK_TARGETS        = Arrays.asList(NEW_TAB, SAME_TAB);
 
@@ -155,14 +157,14 @@ public class ImageApplicationSettingsPlugin implements ApplicationSettingsPlugin
   public Map<String, Object> getSettingsSchema() {
     Map<String, Object> properties = new LinkedHashMap<>();
     properties.put(IMAGE_UPLOAD_ID,
-                   stringSchema("The upload_id upload_layout_image returned, replacing the image shown; the id is consumed and released by the call that writes this application, whether the write succeeds or fails, and stays usable when the call is refused before that write; an empty text removes the image"));
+                   stringSchema("The upload_id upload_layout_image returned, replacing the image shown; the id is consumed and released by the call that writes this application, whether the write succeeds or fails, and stays usable when the call is refused before that write; an empty text removes the image, and is then given with no other setting but image_url"));
     properties.put(IMAGE_URL,
                    stringSchema("The url of the image shown, read only: the stored url sent back unchanged is kept"));
     properties.put(FORMAT,
                    enumSchema(FORMATS,
-                              "How the image is framed: landscape (default, 8:1), portrait (3:4), square or custom (its own ratio)"));
+                              "The box the image is shown in: custom (the default for a new image) keeps the image's own ratio; landscape (8:1), portrait (3:4) and square (1:1) stretch the image to that ratio, so send an image already cropped to it"));
     properties.put(ALT_TEXT,
-                   stringSchema("The alternative text read by screen readers, at most 1000 characters; an empty text removes it"));
+                   stringSchema("The alternative text read by screen readers, at most 1000 characters, without '<'; an empty text removes it"));
     properties.put(LINK_URL,
                    stringSchema("The link opened on a click: an http(s) URL or a path of the platform; an empty text removes it"));
     properties.put(LINK_TARGET, enumSchema(LINK_TARGETS, "Where the link opens: same_tab (default) or new_tab"));
@@ -285,7 +287,7 @@ public class ImageApplicationSettingsPlugin implements ApplicationSettingsPlugin
     FileAttachmentObject merged = new FileAttachmentObject(uploadId == null ? image.getId() : null,
                                                            uploadId,
                                                            image == null ? null : image.getAltText(),
-                                                           image == null ? DEFAULT_FORMAT
+                                                           image == null ? CUSTOM_FORMAT
                                                                          : StringUtils.defaultIfBlank(image.getFormat(),
                                                                                                       DEFAULT_FORMAT),
                                                            image == null ? null : image.getLinkUrl(),
@@ -294,7 +296,11 @@ public class ImageApplicationSettingsPlugin implements ApplicationSettingsPlugin
       merged.setFormat(toValue(settings.get(FORMAT), FORMAT, FORMATS));
     }
     if (settings.containsKey(ALT_TEXT)) {
-      merged.setAltText(StringUtils.trimToNull(toText(settings.get(ALT_TEXT), ALT_TEXT, MAX_ALT_TEXT_LENGTH)));
+      String altText = toText(settings.get(ALT_TEXT), ALT_TEXT, MAX_ALT_TEXT_LENGTH);
+      if (altText.contains("<")) {
+        throw notAccepted(ALT_TEXT);
+      }
+      merged.setAltText(StringUtils.trimToNull(altText));
     }
     if (settings.containsKey(LINK_URL)) {
       Object linkUrl = settings.get(LINK_URL);

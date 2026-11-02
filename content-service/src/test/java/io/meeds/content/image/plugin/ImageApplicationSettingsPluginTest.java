@@ -216,6 +216,9 @@ class ImageApplicationSettingsPluginTest {
                  () -> plugin.validate(context, Map.of("image_upload_id", UPLOAD_ID, "link_url", "javascript:alert(1)")));
     assertThrows(IllegalArgumentException.class,
                  () -> plugin.validate(context, Map.of("image_upload_id", UPLOAD_ID, "alt_text", "a".repeat(1001))));
+    assertThrows(IllegalArgumentException.class,
+                 () -> plugin.validate(context,
+                                       Map.of("image_upload_id", UPLOAD_ID, "alt_text", "</script><img src=x onerror=alert(1)>")));
     assertThrows(IllegalArgumentException.class, () -> plugin.validate(context, Map.of("image_path", "/a.png")));
     assertThrows(IllegalArgumentException.class, () -> plugin.validate(context, Map.of("image_upload_id", 12)));
   }
@@ -278,7 +281,7 @@ class ImageApplicationSettingsPluginTest {
   }
 
   @Test
-  void testApplyOnANewWindowCreatesItsSettingWithTheDefaultFormat() throws Exception {
+  void testApplyOnANewWindowCreatesItsSettingWithTheCustomFormat() throws Exception {
     ApplicationSettingsContext context = context(null, true);
 
     plugin.apply(context, Map.of("image_upload_id", UPLOAD_ID, "alt_text", "Team", "link_target", "new_tab"));
@@ -287,7 +290,7 @@ class ImageApplicationSettingsPluginTest {
     verify(attachmentService, never()).copyAttachments(any(), any(), any(), any(), any(), anyLong());
     ArgumentCaptor<FileAttachmentResourceList> list = ArgumentCaptor.forClass(FileAttachmentResourceList.class);
     verify(attachmentService).saveAttachments(list.capture(), eq(identity));
-    assertEquals(List.of(new FileAttachmentObject(null, UPLOAD_ID, "Team", "landscape", null, "_blank")),
+    assertEquals(List.of(new FileAttachmentObject(null, UPLOAD_ID, "Team", "custom", null, "_blank")),
                  list.getValue().getUploadedFiles());
   }
 
