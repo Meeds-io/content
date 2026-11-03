@@ -22,7 +22,7 @@
 <template>
   <v-hover v-model="hover">
     <v-app
-      class="contentListView border-box-sizing"
+      class="contentListView application-body border-box-sizing"
       flat>
       <v-main class="application-body application-layout-style border-box-sizing d-flex flex-column fill-height py-5 pt-0">
         <application-toolbar
