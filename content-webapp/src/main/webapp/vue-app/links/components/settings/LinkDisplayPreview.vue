@@ -20,13 +20,13 @@
 -->
 <template>
   <v-card
-    class="d-flex align-center justify-center grey-background"
+    class="d-flex align-center justify-center tinted-surface-background-color"
     flat>
     <v-card
       min-height="72"
       width="340"
       max-width="100%"
-      class="d-flex flex-column flex-grow-0 align-center justify-center overflow-hidden pa-4"
+      class="d-flex flex-column flex-grow-0 align-center justify-center overflow-hidden pa-4 layout-drawer-application"
       flat>
       <links-header
         :settings="settings"
@@ -34,8 +34,7 @@
         has-links />
       <links-list
         :settings="settings"
-        :links="linksToDisplay"
-        class="white" />
+        :links="linksToDisplay" />
     </v-card>
   </v-card>
 </template>
