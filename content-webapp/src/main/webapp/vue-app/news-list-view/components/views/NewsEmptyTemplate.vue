@@ -26,7 +26,7 @@
       flat>
       <v-main class="d-flex flex-column fill-height position-relative">
         <v-sheet
-          class="d-flex justify-end"
+          class="d-flex justify-end background-transparent"
           :height="40"
           :min-height="40">
           <v-btn
