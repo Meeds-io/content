@@ -350,7 +350,7 @@ export default {
       this.newsSummaryContent = content;
     },
     setNewsContent(translation) {
-      this.newsBodyContent = translation;
+      this.newsBodyContent = this.$noteUtils.getContentWithScrollableTables(translation);
     },
     // NOTE: This client-side PDF export intentionally duplicates the notes
     // webapp logic (NotePage.vue createPDF). It cannot be shared today: the
