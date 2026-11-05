@@ -20,6 +20,7 @@ package io.meeds.content.image.plugin;
 
 import static io.meeds.content.image.plugin.ImageAttachmentPlugin.OBJECT_TYPE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -30,12 +31,15 @@ import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -58,6 +62,7 @@ import org.exoplatform.social.attachment.model.FileAttachmentResourceList;
 import org.exoplatform.social.attachment.model.ObjectAttachmentDetail;
 import org.exoplatform.social.attachment.model.ObjectAttachmentList;
 import org.exoplatform.social.attachment.model.ObjectAttachmentOperationReport;
+import org.exoplatform.social.attachment.model.UploadedAttachmentDetail;
 import org.exoplatform.social.core.manager.IdentityManager;
 import org.exoplatform.upload.UploadService;
 
@@ -78,6 +83,10 @@ class ImageApplicationSettingsPluginTest {
   private static final String            LIVE_PAGE   = "portal::classic::home";
 
   private static final String            LIVE_NAME   = "Untitled-12-live";
+
+  private static final String            SITE_HOME   = "portal::classic::welcome";
+
+  private static final String            SITE_WITHOUT_PAGE = "not configurable before the site has a page: application";
 
   private static final String            UPLOAD_ID   = "upload-1";
 
@@ -154,6 +163,7 @@ class ImageApplicationSettingsPluginTest {
   @Test
   void testSchemaNamesTheDrawerOptions() {
     assertEquals("Image", plugin.getPortletName());
+    assertTrue(plugin.isConfigurableInSiteContainer());
     @SuppressWarnings("unchecked")
     Map<String, Object> properties = (Map<String, Object>) plugin.getSettingsSchema().get("properties");
     assertEquals(List.of("image_upload_id", "image_url", "format", "alt_text", "link_url", "link_target"),
@@ -292,6 +302,77 @@ class ImageApplicationSettingsPluginTest {
     verify(attachmentService).saveAttachments(list.capture(), eq(identity));
     assertEquals(List.of(new FileAttachmentObject(null, UPLOAD_ID, "Team", "custom", null, "_blank")),
                  list.getValue().getUploadedFiles());
+  }
+
+  /**
+   * In a site container the setting hangs on the site's home page the
+   * context carries: the right is that page's, and the setting is keyed on it
+   */
+  @Test
+  void testSiteContainerWindowIsKeyedOnTheSiteHomePage() throws Exception {
+    when(cmsService.hasEditPermission(identity, SITE_HOME, 0L)).thenReturn(true);
+    ApplicationSettingsContext context = siteContext(SITE_HOME);
+
+    plugin.apply(context, Map.of("image_upload_id", UPLOAD_ID));
+
+    ArgumentCaptor<String> name = ArgumentCaptor.forClass(String.class);
+    verify(cmsService).saveSettingName(eq(OBJECT_TYPE), name.capture(), eq(SITE_HOME), eq(0L), eq(IDENTITY_ID));
+    verify(applicationSettingsService).markOwner(context, Map.of("name", name.getValue()));
+    verify(attachmentService).saveAttachments(any(FileAttachmentResourceList.class), eq(identity));
+  }
+
+  @Test
+  void testSiteContainerWindowOfASiteWithoutPageIsRefusedBeforeAnyCheck() throws Exception {
+    ApplicationSettingsContext context = siteContext(null);
+    Map<String, Object> settings = Map.of("image_upload_id", UPLOAD_ID);
+
+    IllegalArgumentException validation = assertThrows(IllegalArgumentException.class, () -> plugin.validate(context, settings));
+    assertEquals(SITE_WITHOUT_PAGE, validation.getMessage());
+    IllegalArgumentException write = assertThrows(IllegalArgumentException.class, () -> plugin.apply(context, settings));
+    assertEquals(SITE_WITHOUT_PAGE, write.getMessage());
+    verify(cmsService, never()).hasEditPermission(any(), any(), anyLong());
+    verify(cmsService, never()).saveSettingName(any(), any(), any(), anyLong(), anyLong());
+    verify(attachmentService, never()).saveAttachments(any(FileAttachmentResourceList.class), any());
+    verify(uploadService).removeUploadResource(UPLOAD_ID);
+  }
+
+  /**
+   * A window a site draft or a copy left with no name carries the image's
+   * bytes in data.init, as the portlet imports them at the first render: the
+   * first write imports them into the setting it creates, whatever the write
+   * carries, and the preference is cleared with the name the window gets
+   */
+  @Test
+  void testFirstWriteOnAnUnkeyedWindowImportsItsInitialImage() throws Exception {
+    ApplicationSettingsContext context = context(null, true);
+    context.getPreferences().put("data.init", java.util.Base64.getEncoder().encodeToString(new byte[] { 1, 2, 3 }));
+
+    plugin.apply(context, Map.of());
+
+    ArgumentCaptor<String> name = ArgumentCaptor.forClass(String.class);
+    verify(cmsService).saveSettingName(eq(OBJECT_TYPE), name.capture(), eq(LIVE_PAGE), eq(0L), eq(IDENTITY_ID));
+    ArgumentCaptor<UploadedAttachmentDetail> imported = ArgumentCaptor.forClass(UploadedAttachmentDetail.class);
+    verify(attachmentService).saveAttachment(imported.capture(), eq(OBJECT_TYPE), eq(name.getValue()), eq(null), eq(IDENTITY_ID));
+    assertEquals("image/png", imported.getValue().getUploadedResource().getMimeType());
+    assertFalse(new File(imported.getValue().getUploadedResource().getStoreLocation()).exists());
+    Map<String, String> keys = new HashMap<>();
+    keys.put("name", name.getValue());
+    keys.put("data.init", null);
+    verify(applicationSettingsService).markOwner(context, keys);
+    verify(attachmentService, never()).saveAttachments(any(FileAttachmentResourceList.class), any());
+  }
+
+  @Test
+  void testFirstWriteOnAnUnkeyedWindowWhoseImportFailsKeepsItsInitialImage() throws Exception {
+    ApplicationSettingsContext context = context(null, true);
+    context.getPreferences().put("data.init", java.util.Base64.getEncoder().encodeToString(new byte[] { 1, 2, 3 }));
+    doThrow(new IOException("disk")).when(attachmentService).saveAttachment(any(), any(), any(), any(), anyLong());
+
+    IllegalStateException e = assertThrows(IllegalStateException.class, () -> plugin.apply(context, Map.of()));
+
+    assertEquals(LayoutImageService.IMAGE_NOT_SAVED, e.getMessage());
+    verify(applicationSettingsService, never()).markOwner(any(), anyMap());
+    assertEquals(1, context.getPreferences().size());
   }
 
   @Test
@@ -465,6 +546,10 @@ class ImageApplicationSettingsPluginTest {
     image.setLinkUrl(linkUrl);
     image.setLinkTarget(linkTarget);
     attachments.put(name, new ArrayList<>(List.of(image)));
+  }
+
+  private ApplicationSettingsContext siteContext(String homePageReference) {
+    return new ApplicationSettingsContext(12L, "content/Image", new HashMap<>(), true, true, null, null, homePageReference, 0L, USERNAME);
   }
 
   private ApplicationSettingsContext context(String name, boolean draft) {
