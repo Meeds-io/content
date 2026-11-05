@@ -26,6 +26,7 @@ import static io.meeds.content.utils.ApplicationSettingsUtils.integerSchema;
 import static io.meeds.content.utils.ApplicationSettingsUtils.notAccepted;
 import static io.meeds.content.utils.ApplicationSettingsUtils.objectSchema;
 import static io.meeds.content.utils.ApplicationSettingsUtils.requireKnownOptions;
+import static io.meeds.content.utils.ApplicationSettingsUtils.siteWithoutPage;
 import static io.meeds.content.utils.ApplicationSettingsUtils.stringSchema;
 import static io.meeds.content.utils.ApplicationSettingsUtils.toBoolean;
 import static io.meeds.content.utils.ApplicationSettingsUtils.toEnum;
@@ -69,6 +70,7 @@ import io.meeds.layout.model.ApplicationSettingsContext;
 import io.meeds.layout.plugin.ApplicationSettingsPlugin;
 import io.meeds.layout.service.ApplicationSettingsService;
 import io.meeds.social.cms.service.CMSService;
+import io.meeds.social.util.JsonUtils;
 
 import jakarta.annotation.PostConstruct;
 
@@ -76,7 +78,11 @@ import jakarta.annotation.PostConstruct;
  * Configures a Links window as its settings drawer does. The links are a
  * {@link LinkSetting} named by the window's {@code name} preference, which a
  * draft window shares with the live one: the first write on a window that
- * does not own its setting creates a copy for it, keyed on the live page.
+ * does not own its setting creates a copy for it, keyed on the live page,
+ * the site's home page for a window of a site container. A window copied
+ * with no setting name carries the source's links in its {@code data.init}
+ * preference instead, which the portlet imports at the first render: the
+ * first write imports them into the setting it creates, as the render does.
  */
 @Component
 @Profile("layout")
@@ -85,6 +91,8 @@ public class LinkApplicationSettingsPlugin implements ApplicationSettingsPlugin 
   public static final String  PORTLET_NAME           = "Links";
 
   public static final String  NAME_PREFERENCE        = "name";
+
+  public static final String  DATA_INIT_PREFERENCE   = "data.init";
 
   public static final String  TYPE                   = "type";
 
@@ -177,6 +185,11 @@ public class LinkApplicationSettingsPlugin implements ApplicationSettingsPlugin 
   }
 
   @Override
+  public boolean isConfigurableInSiteContainer() {
+    return true;
+  }
+
+  @Override
   public Map<String, Object> getSettingsSchema() {
     Map<String, Object> link = new LinkedHashMap<>();
     link.put(LINK_ID, integerSchema(1, Integer.MAX_VALUE, "Id of a link the read returned, to keep it and its icon; omitted for a new link"));
@@ -203,12 +216,17 @@ public class LinkApplicationSettingsPlugin implements ApplicationSettingsPlugin 
   public Map<String, Object> read(ApplicationSettingsContext context) throws IllegalAccessException, ObjectNotFoundException {
     String name = context.getPreferences().get(NAME_PREFERENCE);
     if (StringUtils.isBlank(name)) {
-      return null; // NOSONAR
+      LinkData initial = getInitialData(context);
+      return initial == null ? null : toSettings(initialSetting(initial), initialLinks(initial)); // NOSONAR
     }
     LinkSetting setting = linkService.getLinkSettingByName(name, null, getIdentity(context));
     if (setting == null) {
       return null; // NOSONAR
     }
+    return toSettings(setting, linkService.getLinks(name, null, true));
+  }
+
+  private Map<String, Object> toSettings(LinkSetting setting, List<Link> links) {
     Map<String, Object> settings = new LinkedHashMap<>();
     settings.put(TYPE, setting.getType() == null ? null : setting.getType().name());
     settings.put(HEADER, withoutBlankTexts(setting.getHeader()));
@@ -219,11 +237,7 @@ public class LinkApplicationSettingsPlugin implements ApplicationSettingsPlugin 
     settings.put(SEE_MORE, StringUtils.defaultString(setting.getSeeMore()));
     settings.put(H_ALIGN, setting.getHAlign() == null ? null : setting.getHAlign().name());
     settings.put(V_ALIGN, setting.getVAlign() == null ? null : setting.getVAlign().name());
-    settings.put(LINKS,
-                 linkService.getLinks(name, null, true)
-                            .stream()
-                            .map(this::toLinkSettings)
-                            .toList());
+    settings.put(LINKS, links.stream().map(this::toLinkSettings).toList());
     return settings;
   }
 
@@ -232,8 +246,9 @@ public class LinkApplicationSettingsPlugin implements ApplicationSettingsPlugin 
                                                                                          ObjectNotFoundException {
     Identity identity = requireEditor(context);
     LinkSetting source = getReadableSource(context, identity);
-    mergeSetting(source, settings);
-    mergeLinks(getSourceLinks(source), settings);
+    LinkData initial = source == null ? getInitialData(context) : null;
+    mergeSetting(source == null ? initialSetting(initial) : source, settings);
+    mergeLinks(source == null ? initialLinks(initial) : getSourceLinks(source), settings);
   }
 
   @Override
@@ -241,22 +256,48 @@ public class LinkApplicationSettingsPlugin implements ApplicationSettingsPlugin 
                                                                                       ObjectNotFoundException {
     Identity identity = requireEditor(context);
     LinkSetting source = getReadableSource(context, identity);
-    LinkSetting setting = mergeSetting(source, settings);
+    LinkData initial = source == null ? getInitialData(context) : null;
+    LinkSetting setting = mergeSetting(source == null ? initialSetting(initial) : source, settings);
     if (source != null && applicationSettingsService.isOwner(context)
         && StringUtils.equals(source.getPageReference(), context.getPageReference())) {
       linkService.saveLinkSetting(setting, mergeLinks(getSourceLinks(source), settings), identity);
     } else {
-      List<Link> links = mergeLinks(getCopiedLinks(source), settings);
+      List<Link> links = mergeLinks(source == null ? toCopies(initialLinks(initial)) : getCopiedLinks(source), settings);
       links.forEach(link -> link.setId(0));
       String name = generateSettingName(context);
       linkService.initLinkSetting(name, context.getPageReference(), context.getSpaceId());
       setting.setName(name);
       linkService.saveLinkSetting(setting, links, identity);
-      applicationSettingsService.markOwner(context, Collections.singletonMap(NAME_PREFERENCE, name));
+      Map<String, String> keys = new LinkedHashMap<>();
+      keys.put(NAME_PREFERENCE, name);
+      if (initial != null) {
+        keys.put(DATA_INIT_PREFERENCE, null);
+      }
+      applicationSettingsService.markOwner(context, keys);
     }
   }
 
+  /**
+   * @return the links the window's {@code data.init} preference holds, with
+   *         their setting, null when the window carries no such preference
+   */
+  private LinkData getInitialData(ApplicationSettingsContext context) {
+    String data = context.getPreferences().get(DATA_INIT_PREFERENCE);
+    return StringUtils.isBlank(data) ? null : JsonUtils.fromJsonString(data, LinkData.class);
+  }
+
+  private LinkSetting initialSetting(LinkData initial) {
+    return initial == null ? null : initial.getLinkSetting();
+  }
+
+  private List<Link> initialLinks(LinkData initial) {
+    return initial == null || initial.getLinks() == null ? Collections.emptyList() : new ArrayList<>(initial.getLinks());
+  }
+
   private Identity requireEditor(ApplicationSettingsContext context) throws IllegalAccessException {
+    if (context.isSiteContainer() && StringUtils.isBlank(context.getPageReference())) {
+      throw siteWithoutPage();
+    }
     Identity identity = getIdentity(context);
     if (identity == null || StringUtils.isBlank(context.getPageReference())
         || !cmsService.hasEditPermission(identity, context.getPageReference(), context.getSpaceId())) {
@@ -294,13 +335,20 @@ public class LinkApplicationSettingsPlugin implements ApplicationSettingsPlugin 
     if (source == null) {
       return Collections.emptyList();
     }
-    LinkData linkData = linkService.getLinkDataByName(source.getName());
+    return toCopies(linkService.getLinkDataByName(source.getName()).getLinks());
+  }
+
+  /**
+   * @return the links, each carrying its icon's content, to be created in a
+   *         copy once their ids are reset
+   */
+  private List<Link> toCopies(List<? extends Link> sourceLinks) {
     List<Link> links = new ArrayList<>();
-    for (LinkWithImageContent link : linkData.getLinks()) {
+    for (Link link : sourceLinks) {
       LinkWithIconAttachment copy = new LinkWithIconAttachment(link);
       copy.setIconFileId(0);
-      if (StringUtils.isNotBlank(link.getImageContent())) {
-        copy.setInputStream(new ByteArrayInputStream(Base64.decodeBase64(link.getImageContent())));
+      if (link instanceof LinkWithImageContent withImage && StringUtils.isNotBlank(withImage.getImageContent())) {
+        copy.setInputStream(new ByteArrayInputStream(Base64.decodeBase64(withImage.getImageContent())));
       }
       links.add(copy);
     }

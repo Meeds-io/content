@@ -22,11 +22,15 @@ import static io.meeds.content.utils.ApplicationSettingsUtils.enumSchema;
 import static io.meeds.content.utils.ApplicationSettingsUtils.notAccepted;
 import static io.meeds.content.utils.ApplicationSettingsUtils.objectSchema;
 import static io.meeds.content.utils.ApplicationSettingsUtils.requireKnownOptions;
+import static io.meeds.content.utils.ApplicationSettingsUtils.siteWithoutPage;
 import static io.meeds.content.utils.ApplicationSettingsUtils.stringSchema;
 import static io.meeds.content.utils.ApplicationSettingsUtils.toText;
 import static io.meeds.content.utils.ApplicationSettingsUtils.toUrl;
 import static io.meeds.content.utils.ApplicationSettingsUtils.toValue;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -36,6 +40,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Profile;
@@ -45,13 +50,17 @@ import org.exoplatform.commons.ObjectAlreadyExistsException;
 import org.exoplatform.commons.exception.ObjectNotFoundException;
 import org.exoplatform.portal.config.UserACL;
 import org.exoplatform.services.security.Identity;
+import org.exoplatform.services.log.ExoLogger;
+import org.exoplatform.services.log.Log;
 import org.exoplatform.social.attachment.AttachmentService;
 import org.exoplatform.social.attachment.model.FileAttachmentObject;
 import org.exoplatform.social.attachment.model.FileAttachmentResourceList;
 import org.exoplatform.social.attachment.model.ObjectAttachmentDetail;
 import org.exoplatform.social.attachment.model.ObjectAttachmentList;
 import org.exoplatform.social.attachment.model.ObjectAttachmentOperationReport;
+import org.exoplatform.social.attachment.model.UploadedAttachmentDetail;
 import org.exoplatform.social.core.manager.IdentityManager;
+import org.exoplatform.upload.UploadResource;
 import org.exoplatform.upload.UploadService;
 
 import io.meeds.layout.model.ApplicationSettingsContext;
@@ -69,7 +78,12 @@ import jakarta.annotation.PostConstruct;
  * format, alternative text and link are an attachment of the CMS setting the
  * window's {@code name} preference names, which a draft window shares with
  * the live one: the first write on a window that does not own its setting
- * creates a copy for it, keyed on the live page, with the stored image.
+ * creates a copy for it, keyed on the live page, the site's home page for a
+ * window of a site container, with the stored image. A window copied with no
+ * setting name carries the image's bytes in its {@code data.init} preference
+ * instead, which the portlet imports at the first render: the first write
+ * imports them into the setting it creates, as the render imports that
+ * preference (a descriptor's {@code image-path} is the render's alone).
  */
 @Component
 @Profile("layout")
@@ -78,6 +92,10 @@ public class ImageApplicationSettingsPlugin implements ApplicationSettingsPlugin
   public static final String        PORTLET_NAME        = "Image";
 
   public static final String        NAME_PREFERENCE     = "name";
+
+  public static final String        DATA_INIT_PREFERENCE = "data.init";
+
+  private static final Log          LOG                 = ExoLogger.getLogger(ImageApplicationSettingsPlugin.class);
 
   public static final String        IMAGE_UPLOAD_ID     = "image_upload_id";
 
@@ -154,6 +172,11 @@ public class ImageApplicationSettingsPlugin implements ApplicationSettingsPlugin
   }
 
   @Override
+  public boolean isConfigurableInSiteContainer() {
+    return true;
+  }
+
+  @Override
   public Map<String, Object> getSettingsSchema() {
     Map<String, Object> properties = new LinkedHashMap<>();
     properties.put(IMAGE_UPLOAD_ID,
@@ -216,6 +239,8 @@ public class ImageApplicationSettingsPlugin implements ApplicationSettingsPlugin
         name = source.getName();
       } else {
         name = createSetting(context, identityId);
+        Map<String, String> keys = new LinkedHashMap<>();
+        keys.put(NAME_PREFERENCE, name);
         if (source != null) {
           attachmentService.copyAttachments(ImageAttachmentPlugin.OBJECT_TYPE,
                                             source.getName(),
@@ -223,8 +248,11 @@ public class ImageApplicationSettingsPlugin implements ApplicationSettingsPlugin
                                             name,
                                             null,
                                             identityId);
+        } else if (StringUtils.isNotBlank(context.getPreferences().get(DATA_INIT_PREFERENCE))) {
+          importInitialImage(name, context.getPreferences().get(DATA_INIT_PREFERENCE), identityId);
+          keys.put(DATA_INIT_PREFERENCE, null);
         }
-        applicationSettingsService.markOwner(context, Collections.singletonMap(NAME_PREFERENCE, name));
+        applicationSettingsService.markOwner(context, keys);
       }
       saveImage(name, getImage(name), settings, getUploadId(settings), identityId, identity);
     } finally {
@@ -336,6 +364,9 @@ public class ImageApplicationSettingsPlugin implements ApplicationSettingsPlugin
   }
 
   private Identity requireEditor(ApplicationSettingsContext context) throws IllegalAccessException {
+    if (context.isSiteContainer() && StringUtils.isBlank(context.getPageReference())) {
+      throw siteWithoutPage();
+    }
     Identity identity = getIdentity(context);
     if (identity == null || StringUtils.isBlank(context.getPageReference())
         || !cmsService.hasEditPermission(identity, context.getPageReference(), context.getSpaceId())) {
@@ -375,6 +406,39 @@ public class ImageApplicationSettingsPlugin implements ApplicationSettingsPlugin
 
   private String getImageUrl(String name, ObjectAttachmentDetail image) {
     return String.format(IMAGE_URL_FORMAT, ImageAttachmentPlugin.OBJECT_TYPE, name, image.getId());
+  }
+
+  /**
+   * Imports the image a copied window carries in its {@code data.init}
+   * preference into the setting created for it, as the portlet's first
+   * render imports that preference
+   */
+  private void importInitialImage(String name, String imageContent, long identityId) {
+    File tempFile = null;
+    try {
+      tempFile = File.createTempFile("image", ".png");
+      Files.write(tempFile.toPath(), Base64.decodeBase64(imageContent));
+      UploadResource uploadResource = new UploadResource("ImageSettings" + UUID.randomUUID());
+      uploadResource.setFileName(tempFile.getName());
+      uploadResource.setMimeType("image/png");
+      uploadResource.setStatus(UploadResource.UPLOADED_STATUS);
+      uploadResource.setStoreLocation(tempFile.getAbsolutePath());
+      attachmentService.saveAttachment(new UploadedAttachmentDetail(uploadResource),
+                                       ImageAttachmentPlugin.OBJECT_TYPE,
+                                       name,
+                                       null,
+                                       identityId);
+    } catch (IOException | ObjectAlreadyExistsException | ObjectNotFoundException e) {
+      throw new IllegalStateException(LayoutImageService.IMAGE_NOT_SAVED, e);
+    } finally {
+      if (tempFile != null) {
+        try {
+          Files.deleteIfExists(tempFile.toPath());
+        } catch (IOException e) {
+          LOG.warn("Temporary file {} of an imported image not deleted", tempFile, e);
+        }
+      }
+    }
   }
 
   private String createSetting(ApplicationSettingsContext context, long identityId) {
