@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -71,6 +72,7 @@ import io.meeds.content.link.service.LinkService;
 import io.meeds.layout.model.ApplicationSettingsContext;
 import io.meeds.layout.service.ApplicationSettingsService;
 import io.meeds.social.cms.service.CMSService;
+import io.meeds.social.util.JsonUtils;
 
 import jakarta.annotation.PostConstruct;
 
@@ -82,6 +84,10 @@ class LinkApplicationSettingsPluginTest {
   private static final String        LIVE_PAGE      = "portal::classic::home";
 
   private static final String        LIVE_SETTING   = "Untitled-12-live";
+
+  private static final String        SITE_HOME      = "portal::classic::welcome";
+
+  private static final String        SITE_WITHOUT_PAGE = "not configurable before the site has a page: application";
 
   private static final long          SPACE_ID       = 0;
 
@@ -138,7 +144,7 @@ class LinkApplicationSettingsPluginTest {
                  "a stored size above the drawer's bounds is read and accepted back");
     assertEquals(false, schema.get("additionalProperties"));
     assertEquals("Links", plugin.getPortletName());
-    assertEquals(false, plugin.isConfigurableInSiteContainer());
+    assertTrue(plugin.isConfigurableInSiteContainer());
   }
 
   @Test
@@ -314,6 +320,74 @@ class LinkApplicationSettingsPluginTest {
     verify(applicationSettingsService).markOwner(context, Map.of("name", name.getValue()));
   }
 
+  /**
+   * In a site container the setting hangs on the site's home page the
+   * context carries: the right is that page's, and the copy is keyed on it
+   */
+  @Test
+  void testSiteContainerWindowIsKeyedOnTheSiteHomePage() throws Exception {
+    when(cmsService.hasEditPermission(identity, SITE_HOME, SPACE_ID)).thenReturn(true);
+    ApplicationSettingsContext context = siteContext(SITE_HOME, Collections.emptyMap());
+
+    plugin.validate(context, Map.of("links", List.of(link(null, "en", "Docs", "/docs"))));
+    plugin.apply(context, Map.of("links", List.of(link(null, "en", "Docs", "/docs"))));
+
+    ArgumentCaptor<String> name = ArgumentCaptor.forClass(String.class);
+    verify(linkService).initLinkSetting(name.capture(), eq(SITE_HOME), eq(SPACE_ID));
+    verify(linkService).saveLinkSetting(any(LinkSetting.class), anyList(), eq(identity));
+    verify(applicationSettingsService).markOwner(context, Map.of("name", name.getValue()));
+  }
+
+  @Test
+  void testSiteContainerWindowOfASiteWithoutPageIsRefusedBeforeAnyCheck() throws Exception {
+    ApplicationSettingsContext context = siteContext(null, Map.of("name", LIVE_SETTING));
+    Map<String, Object> settings = Map.of("links", List.of(link(null, "en", "Docs", "/docs")));
+
+    assertRefused(context, settings, SITE_WITHOUT_PAGE);
+    IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> plugin.apply(context, settings));
+    assertEquals(SITE_WITHOUT_PAGE, e.getMessage());
+    verify(cmsService, never()).hasEditPermission(any(), any(), anyLong());
+    verify(linkService, never()).initLinkSetting(anyString(), any(), anyLong());
+    verify(linkService, never()).saveLinkSetting(any(), anyList(), any());
+  }
+
+  /**
+   * A window a site draft or a copy left with no name carries the source's
+   * links in data.init, as the portlet imports them at the first render: the
+   * first write starts from them, its copy keeps their icons, and the
+   * preference is cleared with the name the window gets
+   */
+  @Test
+  void testFirstWriteOnAnUnkeyedWindowImportsItsInitialData() throws Exception {
+    ApplicationSettingsContext context = context(true, Map.of("data.init", initialData()));
+
+    assertEquals(List.of(Map.of("id", 7L, "name", Map.of("en", "Link"), "description", Map.of(), "url", "/a", "same_tab", false)),
+                 plugin.read(context).get("links"));
+    assertEquals("CARD", plugin.read(context).get("type"));
+    plugin.validate(context, Map.of("links", List.of(link(7L, "en", "Renamed", "/a"), link(null, "en", "New", "/new"))));
+    plugin.apply(context, Map.of("show_name", true));
+
+    ArgumentCaptor<String> name = ArgumentCaptor.forClass(String.class);
+    verify(linkService).initLinkSetting(name.capture(), eq(LIVE_PAGE), eq(SPACE_ID));
+    ArgumentCaptor<LinkSetting> setting = ArgumentCaptor.forClass(LinkSetting.class);
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<List<Link>> links = ArgumentCaptor.forClass(List.class);
+    verify(linkService).saveLinkSetting(setting.capture(), links.capture(), eq(identity));
+    assertEquals(name.getValue(), setting.getValue().getName());
+    assertEquals(LinkDisplayType.CARD, setting.getValue().getType());
+    assertTrue(setting.getValue().isShowName());
+    assertEquals(1, links.getValue().size());
+    Link copy = links.getValue().get(0);
+    assertEquals(0, copy.getId());
+    assertEquals("/a", copy.getUrl());
+    assertNotNull(assertInstanceOf(LinkWithIconAttachment.class, copy).getInputStream());
+    Map<String, String> keys = new HashMap<>();
+    keys.put("name", name.getValue());
+    keys.put("data.init", null);
+    verify(applicationSettingsService).markOwner(context, keys);
+    verify(linkService, never()).getLinkDataByName(anyString());
+  }
+
   @Test
   void testOmittedHeaderAndLinksKeepTheStoredOnes() throws Exception {
     mockSource(LIVE_PAGE, storedLink(7, 99));
@@ -418,6 +492,14 @@ class LinkApplicationSettingsPluginTest {
     lenient().when(linkService.getLinks(LIVE_SETTING, null, true)).thenReturn(new ArrayList<>(Arrays.asList(links)));
   }
 
+  private String initialData() {
+    LinkSetting setting = liveSetting(LIVE_PAGE);
+    setting.setType(LinkDisplayType.CARD);
+    LinkWithImageContent link = new LinkWithImageContent(storedLink(7, 99));
+    link.setImageContent(Base64.getEncoder().encodeToString(new byte[] { 1, 2, 3 }));
+    return JsonUtils.toJsonString(new LinkData(setting, List.of(link)));
+  }
+
   private LinkSetting liveSetting(String pageReference) {
     LinkSetting setting = new LinkSetting();
     setting.setId(3);
@@ -442,6 +524,19 @@ class LinkApplicationSettingsPluginTest {
     link.put("name", Map.of(language, name));
     link.put("url", url);
     return link;
+  }
+
+  private ApplicationSettingsContext siteContext(String homePageReference, Map<String, String> preferences) {
+    return new ApplicationSettingsContext(WINDOW_ID,
+                                          "content/Links",
+                                          new HashMap<>(preferences),
+                                          true,
+                                          true,
+                                          null,
+                                          null,
+                                          homePageReference,
+                                          SPACE_ID,
+                                          USERNAME);
   }
 
   private ApplicationSettingsContext context(boolean draft, Map<String, String> preferences) {
