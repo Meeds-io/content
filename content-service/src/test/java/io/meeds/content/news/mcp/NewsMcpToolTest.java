@@ -2128,7 +2128,7 @@ public class NewsMcpToolTest {
 
     List<CheckedSupplier<?>> edits = List.of(() -> tool.updateNews(NEWS_ID, "Updated", "Updated summary", "Updated content", "en"),
                                              () -> tool.publishNewsInActivityStream(NEWS_ID),
-                                             () -> tool.setNewsIllustration(NEWS_ID, null, "iVBORw0KGgo=", null, null, "alt", "en"),
+                                             () -> tool.setNewsIllustration(NEWS_ID, null, "iVBORw0KGgo=", null, null, "alt", "en", null),
                                              () -> tool.removeNewsIllustration(NEWS_ID, "en"));
     for (CheckedSupplier<?> edit : edits) {
       Exception refusal = null;
