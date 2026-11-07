@@ -23,9 +23,7 @@
   <v-hover v-slot="{ hover }">
     <v-card
       flat
-      class="pa-0"
-      :aria-label="$t('search.access.to.result', {0 :newsTitleText})"
-      :href="newsUrl">
+      class="search-result-card pa-0">
       <v-list class="pa-0" :class="hover && 'light-grey-background-color no-border-radius' || ''">
         <v-list-item>
           <v-list-item-icon class="ms-n1 me-2">
@@ -34,11 +32,15 @@
 
           <v-list-item-content>
             <v-list-item-title class="d-flex flex-row full-width align-center">
-              <h1
-                class="flex-grow-1 primary--text title pt-1 mb-0 ps-0 my-auto align-center text-start text-truncate"
-                v-sanitized-html="newsTitle">
+              <h1 class="flex-grow-1 primary--text title pt-1 mb-0 ps-0 my-auto align-center text-start text-truncate">
+                <a
+                  :href="newsUrl"
+                  class="search-result-link"
+                  v-sanitized-html="newsTitle"></a>
               </h1>
-              <span v-show="hover || isMobile" class="ml-2">
+              <span
+                :class="{'search-result-actions-visible': isMobile}"
+                class="search-result-interactive search-result-actions ml-2">
                 <news-favorite-action
                   :news="result"
                   @removed="$emit('refresh-favorite')" />
@@ -51,7 +53,7 @@
                   v-bind="attrs"
                   v-on="on"
                   :href="spaceUrl"
-                  class="flex-nowrap flex-shrink-0 d-flex spaceAvatar">
+                  class="search-result-interactive flex-nowrap flex-shrink-0 d-flex spaceAvatar">
                   <v-avatar
                     :size="18"
                     tile
@@ -65,12 +67,14 @@
                   <p class="ms-2 my-auto text-subtitle">{{ spaceDisplayName }}</p>
                 </a>
                 <v-icon size="3" class="icon-default-color mx-3">fas fa-circle</v-icon>
-                <exo-user-avatar
-                  :profile-id="updaterUsername"
-                  :size="18"
-                  small-font-size
-                  :avatar="isMobile"
-                  :popover="false" />
+                <span class="search-result-interactive d-inline-flex align-center">
+                  <exo-user-avatar
+                    :profile-id="updaterUsername"
+                    :size="18"
+                    small-font-size
+                    :avatar="isMobile"
+                    :popover="false" />
+                </span>
                 <v-icon
                   v-if="newsUpdateDate"
                   size="3"
@@ -120,9 +124,6 @@ export default {
     },
     newsTitle() {
       return this.result && this.result.title || '';
-    },
-    newsTitleText() {
-      return $('<div />').html(this.newsTitle).text();
     },
     updaterUsername() {
       return this.result?.updaterUserName;
