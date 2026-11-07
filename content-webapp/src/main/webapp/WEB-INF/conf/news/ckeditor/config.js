@@ -13,6 +13,8 @@ CKEDITOR.editorConfig = function (config) {
   config.contentsCss.push('/content/ckeditorCustom/contents.css'); // load last
 
   CKEDITOR.plugins.addExternal('switchView','/content/js/ckeditor/plugins/switchView/','plugin.js');
+  // the table style picker of the notes editor, which the news composer reuses
+  CKEDITOR.plugins.addExternal('tableStyle','/notes/javascript/eXo/wiki/ckeditor/plugins/tableStyle/','plugin.js');
 
   const toolbar = [
     {name: 'accessibility', items: ['A11ychecker']},
@@ -55,7 +57,7 @@ CKEDITOR.editorConfig = function (config) {
   ];
 
   let extraPlugins = 'a11ychecker,balloonpanel,indent,switchView,googleDocPastePl rmatting,indentblock,indentlist,sharedspace,insertContentLink,vuetifyStyle,' +
-        'autolink,colordialog,tagSuggester,emoji,link,font,justify,widget,contextmenu,table,codesnippet,tabletools,tableresize,embedsemantic,suggester';
+        'autolink,colordialog,tagSuggester,emoji,link,font,justify,widget,contextmenu,table,codesnippet,tabletools,tableresize,tableStyle,embedsemantic,suggester';
 
   let removePlugins = 'image,confirmBeforeReload,maximize,resize,autoembed';
 
