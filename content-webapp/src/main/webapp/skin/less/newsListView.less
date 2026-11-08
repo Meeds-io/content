@@ -1202,3 +1202,32 @@ p.caption-title:after {
 #top-news-mosaic.small-width-mosaic {
   .news-mosaic-mobile-layout();
 }
+
+/* The see all link, replaced by its icon and followed by the settings button
+   while the widget is hovered, shows them too while one of them holds the
+   keyboard focus: hidden, they keep their place in the tab order, and the text
+   they replace is left out of it. */
+.VuetifyApp .news-settings {
+  .news-settings-hover-action {
+    position: absolute;
+    opacity: 0;
+  }
+  &.news-settings-hovering,
+  &:focus-within {
+    .news-settings-see-all-text {
+      display: none;
+    }
+    .news-settings-hover-action {
+      position: static;
+      opacity: 1;
+    }
+  }
+}
+
+/* The slider's arrows slide in on hover; they slide in on the keyboard focus too. */
+.VuetifyApp .newsSlider .v-window--show-arrows-on-hover:focus-within {
+  .v-window__next,
+  .v-window__prev {
+    transform: translateX(0);
+  }
+}

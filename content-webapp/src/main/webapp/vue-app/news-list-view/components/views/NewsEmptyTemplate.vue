@@ -30,7 +30,9 @@
           :height="40"
           :min-height="40">
           <v-btn
-            v-if="hover && canManageNewsList"
+            v-if="canManageNewsList"
+            :class="{'d-sr-only-focusable': !hover}"
+            :aria-label="$t('news.latest.openSettings')"
             icon
             @click="openDrawer">
             <v-icon>mdi-cog</v-icon>
