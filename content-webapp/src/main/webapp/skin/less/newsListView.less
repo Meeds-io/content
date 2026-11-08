@@ -1211,6 +1211,7 @@ p.caption-title:after {
   .news-settings-hover-action {
     position: absolute;
     opacity: 0;
+    pointer-events: none;
   }
   &.news-settings-hovering,
   &:focus-within {
@@ -1220,6 +1221,7 @@ p.caption-title:after {
     .news-settings-hover-action {
       position: static;
       opacity: 1;
+      pointer-events: auto;
     }
   }
 }

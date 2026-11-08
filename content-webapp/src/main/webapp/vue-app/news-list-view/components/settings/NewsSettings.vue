@@ -26,7 +26,7 @@
     class="news-settings background-transparent d-flex flex-row align-center text-start px-2">
     <div class="d-flex latestNewsTitleContainer flex-column flex-grow-1 min-width-0 my-1">
       <span
-        v-if="showHeader"
+        v-if="showHeader && (!headerOnHover || isHovering)"
         :title="headerTitle"
         class="text-header">
         <span class="text-truncate">{{ headerTitle }}</span>
@@ -103,6 +103,12 @@ export default {
       default: false
     },
     hideSeeAllButton: {
+      type: Boolean,
+      required: false,
+      default: false
+    },
+    // the header shows only while hovered, the settings button staying rendered for the keyboard
+    headerOnHover: {
       type: Boolean,
       required: false,
       default: false
