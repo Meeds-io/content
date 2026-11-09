@@ -32,11 +32,10 @@
       <v-btn
         v-bind="attrs"
         :aria-label="$t('news.details.menu.open')"
-        class="pull-right"
         icon
         v-on="on"
         @click.prevent="openBottomMenu">
-        <v-icon size="20">
+        <v-icon size="20" aria-hidden="true">
           fas fa-ellipsis-v
         </v-icon>
       </v-btn>

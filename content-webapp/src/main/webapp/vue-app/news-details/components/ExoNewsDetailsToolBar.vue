@@ -21,104 +21,108 @@
 <template>
   <div
     :class="{'me-5': !showEditButton}"
-    class="newsDetailsTopBar">
+    class="newsDetailsTopBar d-flex align-center">
     <v-btn
       class="go-back-button"
       icon
       :aria-label="this.$t('article.details.goBack.label')"
       @click.stop="goBack">
       <v-icon
-        size="15">
+        size="15"
+        aria-hidden="true">
         fas fa-arrow-left
       </v-icon>
     </v-btn>
-    <exo-news-details-action-menu-app
-      v-if="(showEditButton || showDeleteButton || showPublishButton || showCopyLinkButton || showCategoriesButton)"
-      class="pull-right"
-      :news="news"
-      :activity="activity"
-      :current-app="currentApplication"
-      :show-edit-button="showEditButton"
-      :show-delete-button="showDeleteButton"
-      :show-publish-button="showPublishButton"
-      :show-copy-link-button="showCopyLinkButton"
-      :show-refer-button="showReferButton"
-      :show-properties-button="showEditButton"
-      :show-export-pdf-button="true"
-      :show-categories-button="showCategoriesButton"
-      @delete-article="$emit('delete-article')"
-      @export-pdf="$emit('export-pdf')"
-      @edit-article="$emit('edit-article')"
-      @open-properties="$emit('open-properties', $event)"
-      @manage-categories="$emit('manage-categories')" />
-    <v-btn
-      v-if="publicationState === 'staged'"
-      class="btn btn-primary pull-right me-3"
-      outlined
-      @click="$emit('open-publication-drawer')">
-      <v-icon
-        class="me-2"
-        size="20">
-        far fa-clock
-      </v-icon>
-      {{ $t("news.composer.btn.scheduleArticle") }}
-    </v-btn>
-    <exo-news-favorite-action
-      v-if="displayFavoriteButton"
-      :news="news"
-      :activity-id="activityId"
-      :icon-size="20"
-      class="pull-right mt-1 me-2" />
-    <extension-registry-components
-      :params="params"
-      name="NewsDetails"
-      type="news-toolbar"
-      parent-element="div"
-      element="div"
-      class="pull-right mt-1 d-inline-flex" />
-    <v-tooltip
-      v-if="canOpenInNotes"
-      bottom>
-      <template #activator="{ on, attrs }">
+    <div class="newsDetailsTopBarActions d-flex align-center flex-wrap justify-end ms-auto">
+      <div
+        v-if="categoriesCount"
+        class="d-flex align-center flex-wrap me-2">
+        <category-chip
+          v-for="category in displayedCategories"
+          :key="category.id"
+          :category="category"
+          chip-class="me-2"
+          small
+          @select="openEntryListDrawer" />
         <v-btn
-          v-on="on"
-          v-bind="attrs"
-          :href="articlePageUrl"
-          :aria-label="$t('content.article.open.in.notes')"
-          class="pull-right me-2"
-          link
-          icon>
-          <v-icon
-            size="20"
-            class="icon-default-color">
-            fas fa-external-link-alt
-          </v-icon>
+          v-if="remainingCategoriesCount > 0"
+          :title="$t('categories.remainingCount', {0: remainingCategoriesCount})"
+          :aria-label="$t('news.details.categories.remainingCount.ariaLabel', {0: remainingCategoriesCount})"
+          class="flex-shrink-0 px-0 me-2"
+          height="24"
+          width="24"
+          icon
+          @click="openCategoriesListDrawer">
+          <span class="primary--text text-subtitle-font-size" aria-hidden="true">
+            {{ $t('categories.remainingCount', {0: remainingCategoriesCount}) }}
+          </span>
         </v-btn>
-      </template>
-      {{ $t('content.article.open.in.notes') }}
-    </v-tooltip>
-    <div
-      v-if="categoriesCount"
-      class="d-flex align-center flex-wrap pull-right mt-2 me-2">
-      <category-chip
-        v-for="category in displayedCategories"
-        :key="category.id"
-        :category="category"
-        chip-class="me-2"
-        small
-        @select="openEntryListDrawer" />
+      </div>
+      <v-tooltip
+        v-if="canOpenInNotes"
+        bottom>
+        <template #activator="{ on }">
+          <v-btn
+            v-on="on"
+            :href="articlePageUrl"
+            :aria-label="$t('content.article.open.in.notes')"
+            class="me-2"
+            link
+            icon>
+            <v-icon
+              size="20"
+              class="icon-default-color"
+              aria-hidden="true">
+              fas fa-external-link-alt
+            </v-icon>
+          </v-btn>
+        </template>
+        {{ $t('content.article.open.in.notes') }}
+      </v-tooltip>
+      <extension-registry-components
+        :params="params"
+        name="NewsDetails"
+        type="news-toolbar"
+        parent-element="div"
+        element="div"
+        class="d-inline-flex" />
+      <exo-news-favorite-action
+        v-if="displayFavoriteButton"
+        :news="news"
+        :activity-id="activityId"
+        :icon-size="20"
+        class="me-2" />
       <v-btn
-        v-if="remainingCategoriesCount > 0"
-        :title="$t('categories.remainingCount', {0: remainingCategoriesCount})"
-        class="flex-shrink-0 px-0 me-2"
-        height="24"
-        width="24"
-        icon
-        @click="openCategoriesListDrawer">
-        <span class="primary--text text-subtitle-font-size">
-          {{ $t('categories.remainingCount', {0: remainingCategoriesCount}) }}
-        </span>
+        v-if="publicationState === 'staged'"
+        class="btn btn-primary me-3"
+        outlined
+        @click="$emit('open-publication-drawer')">
+        <v-icon
+          class="me-2"
+          size="20"
+          aria-hidden="true">
+          far fa-clock
+        </v-icon>
+        {{ $t("news.composer.btn.scheduleArticle") }}
       </v-btn>
+      <exo-news-details-action-menu-app
+        v-if="(showEditButton || showDeleteButton || showPublishButton || showCopyLinkButton || showCategoriesButton)"
+        :news="news"
+        :activity="activity"
+        :current-app="currentApplication"
+        :show-edit-button="showEditButton"
+        :show-delete-button="showDeleteButton"
+        :show-publish-button="showPublishButton"
+        :show-copy-link-button="showCopyLinkButton"
+        :show-refer-button="showReferButton"
+        :show-properties-button="showEditButton"
+        :show-export-pdf-button="true"
+        :show-categories-button="showCategoriesButton"
+        @delete-article="$emit('delete-article')"
+        @export-pdf="$emit('export-pdf')"
+        @edit-article="$emit('edit-article')"
+        @open-properties="$emit('open-properties', $event)"
+        @manage-categories="$emit('manage-categories')" />
     </div>
     <categories-list-drawer
       v-if="categoriesListDrawerOpened"
