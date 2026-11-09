@@ -21,11 +21,12 @@
 <template>
   <v-sheet 
     v-if="showSettingsContainer"
+    :class="isHovering && 'news-settings-hovering'"
     min-height="30"
-    class="background-transparent d-flex flex-row align-center text-start px-2">
+    class="news-settings background-transparent d-flex flex-row align-center text-start px-2">
     <div class="d-flex latestNewsTitleContainer flex-column flex-grow-1 min-width-0 my-1">
       <span
-        v-if="showHeader"
+        v-if="showHeader && (!headerOnHover || isHovering)"
         :title="headerTitle"
         class="text-header">
         <span class="text-truncate">{{ headerTitle }}</span>
@@ -33,8 +34,9 @@
     </div>
     <div v-if="showSeeAll && !hideSeeAllButton" class="d-flex flex-column my-auto me-2">
       <v-btn
-        v-if="$root.canManageNewsList && isHovering"
-        class="primary--text my-auto"
+        v-if="$root.canManageNewsList"
+        :aria-label="$t('news.published.seeAll')"
+        class="news-settings-hover-action primary--text my-auto"
         icon
         small
         @click="seeAllNews">
@@ -45,7 +47,9 @@
         </v-icon>
       </v-btn>
       <v-btn
-        v-else-if="!isHovering || !$root.canManageNewsList"
+        :tabindex="$root.canManageNewsList ? '-1' : null"
+        :aria-hidden="$root.canManageNewsList ? 'true' : null"
+        :class="$root.canManageNewsList && 'news-settings-see-all-text'"
         color="primary"
         class="pa-0 text-font-size"
         small
@@ -63,7 +67,7 @@
       <v-btn
         v-if="$root.canManageNewsList && showSettingsIcon"
         :class="classButtonOpenSettings"
-        class="icon-default-color white-background"
+        class="news-settings-hover-action icon-default-color white-background"
         :title="$t('news.list.openSettings.title')"
         :aria-label="$t('news.latest.openSettings')"
         :width="settingButtonSize"
@@ -103,6 +107,12 @@ export default {
       required: false,
       default: false
     },
+    // the header shows only while hovered, the settings button staying rendered for the keyboard
+    headerOnHover: {
+      type: Boolean,
+      required: false,
+      default: false
+    },
     classButtonOpenSettings: {
       type: String,
       default: 'button-open-settings'
@@ -122,7 +132,7 @@ export default {
       return this.showHeader || this.showSeeAll || this.$root.canManageNewsList ;
     },
     showSettingsIcon() {
-      return this.isHovering && !this.hideOpenSettingButton;
+      return !this.hideOpenSettingButton;
     }
   },
   created() {
