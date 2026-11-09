@@ -339,15 +339,19 @@ class ImageApplicationSettingsPluginTest {
   /**
    * A window a site draft or a copy left with no name carries the image's
    * bytes in data.init, as the portlet imports them at the first render: the
-   * first write imports them into the setting it creates, whatever the write
-   * carries, and the preference is cleared with the name the window gets
+   * first write that changes the image imports them into the setting it
+   * creates, and the preference is cleared with the name the window gets
    */
   @Test
   void testFirstWriteOnAnUnkeyedWindowImportsItsInitialImage() throws Exception {
     ApplicationSettingsContext context = context(null, true);
     context.getPreferences().put("data.init", java.util.Base64.getEncoder().encodeToString(new byte[] { 1, 2, 3 }));
+    doAnswer(invocation -> {
+      storeImage(invocation.getArgument(2), "imported-file", null, null, null, null);
+      return null;
+    }).when(attachmentService).saveAttachment(any(), eq(OBJECT_TYPE), anyString(), eq(null), eq(IDENTITY_ID));
 
-    plugin.apply(context, Map.of());
+    plugin.apply(context, Map.of("link_target", "new_tab"));
 
     ArgumentCaptor<String> name = ArgumentCaptor.forClass(String.class);
     verify(cmsService).saveSettingName(eq(OBJECT_TYPE), name.capture(), eq(LIVE_PAGE), eq(0L), eq(IDENTITY_ID));
@@ -359,7 +363,6 @@ class ImageApplicationSettingsPluginTest {
     keys.put("name", name.getValue());
     keys.put("data.init", null);
     verify(applicationSettingsService).markOwner(context, keys);
-    verify(attachmentService, never()).saveAttachments(any(FileAttachmentResourceList.class), any());
   }
 
   /**
@@ -407,7 +410,8 @@ class ImageApplicationSettingsPluginTest {
     context.getPreferences().put("data.init", java.util.Base64.getEncoder().encodeToString(new byte[] { 1, 2, 3 }));
     doThrow(new IOException("disk")).when(attachmentService).saveAttachment(any(), any(), any(), any(), anyLong());
 
-    IllegalStateException e = assertThrows(IllegalStateException.class, () -> plugin.apply(context, Map.of()));
+    Map<String, Object> settings = Map.of("alt_text", "Team");
+    IllegalStateException e = assertThrows(IllegalStateException.class, () -> plugin.apply(context, settings));
 
     assertEquals(LayoutImageService.IMAGE_NOT_SAVED, e.getMessage());
     verify(applicationSettingsService, never()).markOwner(any(), anyMap());
@@ -470,6 +474,49 @@ class ImageApplicationSettingsPluginTest {
     plugin.apply(context, Map.of());
 
     verify(attachmentService, never()).saveAttachments(any(), any());
+  }
+
+  /**
+   * The values the read returns, sent back on a window that does not own its
+   * setting, change nothing: no setting is created, no image copied, the
+   * window keeps its keys
+   */
+  @Test
+  void testReadValuesSentBackOnAWindowItDoesNotOwnWriteNothing() throws Exception {
+    storeLiveSetting();
+    storeImage(LIVE_NAME, "file-1", "alt", "square", "/portal/classic/news", "_blank");
+    lenient().doAnswer(invocation -> {
+      attachments.put(invocation.getArgument(3), new ArrayList<>(List.of(attachments.get(LIVE_NAME).getFirst().clone())));
+      return null;
+    }).when(attachmentService).copyAttachments(any(), any(), any(), any(), any(), anyLong());
+    ApplicationSettingsContext context = context(LIVE_NAME, true);
+    lenient().when(applicationSettingsService.isOwner(context)).thenReturn(false);
+
+    plugin.apply(context, plugin.read(context));
+    plugin.apply(context, Map.of());
+
+    verify(cmsService, never()).saveSettingName(anyString(), anyString(), anyString(), anyLong(), anyLong());
+    verify(attachmentService, never()).copyAttachments(any(), any(), any(), any(), any(), anyLong());
+    verify(attachmentService, never()).saveAttachments(any(), any());
+    verify(applicationSettingsService, never()).markOwner(any(), anyMap());
+  }
+
+  @Test
+  void testReadValuesSentBackOnAWindowWhoseImageIsOnlyInDataInitWriteNothing() throws Exception {
+    ApplicationSettingsContext context = context(null, true);
+    context.getPreferences().put("data.init", java.util.Base64.getEncoder().encodeToString(new byte[] { 1, 2, 3 }));
+    lenient().doAnswer(invocation -> {
+      storeImage(invocation.getArgument(2), "imported-file", null, null, null, null);
+      return null;
+    }).when(attachmentService).saveAttachment(any(), any(), anyString(), any(), anyLong());
+
+    plugin.apply(context, plugin.read(context));
+
+    verify(cmsService, never()).saveSettingName(anyString(), anyString(), anyString(), anyLong(), anyLong());
+    verify(attachmentService, never()).saveAttachment(any(), any(), any(), any(), anyLong());
+    verify(attachmentService, never()).saveAttachments(any(), any());
+    verify(applicationSettingsService, never()).markOwner(any(), anyMap());
+    assertEquals(1, context.getPreferences().size());
   }
 
   @Test
