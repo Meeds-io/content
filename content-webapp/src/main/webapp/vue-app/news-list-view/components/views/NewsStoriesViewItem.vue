@@ -35,7 +35,10 @@
       <a
         class="articleLink"
         target="_self"
-        :href="articleUrl">
+        :href="articleUrl"
+        :aria-hidden="showArticleTitle ? 'true' : null"
+        :tabindex="showArticleTitle ? '-1' : null"
+        :aria-label="showArticleTitle ? null : item.title">
         <v-img
           class="position-absolute border-box-sizing full-height full-width"
           :src="articleImage"
@@ -53,6 +56,7 @@
           </div>
         </v-img></a>
       <a
+        v-if="showArticleTitle"
         target="_self"
         :href="articleUrl">
         <div class="d-flex flex-column justify-end position-absolute px-1 pb-1 b-0">
