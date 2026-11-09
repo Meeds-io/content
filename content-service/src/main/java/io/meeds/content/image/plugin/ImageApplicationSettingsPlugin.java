@@ -197,12 +197,12 @@ public class ImageApplicationSettingsPlugin implements ApplicationSettingsPlugin
   @Override
   public Map<String, Object> read(ApplicationSettingsContext context) throws IllegalAccessException, ObjectNotFoundException {
     CMSSetting setting = getReadableSource(context, getIdentity(context));
-    if (setting == null) {
+    ObjectAttachmentDetail image = setting == null ? getInitialImage(context) : getImage(setting.getName());
+    if (setting == null && image == null) {
       return null; // NOSONAR
     }
-    ObjectAttachmentDetail image = getImage(setting.getName());
     Map<String, Object> settings = new LinkedHashMap<>();
-    settings.put(IMAGE_URL, image == null ? "" : getImageUrl(setting.getName(), image));
+    settings.put(IMAGE_URL, getStoredUrl(setting, image));
     settings.put(FORMAT, image == null ? CUSTOM_FORMAT : StringUtils.defaultIfBlank(image.getFormat(), DEFAULT_FORMAT));
     settings.put(ALT_TEXT, image == null ? "" : StringUtils.defaultString(image.getAltText()));
     settings.put(LINK_URL, image == null ? "" : StringUtils.defaultString(image.getLinkUrl()));
@@ -215,7 +215,7 @@ public class ImageApplicationSettingsPlugin implements ApplicationSettingsPlugin
                                                                                          ObjectNotFoundException {
     Identity identity = requireEditor(context);
     CMSSetting source = getReadableSource(context, identity);
-    ObjectAttachmentDetail image = source == null ? null : getImage(source.getName());
+    ObjectAttachmentDetail image = source == null ? getInitialImage(context) : getImage(source.getName());
     String uploadId = getUploadId(settings);
     requireImageUrl(settings, source, image);
     mergeImage(image, settings, uploadId);
@@ -356,8 +356,7 @@ public class ImageApplicationSettingsPlugin implements ApplicationSettingsPlugin
 
   private void requireImageUrl(Map<String, Object> settings, CMSSetting source, ObjectAttachmentDetail image) {
     if (settings.containsKey(IMAGE_URL)) {
-      String storedUrl = image == null ? "" : getImageUrl(source.getName(), image);
-      if (!storedUrl.equals(settings.get(IMAGE_URL))) {
+      if (!getStoredUrl(source, image).equals(settings.get(IMAGE_URL))) {
         throw notAccepted(IMAGE_URL);
       }
     }
@@ -404,8 +403,28 @@ public class ImageApplicationSettingsPlugin implements ApplicationSettingsPlugin
     return attachments.getAttachments().getFirst();
   }
 
-  private String getImageUrl(String name, ObjectAttachmentDetail image) {
-    return String.format(IMAGE_URL_FORMAT, ImageAttachmentPlugin.OBJECT_TYPE, name, image.getId());
+  /**
+   * @return the url of the stored image, empty when the window has no stored
+   *         image, its image being only in {@code data.init} included
+   */
+  private String getStoredUrl(CMSSetting setting, ObjectAttachmentDetail image) {
+    if (setting == null || image == null) {
+      return "";
+    }
+    return String.format(IMAGE_URL_FORMAT, ImageAttachmentPlugin.OBJECT_TYPE, setting.getName(), image.getId());
+  }
+
+  /**
+   * @return the image a window with no setting carries in its
+   *         {@code data.init} preference, with no stored property: the first
+   *         write imports it before applying the given properties, null when
+   *         the window carries none
+   */
+  private ObjectAttachmentDetail getInitialImage(ApplicationSettingsContext context) {
+    if (context.getPreferences() == null || StringUtils.isBlank(context.getPreferences().get(DATA_INIT_PREFERENCE))) {
+      return null;
+    }
+    return new ObjectAttachmentDetail();
   }
 
   /**
