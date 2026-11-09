@@ -71,7 +71,8 @@
       </div>
       <div class="slider-buttons primary d-flex pe-2">
         <v-btn
-          v-if="$root.canManageNewsList && hover"
+          v-if="$root.canManageNewsList"
+          :class="{'d-sr-only-focusable': !hover}"
           :aria-label="$t('news.latest.openSettings')"
           icon
           @click="openDrawer">
