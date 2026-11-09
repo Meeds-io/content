@@ -23,38 +23,59 @@
     <div
       v-if="showReactions"
       class="d-flex">
-      <v-icon 
-        :class="iconColorClass"  
-        class="my-auto  me-1"
-        size="12">
-        fas fa-thumbs-up
-      </v-icon>
       <div
-        :class="textColorClass"
-        class="me-2 my-auto ">
-        {{ item.likesCount }}
+        :aria-label="likesLabel"
+        class="d-flex"
+        role="img">
+        <v-icon
+          :class="iconColorClass"
+          class="my-auto me-1"
+          aria-hidden="true"
+          size="12">
+          fas fa-thumbs-up
+        </v-icon>
+        <div
+          :class="textColorClass"
+          class="me-2 my-auto"
+          aria-hidden="true">
+          {{ item.likesCount }}
+        </div>
       </div>
-      <v-icon
-        :class="iconColorClass"
-        class="my-auto me-1"
-        size="12">
-        fas fa-comment
-      </v-icon>
       <div
-        :class="textColorClass"
-        class="me-2 my-auto">
-        {{ item.commentsCount }}
+        :aria-label="commentsLabel"
+        class="d-flex"
+        role="img">
+        <v-icon
+          :class="iconColorClass"
+          class="my-auto me-1"
+          aria-hidden="true"
+          size="12">
+          fas fa-comment
+        </v-icon>
+        <div
+          :class="textColorClass"
+          class="me-2 my-auto"
+          aria-hidden="true">
+          {{ item.commentsCount }}
+        </div>
       </div>
-      <v-icon
-        :class="iconColorClass"
-        class="my-auto me-1"
-        size="12">
-        fas fa-eye
-      </v-icon>
       <div
-        :class="textColorClass"
-        class="my-auto">
-        {{ item.viewsCount }}
+        :aria-label="viewsLabel"
+        class="d-flex"
+        role="img">
+        <v-icon
+          :class="iconColorClass"
+          class="my-auto me-1"
+          aria-hidden="true"
+          size="12">
+          fas fa-eye
+        </v-icon>
+        <div
+          :class="textColorClass"
+          class="my-auto"
+          aria-hidden="true">
+          {{ item.viewsCount }}
+        </div>
       </div>
     </div>
   </div>
@@ -83,7 +104,22 @@ export default {
   computed: {
     showReactions () {
       return !this.item?.properties?.hideReaction && this.showArticleReactions;
-    }
+    },
+    likesLabel() {
+      return this.countLabel(this.item?.likesCount, 'news.list.reaction.like', 'news.list.reaction.likes');
+    },
+    commentsLabel() {
+      return this.countLabel(this.item?.commentsCount, 'news.list.reaction.comment', 'news.list.reaction.comments');
+    },
+    viewsLabel() {
+      return this.countLabel(this.item?.viewsCount, 'news.details.view', 'news.details.views');
+    },
+  },
+  methods: {
+    countLabel(count, singularKey, pluralKey) {
+      const value = Number(count) || 0;
+      return this.$t(value === 1 && singularKey || pluralKey, {0: value});
+    },
   }
 };
 </script>
