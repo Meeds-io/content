@@ -21,45 +21,46 @@
 <template>
   <div class="d-flex position-relative align-end">
     <v-spacer />
-    <v-fade-transition hide-on-leave>
-      <div
-        v-if="hover"
-        :class="{
-          'r-0': !$vuetify.rtl,
-          'l-0': $vuetify.rtl,
-        }"
-        class="position-absolute z-index-two t-0 ma-2">
-        <v-tooltip v-if="$root.hasImages" bottom>
-          <template #activator="{on, bind}">
-            <v-btn
-              v-on="on"
-              v-bind="bind"
-              class="me-2 white elevation-1"
-              small
-              icon
-              @click="$emit('remove')">
-              <v-icon size="18">fa-trash</v-icon>
-            </v-btn>
-          </template>
-          <span>{{ $t('image.label.removeImage') }}</span>
-        </v-tooltip>
-        <v-tooltip bottom>
-          <template #activator="{on, bind}">
-            <v-btn
-              v-on="on"
-              v-bind="bind"
-              :loading="loading"
-              class="white elevation-1"
-              small
-              icon
-              @click="$emit('edit')">
-              <v-icon size="18">fa-camera</v-icon>
-            </v-btn>
-          </template>
-          <span>{{ $t('image.label.editSettings') }}</span>
-        </v-tooltip>
-      </div>
-    </v-fade-transition>
+    <div
+      :class="{
+        'r-0': !$vuetify.rtl,
+        'l-0': $vuetify.rtl,
+      }"
+      class="position-absolute z-index-two t-0 ma-2">
+      <v-tooltip v-if="$root.hasImages" bottom>
+        <template #activator="{on, bind}">
+          <v-btn
+            v-on="on"
+            v-bind="bind"
+            :aria-label="$t('image.label.removeImage')"
+            :class="{'d-sr-only-focusable': !hover}"
+            class="me-2 white elevation-1"
+            small
+            icon
+            @click="$emit('remove')">
+            <v-icon size="18">fa-trash</v-icon>
+          </v-btn>
+        </template>
+        <span>{{ $t('image.label.removeImage') }}</span>
+      </v-tooltip>
+      <v-tooltip bottom>
+        <template #activator="{on, bind}">
+          <v-btn
+            v-on="on"
+            v-bind="bind"
+            :loading="loading"
+            :aria-label="$t('image.label.editSettings')"
+            :class="{'d-sr-only-focusable': !hover}"
+            class="white elevation-1"
+            small
+            icon
+            @click="$emit('edit')">
+            <v-icon size="18">fa-camera</v-icon>
+          </v-btn>
+        </template>
+        <span>{{ $t('image.label.editSettings') }}</span>
+      </v-tooltip>
+    </div>
   </div>
 </template>
 <script>

@@ -44,7 +44,8 @@
           <template v-if="!filterExpanded" #right>
             <div class="d-flex align-center ms-auto">
               <v-btn
-                v-if="canEdit && hover"
+                v-if="canEdit"
+                :class="{'d-sr-only-focusable': !hover}"
                 icon
                 small
                 :aria-label="$t('content.list.settings.drawer.open')"
