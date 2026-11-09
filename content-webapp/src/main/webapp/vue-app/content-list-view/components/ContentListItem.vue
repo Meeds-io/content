@@ -57,12 +57,13 @@
           </div>
           <v-btn
             v-if="remainingCount > 0"
+            :aria-label="$t('content.categories.remainingCount.ariaLabel', {0: remainingCount})"
             class="flex-shrink-0 flex-grow-0 px-0 ms-1"
             height="24"
             width="24"
             icon
             @click="openMoreCategoriesDrawer">
-            <span class="primary--text text-subtitle-font-size">
+            <span class="primary--text text-subtitle-font-size" aria-hidden="true">
               {{ $t('categories.remainingCount', { 0: remainingCount }) }}
             </span>
           </v-btn>
