@@ -69,6 +69,7 @@ import io.meeds.layout.model.ApplicationSettingsContext;
 import io.meeds.layout.service.ApplicationSettingsService;
 import io.meeds.social.cms.model.CMSSetting;
 import io.meeds.social.cms.service.CMSService;
+import io.meeds.social.translation.model.TranslationField;
 import io.meeds.social.translation.service.TranslationService;
 
 import jakarta.annotation.PostConstruct;
@@ -414,6 +415,55 @@ class NewsListApplicationSettingsPluginTest {
     order.verify(settingService).set(any(), any(), anyString(), any());
     order.verify(translationService).saveTranslationLabels(anyString(), anyString(), anyString(), anyMap(), anyString(), eq(false));
     order.verify(applicationSettingsService).markOwner(any(), anyMap());
+  }
+
+  /**
+   * The read returns an empty header title for a window with no
+   * translation: sent back, it is accepted and nothing is written
+   */
+  @Test
+  void testReadEmptyHeaderSentBackIsAcceptedAndUnwritten() throws Exception {
+    ApplicationSettingsContext context = pageContext(Map.of("name", LIVE_NAME, "applicationId", LIVE_APP_ID));
+    Map<String, Object> read = plugin.read(context);
+    assertEquals(Map.of(), read.get("header_title"));
+
+    plugin.validate(context, Map.of("header_title", read.get("header_title")));
+    plugin.apply(context, Map.of("header_title", read.get("header_title")));
+
+    verify(cmsService, never()).saveSettingName(anyString(), anyString(), anyString(), anyLong(), anyLong());
+    verify(settingService, never()).set(any(), any(), anyString(), any());
+    verify(translationService, never()).saveTranslationLabels(anyString(), anyString(), anyString(), anyMap(), anyString(), eq(false));
+    verify(applicationSettingsService, never()).markOwner(any(), anyMap());
+    verify(applicationSettingsService, never()).updatePreferences(any(), anyMap());
+  }
+
+  /**
+   * A header title equal to the stored one is not rewritten, and does not
+   * re-key a window that does not own its keys
+   */
+  @Test
+  void testUnchangedHeaderDoesNotRekeyTheWindow() throws Exception {
+    when(translationService.getTranslationField(NewsListViewTranslationPlugin.NEWS_LIST_VIEW_OBJECT_TYPE,
+                                                LIVE_APP_ID,
+                                                NewsUtils.NEWS_LIST_HEADER_NAME_FIELD,
+                                                USERNAME))
+                                                          .thenReturn(new TranslationField(NewsListViewTranslationPlugin.NEWS_LIST_VIEW_OBJECT_TYPE,
+                                                                                           LIVE_APP_ID,
+                                                                                           NewsUtils.NEWS_LIST_HEADER_NAME_FIELD,
+                                                                                           Map.of(Locale.ENGLISH,
+                                                                                                  "News",
+                                                                                                  Locale.FRENCH,
+                                                                                                  "Actualités"),
+                                                                                           0L));
+    lenient().when(applicationSettingsService.isOwner(any())).thenReturn(false);
+    ApplicationSettingsContext context = pageContext(Map.of("name", LIVE_NAME, "applicationId", LIVE_APP_ID));
+
+    plugin.apply(context, Map.of("header_title", Map.of("fr", "Actualités", "en", "News")));
+
+    verify(cmsService, never()).saveSettingName(anyString(), anyString(), anyString(), anyLong(), anyLong());
+    verify(settingService, never()).set(any(), any(), anyString(), any());
+    verify(translationService, never()).saveTranslationLabels(anyString(), anyString(), anyString(), anyMap(), anyString(), eq(false));
+    verify(applicationSettingsService, never()).markOwner(any(), anyMap());
   }
 
   @Test

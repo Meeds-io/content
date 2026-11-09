@@ -232,13 +232,22 @@ public abstract class ListViewApplicationSettingsPlugin implements ApplicationSe
     return identity;
   }
 
-  private Map<String, String> toHeader(ApplicationSettingsContext context, Map<String, Object> settings) {
+  /**
+   * @return the header title to write, null when none is given or when the
+   *         given one equals the stored one, an empty one included: a value
+   *         equal to the read value is accepted unchecked and unwritten
+   */
+  private Map<String, String> toHeader(ApplicationSettingsContext context,
+                                       Map<String, Object> settings) throws IllegalAccessException {
     requireKnownOptions(settings, getOptions());
     if (!settings.containsKey(HEADER_TITLE)) {
       return null; // NOSONAR
     } else if (context.isSiteContainer()) {
       throw new IllegalArgumentException(String.format(ApplicationSettingsService.NOT_CONFIGURABLE_IN_SITE_CONTAINER,
                                                        HEADER_TITLE));
+    } else if (readHeader(context.getPreferences().get(APPLICATION_ID_PREFERENCE),
+                          context.getUsername()).equals(settings.get(HEADER_TITLE))) {
+      return null; // NOSONAR
     }
     Map<String, String> header = toTranslations(settings.get(HEADER_TITLE),
                                                 HEADER_TITLE,
