@@ -68,7 +68,8 @@
                 :class="$vuetify.rtl && 'l-0' || 'r-0'"
                 class="flex flex-row t-0 position-absolute">
                 <v-btn
-                  v-if="$root.canManageNewsList && hover"
+                  v-if="$root.canManageNewsList"
+                  :class="{'d-sr-only-focusable': !hover}"
                   :aria-label="$t('news.latest.openSettings')"
                   icon
                   @click.stop.prevent="openDrawer"
