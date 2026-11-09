@@ -23,6 +23,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -317,6 +318,67 @@ public class LinkService {
       }).toList();
       saveLinkSetting(linkSetting, links);
     }
+  }
+
+  /**
+   * Creates a {@link LinkSetting} for a page from a copy of another one's
+   * options and links: the links are created anew, ids reset, each with the
+   * icon its input stream carries
+   * 
+   * @param linkSettingName unique name of the {@link LinkSetting} to create
+   * @param pageReference {@link Page} key composite reference
+   * @param spaceId space identifier where the page is displayed
+   * @param linkSetting the options of the created {@link LinkSetting}
+   * @param links the links to create, as {@link #getLinkCopies(String)} or
+   *          {@link #toLinkCopies(List)} return them
+   * @param identity User Acl {@link Identity} making the operation
+   * @return created {@link LinkSetting}
+   * @throws IllegalAccessException when user isn't allowed to write the
+   *           created link setting
+   * @throws ObjectNotFoundException when the created {@link LinkSetting} is
+   *           not found
+   */
+  public LinkSetting copyLinkSetting(String linkSettingName,
+                                     String pageReference,
+                                     long spaceId,
+                                     LinkSetting linkSetting,
+                                     List<Link> links,
+                                     Identity identity) throws IllegalAccessException, ObjectNotFoundException {
+    links.forEach(link -> link.setId(0));
+    initLinkSetting(linkSettingName, pageReference, spaceId);
+    linkSetting.setName(linkSettingName);
+    return saveLinkSetting(linkSetting, links, identity);
+  }
+
+  /**
+   * @param linkSettingName {@link LinkSetting} unique name
+   * @return the links of the {@link LinkSetting}, each carrying its icon's
+   *         content, to be created in a copy by
+   *         {@link #copyLinkSetting(String, String, long, LinkSetting, List, Identity)}
+   * @throws ObjectNotFoundException when {@link LinkSetting} not found
+   */
+  public List<Link> getLinkCopies(String linkSettingName) throws ObjectNotFoundException {
+    return toLinkCopies(getLinkDataByName(linkSettingName).getLinks());
+  }
+
+  /**
+   * @param links the links to copy, a {@link LinkWithImageContent} carrying
+   *          its icon's content
+   * @return the links, each with its id and carrying its icon's content as an
+   *         input stream, no icon file, to be created in a copy by
+   *         {@link #copyLinkSetting(String, String, long, LinkSetting, List, Identity)}
+   */
+  public List<Link> toLinkCopies(List<? extends Link> links) {
+    List<Link> copies = new ArrayList<>();
+    for (Link link : links) {
+      LinkWithIconAttachment copy = new LinkWithIconAttachment(link);
+      copy.setIconFileId(0);
+      if (link instanceof LinkWithImageContent withImage && StringUtils.isNotBlank(withImage.getImageContent())) {
+        copy.setInputStream(new ByteArrayInputStream(Base64.decodeBase64(withImage.getImageContent())));
+      }
+      copies.add(copy);
+    }
+    return copies;
   }
 
   /**
