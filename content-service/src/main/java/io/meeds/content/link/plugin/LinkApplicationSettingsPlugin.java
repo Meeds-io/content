@@ -36,7 +36,6 @@ import static io.meeds.content.utils.ApplicationSettingsUtils.toTranslations;
 import static io.meeds.content.utils.ApplicationSettingsUtils.toUrl;
 import static io.meeds.content.utils.ApplicationSettingsUtils.translationsSchema;
 
-import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -47,7 +46,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Profile;
@@ -63,8 +61,6 @@ import io.meeds.content.link.constant.LinkDisplayType;
 import io.meeds.content.link.model.Link;
 import io.meeds.content.link.model.LinkData;
 import io.meeds.content.link.model.LinkSetting;
-import io.meeds.content.link.model.LinkWithIconAttachment;
-import io.meeds.content.link.model.LinkWithImageContent;
 import io.meeds.content.link.service.LinkService;
 import io.meeds.layout.model.ApplicationSettingsContext;
 import io.meeds.layout.plugin.ApplicationSettingsPlugin;
@@ -263,18 +259,16 @@ public class LinkApplicationSettingsPlugin implements ApplicationSettingsPlugin 
         && StringUtils.equals(source.getPageReference(), context.getPageReference())) {
       linkService.saveLinkSetting(setting, mergeLinks(getSourceLinks(source), settings), identity);
     } else {
-      List<Link> links = source == null ? toCopies(initialLinks(initial)) : getCopiedLinks(source);
+      List<Link> links = source == null ? linkService.toLinkCopies(initialLinks(initial))
+                                        : linkService.getLinkCopies(source.getName());
       Map<String, Object> unchanged = toSettings(base == null ? newSetting() : base, links);
       links = mergeLinks(links, settings);
       if (unchanged.equals(toSettings(setting, links))) {
         // Nothing to copy for a window that does not own its setting
         return;
       }
-      links.forEach(link -> link.setId(0));
       String name = generateSettingName(context);
-      linkService.initLinkSetting(name, context.getPageReference(), context.getSpaceId());
-      setting.setName(name);
-      linkService.saveLinkSetting(setting, links, identity);
+      linkService.copyLinkSetting(name, context.getPageReference(), context.getSpaceId(), setting, links, identity);
       Map<String, String> keys = new LinkedHashMap<>();
       keys.put(NAME_PREFERENCE, name);
       if (initial != null) {
@@ -332,34 +326,6 @@ public class LinkApplicationSettingsPlugin implements ApplicationSettingsPlugin 
 
   private List<Link> getSourceLinks(LinkSetting source) {
     return source == null ? Collections.emptyList() : linkService.getLinks(source.getName(), null, true);
-  }
-
-  /**
-   * @return the source's links, each carrying its icon's content, to be
-   *         created in a copy once their ids are reset
-   */
-  private List<Link> getCopiedLinks(LinkSetting source) throws ObjectNotFoundException {
-    if (source == null) {
-      return Collections.emptyList();
-    }
-    return toCopies(linkService.getLinkDataByName(source.getName()).getLinks());
-  }
-
-  /**
-   * @return the links, each carrying its icon's content, to be created in a
-   *         copy once their ids are reset
-   */
-  private List<Link> toCopies(List<? extends Link> sourceLinks) {
-    List<Link> links = new ArrayList<>();
-    for (Link link : sourceLinks) {
-      LinkWithIconAttachment copy = new LinkWithIconAttachment(link);
-      copy.setIconFileId(0);
-      if (link instanceof LinkWithImageContent withImage && StringUtils.isNotBlank(withImage.getImageContent())) {
-        copy.setInputStream(new ByteArrayInputStream(Base64.decodeBase64(withImage.getImageContent())));
-      }
-      links.add(copy);
-    }
-    return links;
   }
 
   private LinkSetting mergeSetting(LinkSetting source, Map<String, Object> settings) {
