@@ -362,6 +362,45 @@ class ImageApplicationSettingsPluginTest {
     verify(attachmentService, never()).saveAttachments(any(FileAttachmentResourceList.class), any());
   }
 
+  /**
+   * A window whose image is only in data.init reads that image, with no
+   * stored property, and takes a write of its properties alone: the write
+   * imports the image, then stores the given properties on it
+   */
+  @Test
+  void testPropertyOnlyWriteOnAWindowWhoseImageIsOnlyInDataInit() throws Exception {
+    ApplicationSettingsContext context = context(null, true);
+    context.getPreferences().put("data.init", java.util.Base64.getEncoder().encodeToString(new byte[] { 1, 2, 3 }));
+    doAnswer(invocation -> {
+      storeImage(invocation.getArgument(2), "imported-file", null, null, null, null);
+      return null;
+    }).when(attachmentService).saveAttachment(any(), eq(OBJECT_TYPE), anyString(), eq(null), eq(IDENTITY_ID));
+
+    Map<String, Object> read = plugin.read(context);
+    assertEquals("", read.get("image_url"));
+    assertEquals("landscape", read.get("format"));
+    assertEquals("", read.get("alt_text"));
+    assertEquals("", read.get("link_url"));
+    assertEquals("same_tab", read.get("link_target"));
+    Map<String, Object> settings = Map.of("alt_text", "Team", "format", "square", "link_url", "/portal/classic/news");
+    plugin.validate(context, settings);
+    plugin.apply(context, settings);
+
+    ArgumentCaptor<String> name = ArgumentCaptor.forClass(String.class);
+    verify(cmsService).saveSettingName(eq(OBJECT_TYPE), name.capture(), eq(LIVE_PAGE), eq(0L), eq(IDENTITY_ID));
+    verify(attachmentService).saveAttachment(any(), eq(OBJECT_TYPE), eq(name.getValue()), eq(null), eq(IDENTITY_ID));
+    ArgumentCaptor<FileAttachmentResourceList> list = ArgumentCaptor.forClass(FileAttachmentResourceList.class);
+    verify(attachmentService).saveAttachments(list.capture(), eq(identity));
+    assertEquals(name.getValue(), list.getValue().getObjectId());
+    assertTrue(list.getValue().getUploadedFiles().isEmpty());
+    assertEquals(List.of(new FileAttachmentObject("imported-file", null, "Team", "square", "/portal/classic/news", null)),
+                 list.getValue().getAttachedFiles());
+    Map<String, String> keys = new HashMap<>();
+    keys.put("name", name.getValue());
+    keys.put("data.init", null);
+    verify(applicationSettingsService).markOwner(context, keys);
+  }
+
   @Test
   void testFirstWriteOnAnUnkeyedWindowWhoseImportFailsKeepsItsInitialImage() throws Exception {
     ApplicationSettingsContext context = context(null, true);
