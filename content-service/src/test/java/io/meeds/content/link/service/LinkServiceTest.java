@@ -331,6 +331,63 @@ public class LinkServiceTest extends AbstractSpringConfigurationTest { // NOSONA
 
   @Test
   @SneakyThrows
+  public void testCopyLinkSetting() {
+    LinkSetting source = initLinkSetting(LINK_SETTING_NAME, "testCopyLinkSettingSource");
+    source.setHeader(Collections.singletonMap("en", HEADER_NAME));
+    source.setShowName(true);
+    source.setType(LinkDisplayType.CARD);
+    source.setVAlign(LinkAlignType.START);
+    source.setHAlign(LinkAlignType.END);
+    File icon = File.createTempFile("icon", "temp");
+    java.nio.file.Files.write(icon.toPath(), new byte[] { 1, 2, 3 });
+    uploadService.createUploadResource(UPLOAD_ID, icon.getPath(), FILE_NAME, MIME_TYPE);
+    linkService.saveLinkSetting(source,
+                                Arrays.asList(new LinkWithIconAttachment(0,
+                                                                         Collections.singletonMap("en", "Website"),
+                                                                         Collections.singletonMap("en", "Description"),
+                                                                         "https://localhost/",
+                                                                         null,
+                                                                         true,
+                                                                         0,
+                                                                         0,
+                                                                         UPLOAD_ID)),
+                                registerAdministratorUser(USERNAME));
+    Link sourceLink = linkService.getLinks(LINK_SETTING_NAME).get(0);
+    assertTrue(sourceLink.getIconFileId() > 0);
+
+    List<Link> copies = linkService.getLinkCopies(LINK_SETTING_NAME);
+    assertEquals(1, copies.size());
+    assertEquals(sourceLink.getId(), copies.get(0).getId());
+    assertEquals(0, copies.get(0).getIconFileId());
+    assertNotNull(((LinkWithIconAttachment) copies.get(0)).getInputStream());
+
+    String copyPage = createPage("testCopyLinkSettingCopy", UserACL.EVERYONE, ADMINISTRATORS_GROUP);
+    LinkSetting setting = linkService.getLinkSettingByName(LINK_SETTING_NAME, null, true).clone();
+    setting.setShowDescription(true);
+    linkService.copyLinkSetting("linkServiceCopyName", copyPage, SPACE_ID, setting, copies, registerAdministratorUser(USERNAME));
+
+    LinkSetting copy = linkService.getLinkSettingByName("linkServiceCopyName", null, true);
+    assertNotEquals(linkService.getLinkSettingByName(LINK_SETTING_NAME).getId(), copy.getId());
+    assertEquals(copyPage, copy.getPageReference());
+    assertEquals(SPACE_ID, copy.getSpaceId());
+    assertEquals(LinkDisplayType.CARD, copy.getType());
+    assertTrue(copy.isShowName());
+    assertTrue(copy.isShowDescription());
+    assertEquals(HEADER_NAME, copy.getHeader().get("en"));
+    List<Link> copiedLinks = linkService.getLinks("linkServiceCopyName", null, true);
+    assertEquals(1, copiedLinks.size());
+    Link copiedLink = copiedLinks.get(0);
+    assertNotEquals(sourceLink.getId(), copiedLink.getId());
+    assertEquals("https://localhost/", copiedLink.getUrl());
+    assertEquals("Website", copiedLink.getName().get("en"));
+    assertTrue(copiedLink.getIconFileId() > 0);
+    assertNotEquals(sourceLink.getIconFileId(), copiedLink.getIconFileId());
+    assertEquals(sourceLink.getIconFileId(), linkService.getLinks(LINK_SETTING_NAME).get(0).getIconFileId());
+    assertFalse(linkService.getLinkSettingByName(LINK_SETTING_NAME).isShowDescription());
+  }
+
+  @Test
+  @SneakyThrows
   public void testGetLinkSettingPermissions() {
     assertNull(linkService.getLinkSettingByName(LINK_SETTING_NAME, null, null));
 

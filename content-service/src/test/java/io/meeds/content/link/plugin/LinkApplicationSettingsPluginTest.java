@@ -115,13 +115,17 @@ class LinkApplicationSettingsPluginTest {
   private LinkApplicationSettingsPlugin plugin;
 
   @BeforeEach
-  void setUp() {
+  void setUp() throws Exception {
     LocaleConfig english = localeConfig(Locale.ENGLISH);
     LocaleConfig french = localeConfig(Locale.FRENCH);
     lenient().when(localeConfigService.getLocalConfigs()).thenReturn(Arrays.asList(english, french));
     lenient().when(localeConfigService.getDefaultLocaleConfig()).thenReturn(english);
     lenient().when(userAcl.getUserIdentity(USERNAME)).thenReturn(identity);
     lenient().when(cmsService.hasEditPermission(identity, LIVE_PAGE, SPACE_ID)).thenReturn(true);
+    // The copy is the service's: its own steps stay observable on the mock
+    lenient().when(linkService.getLinkCopies(anyString())).thenCallRealMethod();
+    lenient().when(linkService.toLinkCopies(any())).thenCallRealMethod();
+    lenient().when(linkService.copyLinkSetting(anyString(), anyString(), anyLong(), any(), any(), any())).thenCallRealMethod();
   }
 
   @Test

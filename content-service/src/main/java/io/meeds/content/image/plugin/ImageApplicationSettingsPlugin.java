@@ -28,19 +28,15 @@ import static io.meeds.content.utils.ApplicationSettingsUtils.toText;
 import static io.meeds.content.utils.ApplicationSettingsUtils.toUrl;
 import static io.meeds.content.utils.ApplicationSettingsUtils.toValue;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Profile;
@@ -50,19 +46,16 @@ import org.exoplatform.commons.ObjectAlreadyExistsException;
 import org.exoplatform.commons.exception.ObjectNotFoundException;
 import org.exoplatform.portal.config.UserACL;
 import org.exoplatform.services.security.Identity;
-import org.exoplatform.services.log.ExoLogger;
-import org.exoplatform.services.log.Log;
 import org.exoplatform.social.attachment.AttachmentService;
 import org.exoplatform.social.attachment.model.FileAttachmentObject;
 import org.exoplatform.social.attachment.model.FileAttachmentResourceList;
 import org.exoplatform.social.attachment.model.ObjectAttachmentDetail;
 import org.exoplatform.social.attachment.model.ObjectAttachmentList;
 import org.exoplatform.social.attachment.model.ObjectAttachmentOperationReport;
-import org.exoplatform.social.attachment.model.UploadedAttachmentDetail;
 import org.exoplatform.social.core.manager.IdentityManager;
-import org.exoplatform.upload.UploadResource;
 import org.exoplatform.upload.UploadService;
 
+import io.meeds.content.image.service.ImageService;
 import io.meeds.layout.model.ApplicationSettingsContext;
 import io.meeds.layout.model.ImageConsumption;
 import io.meeds.layout.plugin.ApplicationSettingsPlugin;
@@ -95,8 +88,6 @@ public class ImageApplicationSettingsPlugin implements ApplicationSettingsPlugin
 
   public static final String        DATA_INIT_PREFERENCE = "data.init";
 
-  private static final Log          LOG                 = ExoLogger.getLogger(ImageApplicationSettingsPlugin.class);
-
   public static final String        IMAGE_UPLOAD_ID     = "image_upload_id";
 
   public static final String        IMAGE_URL           = "image_url";
@@ -127,8 +118,6 @@ public class ImageApplicationSettingsPlugin implements ApplicationSettingsPlugin
 
   public static final List<String>  LINK_TARGETS        = Arrays.asList(NEW_TAB, SAME_TAB);
 
-  private static final String       SETTING_NAME_PREFIX = "Untitled";
-
   private static final List<String> OPTIONS             = Arrays.asList(IMAGE_UPLOAD_ID,
                                                                         IMAGE_URL,
                                                                         FORMAT,
@@ -149,6 +138,9 @@ public class ImageApplicationSettingsPlugin implements ApplicationSettingsPlugin
 
   @Autowired
   private UploadService              uploadService;
+
+  @Autowired
+  private ImageService               imageService;
 
   @Autowired
   private UserACL                    userAcl;
@@ -247,12 +239,7 @@ public class ImageApplicationSettingsPlugin implements ApplicationSettingsPlugin
         Map<String, String> keys = new LinkedHashMap<>();
         keys.put(NAME_PREFERENCE, name);
         if (source != null) {
-          attachmentService.copyAttachments(ImageAttachmentPlugin.OBJECT_TYPE,
-                                            source.getName(),
-                                            ImageAttachmentPlugin.OBJECT_TYPE,
-                                            name,
-                                            null,
-                                            identityId);
+          imageService.copyImage(source.getName(), name, identityId);
         } else if (StringUtils.isNotBlank(context.getPreferences().get(DATA_INIT_PREFERENCE))) {
           importInitialImage(name, context.getPreferences().get(DATA_INIT_PREFERENCE), identityId);
           keys.put(DATA_INIT_PREFERENCE, null);
@@ -455,48 +442,22 @@ public class ImageApplicationSettingsPlugin implements ApplicationSettingsPlugin
    * render imports that preference
    */
   private void importInitialImage(String name, String imageContent, long identityId) {
-    File tempFile = null;
     try {
-      tempFile = File.createTempFile("image", ".png");
-      Files.write(tempFile.toPath(), Base64.decodeBase64(imageContent));
-      UploadResource uploadResource = new UploadResource("ImageSettings" + UUID.randomUUID());
-      uploadResource.setFileName(tempFile.getName());
-      uploadResource.setMimeType("image/png");
-      uploadResource.setStatus(UploadResource.UPLOADED_STATUS);
-      uploadResource.setStoreLocation(tempFile.getAbsolutePath());
-      attachmentService.saveAttachment(new UploadedAttachmentDetail(uploadResource),
-                                       ImageAttachmentPlugin.OBJECT_TYPE,
-                                       name,
-                                       null,
-                                       identityId);
+      imageService.importImage(name, imageContent, identityId);
     } catch (IOException | ObjectAlreadyExistsException | ObjectNotFoundException e) {
       throw new IllegalStateException(LayoutImageService.IMAGE_NOT_SAVED, e);
-    } finally {
-      if (tempFile != null) {
-        try {
-          Files.deleteIfExists(tempFile.toPath());
-        } catch (IOException e) {
-          LOG.warn("Temporary file {} of an imported image not deleted", tempFile, e);
-        }
-      }
     }
   }
 
   private String createSetting(ApplicationSettingsContext context, long identityId) {
-    String name;
-    do {
-      name = SETTING_NAME_PREFIX + "-" + context.getApplicationId() + "-" + UUID.randomUUID();
-    } while (cmsService.isSettingNameExists(ImageAttachmentPlugin.OBJECT_TYPE, name));
     try {
-      cmsService.saveSettingName(ImageAttachmentPlugin.OBJECT_TYPE,
-                                 name,
-                                 context.getPageReference(),
-                                 context.getSpaceId(),
-                                 identityId);
+      return imageService.createImageSetting(context.getApplicationId(),
+                                             context.getPageReference(),
+                                             context.getSpaceId(),
+                                             identityId);
     } catch (ObjectAlreadyExistsException e) {
       throw new IllegalStateException(LayoutImageService.IMAGE_NOT_SAVED, e);
     }
-    return name;
   }
 
   private Identity getIdentity(ApplicationSettingsContext context) {

@@ -52,6 +52,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import org.exoplatform.commons.exception.ObjectNotFoundException;
 import org.exoplatform.portal.config.UserACL;
@@ -66,6 +67,7 @@ import org.exoplatform.social.attachment.model.UploadedAttachmentDetail;
 import org.exoplatform.social.core.manager.IdentityManager;
 import org.exoplatform.upload.UploadService;
 
+import io.meeds.content.image.service.ImageService;
 import io.meeds.layout.model.ApplicationSettingsContext;
 import io.meeds.layout.model.ImageConsumption;
 import io.meeds.layout.service.ApplicationSettingsService;
@@ -116,12 +118,17 @@ class ImageApplicationSettingsPluginTest {
   @InjectMocks
   private ImageApplicationSettingsPlugin plugin;
 
+  /** The service the plugin delegates to, on the same mocks */
+  @InjectMocks
+  private ImageService                   imageService;
+
   private Identity                       identity;
 
   private Map<String, List<ObjectAttachmentDetail>> attachments;
 
   @BeforeEach
   void setUp() throws Exception {
+    ReflectionTestUtils.setField(plugin, "imageService", imageService);
     identity = mock(Identity.class);
     attachments = new HashMap<>();
     lenient().when(userAcl.getUserIdentity(USERNAME)).thenReturn(identity);
