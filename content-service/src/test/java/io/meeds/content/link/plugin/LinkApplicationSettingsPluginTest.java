@@ -268,6 +268,39 @@ class LinkApplicationSettingsPluginTest {
     verify(applicationSettingsService).markOwner(context, Map.of("name", name.getValue()));
   }
 
+  /**
+   * The values the read returns, sent back on a window that does not own its
+   * setting, change nothing: no setting is created, no link copied, the
+   * window keeps its keys
+   */
+  @Test
+  void testReadValuesSentBackOnAWindowItDoesNotOwnWriteNothing() throws Exception {
+    mockSource(LIVE_PAGE, storedLink(7, 99));
+    lenient().when(linkService.getLinkSettingByName(LIVE_SETTING, null, identity)).thenReturn(liveSetting(LIVE_PAGE));
+    when(linkService.getLinkDataByName(LIVE_SETTING)).thenReturn(new LinkData(liveSetting(LIVE_PAGE),
+                                                                              List.of(new LinkWithImageContent(storedLink(7, 99)))));
+    lenient().when(applicationSettingsService.isOwner(any())).thenReturn(false);
+    ApplicationSettingsContext context = context(true, Map.of("name", LIVE_SETTING));
+
+    plugin.apply(context, plugin.read(context));
+    plugin.apply(context, Map.of());
+
+    verify(linkService, never()).initLinkSetting(anyString(), anyString(), anyLong());
+    verify(linkService, never()).saveLinkSetting(any(), any(), any());
+    verify(applicationSettingsService, never()).markOwner(any(), anyMap());
+  }
+
+  @Test
+  void testReadValuesSentBackOnAnUnkeyedWindowWriteNothing() throws Exception {
+    ApplicationSettingsContext context = context(true, Map.of("data.init", initialData()));
+
+    plugin.apply(context, plugin.read(context));
+
+    verify(linkService, never()).initLinkSetting(anyString(), anyString(), anyLong());
+    verify(linkService, never()).saveLinkSetting(any(), any(), any());
+    verify(applicationSettingsService, never()).markOwner(any(), anyMap());
+  }
+
   @Test
   void testOwnedWindowIsWrittenInPlace() throws Exception {
     mockSource(LIVE_PAGE, storedLink(7, 99));
