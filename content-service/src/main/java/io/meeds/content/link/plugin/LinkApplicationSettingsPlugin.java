@@ -257,12 +257,19 @@ public class LinkApplicationSettingsPlugin implements ApplicationSettingsPlugin 
     Identity identity = requireEditor(context);
     LinkSetting source = getReadableSource(context, identity);
     LinkData initial = source == null ? getInitialData(context) : null;
-    LinkSetting setting = mergeSetting(source == null ? initialSetting(initial) : source, settings);
+    LinkSetting base = source == null ? initialSetting(initial) : source;
+    LinkSetting setting = mergeSetting(base, settings);
     if (source != null && applicationSettingsService.isOwner(context)
         && StringUtils.equals(source.getPageReference(), context.getPageReference())) {
       linkService.saveLinkSetting(setting, mergeLinks(getSourceLinks(source), settings), identity);
     } else {
-      List<Link> links = mergeLinks(source == null ? toCopies(initialLinks(initial)) : getCopiedLinks(source), settings);
+      List<Link> links = source == null ? toCopies(initialLinks(initial)) : getCopiedLinks(source);
+      Map<String, Object> unchanged = toSettings(base == null ? newSetting() : base, links);
+      links = mergeLinks(links, settings);
+      if (unchanged.equals(toSettings(setting, links))) {
+        // Nothing to copy for a window that does not own its setting
+        return;
+      }
       links.forEach(link -> link.setId(0));
       String name = generateSettingName(context);
       linkService.initLinkSetting(name, context.getPageReference(), context.getSpaceId());
