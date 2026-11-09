@@ -238,6 +238,11 @@ public class ImageApplicationSettingsPlugin implements ApplicationSettingsPlugin
           && StringUtils.equals(source.getPageReference(), context.getPageReference())) {
         name = source.getName();
       } else {
+        ObjectAttachmentDetail image = source == null ? getInitialImage(context) : getImage(source.getName());
+        if (isUnchanged(image, mergeImage(image, settings, getUploadId(settings)), getUploadId(settings))) {
+          // Nothing to copy for a window that does not own its setting
+          return;
+        }
         name = createSetting(context, identityId);
         Map<String, String> keys = new LinkedHashMap<>();
         keys.put(NAME_PREFERENCE, name);
@@ -342,6 +347,23 @@ public class ImageApplicationSettingsPlugin implements ApplicationSettingsPlugin
       merged.setLinkTarget(NEW_TAB.equals(toValue(settings.get(LINK_TARGET), LINK_TARGET, LINK_TARGETS)) ? BLANK_TARGET : null);
     }
     return merged;
+  }
+
+  /**
+   * @return whether saving the merged attachment leaves the image as it is:
+   *         nothing given, the removal of no image, or the stored properties
+   *         sent back with no upload
+   */
+  private boolean isUnchanged(ObjectAttachmentDetail image, FileAttachmentObject merged, String uploadId) {
+    if (merged == null) {
+      return image == null || !"".equals(uploadId);
+    }
+    return image != null && merged.getUploadId() == null
+           && StringUtils.equals(StringUtils.defaultString(image.getAltText()), StringUtils.defaultString(merged.getAltText()))
+           && StringUtils.equals(StringUtils.defaultIfBlank(image.getFormat(), DEFAULT_FORMAT), merged.getFormat())
+           && StringUtils.equals(StringUtils.defaultString(image.getLinkUrl()), StringUtils.defaultString(merged.getLinkUrl()))
+           && StringUtils.equals(StringUtils.defaultString(image.getLinkTarget()),
+                                 StringUtils.defaultString(merged.getLinkTarget()));
   }
 
   private String getUploadId(Map<String, Object> settings) {
