@@ -41,19 +41,22 @@
               {{ newsTitle }}
             </span>
             <v-tooltip bottom>
-              <template #activator="{ on, attrs }">
+              <template #activator="{ on }">
                 <span
                   v-on="on"
-                  v-bind="attrs"
                   class="text-no-wrap">
                   <v-icon
                     size="20"
-                    class="ms-3 icon-default-color">
+                    class="ms-3 icon-default-color"
+                    aria-hidden="true">
                     fas fa-eye
                   </v-icon>
-                  <span class="article-views position-relative text-subtitle">
+                  <span
+                    class="article-views position-relative text-subtitle"
+                    aria-hidden="true">
                     {{ newsViews }}
                   </span>
+                  <span class="d-sr-only">{{ newsViewsCount }}</span>
                 </span>
               </template>
               <span class="caption">
