@@ -25,7 +25,9 @@
       width="140"
       class="me-2 white card-border-radius overflow-hidden elevation-0 py-0 position-relative border-box-sizing">
       <news-settings
-        v-if="!showSeeAll && lastItem && hover"
+        v-if="!showSeeAll && lastItem && (hover || $root.canManageNewsList)"
+        :is-hovering="hover"
+        header-on-hover
         class="position-absolute r-0 z-index-modal mt-2"
         class-button-open-settings="white-background"
         setting-button-size="24"
