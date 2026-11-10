@@ -1914,7 +1914,7 @@ public class NewsServiceTest {
 
     assertEquals(List.of("10"), filter.getSpaces());
     verify(newsSearchConnector).search(any(), eq(filter));
-    verify(spaceService, never()).getSpaceById(anyString());
+    verify(spaceService, never()).getSpaceById(nullable(String.class));
   }
 
   /**
