@@ -723,7 +723,10 @@ public class NewsService {
    * current user can't view are ignored, as the news page refuses them, and a
    * filter naming no space the user can view gives no news.
    *
-   * @param filter
+   * @param filter the news filter. Without a search text, its space list is
+   *          replaced with the subset of those spaces the current user can
+   *          view: a caller that reuses the filter afterwards reads that
+   *          subset
    * @param currentIdentity
    * @return all news
    * @throws Exception when error
