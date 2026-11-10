@@ -23,7 +23,7 @@
   <v-hover v-slot="{ hover }">
     <v-card
       flat
-      class="search-result-card pa-0">
+      class="hover-reveal-parent transparent pa-0">
       <v-list class="pa-0" :class="hover && 'light-grey-background-color no-border-radius' || ''">
         <v-list-item>
           <v-list-item-icon class="ms-n1 me-2">
@@ -35,12 +35,12 @@
               <h1 class="flex-grow-1 primary--text title pt-1 mb-0 ps-0 my-auto align-center text-start text-truncate">
                 <a
                   :href="newsUrl"
-                  class="search-result-link"
+                  class="stretched-link"
                   v-sanitized-html="newsTitle"></a>
               </h1>
               <span
-                :class="{'search-result-actions-visible': isMobile}"
-                class="search-result-interactive search-result-actions ml-2">
+                :class="!isMobile && 'hover-reveal'"
+                class="stretched-link-above ml-2">
                 <news-favorite-action
                   :news="result"
                   @removed="$emit('refresh-favorite')" />
@@ -53,7 +53,7 @@
                   v-bind="attrs"
                   v-on="on"
                   :href="spaceUrl"
-                  class="search-result-interactive flex-nowrap flex-shrink-0 d-flex spaceAvatar">
+                  class="stretched-link-above flex-nowrap flex-shrink-0 d-flex spaceAvatar">
                   <v-avatar
                     :size="18"
                     tile
@@ -67,7 +67,7 @@
                   <p class="ms-2 my-auto text-subtitle">{{ spaceDisplayName }}</p>
                 </a>
                 <v-icon size="3" class="icon-default-color mx-3">fas fa-circle</v-icon>
-                <span class="search-result-interactive d-inline-flex align-center">
+                <span class="stretched-link-above d-inline-flex align-center">
                   <exo-user-avatar
                     :profile-id="updaterUsername"
                     :size="18"
