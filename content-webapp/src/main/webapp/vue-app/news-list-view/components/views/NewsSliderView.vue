@@ -19,80 +19,95 @@
 
 -->
 <template>
-  <v-hover v-slot="{ hover }">
-    <div class="newsSlider">
-      <v-carousel
-        :show-arrows="news?.length > 1"
-        :show-arrows-on-hover="news?.length > 1"
-        :hide-delimiters="news?.length === 1"
-        interval="10000"
-        height="220"
-        class="fill-height"
-        cycle
-        hide-delimiter-background>
-        <v-carousel-item
-          v-for="(item,i) in news"
-          :key="i"
-          :href="articleUrl(item)"
-          class="carouselItem"
-          link
-          eager
-          dark>
-          <v-img
-            :src="showArticleImage && !!item.illustrationURL
-              ? item.illustrationURL.concat('&size=1420x222')
-              : '/content/images/news.png'"
-            :alt="item?.properties?.featuredImage?.altText || ''"
-            :aspect-ratio="8"
-            class="articleImage object-fit-cover full-height width-full" />
-          <v-container class="position-absolute pa-0 t-0 l-0 r-0 align-center full-width full-height d-flex text-center">
-            <extension-registry-components
-              :params="{
-                parameters: item?.parameters,
-                chipSize: 'auto',
-              }"
-              name="ContentList"
-              type="content-card-event-date-chip"
-              element="span"
-              class="position-absolute b-0 line-height-normal" />
+  <div class="newsSlider hover-reveal-parent position-relative">
+    <v-carousel
+      v-model="slider"
+      :show-arrows="false"
+      :hide-delimiters="news?.length === 1"
+      interval="10000"
+      height="220"
+      class="fill-height"
+      cycle
+      hide-delimiter-background>
+      <v-carousel-item
+        v-for="(item,i) in news"
+        :key="i"
+        :href="articleUrl(item)"
+        class="carouselItem"
+        link
+        eager
+        dark>
+        <v-img
+          :src="showArticleImage && !!item.illustrationURL
+            ? item.illustrationURL.concat('&size=1420x222')
+            : '/content/images/news.png'"
+          :alt="item?.properties?.featuredImage?.altText || ''"
+          :aspect-ratio="8"
+          class="articleImage object-fit-cover full-height width-full" />
+        <v-container class="position-absolute pa-0 t-0 l-0 r-0 align-center full-width full-height d-flex text-center">
+          <extension-registry-components
+            :params="{
+              parameters: item?.parameters,
+              chipSize: 'auto',
+            }"
+            name="ContentList"
+            type="content-card-event-date-chip"
+            element="span"
+            class="position-absolute b-0 line-height-normal" />
+          <div
+            v-if="firstCategory(item)"
+            class="position-absolute b-0 r-0 ma-2 white rounded-pill">
+            <category-chip
+              :category="firstCategory(item)"
+              small
+              tabindex="-1" />
+          </div>
+          <div class="px-10 mt-auto pb-13 no-min-width full-width flex-column">
             <div
-              v-if="firstCategory(item)"
-              class="position-absolute b-0 r-0 ma-2 white rounded-pill">
-              <category-chip
-                :category="firstCategory(item)"
-                small
-                tabindex="-1" />
+              v-if="showArticleTitle"
+              class="elevation-0 height-fit-content line-height-normal primary-background-opacity-8 mx-auto font-weight-bold application-border-radius pa-1 d-flex align-center width-fit-content">
+              <span class="text-title white--text text-truncate">
+                {{ item.title }}
+              </span>
             </div>
-            <div class="px-10 mt-auto pb-13 no-min-width full-width flex-column">
-              <div
-                :class="$vuetify.rtl && 'l-0' || 'r-0'"
-                class="flex flex-row t-0 position-absolute">
-                <v-btn
-                  v-if="$root.canManageNewsList"
-                  :class="{'d-sr-only-focusable': !hover}"
-                  :aria-label="$t('news.latest.openSettings')"
-                  icon
-                  @click.stop.prevent="openDrawer"
-                  class="float-right mt-1 me-1">
-                  <v-icon size="18">
-                    fas fa-cog
-                  </v-icon>
-                </v-btn>
-              </div>
-              <v-card
-                v-if="showArticleTitle"
-                :href="articleUrl(item)"
-                class="elevation-0 height-fit-content line-height-normal primary-background-opacity-8 mx-auto font-weight-bold application-border-radius pa-1 d-flex align-center width-fit-content">
-                <span class="text-title white--text text-truncate">
-                  {{ item.title }}
-                </span>
-              </v-card>
-            </div>
-          </v-container>
-        </v-carousel-item>
-      </v-carousel>
+          </div>
+        </v-container>
+      </v-carousel-item>
+    </v-carousel>
+    <template v-if="news?.length > 1">
+      <v-btn
+        :aria-label="$t('news.alertView.leftArrowButtonTitle')"
+        :class="$vuetify.rtl && 'r-0' || 'l-0'"
+        class="news-slider-previous hover-reveal absolute-vertical-center z-index-two"
+        icon
+        dark
+        @click="previous">
+        <v-icon size="16">{{ $vuetify.rtl ? 'fas fa-chevron-right' : 'fas fa-chevron-left' }}</v-icon>
+      </v-btn>
+      <v-btn
+        :aria-label="$t('news.alertView.rightArrowButtonTitle')"
+        :class="$vuetify.rtl && 'l-0' || 'r-0'"
+        class="news-slider-next hover-reveal absolute-vertical-center z-index-two"
+        icon
+        dark
+        @click="next">
+        <v-icon size="16">{{ $vuetify.rtl ? 'fas fa-chevron-left' : 'fas fa-chevron-right' }}</v-icon>
+      </v-btn>
+    </template>
+    <div
+      v-if="$root.canManageNewsList"
+      :class="$vuetify.rtl && 'l-0' || 'r-0'"
+      class="position-absolute t-0 mt-1 mx-1 z-index-two">
+      <v-btn
+        :aria-label="$t('news.latest.openSettings')"
+        class="news-slider-settings hover-reveal"
+        icon
+        dark
+        @click="openDrawer">
+        <v-icon size="18">fas fa-cog</v-icon>
+      </v-btn>
     </div>
-  </v-hover>
+  </div>
 </template>
 <script>
 export default {
@@ -111,6 +126,7 @@ export default {
     },
   },
   data: () => ({
+    slider: 0,
     firstCategories: {},
   }),
   computed: {
@@ -141,6 +157,12 @@ export default {
     },
   },
   methods: {
+    previous() {
+      this.slider = (this.slider + this.news.length - 1) % this.news.length;
+    },
+    next() {
+      this.slider = (this.slider + 1) % this.news.length;
+    },
     openDrawer() {
       this.$root.$emit('news-settings-drawer-open');
     },

@@ -21,12 +21,11 @@
 <template>
   <v-sheet 
     v-if="showSettingsContainer"
-    :class="isHovering && 'news-settings-hovering'"
     min-height="30"
-    class="news-settings background-transparent d-flex flex-row align-center text-start px-2">
+    class="background-transparent d-flex flex-row align-center text-start px-2">
     <div class="d-flex latestNewsTitleContainer flex-column flex-grow-1 min-width-0 my-1">
       <span
-        v-if="showHeader && (!headerOnHover || isHovering)"
+        v-if="showHeader"
         :title="headerTitle"
         class="text-header">
         <span class="text-truncate">{{ headerTitle }}</span>
@@ -36,7 +35,7 @@
       <v-btn
         v-if="$root.canManageNewsList"
         :aria-label="$t('news.published.seeAll')"
-        class="news-settings-hover-action primary--text my-auto"
+        class="hover-swap-alt primary--text my-auto"
         icon
         small
         @click="seeAllNews">
@@ -49,7 +48,7 @@
       <v-btn
         :tabindex="$root.canManageNewsList ? '-1' : null"
         :aria-hidden="$root.canManageNewsList ? 'true' : null"
-        :class="$root.canManageNewsList && 'news-settings-see-all-text'"
+        :class="$root.canManageNewsList && 'hover-swap-default'"
         color="primary"
         class="pa-0 text-font-size"
         small
@@ -67,7 +66,7 @@
       <v-btn
         v-if="$root.canManageNewsList && showSettingsIcon"
         :class="classButtonOpenSettings"
-        class="news-settings-hover-action icon-default-color white-background"
+        class="hover-reveal icon-default-color white-background"
         :title="$t('news.list.openSettings.title')"
         :aria-label="$t('news.latest.openSettings')"
         :width="settingButtonSize"
@@ -92,23 +91,12 @@ export default {
       type: Number,
       default: null
     },
-    isHovering: {
-      type: Boolean,
-      required: false,
-      default: true
-    },
     hideOpenSettingButton: {
       type: Boolean,
       required: false,
       default: false
     },
     hideSeeAllButton: {
-      type: Boolean,
-      required: false,
-      default: false
-    },
-    // the header shows only while hovered, the settings button staying rendered for the keyboard
-    headerOnHover: {
       type: Boolean,
       required: false,
       default: false

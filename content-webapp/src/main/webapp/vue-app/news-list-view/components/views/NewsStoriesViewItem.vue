@@ -19,56 +19,52 @@
 
 -->
 <template>
-  <v-hover v-slot="{ hover }">
-    <v-card
-      height="210"
-      width="140"
-      class="me-2 white card-border-radius overflow-hidden elevation-0 py-0 position-relative border-box-sizing">
-      <news-settings
-        v-if="!showSeeAll && lastItem && (hover || $root.canManageNewsList)"
-        :is-hovering="hover"
-        header-on-hover
-        class="position-absolute r-0 z-index-modal mt-2"
-        class-button-open-settings="white-background"
-        setting-button-size="24"
-        hide-see-all-button />
-      <a
-        class="articleLink"
-        target="_self"
-        :href="articleUrl"
-        :aria-hidden="showArticleTitle ? 'true' : null"
-        :tabindex="showArticleTitle ? '-1' : null"
-        :aria-label="showArticleTitle ? null : item.title">
-        <v-img
-          class="position-absolute border-box-sizing full-height full-width"
-          :src="articleImage"
-          :aspect-ratio="2/3"
-          :alt="featuredImageAltText">
-          <div class="absolute-full-size linear-gradient-black-overlay-background"></div>
-          <div class="text-subtitle-font-size position-absolute mt-2 ms-2">
-            <v-img
-              v-if="showArticleAuthor"
-              :src="item.authorAvatarUrl"
-              width="30px"
-              height="30px"
-              class="ma-auto border-radius-circle"
-              alt="" />
-          </div>
-        </v-img></a>
-      <a
-        v-if="showArticleTitle"
-        target="_self"
-        :href="articleUrl">
-        <div class="d-flex flex-column justify-end position-absolute px-1 pb-1 b-0">
-          <div 
-            v-if="showArticleTitle" 
-            class="text-font-size white--text text-truncate-2">
-            {{ item.title }}
-          </div>
+  <v-card
+    height="210"
+    width="140"
+    class="hover-reveal-parent me-2 white card-border-radius overflow-hidden elevation-0 py-0 position-relative border-box-sizing">
+    <news-settings
+      v-if="!showSeeAll && lastItem"
+      class="hover-reveal position-absolute r-0 z-index-modal mt-2"
+      class-button-open-settings="white-background"
+      setting-button-size="24"
+      hide-see-all-button />
+    <a
+      class="articleLink"
+      target="_self"
+      :href="articleUrl"
+      :aria-hidden="showArticleTitle ? 'true' : null"
+      :tabindex="showArticleTitle ? '-1' : null"
+      :aria-label="showArticleTitle ? null : item.title">
+      <v-img
+        class="position-absolute border-box-sizing full-height full-width"
+        :src="articleImage"
+        :aspect-ratio="2/3"
+        :alt="featuredImageAltText">
+        <div class="absolute-full-size linear-gradient-black-overlay-background"></div>
+        <div class="text-subtitle-font-size position-absolute mt-2 ms-2">
+          <v-img
+            v-if="showArticleAuthor"
+            :src="item.authorAvatarUrl"
+            width="30px"
+            height="30px"
+            class="ma-auto border-radius-circle"
+            alt="" />
         </div>
-      </a>
-    </v-card>
-  </v-hover>
+      </v-img></a>
+    <a
+      v-if="showArticleTitle"
+      target="_self"
+      :href="articleUrl">
+      <div class="d-flex flex-column justify-end position-absolute px-1 pb-1 b-0">
+        <div 
+          v-if="showArticleTitle" 
+          class="text-font-size white--text text-truncate-2">
+          {{ item.title }}
+        </div>
+      </div>
+    </a>
+  </v-card>
 </template>
 
 <script>

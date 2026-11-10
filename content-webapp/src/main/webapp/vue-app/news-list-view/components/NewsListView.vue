@@ -19,31 +19,29 @@
 
 -->
 <template>
-  <v-hover v-slot="{ hover }">
-    <v-app v-show="!hideEmptyNewsTemplate" class="news-list-view-app position-relative">
-      <v-card
-        :class="newsListViewClass"
-        class="application-body application-layout-style"
-        height="100%"
-        flat>
-        <v-card-text class="pa-0">
-          <news-settings v-if="displayHeader" :is-hovering="hover" />
-          <extension-registry-component
-            v-if="selectedViewExtension"
-            element-class="news-list-view"
-            :component="selectedViewComponent"
-            :params="viewComponentParams" />
-        </v-card-text>
-      </v-card>
-      <news-settings-drawer
-        v-if="canManageNewsList"
-        :saved-header-translations="headerTranslations"
-        :language="language"
-        :application-id="applicationId" />
-      <news-publish-targets-management-drawer v-if="canCreateNewsTarget" />
-      <content-list-drawer ref="contentListDrawer" />
-    </v-app>
-  </v-hover>
+  <v-app v-show="!hideEmptyNewsTemplate" class="news-list-view-app hover-reveal-parent hover-swap-parent position-relative">
+    <v-card
+      :class="newsListViewClass"
+      class="application-body application-layout-style"
+      height="100%"
+      flat>
+      <v-card-text class="pa-0">
+        <news-settings v-if="displayHeader" />
+        <extension-registry-component
+          v-if="selectedViewExtension"
+          element-class="news-list-view"
+          :component="selectedViewComponent"
+          :params="viewComponentParams" />
+      </v-card-text>
+    </v-card>
+    <news-settings-drawer
+      v-if="canManageNewsList"
+      :saved-header-translations="headerTranslations"
+      :language="language"
+      :application-id="applicationId" />
+    <news-publish-targets-management-drawer v-if="canCreateNewsTarget" />
+    <content-list-drawer ref="contentListDrawer" />
+  </v-app>
 </template>
 
 <script>

@@ -26,9 +26,7 @@
       'pb-2': $root.isCard,
       'pb-4': !$root.isCard,
     }"
-    class="d-flex align-center"
-    @focusin="onFocusIn"
-    @focusout="onFocusOut">
+    class="d-flex align-center">
     <div v-if="header" class="flex-shrink-1 text-header text-start">
       <span class="text-truncate">{{ header }}</span>
     </div>
@@ -40,36 +38,35 @@
         v-if="seeMoreUrl"
         :href="seeMoreUrl"
         :title="$t('links.label.seeMore')"
+        :aria-label="$t('links.label.seeMore')"
         target="_blank"
-        :outlined="hoverEdit"
-        :icon="hoverEdit"
-        :class="!hoverEdit && 'pa-0'"
-        :color="!hoverEdit && 'primary'"
-        :text="!hoverEdit"
+        class="pa-0"
+        color="primary"
         rel="nofollow noreferrer noopener"
-        small>
-        <v-icon
-          v-if="hoverEdit"
-          size="18"
-          class="primary--text">
-          fa-external-link-alt
-        </v-icon>
+        small
+        text>
         <span
-          v-else-if="seeMoreUrl"
+          :class="canEdit && 'hover-swap-default'"
           class="text-none text-font-size">
           {{ $t('links.label.seeMore') }}
         </span>
+        <v-icon
+          v-if="canEdit"
+          size="18"
+          class="hover-swap-alt primary--text">
+          fa-external-link-alt
+        </v-icon>
       </v-btn>
       <v-btn
         v-if="canEdit"
         :title="$t('links.label.editSettings')"
         :aria-label="$t('links.label.editSettings')"
+        class="hover-reveal"
         :class="{
           'position-absolute z-index-two t-0': !seeMoreUrl,
           'r-0': !$vuetify.rtl,
           'l-0': $vuetify.rtl,
           'ma-1': !showHeader,
-          'd-sr-only-focusable': !hoverEdit,
         }"
         small
         icon
@@ -109,18 +106,8 @@ export default {
       type: Boolean,
       default: false,
     },
-    hover: {
-      type: Boolean,
-      default: false,
-    },
   },
-  data: () => ({
-    focused: false,
-  }),
   computed: {
-    hoverEdit() {
-      return this.canEdit && (this.hover || this.focused);
-    },
     showHeader() {
       return this.header?.length || this.seeMoreUrl?.length;
     },
@@ -133,14 +120,6 @@ export default {
         email: true,
         phone: true,
       });
-    },
-  },
-  methods: {
-    onFocusIn(event) {
-      this.focused = event.target.matches(':focus-visible');
-    },
-    onFocusOut(event) {
-      this.focused = !!(event.relatedTarget && event.currentTarget.contains(event.relatedTarget));
     },
   },
 };
