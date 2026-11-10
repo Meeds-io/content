@@ -21,7 +21,7 @@
 -->
 <template>
   <a
-    :href="item.url"
+    :href="itemUrl"
     tabindex="0"
     :class="isCompactDisplay ? 'py-2' : 'py-3'"
     class="contentListItem d-flex"
@@ -172,6 +172,11 @@ export default {
     canBookmark() {
       return !this.isMobile && !this.item.draft && !this.item.scheduled;
     },
+    itemUrl() {
+      // A draft has no view page: the article detail page shows it as
+      // restricted content, so a draft links to its editor.
+      return this.item.draft ? this.getEditUrl() : this.item.url;
+    },
     defaultIllustrationUrl() {
       return this.item.contentType === 'notes' ? '/content/images/notes.webp' : '/content/images/news.webp';
     },
@@ -253,11 +258,16 @@ export default {
       // dedicated editor app (news-editor/notes-editor), not the item's own
       // view page - mirrors NewsApp.vue's getEditUrl() and
       // NotePage.vue's editNote() exactly.
-      const editUrl = this.item.contentType === 'notes' ? this.getNoteEditUrl() : this.getNewsEditUrl();
-      window.open(editUrl, '_blank');
+      window.open(this.getEditUrl(), '_blank');
+    },
+    getEditUrl() {
+      return this.item.contentType === 'notes' ? this.getNoteEditUrl() : this.getNewsEditUrl();
     },
     getNewsEditUrl() {
-      let editUrl = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news-editor?newsId=${this.item.id}`;
+      // The editor loads the latest draft of a published article by that
+      // article's id, which a draft entry carries as its targetPageId.
+      const newsId = this.item.activityId && this.item.targetPageId || this.item.id;
+      let editUrl = `${eXo.env.portal.context}/${eXo.env.portal.metaPortalName}/news-editor?newsId=${newsId}`;
       if (this.item.spaceId) {
         editUrl += `&spaceId=${this.item.spaceId}`;
       }
@@ -281,9 +291,9 @@ export default {
         + `&notePageUri=${encodeURIComponent(eXo.env.portal.selectedNodeUri || '')}`;
     },
     onItemLinkClick(event) {
-      // A draft note has no standalone view page - the only meaningful
-      // action is to open it back in its editor.
-      if (!this.item.url) {
+      // A draft, news or note, has no standalone view page - the only
+      // meaningful action is to open it back in its editor.
+      if (this.item.draft || !this.item.url) {
         event.preventDefault();
         this.editItem();
       }

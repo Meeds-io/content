@@ -38,7 +38,7 @@
     </template>
     <v-list class="pa-0 text-no-wrap width-fit-content contentActionMenuItems">
       <v-list-item
-        v-if="item.url"
+        v-if="item.url && !item.draft"
         class="ps-2 pe-4 d-flex align-center"
         @click="copyLink">
         <v-icon size="16" class="clickable icon-menu me-2">fas fa-link</v-icon>
