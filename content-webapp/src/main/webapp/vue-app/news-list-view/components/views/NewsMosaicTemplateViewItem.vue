@@ -104,7 +104,7 @@
                   class="flex-shrink-0 my-auto me-2">
                   <img
                     :src="item.authorAvatarUrl"
-                    :alt="item.authorDisplayName">
+                    alt="">
                 </v-avatar>
                 <span>{{ item.authorDisplayName }}</span>
               </span>
