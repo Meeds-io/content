@@ -52,13 +52,6 @@
             type="content-card-event-date-chip"
             element="span"
             class="stretched-link-above position-absolute b-0 line-height-normal" />
-          <div
-            v-if="firstCategory(item)"
-            class="stretched-link-above position-absolute b-0 r-0 ma-2 white rounded-pill">
-            <category-chip
-              :category="firstCategory(item)"
-              small />
-          </div>
           <div class="px-10 mt-auto pb-13 no-min-width full-width flex-column">
             <a
               :href="articleUrl(item)"
@@ -70,6 +63,13 @@
                 </span>
               </span>
             </a>
+          </div>
+          <div
+            v-if="firstCategory(item)"
+            class="stretched-link-above position-absolute b-0 r-0 ma-2 white rounded-pill">
+            <category-chip
+              :category="firstCategory(item)"
+              small />
           </div>
         </v-container>
       </v-carousel-item>
