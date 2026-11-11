@@ -256,8 +256,8 @@ export default {
     editItem() {
       // Unlike the view/publish URL, editing needs each content type's own
       // dedicated editor app (news-editor/notes-editor), not the item's own
-      // view page. The news editor URL follows the editor's own convention
-      // (ContentRichEditor.vue#updateUrl).
+      // view page. For a draft or a posted article, the news editor URL
+      // follows the editor's own convention (ContentRichEditor.vue#updateUrl).
       window.open(this.getEditUrl(), '_blank');
     },
     getEditUrl() {
