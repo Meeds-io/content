@@ -31,36 +31,34 @@
         :item="item"
         :last-item="news.length - 1 === index"
         :selected-option="selectedOption" />
-      <v-hover v-slot="{ hover }">
-        <div 
-          v-if="showSeeAll">
-          <news-settings 
-            :hide-see-all-button="true"
-            :is-hovering="hover"
-            class="position-absolute r-0 z-index-modal mt-1" />
-          <a
-            class="see-all-link"
-            target="_self"
-            :href="seeAllUrl">
-            <v-card
-              height="210"
-              width="140"
-              class="elevation-0 d-flex align-center justify-center flex-column">
-              <v-btn
-                class="grey-lighten1-background"
-                icon>
-                <v-icon
-                  class="white--text">
-                  fas fa-ellipsis-h
-                </v-icon>
-              </v-btn>
-              <div class="text-sub-title mt-2">
-                {{ $t('news.published.seeAll') }}
-              </div>
-            </v-card>
-          </a>
-        </div>
-      </v-hover>
+      <div
+        v-if="showSeeAll"
+        class="hover-reveal-parent">
+        <news-settings 
+          :hide-see-all-button="true"
+          class="position-absolute r-0 z-index-modal mt-1" />
+        <a
+          class="see-all-link"
+          target="_self"
+          :href="seeAllUrl">
+          <v-card
+            height="210"
+            width="140"
+            class="elevation-0 d-flex align-center justify-center flex-column">
+            <v-avatar
+              class="grey-lighten1-background"
+              size="36">
+              <v-icon
+                class="white--text">
+                fas fa-ellipsis-h
+              </v-icon>
+            </v-avatar>
+            <div class="text-sub-title mt-2">
+              {{ $t('news.published.seeAll') }}
+            </div>
+          </v-card>
+        </a>
+      </div>
     </card-carousel>
   </div>
 </template>
