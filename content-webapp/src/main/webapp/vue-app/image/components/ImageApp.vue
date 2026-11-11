@@ -20,25 +20,22 @@
 -->
 <template>
   <v-app ref="app">
-    <v-hover v-model="hover" :disabled="!canEdit">
-      <v-card
-        :color="$root.hasImages && 'transparent' || 'primary'"
-        class="application-body application-dimension overflow-hidden no-border-radius"
-        min-width="100%"
-        flat>
-        <v-responsive :aspect-ratio="$root.imageAspectRatio" class="application-dimension overflow-hidden">
-          <image-settings-header
-            v-if="canEdit"
-            :hover="hover || loading"
-            :loading="loading"
-            @edit="editSettings"
-            @remove="removeImage" />
-          <div class="d-flex">
-            <image-view />
-          </div>
-        </v-responsive>
-      </v-card>
-    </v-hover>
+    <v-card
+      :color="$root.hasImages && 'transparent' || 'primary'"
+      class="hover-reveal-parent application-body application-dimension overflow-hidden no-border-radius"
+      min-width="100%"
+      flat>
+      <v-responsive :aspect-ratio="$root.imageAspectRatio" class="application-dimension overflow-hidden">
+        <image-settings-header
+          v-if="canEdit"
+          :loading="loading"
+          @edit="editSettings"
+          @remove="removeImage" />
+        <div class="d-flex">
+          <image-view />
+        </div>
+      </v-responsive>
+    </v-card>
     <template v-if="canEdit">
       <image-settings-drawer
         v-if="edit"
@@ -61,7 +58,6 @@
 <script>
 export default {
   data: () => ({
-    hover: false,
     loading: false,
     saving: false,
     edit: false,
