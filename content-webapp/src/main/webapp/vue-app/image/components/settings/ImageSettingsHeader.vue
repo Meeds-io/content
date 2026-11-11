@@ -33,7 +33,7 @@
             v-on="on"
             v-bind="bind"
             :aria-label="$t('image.label.removeImage')"
-            :class="{'d-sr-only-focusable': !hover}"
+            :class="!loading && 'hover-reveal'"
             class="me-2 white elevation-1"
             small
             icon
@@ -50,7 +50,7 @@
             v-bind="bind"
             :loading="loading"
             :aria-label="$t('image.label.editSettings')"
-            :class="{'d-sr-only-focusable': !hover}"
+            :class="!loading && 'hover-reveal'"
             class="white elevation-1"
             small
             icon
@@ -66,10 +66,6 @@
 <script>
 export default {
   props: {
-    hover: {
-      type: Boolean,
-      default: false,
-    },
     loading: {
       type: Boolean,
       default: false,
