@@ -20,100 +20,98 @@
 
 -->
 <template>
-  <v-hover v-model="hover">
-    <v-app
-      class="contentListView application-body border-box-sizing"
-      flat>
-      <v-main class="application-body application-layout-style border-box-sizing d-flex flex-column fill-height py-5 pt-0">
-        <application-toolbar
-          ref="toolbar"
-          :right-text-filter="{
-            minCharacters: 0,
-            placeholder: $t('content.list.filter.placeholder'),
-          }"
-          :filters-count="advancedFiltersCount"
-          no-text-truncate
-          compact
-          @filter-text-input-end-typing="onSearchTextChanged"
-          @filter-expand="filterExpanded = $event">
-          <template v-if="!compact && showHeader" #left>
-            <span class="text-header">
-              <span class="text-truncate">{{ headerTitle || $t('content.list.title') }}</span>
-            </span>
-          </template>
-          <template v-if="!filterExpanded" #right>
-            <div class="d-flex align-center ms-auto">
-              <v-btn
-                v-if="canEdit"
-                :class="{'d-sr-only-focusable': !hover}"
-                icon
-                small
-                :aria-label="$t('content.list.settings.drawer.open')"
-                @click="$refs.settingsDrawer.open()">
-                <v-icon size="20">fas fa-cog</v-icon>
-              </v-btn>
-              <v-btn
-                icon
-                small
-                class="ms-4"
-                :aria-label="$t('content.list.filter.drawer.open')"
-                @click="$refs.filterDrawer.open(advancedFilter)">
-                <v-icon size="20" :class="advancedFiltersCount && 'primary--text' || 'icon-default-color'">fas fa-sliders-h</v-icon>
-              </v-btn>
-              <span v-if="advancedFiltersCount" class="primary--text text-caption">({{ advancedFiltersCount }})</span>
-            </div>
-          </template>
-        </application-toolbar>
-        <categories-filter
-          v-if="allowFilteringPerCategory"
-          :value="activeCategoryId"
-          :category-ids="categoryIds"
-          :exclude-category-ids="excludeCategoryIds"
-          :category-depth="categoryDepth"
-          class="px-4 pb-2"
-          object-type="content"
-          hide-on-empty
-          @input="selectCategory" />
-        <div v-if="loading" class="d-flex flex-grow-1 align-center justify-center">
-          <v-progress-circular indeterminate color="primary" />
-        </div>
-        <div v-else-if="!items.length" class="d-flex flex-grow-1 flex-column align-center justify-center">
-          <v-icon size="64" class="tertiary--text mb-4">fas fa-newspaper</v-icon>
-          <span>{{ $t('content.list.empty') }}</span>
-        </div>
-        <div v-else class="d-flex flex-column px-4">
-          <content-list-item
-            v-for="contentItem in items"
-            :key="`${contentItem.contentType}-${contentItem.id}`"
-            :item="contentItem"
-            :compact="compact"
-            :expanded="expanded"
-            class="border-box-sizing"
-            @published="load"
-            @delete="confirmDelete"
-            @select-category="selectCategory" />
-          <div v-if="hasMore" class="d-flex justify-center pt-2">
+  <v-app
+    class="contentListView hover-reveal-parent application-body border-box-sizing"
+    flat>
+    <v-main class="application-body application-layout-style border-box-sizing d-flex flex-column fill-height py-5 pt-0">
+      <application-toolbar
+        ref="toolbar"
+        :right-text-filter="{
+          minCharacters: 0,
+          placeholder: $t('content.list.filter.placeholder'),
+        }"
+        :filters-count="advancedFiltersCount"
+        no-text-truncate
+        compact
+        @filter-text-input-end-typing="onSearchTextChanged"
+        @filter-expand="filterExpanded = $event">
+        <template v-if="!compact && showHeader" #left>
+          <span class="text-header">
+            <span class="text-truncate">{{ headerTitle || $t('content.list.title') }}</span>
+          </span>
+        </template>
+        <template v-if="!filterExpanded" #right>
+          <div class="d-flex align-center ms-auto">
             <v-btn
-              :loading="loadingMore"
-              text
-              @click="loadMore">
-              {{ $t('content.list.loadMore') }}
+              v-if="canEdit"
+              class="hover-reveal"
+              icon
+              small
+              :aria-label="$t('content.list.settings.drawer.open')"
+              @click="$refs.settingsDrawer.open()">
+              <v-icon size="20">fas fa-cog</v-icon>
             </v-btn>
+            <v-btn
+              icon
+              small
+              class="ms-4"
+              :aria-label="$t('content.list.filter.drawer.open')"
+              @click="$refs.filterDrawer.open(advancedFilter)">
+              <v-icon size="20" :class="advancedFiltersCount && 'primary--text' || 'icon-default-color'">fas fa-sliders-h</v-icon>
+            </v-btn>
+            <span v-if="advancedFiltersCount" class="primary--text text-caption">({{ advancedFiltersCount }})</span>
           </div>
+        </template>
+      </application-toolbar>
+      <categories-filter
+        v-if="allowFilteringPerCategory"
+        :value="activeCategoryId"
+        :category-ids="categoryIds"
+        :exclude-category-ids="excludeCategoryIds"
+        :category-depth="categoryDepth"
+        class="px-4 pb-2"
+        object-type="content"
+        hide-on-empty
+        @input="selectCategory" />
+      <div v-if="loading" class="d-flex flex-grow-1 align-center justify-center">
+        <v-progress-circular indeterminate color="primary" />
+      </div>
+      <div v-else-if="!items.length" class="d-flex flex-grow-1 flex-column align-center justify-center">
+        <v-icon size="64" class="tertiary--text mb-4">fas fa-newspaper</v-icon>
+        <span>{{ $t('content.list.empty') }}</span>
+      </div>
+      <div v-else class="d-flex flex-column px-4">
+        <content-list-item
+          v-for="contentItem in items"
+          :key="`${contentItem.contentType}-${contentItem.id}`"
+          :item="contentItem"
+          :compact="compact"
+          :expanded="expanded"
+          class="border-box-sizing"
+          @published="load"
+          @delete="confirmDelete"
+          @select-category="selectCategory" />
+        <div v-if="hasMore" class="d-flex justify-center pt-2">
+          <v-btn
+            :loading="loadingMore"
+            text
+            @click="loadMore">
+            {{ $t('content.list.loadMore') }}
+          </v-btn>
         </div>
-        <content-filter-drawer ref="filterDrawer" @apply="applyAdvancedFilter" />
-        <content-list-settings-drawer v-if="canEdit" ref="settingsDrawer" />
-        <note-publication-target-drawer />
-        <exo-confirm-dialog
-          ref="deleteConfirmDialog"
-          :message="$t('content.list.item.delete.confirm.message')"
-          :title="$t('content.list.item.delete.confirm.title')"
-          :ok-label="$t('content.list.item.delete.confirm.ok')"
-          :cancel-label="$t('content.list.item.delete.confirm.cancel')"
-          @ok="deleteConfirmed" />
-      </v-main>
-    </v-app>
-  </v-hover>
+      </div>
+      <content-filter-drawer ref="filterDrawer" @apply="applyAdvancedFilter" />
+      <content-list-settings-drawer v-if="canEdit" ref="settingsDrawer" />
+      <note-publication-target-drawer />
+      <exo-confirm-dialog
+        ref="deleteConfirmDialog"
+        :message="$t('content.list.item.delete.confirm.message')"
+        :title="$t('content.list.item.delete.confirm.title')"
+        :ok-label="$t('content.list.item.delete.confirm.ok')"
+        :cancel-label="$t('content.list.item.delete.confirm.cancel')"
+        @ok="deleteConfirmed" />
+    </v-main>
+  </v-app>
 </template>
 <script>
 import * as queryParamUtils from '../js/queryParamUtils.js';
@@ -174,7 +172,6 @@ export default {
       loading: true,
       loadingMore: false,
       itemToDelete: null,
-      hover: false,
       filterExpanded: false,
       appliedSearchText: null,
       advancedFilter: {
