@@ -21,7 +21,7 @@
 <template>
   <div
     id="top-news-mosaic"
-    class="hover-reveal-parent hover-swap-parent"
+    class="hover-reveal-parent hover-swap-trigger"
     ref="top-news-mosaic"
     :class="{ 'small-width-mosaic': isSmallWidth }">
     <news-settings

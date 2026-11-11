@@ -33,7 +33,7 @@
     <v-spacer />
     <div
       v-if="hasLinks && (seeMoreUrl || canEdit)"
-      class="flex-grow-0 flex-shrink-0 text-end">
+      class="hover-swap-parent flex-grow-0 flex-shrink-0 text-end">
       <v-btn
         v-if="seeMoreUrl"
         :href="seeMoreUrl"

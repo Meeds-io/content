@@ -32,9 +32,7 @@
       <v-carousel-item
         v-for="(item,i) in news"
         :key="i"
-        :href="articleUrl(item)"
         class="carouselItem"
-        link
         eager
         dark>
         <v-img
@@ -53,23 +51,25 @@
             name="ContentList"
             type="content-card-event-date-chip"
             element="span"
-            class="position-absolute b-0 line-height-normal" />
+            class="stretched-link-above position-absolute b-0 line-height-normal" />
           <div
             v-if="firstCategory(item)"
-            class="position-absolute b-0 r-0 ma-2 white rounded-pill">
+            class="stretched-link-above position-absolute b-0 r-0 ma-2 white rounded-pill">
             <category-chip
               :category="firstCategory(item)"
-              small
-              tabindex="-1" />
+              small />
           </div>
           <div class="px-10 mt-auto pb-13 no-min-width full-width flex-column">
-            <div
-              v-if="showArticleTitle"
-              class="elevation-0 height-fit-content line-height-normal primary-background-opacity-8 mx-auto font-weight-bold application-border-radius pa-1 d-flex align-center width-fit-content">
-              <span class="text-title white--text text-truncate">
-                {{ item.title }}
+            <a
+              :href="articleUrl(item)"
+              class="stretched-link">
+              <span
+                :class="showArticleTitle && 'd-flex elevation-0 height-fit-content line-height-normal primary-background-opacity-8 mx-auto font-weight-bold application-border-radius pa-1 align-center width-fit-content' || 'd-sr-only'">
+                <span :class="showArticleTitle && 'text-title white--text text-truncate'">
+                  {{ item.title }}
+                </span>
               </span>
-            </div>
+            </a>
           </div>
         </v-container>
       </v-carousel-item>
@@ -79,7 +79,10 @@
         :aria-label="$t('news.alertView.leftArrowButtonTitle')"
         :class="$vuetify.rtl && 'r-0' || 'l-0'"
         class="news-slider-previous hover-reveal absolute-vertical-center z-index-two"
-        icon
+        color="grey darken-4"
+        fab
+        x-small
+        depressed
         dark
         @click="previous">
         <v-icon size="16">{{ $vuetify.rtl ? 'fas fa-chevron-right' : 'fas fa-chevron-left' }}</v-icon>
@@ -88,7 +91,10 @@
         :aria-label="$t('news.alertView.rightArrowButtonTitle')"
         :class="$vuetify.rtl && 'l-0' || 'r-0'"
         class="news-slider-next hover-reveal absolute-vertical-center z-index-two"
-        icon
+        color="grey darken-4"
+        fab
+        x-small
+        depressed
         dark
         @click="next">
         <v-icon size="16">{{ $vuetify.rtl ? 'fas fa-chevron-left' : 'fas fa-chevron-right' }}</v-icon>

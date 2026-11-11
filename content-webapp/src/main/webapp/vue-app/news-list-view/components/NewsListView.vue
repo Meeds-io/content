@@ -19,7 +19,7 @@
 
 -->
 <template>
-  <v-app v-show="!hideEmptyNewsTemplate" class="news-list-view-app hover-reveal-parent hover-swap-parent position-relative">
+  <v-app v-show="!hideEmptyNewsTemplate" class="news-list-view-app hover-reveal-parent hover-swap-trigger position-relative">
     <v-card
       :class="newsListViewClass"
       class="application-body application-layout-style"

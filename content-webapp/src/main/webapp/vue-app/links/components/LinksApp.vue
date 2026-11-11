@@ -25,7 +25,7 @@
       :class="$root.isCard ? 'px-5 pt-5' : 'pa-5'"
       min-width="100%"
       max-width="100%"
-      class="hover-reveal-parent hover-swap-parent d-flex flex-column align-center border-box-sizing position-relative application-body"
+      class="hover-reveal-parent hover-swap-trigger d-flex flex-column align-center border-box-sizing position-relative application-body"
       flat>
       <links-header
         v-if="$root.initialized"
