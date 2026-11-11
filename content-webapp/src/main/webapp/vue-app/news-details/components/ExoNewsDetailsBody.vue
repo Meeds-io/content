@@ -250,6 +250,11 @@ export default {
     this.$root.$on('update-news-summary', this.setNewsSummary);
     this.$root.$on('update-news-body', this.setNewsContent);
   },
+  beforeDestroy() {
+    this.$root.$off('update-news-title', this.setNewsTitle);
+    this.$root.$off('update-news-summary', this.setNewsSummary);
+    this.$root.$off('update-news-body', this.setNewsContent);
+  },
   computed: {
     contentDetailsExtensionsParams() {
       return {

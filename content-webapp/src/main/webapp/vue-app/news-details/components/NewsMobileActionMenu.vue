@@ -77,6 +77,10 @@ export default {
     this.$root.$on('open-news-mobile-action-menu', this.open);
     this.$root.$on('close-news-mobile-action-menu',this.close);
   },
+  beforeDestroy() {
+    this.$root.$off('open-news-mobile-action-menu', this.open);
+    this.$root.$off('close-news-mobile-action-menu', this.close);
+  },
   methods: {
     open(config) {
       this.news = config.news;
