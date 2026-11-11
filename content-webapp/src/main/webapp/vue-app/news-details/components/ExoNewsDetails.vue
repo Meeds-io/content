@@ -215,18 +215,18 @@ export default {
       this.$root.$emit('application-loaded');
     }
     this.getArticlePage();
-    window.addEventListener('message', (event) => {
-      if (this.iframelyOriginRegex.exec(event.origin)) {
-        const data = JSON.parse(event.data);
-        if (data.method === 'open-href') {
-          window.open(data.href, '_blank');
-        }
-      }
-    });
+    window.addEventListener('message', this.handleIframelyMessage);
     this.$root.$on('open-edit-publishing-drawer', this.openPublicationDrawer);
     this.$root.$on('refer-article-to-note', this.referArticle);
     this.$root.$on('move-page', this.moveArticlePage);
     this.bindTreeViewNavigationClickListener();
+  },
+  beforeDestroy() {
+    window.removeEventListener('message', this.handleIframelyMessage);
+    this.$root.$off('open-edit-publishing-drawer', this.openPublicationDrawer);
+    this.$root.$off('refer-article-to-note', this.referArticle);
+    this.$root.$off('move-page', this.moveArticlePage);
+    document.removeEventListener('click', this.handleTreeViewNavigationClick);
   },
   mounted() {
     const urlHash = window.location.hash;
@@ -530,12 +530,20 @@ export default {
       }, 200);
     },
     bindTreeViewNavigationClickListener() {
-      const self = this;
-      document.addEventListener('click', function (event) {
-        if (event.target.closest('.image-navigation')) {
-          window.location.href = self.articlePage.url;
+      document.addEventListener('click', this.handleTreeViewNavigationClick);
+    },
+    handleTreeViewNavigationClick(event) {
+      if (event.target.closest('.image-navigation')) {
+        window.location.href = this.articlePage.url;
+      }
+    },
+    handleIframelyMessage(event) {
+      if (this.iframelyOriginRegex.exec(event.origin)) {
+        const data = JSON.parse(event.data);
+        if (data.method === 'open-href') {
+          window.open(data.href, '_blank');
         }
-      });
+      }
     },
   }
 };
