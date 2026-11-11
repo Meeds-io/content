@@ -19,32 +19,30 @@
 
 -->
 <template>
-  <v-hover v-slot="{ hover }">
-    <div
-      id="top-news-mosaic"
-      ref="top-news-mosaic"
-      :class="{ 'small-width-mosaic': isSmallWidth }">
-      <news-settings
-        :is-hovering="hover"
-        class="mt-3 me-1 position-absolute r-0 z-index-two" />
-      <div :class="`application-border-radius mosaic-container ${singleArticleClass}`">
-        <news-mosaic-template-view-item
-          v-for="(item, index) of news"
-          :key="index"
-          :item="item"
-          :index="index"
-          :is-small-width="isSmallWidth"
-          :total-count="news.length"
-          :show-article-title="showArticleTitle"
-          :show-article-image="showArticleImage"
-          :show-article-date="showArticleDate"
-          :show-article-summary="showArticleSummary"
-          :show-article-author="showArticleAuthor"
-          :show-article-space="showArticleSpace"
-          :show-article-reactions="showArticleReactions" />
-      </div>
+  <div
+    id="top-news-mosaic"
+    class="hover-reveal-parent hover-swap-trigger"
+    ref="top-news-mosaic"
+    :class="{ 'small-width-mosaic': isSmallWidth }">
+    <news-settings
+      class="mt-3 me-1 position-absolute r-0 z-index-two" />
+    <div :class="`application-border-radius mosaic-container ${singleArticleClass}`">
+      <news-mosaic-template-view-item
+        v-for="(item, index) of news"
+        :key="index"
+        :item="item"
+        :index="index"
+        :is-small-width="isSmallWidth"
+        :total-count="news.length"
+        :show-article-title="showArticleTitle"
+        :show-article-image="showArticleImage"
+        :show-article-date="showArticleDate"
+        :show-article-summary="showArticleSummary"
+        :show-article-author="showArticleAuthor"
+        :show-article-space="showArticleSpace"
+        :show-article-reactions="showArticleReactions" />
     </div>
-  </v-hover>
+  </div>
 </template>
 
 <script>
