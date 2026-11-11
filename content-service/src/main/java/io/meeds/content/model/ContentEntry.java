@@ -65,6 +65,13 @@ public class ContentEntry {
 
   private String       activityId;
 
+  /**
+   * Id of the article a draft was started from, null for an article or for a
+   * draft of no article: the news editor opens the draft of a posted article
+   * by that article's id.
+   */
+  private String       targetPageId;
+
   private String       spaceUrl;
 
   private String       lang;

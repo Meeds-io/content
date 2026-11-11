@@ -19,6 +19,8 @@
 package io.meeds.content.news.plugin;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -282,6 +284,81 @@ public class NewsContentTypePluginTest {
     });
 
     plugin.search(filter, 20, currentIdentity, null);
+  }
+
+  /**
+   * EXO-93764: the Content List opens a draft in the news editor, which loads
+   * the draft of a published article by that article's id, not the draft's.
+   */
+  @Test
+  public void testSearchDraftsMapsTargetPageId() throws Exception {
+    ContentFilter filter = new ContentFilter();
+    filter.setStatus(ContentUtils.STATUS_DRAFT);
+    News latestDraft = new News();
+    latestDraft.setId("12");
+    latestDraft.setTargetPageId("3");
+    latestDraft.setActivityId("activity3");
+    latestDraft.setPublicationState(NewsService.DRAFT);
+    News newDraft = new News();
+    newDraft.setId("13");
+    newDraft.setPublicationState(NewsService.DRAFT);
+    when(newsService.getNews(any(NewsFilter.class), eq(currentIdentity))).thenReturn(Arrays.asList(latestDraft, newDraft));
+
+    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null);
+
+    assertEquals(2, entries.size());
+    ContentEntry latestDraftEntry = entries.get(0);
+    assertEquals("12", latestDraftEntry.getId());
+    assertTrue(latestDraftEntry.isDraft());
+    assertEquals("3", latestDraftEntry.getTargetPageId());
+    assertEquals("activity3", latestDraftEntry.getActivityId());
+    ContentEntry newDraftEntry = entries.get(1);
+    assertEquals("13", newDraftEntry.getId());
+    assertTrue(newDraftEntry.isDraft());
+    assertNull(newDraftEntry.getTargetPageId());
+  }
+
+  /**
+   * EXO-93764: a text search under the drafts status answers published
+   * articles, which the Content List must keep opening on their view page,
+   * not in the editor.
+   */
+  @Test
+  public void testSearchDraftsWithTextKeepsPublishedArticlesNotDraft() throws Exception {
+    ContentFilter filter = new ContentFilter();
+    filter.setStatus(ContentUtils.STATUS_DRAFT);
+    filter.setSearchText("article");
+    News article = new News();
+    article.setId("4");
+    article.setActivityId("activity4");
+    article.setPublicationState(NewsService.POSTED);
+    when(newsService.searchNews(any(NewsFilter.class), any())).thenReturn(Arrays.asList(article));
+
+    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null);
+
+    assertEquals(1, entries.size());
+    assertFalse(entries.get(0).isDraft());
+  }
+
+  /**
+   * EXO-93764: outside the drafts status no entry is a draft, whatever
+   * publication state the news carries. This pins the status half of the
+   * draft flag; whether an article read under another status can carry the
+   * draft state is not established, so this is a guard.
+   */
+  @Test
+  public void testSearchOutsideDraftsNeverFlagsDraft() throws Exception {
+    ContentFilter filter = new ContentFilter();
+    filter.setStatus(ContentUtils.STATUS_PUBLISHED);
+    News article = new News();
+    article.setId("5");
+    article.setPublicationState(NewsService.DRAFT);
+    when(newsService.getNews(any(NewsFilter.class), eq(currentIdentity))).thenReturn(Arrays.asList(article));
+
+    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null);
+
+    assertEquals(1, entries.size());
+    assertFalse(entries.get(0).isDraft());
   }
 
   @Test

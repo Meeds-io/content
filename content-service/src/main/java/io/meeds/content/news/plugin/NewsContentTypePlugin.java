@@ -206,6 +206,7 @@ public class NewsContentTypePlugin implements ContentTypePlugin {
     entry.setActivityId(news.getActivityId());
     entry.setSpaceUrl(news.getSpaceUrl());
     entry.setLang(news.getLang());
+    entry.setTargetPageId(news.getTargetPageId());
     entry.setDate(news.getUpdateDate());
     entry.setLikesCount(news.getLikesCount());
     entry.setCommentsCount(news.getCommentsCount());
@@ -214,7 +215,10 @@ public class NewsContentTypePlugin implements ContentTypePlugin {
     entry.setCategoryIds(news.getCategories());
     entry.setPublished(StringUtils.equals(status, ContentUtils.STATUS_PUBLISHED)
         || StringUtils.equals(status, ContentUtils.STATUS_MY_CONTENT));
-    entry.setDraft(StringUtils.equals(status, ContentUtils.STATUS_DRAFT));
+    // A text search answers published articles whatever the status filter:
+    // only a news that is itself a draft is one.
+    entry.setDraft(StringUtils.equals(status, ContentUtils.STATUS_DRAFT)
+        && StringUtils.equals(news.getPublicationState(), NewsService.DRAFT));
     entry.setScheduled(StringUtils.equals(status, ContentUtils.STATUS_SCHEDULED));
     entry.setCanEdit(news.isCanEdit());
     entry.setCanDelete(news.isCanDelete());
