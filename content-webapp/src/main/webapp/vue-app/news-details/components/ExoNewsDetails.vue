@@ -490,6 +490,11 @@ export default {
         ...this.localNews,
         parameters: cleanParameters
       };
+      if (this.activityId) {
+        // The activity footer reads the reactions option from the activity's own
+        // copy of the article: have the stream reload the activity.
+        this.$root.$emit('activity-updated', this.activityId);
+      }
     },
     getNewsById(newsId) {
       this.$newsServices.getNewsById(newsId, false, this.processedNewsType, this.selectedTranslation.value)
