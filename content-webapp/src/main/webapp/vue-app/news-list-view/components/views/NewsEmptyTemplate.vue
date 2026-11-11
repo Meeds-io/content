@@ -19,44 +19,42 @@
 
 -->
 <template>
-  <v-hover v-slot="{ hover }">
-    <v-app
-      v-show="displayEmptyTemplateOptions"
-      class="newsEmptyTemplate border-box-sizing"
-      flat>
-      <v-main class="d-flex flex-column fill-height position-relative">
-        <v-sheet
-          class="d-flex justify-end background-transparent"
-          :height="40"
-          :min-height="40">
-          <v-btn
-            v-if="canManageNewsList"
-            :class="{'d-sr-only-focusable': !hover}"
-            :aria-label="$t('news.latest.openSettings')"
-            icon
-            @click="openDrawer">
-            <v-icon>mdi-cog</v-icon>
-          </v-btn>
-        </v-sheet>
-        <div class="d-flex flex-grow-1 mb-6 align-center justify-center">
-          <v-btn
-            v-if="canCreateNews"
-            class="btn btn-primary"
-            outlined
-            @click="openNewsEditor">
-            {{ $t('news.list.settings.createNews') }}
-          </v-btn>
-          <v-btn
-            v-else
-            class="btn btn-primary"
-            outlined
-            @click="openDrawer">
-            {{ $t('news.latest.openSettings') }}
-          </v-btn>
-        </div>
-      </v-main>
-    </v-app>
-  </v-hover>
+  <v-app
+    v-show="displayEmptyTemplateOptions"
+    class="newsEmptyTemplate hover-reveal-parent border-box-sizing"
+    flat>
+    <v-main class="d-flex flex-column fill-height position-relative">
+      <v-sheet
+        class="d-flex justify-end background-transparent"
+        :height="40"
+        :min-height="40">
+        <v-btn
+          v-if="canManageNewsList"
+          class="hover-reveal"
+          :aria-label="$t('news.latest.openSettings')"
+          icon
+          @click="openDrawer">
+          <v-icon>mdi-cog</v-icon>
+        </v-btn>
+      </v-sheet>
+      <div class="d-flex flex-grow-1 mb-6 align-center justify-center">
+        <v-btn
+          v-if="canCreateNews"
+          class="btn btn-primary"
+          outlined
+          @click="openNewsEditor">
+          {{ $t('news.list.settings.createNews') }}
+        </v-btn>
+        <v-btn
+          v-else
+          class="btn btn-primary"
+          outlined
+          @click="openDrawer">
+          {{ $t('news.latest.openSettings') }}
+        </v-btn>
+      </div>
+    </v-main>
+  </v-app>
 </template>
 
 <script>
