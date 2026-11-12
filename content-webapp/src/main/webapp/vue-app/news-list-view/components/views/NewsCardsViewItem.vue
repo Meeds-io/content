@@ -22,17 +22,13 @@
   <v-card
     class="position-relative application-border
     application-border-radius z-index-zero border-box-sizing overflow-hidden me-2 d-block card elevation-1"
-    ref="newsCard"
-    :href="articleUrl"
-    target="_self"
-    :class="{ 'keyboard-slide': slideActive, 'border-color-black' : isCardFocused || isArticleLinkFocused}"
+    :class="{ 'keyboard-slide': slideActive, 'border-color-black' : isArticleLinkFocused}"
     height="275"
     width="240"
-    tabindex="0"
-    @keydown.esc="blurContentHover($event)"
-    @focus="isCardFocused = true;"
-    @blur="isCardFocused = false;"
-    @mouseover="showDetails = true"
+    @keydown.esc="showDetails = false; detailsDismissed = true"
+    @focusin="showDetails = true; detailsDismissed = false"
+    @focusout="showDetails = false"
+    @mouseover="showDetails = true; detailsDismissed = false"
     @mouseleave="showDetails = false">
     <v-sheet
       class="position-relative overflow-hidden flex-shrink-0"
@@ -59,14 +55,14 @@
           tabindex="-1" />
       </div>
     </v-sheet>
-    <div
-      class="text-area articleLinkDetails"
-      role="link"
-      tabindex="0"
+    <!-- the card is not a link, so that its reaction counters are read: this link covers the card and is its one keyboard stop -->
+    <a
+      :href="articleUrl"
       :aria-label="$t('news.illustration.link.title', {0: item.title})"
-      @focus="isArticleLinkFocused = true; showDetails = true"
-      @blur="isArticleLinkFocused = false; showDetails =false"
-      @keydown.enter.prevent="openArticle">
+      :class="{'details-dismissed': detailsDismissed}"
+      class="text-area articleLinkDetails stretched-link text-color text-decoration-none d-block"
+      @focus="isArticleLinkFocused = true"
+      @blur="isArticleLinkFocused = false">
       <div
         class="upper-row pa-2 pt-1">
         <div
@@ -146,9 +142,9 @@
           </div>
         </div>
       </div>
-    </div>
+    </a>
     <div
-      class="news-card-reactions position-absolute full-width b-0 l-0 t-0 d-flex z-index-two align-end flex-shrink-0 px-2 py-1 border-top-color text-subtitle">
+      class="news-card-reactions not-clickable-link position-absolute full-width b-0 l-0 t-0 d-flex z-index-two align-end flex-shrink-0 px-2 py-1 border-top-color text-subtitle">
       <news-template-view-item-reactions
         :item="item"
         :show-article-reactions="showArticleReactions" />
@@ -185,7 +181,7 @@ export default {
     },
     slideActive: false,
     isArticleLinkFocused: false,
-    isCardFocused: false,
+    detailsDismissed: false,
     showDetails: false,
     firstCategory: null
   }),
@@ -259,14 +255,5 @@ export default {
       return eXo.env.portal.userName !== '' ? this.item.url : `${eXo.env.portal.context}/${eXo.env.portal.portalName}/news-detail?newsId=${this.item.id}&type=article`;
     }
   },
-  methods: {
-    openArticle() {
-      window.open(this.articleUrl, '_self');
-    },
-    blurContentHover(event) {
-      event.target.blur();
-      this.$refs.newsCard.focus();
-    },
-  }
 };
 </script>
