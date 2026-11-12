@@ -23,10 +23,9 @@
     <div
       v-if="showReactions"
       class="d-flex">
-      <div
-        :aria-label="likesLabel"
-        class="d-flex"
-        role="img">
+      <!-- the counters are read as plain text: the icons and the visible numbers are hidden from screen readers -->
+      <div class="d-flex">
+        <span class="screen-reader-only">{{ likesLabel }}</span>
         <v-icon
           :class="iconColorClass"
           class="my-auto me-1"
@@ -41,10 +40,8 @@
           {{ item.likesCount }}
         </div>
       </div>
-      <div
-        :aria-label="commentsLabel"
-        class="d-flex"
-        role="img">
+      <div class="d-flex">
+        <span class="screen-reader-only">{{ commentsLabel }}</span>
         <v-icon
           :class="iconColorClass"
           class="my-auto me-1"
@@ -59,10 +56,8 @@
           {{ item.commentsCount }}
         </div>
       </div>
-      <div
-        :aria-label="viewsLabel"
-        class="d-flex"
-        role="img">
+      <div class="d-flex">
+        <span class="screen-reader-only">{{ viewsLabel }}</span>
         <v-icon
           :class="iconColorClass"
           class="my-auto me-1"
