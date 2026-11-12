@@ -743,13 +743,14 @@ p.caption-title:after {
     &:hover{
       cursor: pointer;
 
-      .articleLinkDetails:not(.is-article-link-focused) .upper-row {
+      .articleLinkDetails:not(.is-article-link-focused):not(.details-dismissed) .upper-row {
         transform: translateY(0);
       }
     }
 
-    .articleLinkDetails:focus .upper-row,
-    .articleLinkDetails:focus-within .upper-row {
+    // Esc hides the details shown on focus, the focus staying on the article link
+    .articleLinkDetails:not(.details-dismissed):focus .upper-row,
+    .articleLinkDetails:not(.details-dismissed):focus-within .upper-row {
       transform: translateY(0);
     }
 

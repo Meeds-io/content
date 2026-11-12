@@ -27,8 +27,7 @@
       }"
       class="articleLink"
       target="_self"
-      :href="articleUrl"
-      :aria-label="$t('news.space.icon.title',{ 0:item.spaceDisplayName })">
+      :href="articleUrl">
       <v-sheet
         v-if="showImage"
         v-bind="isMobile ? { minWidth: 80, height: 80 }
@@ -162,9 +161,9 @@
               <v-avatar 
                 size="20" 
                 class="flex-shrink-0 my-auto me-2">
-                <img 
-                  :src="item.authorAvatarUrl" 
-                  :alt="item.authorDisplayName">
+                <img
+                  :src="item.authorAvatarUrl"
+                  alt="">
               </v-avatar>
               <span>
                 {{ item.authorDisplayName }}
