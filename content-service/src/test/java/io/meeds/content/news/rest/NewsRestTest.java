@@ -32,6 +32,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -48,6 +49,9 @@ import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.RuntimeDelegate;
@@ -715,6 +719,68 @@ public class NewsRestTest {
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
     verify(newsService).deleteNews("1", currentIdentity, ARTICLE.name().toLowerCase());
+  }
+
+  @Test
+  public void aNewsDeletedWithADelayIsDeletedWhenTheNodeStops() throws Exception {
+    Identity currentIdentity = new Identity(JOHN);
+    ConversationState.setCurrent(new ConversationState(currentIdentity));
+    News news = new News();
+    news.setId("1");
+    lenient().when(newsService.getNewsById(anyString(), any(), anyBoolean(), anyString())).thenReturn(news);
+
+    assertEquals(Response.Status.OK.getStatusCode(),
+                 newsRestController.deleteNews("1", ARTICLE.name().toLowerCase(), 3600L).getStatus());
+    verify(newsService, never()).deleteNews(anyString(), any(), anyString());
+
+    long stopStart = System.nanoTime();
+    newsRestController.destroy();
+
+    // The stop drops the waiting deletion from the executor rather than waiting
+    // for its delay up to the stop's timeout
+    assertTrue(TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - stopStart) < 5);
+    verify(newsService).deleteNews("1", currentIdentity, ARTICLE.name().toLowerCase());
+    // Deleted already: the undo is refused
+    assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), newsRestController.undoDeleteNews("1").getStatus());
+  }
+
+  @Test
+  public void aNewsDeletionRunningWhenTheNodeStopsEnds() throws Exception {
+    Identity currentIdentity = new Identity(JOHN);
+    ConversationState.setCurrent(new ConversationState(currentIdentity));
+    News news = new News();
+    news.setId("1");
+    lenient().when(newsService.getNewsById(anyString(), any(), anyBoolean(), anyString())).thenReturn(news);
+    CountDownLatch started = new CountDownLatch(1);
+    AtomicBoolean ended = new AtomicBoolean();
+    doAnswer(invocation -> {
+      started.countDown();
+      Thread.sleep(500);
+      ended.set(true);
+      return null;
+    }).when(newsService).deleteNews("1", currentIdentity, ARTICLE.name().toLowerCase());
+    newsRestController.deleteNews("1", ARTICLE.name().toLowerCase(), 1L);
+    assertTrue(started.await(10, TimeUnit.SECONDS));
+
+    newsRestController.destroy();
+
+    assertTrue(ended.get());
+    verify(newsService).deleteNews("1", currentIdentity, ARTICLE.name().toLowerCase());
+  }
+
+  @Test
+  public void aNewsWhoseDeletionIsUndoneIsNotDeletedWhenTheNodeStops() throws Exception {
+    Identity currentIdentity = new Identity(JOHN);
+    ConversationState.setCurrent(new ConversationState(currentIdentity));
+    News news = new News();
+    news.setId("1");
+    lenient().when(newsService.getNewsById(anyString(), any(), anyBoolean(), anyString())).thenReturn(news);
+    newsRestController.deleteNews("1", ARTICLE.name().toLowerCase(), 3600L);
+
+    assertEquals(Response.Status.NO_CONTENT.getStatusCode(), newsRestController.undoDeleteNews("1").getStatus());
+    newsRestController.destroy();
+
+    verify(newsService, never()).deleteNews(anyString(), any(), anyString());
   }
 
   @Test
