@@ -22,13 +22,13 @@ import static io.meeds.content.news.utils.NewsUtils.NewsObjectType.ARTICLE;
 import static io.meeds.content.news.utils.NewsUtils.NewsObjectType.EXISTING_PAGE;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.Executors;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import javax.ws.rs.core.Response;
@@ -113,9 +113,20 @@ public class NewsRest {
   @Autowired
   private FavoriteService          favoriteService;
 
-  private Map<String, String>      newsToDeleteQueue = new HashMap<>();
+  /**
+   * The news deleted with a delay, not yet deleted, by id. Written by the
+   * request threads and by the delayed deletion: whichever removes an entry
+   * first owns it.
+   */
+  private final Map<String, PendingDeletion> newsToDeleteQueue = new ConcurrentHashMap<>();
+
+  /** Seconds the stop waits for a deletion that is running. */
+  private static final long        STOP_TIMEOUT      = 10;
 
   private ScheduledExecutorService scheduledExecutor;
+
+  private record PendingDeletion(org.exoplatform.services.security.Identity identity, String newsObjectType) {
+  }
 
   private enum FilterType {
     PINNED, MYPOSTED, DRAFTS, SCHEDULED, ALL
@@ -123,14 +134,28 @@ public class NewsRest {
 
   @PostConstruct
   public void init() {
-    scheduledExecutor = Executors.newScheduledThreadPool(1);
+    ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1);
+    // The deletions still waiting for their delay at stop are run by destroy
+    executor.setExecuteExistingDelayedTasksAfterShutdownPolicy(false);
+    scheduledExecutor = executor;
   }
 
   @PreDestroy
   public void destroy() {
     if (scheduledExecutor != null) {
+      // A deletion running now ends: interrupted, it would be lost
       scheduledExecutor.shutdown();
+      try {
+        if (!scheduledExecutor.awaitTermination(STOP_TIMEOUT, TimeUnit.SECONDS)) {
+          LOG.warn("A news deletion did not end within {} seconds of the stop", STOP_TIMEOUT);
+        }
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
     }
+    // A deletion still waiting for its delay would be lost with this node: it
+    // runs now, its undo no longer possible
+    new ArrayList<>(newsToDeleteQueue.keySet()).forEach(this::deletePendingNews);
   }
 
   @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
@@ -277,23 +302,8 @@ public class NewsRest {
       }
 
       if (delay > 0) {// TODO Move to service layer
-        newsToDeleteQueue.put(id, currentIdentity.getUserId());
-        scheduledExecutor.schedule(() -> {
-          if (newsToDeleteQueue.containsKey(id)) {
-            ExoContainerContext.setCurrentContainer(container);
-            RequestLifeCycle.begin(container);
-            try {
-              newsToDeleteQueue.remove(id);
-              newsService.deleteNews(id, currentIdentity, newsObjectType);
-            } catch (IllegalAccessException e) {
-              LOG.error("User '{}' attempts to delete a non authorized news", currentIdentity.getUserId(), e);
-            } catch (Exception e) {
-              LOG.warn("Error when deleting the news with id " + id, e);
-            } finally {
-              RequestLifeCycle.end();
-            }
-          }
-        }, delay, TimeUnit.SECONDS);
+        newsToDeleteQueue.put(id, new PendingDeletion(currentIdentity, newsObjectType));
+        scheduledExecutor.schedule(() -> deletePendingNews(id), delay, TimeUnit.SECONDS);
       } else {
         newsToDeleteQueue.remove(id);
         newsService.deleteNews(id, currentIdentity, newsObjectType);
@@ -305,6 +315,25 @@ public class NewsRest {
     } catch (Exception e) {
       LOG.error("Error when deleting the news with id " + id, e);
       return Response.serverError().entity(e.getMessage()).build();
+    }
+  }
+
+  private void deletePendingNews(String id) {
+    PendingDeletion pendingDeletion = newsToDeleteQueue.remove(id);
+    if (pendingDeletion == null) {
+      // Undone, or deleted already
+      return;
+    }
+    ExoContainerContext.setCurrentContainer(container);
+    RequestLifeCycle.begin(container);
+    try {
+      newsService.deleteNews(id, pendingDeletion.identity(), pendingDeletion.newsObjectType());
+    } catch (IllegalAccessException e) {
+      LOG.error("User '{}' attempts to delete a non authorized news", pendingDeletion.identity().getUserId(), e);
+    } catch (Exception e) {
+      LOG.warn("Error when deleting the news with id " + id, e);
+    } finally {
+      RequestLifeCycle.end();
     }
   }
 
@@ -321,14 +350,18 @@ public class NewsRest {
     if (StringUtils.isBlank(id)) {
       return Response.status(Response.Status.BAD_REQUEST).entity("News identifier must not be null or empty").build();
     }
-    if (newsToDeleteQueue.containsKey(id)) {// TODO Move to service layer
+    PendingDeletion pendingDeletion = newsToDeleteQueue.get(id);// TODO Move to service layer
+    if (pendingDeletion != null) {
       String authenticatedUser = ConversationState.getCurrent().getIdentity().getUserId();
-      String originalModifierUser = newsToDeleteQueue.get(id);
+      String originalModifierUser = pendingDeletion.identity().getUserId();
       if (!originalModifierUser.equals(authenticatedUser)) {
         LOG.warn("User {} attempts to cancel deletion of a news deleted by user {}", authenticatedUser, originalModifierUser);
         return Response.status(Response.Status.FORBIDDEN).build();
       }
-      newsToDeleteQueue.remove(id);
+    }
+    // Removed here, the delayed deletion finds nothing to delete; removed there
+    // first, the news is deleted already
+    if (pendingDeletion != null && newsToDeleteQueue.remove(id, pendingDeletion)) {
       return Response.noContent().build();
     } else {
       return Response.status(Response.Status.BAD_REQUEST)

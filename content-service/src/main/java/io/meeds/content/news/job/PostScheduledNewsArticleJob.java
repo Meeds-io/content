@@ -48,6 +48,7 @@ import org.exoplatform.social.metadata.MetadataService;
 import io.meeds.common.ContainerTransactional;
 import io.meeds.content.news.model.News;
 import io.meeds.content.news.service.NewsService;
+import io.meeds.spring.kernel.ClusterTaskScheduler;
 
 @Component
 public class PostScheduledNewsArticleJob {
@@ -64,7 +65,7 @@ public class PostScheduledNewsArticleJob {
   private ActivityManager     activityManager;
 
 
-  @Scheduled(cron = "${meeds.content.postScheduledNewsArticle.job.cron:15 */2 * * * ?}")
+  @Scheduled(cron = "${meeds.content.postScheduledNewsArticle.job.cron:15 */2 * * * ?}", scheduler = ClusterTaskScheduler.NAME)
   @ContainerTransactional
   public void postScheduledNewsArticle() {
 
@@ -110,7 +111,7 @@ public class PostScheduledNewsArticleJob {
                    });
   }
 
-  @Scheduled(cron = "${meeds.content.postScheduledNewsArticle.job.cron:15 */2 * * * ?}")
+  @Scheduled(cron = "${meeds.content.postScheduledNewsArticle.job.cron:15 */2 * * * ?}", scheduler = ClusterTaskScheduler.NAME)
   @ContainerTransactional
   public void unpublishArticle() {
     metadataService.getMetadataItemsByMetadataNameAndTypeAndObjectAndMetadataItemProperty(NEWS_METADATA_NAME,
