@@ -733,8 +733,12 @@ public class NewsRestTest {
                  newsRestController.deleteNews("1", ARTICLE.name().toLowerCase(), 3600L).getStatus());
     verify(newsService, never()).deleteNews(anyString(), any(), anyString());
 
+    long stopStart = System.nanoTime();
     newsRestController.destroy();
 
+    // The stop drops the waiting deletion from the executor rather than waiting
+    // for its delay up to the stop's timeout
+    assertTrue(TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - stopStart) < 5);
     verify(newsService).deleteNews("1", currentIdentity, ARTICLE.name().toLowerCase());
     // Deleted already: the undo is refused
     assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), newsRestController.undoDeleteNews("1").getStatus());
