@@ -27,8 +27,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import javax.ws.rs.core.Response;
@@ -120,6 +120,9 @@ public class NewsRest {
    */
   private final Map<String, PendingDeletion> newsToDeleteQueue = new ConcurrentHashMap<>();
 
+  /** Seconds the stop waits for a deletion that is running. */
+  private static final long        STOP_TIMEOUT      = 10;
+
   private ScheduledExecutorService scheduledExecutor;
 
   private record PendingDeletion(org.exoplatform.services.security.Identity identity, String newsObjectType) {
@@ -131,13 +134,24 @@ public class NewsRest {
 
   @PostConstruct
   public void init() {
-    scheduledExecutor = Executors.newScheduledThreadPool(1);
+    ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1);
+    // The deletions still waiting for their delay at stop are run by destroy
+    executor.setExecuteExistingDelayedTasksAfterShutdownPolicy(false);
+    scheduledExecutor = executor;
   }
 
   @PreDestroy
   public void destroy() {
     if (scheduledExecutor != null) {
-      scheduledExecutor.shutdownNow();
+      // A deletion running now ends: interrupted, it would be lost
+      scheduledExecutor.shutdown();
+      try {
+        if (!scheduledExecutor.awaitTermination(STOP_TIMEOUT, TimeUnit.SECONDS)) {
+          LOG.warn("A news deletion did not end within {} seconds of the stop", STOP_TIMEOUT);
+        }
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
     }
     // A deletion still waiting for its delay would be lost with this node: it
     // runs now, its undo no longer possible
