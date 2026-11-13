@@ -718,6 +718,40 @@ public class NewsRestTest {
   }
 
   @Test
+  public void aNewsDeletedWithADelayIsDeletedWhenTheNodeStops() throws Exception {
+    Identity currentIdentity = new Identity(JOHN);
+    ConversationState.setCurrent(new ConversationState(currentIdentity));
+    News news = new News();
+    news.setId("1");
+    lenient().when(newsService.getNewsById(anyString(), any(), anyBoolean(), anyString())).thenReturn(news);
+
+    assertEquals(Response.Status.OK.getStatusCode(),
+                 newsRestController.deleteNews("1", ARTICLE.name().toLowerCase(), 3600L).getStatus());
+    verify(newsService, never()).deleteNews(anyString(), any(), anyString());
+
+    newsRestController.destroy();
+
+    verify(newsService).deleteNews("1", currentIdentity, ARTICLE.name().toLowerCase());
+    // Deleted already: the undo is refused
+    assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), newsRestController.undoDeleteNews("1").getStatus());
+  }
+
+  @Test
+  public void aNewsWhoseDeletionIsUndoneIsNotDeletedWhenTheNodeStops() throws Exception {
+    Identity currentIdentity = new Identity(JOHN);
+    ConversationState.setCurrent(new ConversationState(currentIdentity));
+    News news = new News();
+    news.setId("1");
+    lenient().when(newsService.getNewsById(anyString(), any(), anyBoolean(), anyString())).thenReturn(news);
+    newsRestController.deleteNews("1", ARTICLE.name().toLowerCase(), 3600L);
+
+    assertEquals(Response.Status.NO_CONTENT.getStatusCode(), newsRestController.undoDeleteNews("1").getStatus());
+    newsRestController.destroy();
+
+    verify(newsService, never()).deleteNews(anyString(), any(), anyString());
+  }
+
+  @Test
   public void shouldNotDeleteNewsWhenUserIsNotDraftAuthor() throws Exception {
     // Given
     Identity currentIdentity = new Identity(JOHN);
