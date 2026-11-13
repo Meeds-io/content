@@ -45,6 +45,7 @@ import io.meeds.content.link.service.LinkService;
 import io.meeds.content.link.storage.cache.CachedLinkStorage;
 import io.meeds.kernel.test.AbstractSpringTest;
 import io.meeds.spring.AvailableIntegration;
+import io.meeds.spring.kernel.KernelSchedulingConfiguration;
 import io.meeds.spring.web.security.WebSecurityConfiguration;
 
 @SpringBootTest
@@ -73,7 +74,9 @@ import io.meeds.spring.web.security.WebSecurityConfiguration;
   @ConfigurationUnit(scope = ContainerScope.PORTAL, path = "conf/exo.social.component.core-local-configuration.xml"),
 })
 @EnableAutoConfiguration
-@ContextConfiguration(classes = { WebSecurityConfiguration.class })
+// The scheduled methods that name the cluster scheduler resolve it, as in
+// the add-on's application
+@ContextConfiguration(classes = { WebSecurityConfiguration.class, KernelSchedulingConfiguration.class })
 @AutoConfigureWebMvc
 @AutoConfigureMockMvc(addFilters = false)
 @RunWith(SpringRunner.class)
