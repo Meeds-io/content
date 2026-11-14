@@ -719,15 +719,26 @@ public class NewsService {
   }
 
   /**
-   * Get all news
-   * 
-   * @param filter
+   * Get all news. Without a search text, the spaces of the filter that the
+   * current user can't view are ignored, as the news page refuses them, and a
+   * filter naming no space the user can view gives no news.
+   *
+   * @param filter the news filter. Without a search text, its space list is
+   *          replaced with the subset of those spaces the current user can
+   *          view: a caller that reuses the filter afterwards reads that
+   *          subset
    * @param currentIdentity
    * @return all news
    * @throws Exception when error
    */
   public List<News> getNews(NewsFilter filter, Identity currentIdentity) throws Exception {
     List<News> newsList = new ArrayList<>();
+    if (filter != null && StringUtils.isBlank(filter.getSearchText()) && CollectionUtils.isNotEmpty(filter.getSpaces())) {
+      filter.setSpaces(getViewableSpaceIds(filter.getSpaces(), currentIdentity.getUserId()));
+      if (filter.getSpaces().isEmpty()) {
+        return newsList;
+      }
+    }
     if (filter != null) {
       if (StringUtils.isNotBlank(filter.getSearchText())) {
         newsList =
@@ -2165,6 +2176,13 @@ public class NewsService {
 
   private boolean isArticleOwner(News article, String userName) {
     return StringUtils.isNotEmpty(article.getOwner()) && article.getOwner().equals(userName);
+  }
+
+  private List<String> getViewableSpaceIds(List<String> spaceIds, String username) {
+    return spaceIds.stream().filter(spaceId -> {
+      Space space = spaceService.getSpaceById(spaceId);
+      return space != null && spaceService.canViewSpace(space, username);
+    }).toList();
   }
 
   private boolean canViewSharedInSpaces(News news, String username) {
