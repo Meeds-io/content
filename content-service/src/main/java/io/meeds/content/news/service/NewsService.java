@@ -37,12 +37,14 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.TreeSet;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -209,16 +211,18 @@ public class NewsService {
   public static final String       UNPUBLISH_SCHEDULED_DATE               = "unpublishScheduledDate";
 
   /**
-   * The {@code newsPage} property naming the draft an article page was created
-   * from, when it was posted or scheduled from a draft of a new article.
+   * The property of a {@code newsPage} or {@code newsDraftPage} item naming the
+   * objects the article was stored under before, most recent first, as
+   * {@code draft:<id>} and {@code page:<id>} joined with {@code ;}: the object
+   * it replaces, then that object's own chain, at most
+   * {@link #ORIGIN_CHAIN_MAX} entries, the oldest dropped. Posting or scheduling
+   * a new article's draft writes it on the page's item; unscheduling a staged
+   * article writes it on the new draft's item.
    */
-  public static final String       ORIGIN_DRAFT_ID                        = "originDraftId";
+  public static final String       ORIGIN_CHAIN                           = "originChain";
 
-  /**
-   * The {@code newsDraftPage} property naming the article page a draft was
-   * created from, when a staged article was unscheduled back to a draft.
-   */
-  public static final String       ORIGIN_PAGE_ID                         = "originPageId";
+  /** The most entries an {@link #ORIGIN_CHAIN} keeps. */
+  public static final int          ORIGIN_CHAIN_MAX                       = 20;
 
   /** The {@code content.update.permissions} data key holding the article's id. */
   public static final String       ARTICLE_ID                             = "articleId";
@@ -255,7 +259,7 @@ public class NewsService {
                                                                                    PUBLISHER,
                                                                                    PAGE_REFERRED,
                                                                                    DE_REFER_PAGE_ID,
-                                                                                   ORIGIN_DRAFT_ID);
+                                                                                   ORIGIN_CHAIN);
 
   /** The keyset order of a space's articles: pages, then drafts, each by numeric id. */
   private static final Comparator<ArticleRef> ARTICLE_REF_ORDER =
@@ -1061,7 +1065,7 @@ public class NewsService {
 
   /**
    * Un-schedule publishing a News. A staged article written in the news editor
-   * goes back to a new draft, which names its page ({@link #ORIGIN_PAGE_ID});
+   * goes back to a new draft, whose {@link #ORIGIN_CHAIN} starts with its page;
    * the page is then deleted, and {@link NewsUtils#ARTICLE_ID_CHANGED}
    * broadcast. A page posted as an article keeps its id and only loses its
    * article items.
@@ -1078,7 +1082,9 @@ public class NewsService {
       if (news.getProperties() != null) {
         news.getProperties().setDraft(true);
       }
-      news = createDraftArticleForNewPage(news, space.getGroupId(), articleCreator, System.currentTimeMillis(), existingNews.getId());
+      String originChain = extendOriginChain(new ArticleRef(existingNews.getId(), false),
+                                             readOriginChain(NEWS_METADATA_PAGE_OBJECT_TYPE, existingNews.getId(), space.getId()));
+      news = createDraftArticleForNewPage(news, space.getGroupId(), articleCreator, System.currentTimeMillis(), originChain);
       broadcastUnScheduleArticleEvent(existingNews, news.getId());
       deleteArticle(existingNews, articleCreator);
       NewsUtils.broadcastEvent(NewsUtils.ARTICLE_ID_CHANGED,
@@ -1283,8 +1289,8 @@ public class NewsService {
    * @param pageOwnerId the group id of the space's wiki
    * @param draftArticleCreator the username of its creator
    * @param creationDate its creation date
-   * @param originPageId the id of the article page the draft replaces, stored
-   *          as {@link #ORIGIN_PAGE_ID}; null for none
+   * @param originChain the {@link #ORIGIN_CHAIN} of the draft, starting with
+   *          the article page it replaces; null for none
    * @return the created draft news article
    * @throws Exception when error occurs
    */
@@ -1292,7 +1298,7 @@ public class NewsService {
                                             String pageOwnerId,
                                             String draftArticleCreator,
                                             long creationDate,
-                                            String originPageId) throws Exception {
+                                            String originChain) throws Exception {
     Wiki wiki = wikiService.getWikiByTypeAndOwner(WikiType.GROUP.name().toLowerCase(), pageOwnerId);
     Page newsArticlesRootNotePage = null;
     if (wiki != null) {
@@ -1341,8 +1347,8 @@ public class NewsService {
                                                                        Long.parseLong(draftArticleSpace.getId()));
       String draftArticleMetadataItemCreatorIdentityId = identityManager.getOrCreateUserIdentity(draftArticleCreator).getId();
       Map<String, String> draftArticleMetadataItemProperties = new HashMap<>();
-      if (originPageId != null) {
-        draftArticleMetadataItemProperties.put(ORIGIN_PAGE_ID, originPageId);
+      if (originChain != null) {
+        draftArticleMetadataItemProperties.put(ORIGIN_CHAIN, originChain);
       }
       metadataService.createMetadataItem(draftArticleMetaDataObject,
                                          NEWS_METADATA_KEY,
@@ -1445,7 +1451,7 @@ public class NewsService {
   /**
    * Creates the page of a new article, then deletes the draft of a new article
    * it was written in, when there is one. In that case the page's
-   * {@code newsPage} item names the draft ({@link #ORIGIN_DRAFT_ID}), and
+   * {@code newsPage} item's {@link #ORIGIN_CHAIN} starts with the draft, and
    * {@link NewsUtils#ARTICLE_ID_CHANGED} is broadcast once the draft is
    * deleted: a value write still in flight then either commits before the
    * move, or finds its object gone. An article created with no draft, as the MCP
@@ -1516,7 +1522,11 @@ public class NewsService {
                                   space.getId(),
                                   pageVersion.getId(),
                                   false,
-                                  originDraft == null ? null : originDraft.getId());
+                                  originDraft == null ? null
+                                                      : extendOriginChain(new ArticleRef(originDraft.getId(), true),
+                                                                          readOriginChain(NEWS_METADATA_DRAFT_OBJECT_TYPE,
+                                                                                          originDraft.getId(),
+                                                                                          space.getId())));
         // delete the draft
         deleteDraftArticle(draftNewsId, poster.getUserId());
         if (originDraft != null) {
@@ -1680,6 +1690,25 @@ public class NewsService {
    */
   public int countArticles(String spaceId) {
     return readArticleRefs(spaceId).size();
+  }
+
+  /**
+   * Tells, for each article of a space {@link #getArticleRefs} lists, the
+   * objects it was stored under before, from the same read: its
+   * {@link #ORIGIN_CHAIN}, most recent first. A gone draft or page found in a
+   * chain is the past of the live article holding that chain.
+   *
+   * @param spaceId the space id
+   * @return each live article and its past objects, in
+   *         {@link #getArticleRefs}' order; an article with no past maps to an
+   *         empty list
+   */
+  public Map<ArticleRef, List<ArticleRef>> getArticleOrigins(String spaceId) {
+    Map<ArticleRef, List<ArticleRef>> origins = new LinkedHashMap<>();
+    readArticleItems(spaceId).forEach((article, properties) -> origins.put(article,
+                                                                           parseOriginChain(properties == null ? null
+                                                                                                               : properties.get(ORIGIN_CHAIN))));
+    return origins;
   }
 
   public void removeArticleMetadataProperty(String articleId, String propertyKey, long updater) {
@@ -1850,8 +1879,8 @@ public class NewsService {
    * @param spaceId the id of its space
    * @param versionId the id of its page version
    * @param externalPage true for an existing page posted as an article
-   * @param originDraftId the id of the draft of a new article the page was
-   *          created from, stored as {@link #ORIGIN_DRAFT_ID}; null for none
+   * @param originChain the page's {@link #ORIGIN_CHAIN}, starting with the
+   *          draft of a new article it was created from; null for none
    * @throws Exception when a metadata item cannot be created
    */
   private void buildNewArticleProperties(News article,
@@ -1860,7 +1889,7 @@ public class NewsService {
                                          String spaceId,
                                          String versionId,
                                          boolean externalPage,
-                                         String originDraftId) throws Exception {
+                                         String originChain) throws Exception {
     NewsPageVersionObject articleVersionMetaDataObject = new NewsPageVersionObject(NEWS_METADATA_PAGE_VERSION_OBJECT_TYPE,
                                                                                    versionId,
                                                                                    null,
@@ -1904,8 +1933,8 @@ public class NewsService {
     newsPageProperties.put(PUBLISHED, String.valueOf(article.isPublished()));
     newsPageProperties.put(NEWS_DELETED, String.valueOf(articlePage.isDeleted()));
     newsPageProperties.put(PUBLISHER, creatorIdentity.getProfile().getFullName());
-    if (originDraftId != null) {
-      newsPageProperties.put(ORIGIN_DRAFT_ID, originDraftId);
+    if (originChain != null) {
+      newsPageProperties.put(ORIGIN_CHAIN, originChain);
     }
 
     // A brand-new article page is indexed into the notes index immediately
@@ -1937,17 +1966,28 @@ public class NewsService {
   }
 
   /**
+   * @param spaceId the space id
+   * @return the space's articles in {@link #ARTICLE_REF_ORDER}, as
+   *         {@link #readArticleItems} reads them
+   */
+  private List<ArticleRef> readArticleRefs(String spaceId) {
+    return List.copyOf(readArticleItems(spaceId).keySet());
+  }
+
+  /**
    * Reads a space's articles in {@link #ARTICLE_REF_ORDER}, from its
    * {@code newsPage} and {@code newsDraftPage} items in one query: a page
    * whose item says it is deleted (an unscheduled article) or an external page
    * (a note posted as an article) is left out, and an id is kept once.
    *
    * @param spaceId the space id
-   * @return the space's articles; none for an id that is not a number
+   * @return each of the space's articles with its item's properties; none for
+   *         an id that is not a number
    */
-  private List<ArticleRef> readArticleRefs(String spaceId) {
+  private SortedMap<ArticleRef, Map<String, String>> readArticleItems(String spaceId) {
+    SortedMap<ArticleRef, Map<String, String>> articles = new TreeMap<>(ARTICLE_REF_ORDER);
     if (!StringUtils.isNumeric(spaceId)) {
-      return List.of();
+      return articles;
     }
     MetadataFilter metadataFilter = new MetadataFilter();
     metadataFilter.setMetadataName(NEWS_METADATA_NAME);
@@ -1957,18 +1997,17 @@ public class NewsService {
     // No limit: a single query, since the filter's order is not stable
     // enough for offset paging (creation date, then the metadata's own id)
     List<MetadataItem> items = metadataService.getMetadataItemsByFilter(metadataFilter, 0, 0);
-    Set<ArticleRef> articles = new TreeSet<>(ARTICLE_REF_ORDER);
     for (MetadataItem item : items) {
       if (item == null || !StringUtils.isNumeric(item.getObjectId())) {
         continue;
       }
       if (NEWS_METADATA_DRAFT_OBJECT_TYPE.equals(item.getObjectType())) {
-        articles.add(new ArticleRef(item.getObjectId(), true));
+        articles.putIfAbsent(new ArticleRef(item.getObjectId(), true), item.getProperties());
       } else if (NEWS_METADATA_PAGE_OBJECT_TYPE.equals(item.getObjectType()) && isListedArticlePage(item.getProperties())) {
-        articles.add(new ArticleRef(item.getObjectId(), false));
+        articles.putIfAbsent(new ArticleRef(item.getObjectId(), false), item.getProperties());
       }
     }
-    return List.copyOf(articles);
+    return articles;
   }
 
   /**
@@ -1979,6 +2018,63 @@ public class NewsService {
   private static boolean isListedArticlePage(Map<String, String> properties) {
     return properties == null
         || !(Boolean.parseBoolean(properties.get(NEWS_DELETED)) || Boolean.parseBoolean(properties.get(EXTERNAL_PAGE)));
+  }
+
+  /**
+   * Reads the {@link #ORIGIN_CHAIN} of an article object from its own metadata
+   * item, never from a caller's {@link News#getParameters()}.
+   *
+   * @param objectType {@code newsPage} or {@code newsDraftPage}
+   * @param objectId the page's or the draft's id
+   * @param spaceId the article's space id
+   * @return the stored chain, null when the object's item carries none
+   */
+  private String readOriginChain(String objectType, String objectId, String spaceId) {
+    List<MetadataItem> items = metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY,
+                                                                                   new MetadataObject(objectType,
+                                                                                                      objectId,
+                                                                                                      null,
+                                                                                                      Long.parseLong(spaceId)));
+    return CollectionUtils.isEmpty(items) || items.getFirst() == null || items.getFirst().getProperties() == null ? null
+                                                                                                                  : items.getFirst()
+                                                                                                                         .getProperties()
+                                                                                                                         .get(ORIGIN_CHAIN);
+  }
+
+  /**
+   * @param replaced the object the article was stored under until now
+   * @param replacedChain that object's own {@link #ORIGIN_CHAIN}, or null
+   * @return the chain of the object replacing it: that object first, then its
+   *         chain, at most {@link #ORIGIN_CHAIN_MAX} entries
+   */
+  static String extendOriginChain(ArticleRef replaced, String replacedChain) {
+    List<ArticleRef> chain = new ArrayList<>();
+    chain.add(replaced);
+    chain.addAll(parseOriginChain(replacedChain));
+    return chain.stream()
+                .limit(ORIGIN_CHAIN_MAX)
+                .map(article -> (article.draft() ? "draft:" : "page:") + article.id())
+                .collect(Collectors.joining(";"));
+  }
+
+  /**
+   * @param originChain a stored {@link #ORIGIN_CHAIN}, or null
+   * @return its entries, most recent first; an entry that is not
+   *         {@code draft:<id>} or {@code page:<id>} with a numeric id is
+   *         dropped
+   */
+  static List<ArticleRef> parseOriginChain(String originChain) {
+    if (StringUtils.isBlank(originChain)) {
+      return List.of();
+    }
+    List<ArticleRef> chain = new ArrayList<>();
+    for (String entry : originChain.split(";")) {
+      String id = StringUtils.substringAfter(entry, ":");
+      if (StringUtils.isNumeric(id) && (entry.startsWith("draft:") || entry.startsWith("page:"))) {
+        chain.add(new ArticleRef(id, entry.startsWith("draft:")));
+      }
+    }
+    return chain;
   }
 
   private void referOrDeReferArticlePage(News article, Page articlePage, Map<String, String> properties) {

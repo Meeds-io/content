@@ -1658,7 +1658,8 @@ public class NewsServiceTest {
    * A caller's parameters never set a key the service computes, whether the
    * article gives a value for it or not, and their other keys are kept.
    * Mutants: the parameters merged after the computed keys, or any one key
-   * left out of {@code COMPUTED_ARTICLE_PROPERTY_KEYS}, fail it.
+   * left out of {@code COMPUTED_ARTICLE_PROPERTY_KEYS}, fail it: the keys
+   * are spelled out in the test, never read from the set.
    */
   @Test
   public void testCreateArticleKeepsComputedKeysOverParameters() throws Exception {
@@ -1678,8 +1679,27 @@ public class NewsServiceTest {
     article.setSpaceId("1");
     article.setPublicationState(POSTED);
     article.setPublished(false);
+    // Spelled out here, never read from the set under test: a key dropped
+    // from the set must still be sent, and seen refused.
+    List<String> serviceKeys = List.of("audience",
+                                       "schedulePostDate",
+                                       "unpublishScheduled",
+                                       "unpublishScheduledDate",
+                                       "publicationState",
+                                       "externalPage",
+                                       "activityPosted",
+                                       "activityCategories",
+                                       "published",
+                                       "deleted",
+                                       "publisher",
+                                       "pageReferred",
+                                       "deReferPageId",
+                                       "originChain",
+                                       "activities",
+                                       "viewers",
+                                       "viewsCount");
     Map<String, String> parameters = new HashMap<>();
-    NewsService.COMPUTED_ARTICLE_PROPERTY_KEYS.forEach(key -> parameters.put(key, "callerValue"));
+    serviceKeys.forEach(key -> parameters.put(key, "callerValue"));
     parameters.put("eventId", "12");
     article.setParameters(parameters);
 
@@ -1688,9 +1708,10 @@ public class NewsServiceTest {
     ArgumentCaptor<Map<String, String>> properties = ArgumentCaptor.forClass(Map.class);
     verify(metadataService).createMetadataItem(any(NewsPageObject.class), any(MetadataKey.class), properties.capture(), anyLong(), anyBoolean());
     Map<String, String> stored = properties.getValue();
-    for (String key : NewsService.COMPUTED_ARTICLE_PROPERTY_KEYS) {
+    for (String key : serviceKeys) {
       assertNotEquals("Computed key " + key + " set by the caller", "callerValue", stored.get(key));
     }
+    assertEquals(new java.util.HashSet<>(serviceKeys), NewsService.COMPUTED_ARTICLE_PROPERTY_KEYS);
     assertEquals(POSTED, stored.get(NEWS_PUBLICATION_STATE));
     assertEquals("false", stored.get(PUBLISHED));
     assertEquals("true", stored.get(EXTERNAL_PAGE));
@@ -1716,8 +1737,10 @@ public class NewsServiceTest {
     draft.setId("5");
     draft.setWikiOwner(space.getGroupId());
     when(noteService.getDraftNoteById("5", "john")).thenReturn(draft);
+    MetadataItem draftItem = mock(MetadataItem.class);
+    when(draftItem.getProperties()).thenReturn(Map.of(NewsService.ORIGIN_CHAIN, "page:3;draft:2"));
     when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
-                                                             any(MetadataObject.class))).thenReturn(List.of(mock(MetadataItem.class)));
+                                                             any(MetadataObject.class))).thenReturn(List.of(draftItem));
     AtomicBoolean draftDeleted = new AtomicBoolean();
     doAnswer(invocation -> {
       draftDeleted.set(true);
@@ -1735,7 +1758,9 @@ public class NewsServiceTest {
     NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.ARTICLE_ID_CHANGED), eq("john"), change.capture()));
     assertEquals(new ArticleIdChange("5", true, "11", false, "1"), change.getValue());
     assertTrue("The draft must be deleted before the id change is broadcast", deletedAtBroadcast.get());
-    assertEquals("5", capturePageProperties().get(NewsService.ORIGIN_DRAFT_ID));
+    assertEquals("The page's chain is its draft, then the draft's own chain",
+                 "draft:5;page:3;draft:2",
+                 capturePageProperties().get(NewsService.ORIGIN_CHAIN));
   }
 
   /**
@@ -1762,7 +1787,7 @@ public class NewsServiceTest {
       newsService.createNewsArticlePage(newArticle(draftId), "john");
 
       NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.ARTICLE_ID_CHANGED), any(), any()), never());
-      assertNull(capturePageProperties().get(NewsService.ORIGIN_DRAFT_ID));
+      assertNull(capturePageProperties().get(NewsService.ORIGIN_CHAIN));
     }
   }
 
@@ -1786,6 +1811,9 @@ public class NewsServiceTest {
     when(pageVersion.getId()).thenReturn("70");
     when(noteService.getPublishedVersionByPageIdAndLang(7L, null)).thenReturn(pageVersion);
 
+    MetadataItem pageItem = mock(MetadataItem.class);
+    when(pageItem.getProperties()).thenReturn(Map.of(NewsService.ORIGIN_CHAIN, "draft:5"));
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class), any(MetadataObject.class))).thenReturn(List.of(pageItem));
     News existingArticle = new News();
     existingArticle.setId("7");
     existingArticle.setSpaceId("1");
@@ -1816,7 +1844,7 @@ public class NewsServiceTest {
     assertTrue("The page must be deleted before the id change is broadcast", deletedAtBroadcast.get());
     ArgumentCaptor<Map<String, String>> properties = ArgumentCaptor.forClass(Map.class);
     verify(metadataService).createMetadataItem(any(NewsDraftObject.class), any(MetadataKey.class), properties.capture(), anyLong(), anyBoolean());
-    assertEquals("7", properties.getValue().get(NewsService.ORIGIN_PAGE_ID));
+    assertEquals("page:7;draft:5", properties.getValue().get(NewsService.ORIGIN_CHAIN));
     Map<String, Object> permissions = capturePermissionsData();
     assertEquals("8", permissions.get(NewsService.ARTICLE_ID));
     assertEquals(Boolean.TRUE, permissions.get(NewsService.ARTICLE_DRAFT));
@@ -1886,6 +1914,53 @@ public class NewsServiceTest {
     assertEquals(List.of(3L), filter.getValue().getMetadataSpaceIds());
     assertFalse(filter.getValue().getMetadataObjectTypes().contains(NewsService.NEWS_METADATA_LATEST_DRAFT_OBJECT_TYPE));
     assertEquals(0, newsService.countArticles("not-a-number"));
+  }
+
+  /**
+   * A chain keeps the most recent {@code ORIGIN_CHAIN_MAX} entries, the
+   * replaced object first, and a stored entry that is not a typed numeric id
+   * is dropped. Mutants: the cap removed, the oldest kept instead of the
+   * newest, or the type prefix ignored, fail it.
+   */
+  @Test
+  public void testOriginChainKeepsTheMostRecentEntries() {
+    String longChain = java.util.stream.IntStream.rangeClosed(1, 25)
+                                                 .mapToObj(index -> (index % 2 == 0 ? "draft:" : "page:") + index)
+                                                 .collect(java.util.stream.Collectors.joining(";"));
+    List<ArticleRef> chain = NewsService.parseOriginChain(NewsService.extendOriginChain(new ArticleRef("100", true), longChain));
+    assertEquals(NewsService.ORIGIN_CHAIN_MAX, chain.size());
+    assertEquals(new ArticleRef("100", true), chain.get(0));
+    assertEquals(new ArticleRef("1", false), chain.get(1));
+    assertEquals(new ArticleRef("19", false), chain.get(19));
+
+    assertEquals(List.of(new ArticleRef("4", false), new ArticleRef("6", true)),
+                 NewsService.parseOriginChain("page:4;x:5;draft:6;draft:abc;7"));
+    assertEquals(List.of(), NewsService.parseOriginChain(null));
+  }
+
+  /**
+   * Each live article of a space comes with its past objects, read from its
+   * own item, in the keyset order; a deleted page's chain is not offered.
+   * Mutant: the chain read from another item, or a deleted page listed, fail
+   * it.
+   */
+  @Test
+  public void testArticleOriginsMapEachLiveArticleToItsPast() {
+    List<MetadataItem> items = List.of(articleItem(NewsService.NEWS_METADATA_PAGE_OBJECT_TYPE,
+                                                   "12",
+                                                   Map.of(NewsService.ORIGIN_CHAIN, "draft:8;page:7;draft:5")),
+                                       articleItem(NewsService.NEWS_METADATA_PAGE_OBJECT_TYPE,
+                                                   "7",
+                                                   Map.of(NEWS_DELETED, "true", NewsService.ORIGIN_CHAIN, "draft:5")),
+                                       articleItem(NewsService.NEWS_METADATA_DRAFT_OBJECT_TYPE, "9", Map.of()));
+    when(metadataService.getMetadataItemsByFilter(any(MetadataFilter.class), eq(0L), eq(0L))).thenReturn(items);
+
+    Map<ArticleRef, List<ArticleRef>> origins = newsService.getArticleOrigins("3");
+
+    assertEquals(List.of(new ArticleRef("12", false), new ArticleRef("9", true)), List.copyOf(origins.keySet()));
+    assertEquals(List.of(new ArticleRef("8", true), new ArticleRef("7", false), new ArticleRef("5", true)),
+                 origins.get(new ArticleRef("12", false)));
+    assertEquals(List.of(), origins.get(new ArticleRef("9", true)));
   }
 
   /**
