@@ -1543,9 +1543,14 @@ public class NewsServiceTest {
     when(existingMetadataItem.getProperties()).thenReturn(existingProperties);
     when(existingMetadataItem.getId()).thenReturn(1L);
 
+    existingProperties.put(PUBLISHED, "false");
     Map<String, String> newProperties = new HashMap<>();
     newProperties.put("key1", "newValue");
     newProperties.put("key2", "value2");
+    // computed keys a caller sends are ignored. Mutant: the filter removed
+    // fails it.
+    newProperties.put(PUBLISHED, "true");
+    newProperties.put(NewsService.ORIGIN_CHAIN, "draft:1");
 
     // When
     Map<String, String> mergedResult = newsService.updateMetadataProperties("1", newProperties, 1L);
@@ -1556,6 +1561,20 @@ public class NewsServiceTest {
     assertEquals("newValue", mergedResult.get("key1"));
     assertEquals("value2", mergedResult.get("key2"));
     assertEquals("existingValue", mergedResult.get("existingKey"));
+    assertEquals("false", mergedResult.get(PUBLISHED));
+    assertNull(mergedResult.get(NewsService.ORIGIN_CHAIN));
+  }
+
+  /**
+   * A computed key is never removed through the add-ons' property removal,
+   * and nothing is read for it. Mutant: the guard removed fails it.
+   */
+  @Test
+  public void testRemoveArticleMetadataPropertyKeepsComputedKeys() {
+    newsService.removeArticleMetadataProperty("1", NEWS_DELETED, 1L);
+    newsService.removeArticleMetadataProperty("1", NewsService.ORIGIN_CHAIN, 1L);
+    verify(noteService, never()).getNoteById(anyString());
+    verify(metadataService, never()).updateMetadataItem(any(MetadataItem.class), anyLong(), anyBoolean());
   }
 
   @Test

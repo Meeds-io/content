@@ -1759,7 +1759,19 @@ public class NewsService {
     return origins;
   }
 
+  /**
+   * Removes a property an add-on set on an article's {@code newsPage} item. A
+   * key the service computes ({@link #COMPUTED_ARTICLE_PROPERTY_KEYS}) is
+   * never removed.
+   *
+   * @param articleId the article id
+   * @param propertyKey the property to remove
+   * @param updater the identity id of the updater
+   */
   public void removeArticleMetadataProperty(String articleId, String propertyKey, long updater) {
+    if (COMPUTED_ARTICLE_PROPERTY_KEYS.contains(propertyKey)) {
+      return;
+    }
     News article = getNewsArticleById(articleId);
     if (article == null) {
       return;
@@ -1777,6 +1789,19 @@ public class NewsService {
     metadataService.updateMetadataItem(metadataItem, updater, false);
   }
 
+  /**
+   * Merges properties an add-on sets on an article's {@code newsPage} item
+   * (publish-extension metadata such as {@code eventId}) over the stored
+   * ones. A key the service computes ({@link #COMPUTED_ARTICLE_PROPERTY_KEYS})
+   * is ignored: no caller sets the article's state, audience, schedule,
+   * origin or the other computed keys through it.
+   *
+   * @param articleId the article id
+   * @param properties the properties to set
+   * @param updater the identity id of the updater
+   * @return the item's properties once merged
+   * @throws ObjectNotFoundException when no article carries the id
+   */
   public Map<String, String> updateMetadataProperties(String articleId,
                                                       Map<String, String> properties,
                                                       Long updater) throws ObjectNotFoundException {
@@ -1790,7 +1815,10 @@ public class NewsService {
 
     if (existingItem != null) {
       Map<String, String> mergedProperties = new HashMap<>(existingItem.getProperties());
-      mergedProperties.putAll(properties);
+      properties.entrySet()
+                .stream()
+                .filter(property -> !COMPUTED_ARTICLE_PROPERTY_KEYS.contains(property.getKey()))
+                .forEach(property -> mergedProperties.put(property.getKey(), property.getValue()));
       existingItem.setProperties(mergedProperties);
       metadataService.updateMetadataItem(existingItem, updater, false);
       updateNewsActivity(article, false, article.isActivityPosted(), false);
