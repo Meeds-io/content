@@ -1737,6 +1737,8 @@ public class NewsServiceTest {
     draft.setId("5");
     draft.setWikiOwner(space.getGroupId());
     when(noteService.getDraftNoteById("5", "john")).thenReturn(draft);
+    when(noteService.getDraftNoteById("5")).thenReturn(draft);
+    when(spaceService.isManager(any(Space.class), eq("john"))).thenReturn(true);
     MetadataItem draftItem = mock(MetadataItem.class);
     when(draftItem.getProperties()).thenReturn(Map.of(NewsService.ORIGIN_CHAIN, "page:3;draft:2"));
     when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
@@ -1778,6 +1780,8 @@ public class NewsServiceTest {
     latestDraft.setTargetPageId("9");
     latestDraft.setWikiOwner(space.getGroupId());
     when(noteService.getDraftNoteById("6", "john")).thenReturn(latestDraft);
+    when(noteService.getDraftNoteById("6")).thenReturn(latestDraft);
+    when(spaceService.isManager(any(Space.class), eq("john"))).thenReturn(true);
     when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
                                                              any(MetadataObject.class))).thenReturn(List.of(mock(MetadataItem.class)));
 
@@ -1788,6 +1792,47 @@ public class NewsServiceTest {
 
       NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.ARTICLE_ID_CHANGED), any(), any()), never());
       assertNull(capturePageProperties().get(NewsService.ORIGIN_CHAIN));
+    }
+  }
+
+  /**
+   * A draft of another space, or one the poster may not edit, is never the
+   * origin of the article posted with its id: no origin is recorded and no
+   * id change broadcast, so another writer's draft never moves to the
+   * poster's article. Mutants: the space check or the edit check removed
+   * fail it.
+   */
+  @Test
+  public void testCreateArticlePageNamesOnlyAnEditableDraftOfItsSpaceAsOrigin() throws Exception {
+    Space space = mockSpace();
+    mockIdentity();
+    mockArticlePageCreation(space, "11");
+    Space otherSpace = mock(Space.class);
+    when(otherSpace.getId()).thenReturn("2");
+    when(otherSpace.getGroupId()).thenReturn("/spaces/other");
+    when(spaceService.getSpaceByGroupId("/spaces/other")).thenReturn(otherSpace);
+    when(spaceService.getSpaceById("2")).thenReturn(otherSpace);
+    DraftPage otherSpaceDraft = new DraftPage();
+    otherSpaceDraft.setId("21");
+    otherSpaceDraft.setWikiOwner("/spaces/other");
+    when(noteService.getDraftNoteById("21")).thenReturn(otherSpaceDraft);
+    DraftPage someoneElsesDraft = new DraftPage();
+    someoneElsesDraft.setId("22");
+    someoneElsesDraft.setOwner("mary");
+    someoneElsesDraft.setWikiOwner(space.getGroupId());
+    when(noteService.getDraftNoteById("22")).thenReturn(someoneElsesDraft);
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+                                                             any(MetadataObject.class))).thenReturn(List.of(mock(MetadataItem.class)));
+    // john may edit in space 2 only: draft 22, owned by mary in space 1, is not his to edit
+    when(spaceService.isManager(otherSpace, "john")).thenReturn(true);
+
+    for (String draftId : List.of("21", "22")) {
+      NEWS_UTILS.clearInvocations();
+      clearInvocations(metadataService);
+      newsService.createNewsArticlePage(newArticle(draftId), "john");
+
+      NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.ARTICLE_ID_CHANGED), any(), any()), never());
+      assertNull(draftId, capturePageProperties().get(NewsService.ORIGIN_CHAIN));
     }
   }
 

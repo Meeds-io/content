@@ -1469,7 +1469,7 @@ public class NewsService {
     String draftNewsId = newsArticle.getId();
 
     Identity poster = NewsUtils.getUserIdentity(newsArticleCreator);
-    DraftPage originDraft = getNewArticleDraft(draftNewsId, poster);
+    News originDraft = getNewArticleDraft(draftNewsId, poster, newsArticle.getSpaceId());
     Space space = spaceService.getSpaceById(newsArticle.getSpaceId());
     String pageOwnerId = space.getGroupId();
 
@@ -1999,18 +1999,21 @@ public class NewsService {
   }
 
   /**
+   * The draft an article is posted from, as its origin: only the draft of a
+   * new article of the same space, which the poster may edit; any other id
+   * names no origin.
+   *
    * @param draftId an id as a caller gave it for the article's draft, or null
-   * @param creator the user the draft is read as
-   * @return the draft of a new article carrying that id, or null when the id
-   *         names none, or names the draft of an existing article
-   * @throws Exception when the draft cannot be read
+   * @param creator the poster
+   * @param spaceId the space of the article posted
+   * @return the draft, or null when the id names no such draft
    */
-  private DraftPage getNewArticleDraft(String draftId, Identity creator) throws Exception {
-    if (!StringUtils.isNumeric(draftId) || creator == null) {
+  private News getNewArticleDraft(String draftId, Identity creator, String spaceId) {
+    if (creator == null || spaceId == null) {
       return null;
     }
-    DraftPage draft = noteService.getDraftNoteById(draftId, creator.getUserId());
-    return draft == null || draft.getTargetPageId() != null ? null : draft;
+    News draft = getDraftArticleById(draftId);
+    return draft != null && spaceId.equals(draft.getSpaceId()) && canEditNews(draft, creator.getUserId()) ? draft : null;
   }
 
   /**
