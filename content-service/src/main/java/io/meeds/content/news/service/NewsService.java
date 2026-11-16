@@ -217,6 +217,15 @@ public class NewsService {
    */
   public static final String       ORIGIN_PAGE_ID                         = "originPageId";
 
+  /** The {@code content.update.permissions} data key holding the article's id. */
+  public static final String       ARTICLE_ID                             = "articleId";
+
+  /**
+   * The {@code content.update.permissions} data key telling, as a Boolean,
+   * whether {@link #ARTICLE_ID} is the id of the draft of a new article.
+   */
+  public static final String       ARTICLE_DRAFT                          = "articleDraft";
+
   public static final MetadataKey  NEWS_METADATA_KEY                      =
                                                      new MetadataKey(NEWS_METADATA_TYPE.getName(), NEWS_METADATA_NAME, 0);
 
@@ -1027,6 +1036,7 @@ public class NewsService {
       // set the url and the space url to the scheduled news
       news.setUrl(NewsUtils.buildNewsArticleUrl(news, currentIdentity.getUserId()));
       news.setSpaceUrl(NewsUtils.buildSpaceUrl(news.getSpaceId()));
+      NewsUtils.broadcastEvent(NewsUtils.SCHEDULE_NEWS, currentIdentity.getUserId(), news);
       if (originalArticle != null && !originalArticle.getPublicationState().equalsIgnoreCase(STAGED)) {
         NewsUtils.broadcastEvent(NewsUtils.UPDATE_PUBLISH_CONTENT,
                                  currentIdentity.getUserId(),
@@ -1332,7 +1342,7 @@ public class NewsService {
                                          Long.parseLong(draftArticleMetadataItemCreatorIdentityId),
                                          false);
       // Update content permissions
-      updateArticlePermissions(List.of(draftArticleSpace), draftArticle);
+      updateArticlePermissions(List.of(draftArticleSpace), draftArticle, true);
       return draftArticle;
     }
     return null;
@@ -1921,7 +1931,7 @@ public class NewsService {
       draftArticle.setIllustrationURL(NewsUtils.buildIllustrationUrl(draftPage.getProperties(), draftArticle.getLang()));
 
       // Update content permissions
-      updateArticlePermissions(List.of(space), draftArticle);
+      updateArticlePermissions(List.of(space), draftArticle, true);
       return draftArticle;
     }
     return null;
@@ -2985,7 +2995,35 @@ public class NewsService {
     return null;
   }
 
+  /**
+   * Broadcasts {@link NewsUtils#UPDATE_CONTENT_PERMISSIONS} for an article's
+   * content: its spaces, its body, the stored entity it is read from, its
+   * audience, and the article itself, as {@link #ARTICLE_ID} (its page id, the
+   * page's for the draft of an existing article) and {@link #ARTICLE_DRAFT}
+   * ({@code true} for the draft of a new article, whose id is the draft's).
+   *
+   * @param spaces the article's space, and the spaces it is shared in are
+   *          added
+   * @param article the article, a page or the draft of an existing article
+   */
   private void updateArticlePermissions(List<Space> spaces, News article) {
+    updateArticlePermissions(spaces, article, false);
+  }
+
+  /**
+   * Broadcasts {@link NewsUtils#UPDATE_CONTENT_PERMISSIONS} for an article's
+   * content, as {@link #updateArticlePermissions(List, News)} does.
+   *
+   * @param spaces the article's space, and the spaces it is shared in are
+   *          added
+   * @param article the article
+   * @param newArticleDraft true when the article is the draft of a new
+   *          article: the event then names the draft ({@code WIKI_DRAFT_PAGES}
+   *          and the draft's id), whatever the article's state, since a staged
+   *          article unscheduled back to a draft keeps its staged state until
+   *          saved
+   */
+  private void updateArticlePermissions(List<Space> spaces, News article, boolean newArticleDraft) {
     Map<String, Object> updateContentPermissionEventListenerData = new HashMap<>();
     if (CollectionUtils.isNotEmpty(article.getSharedInSpacesList())) {
       List<Space> spaceList = article.getSharedInSpacesList().stream().map(spaceId -> {
@@ -3000,10 +3038,14 @@ public class NewsService {
       spaces.addAll(spaceList);
     }
     updateContentPermissionEventListenerData.putAll(Map.of("spaces", spaces, ARTICLE_CONTENT, article.getBody()));
-    String entityType = article.getPublicationState().equals(DRAFT) ? "WIKI_DRAFT_PAGES" : "WIKI_PAGE_VERSIONS";
+    String entityType = newArticleDraft || DRAFT.equals(article.getPublicationState()) ? "WIKI_DRAFT_PAGES" : "WIKI_PAGE_VERSIONS";
     String entityId = entityType.equals("WIKI_DRAFT_PAGES") ? article.getId() : article.getLatestVersionId();
     updateContentPermissionEventListenerData.put("entityId", entityId);
     updateContentPermissionEventListenerData.put("entityType", entityType);
+    updateContentPermissionEventListenerData.put(ARTICLE_ID,
+                                                 newArticleDraft || StringUtils.isBlank(article.getTargetPageId()) ? article.getId()
+                                                                                                                   : article.getTargetPageId());
+    updateContentPermissionEventListenerData.put(ARTICLE_DRAFT, newArticleDraft);
     if (article.getAudience() != null) {
       updateContentPermissionEventListenerData.put(NEWS_AUDIENCE, article.getAudience());
     }

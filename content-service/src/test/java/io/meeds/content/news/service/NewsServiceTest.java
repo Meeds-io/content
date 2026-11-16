@@ -1237,6 +1237,28 @@ public class NewsServiceTest {
     verify(noteService, times(1)).createNote(any(Wiki.class), anyString(), any(Page.class), any(Identity.class), anyBoolean());
   }
 
+  /**
+   * Every schedule is broadcast, with the scheduled article: the Forms index
+   * refreshes a staged article's keys on it. Mutant: the broadcast removed
+   * fails it.
+   */
+  @Test
+  public void testScheduleNewsBroadcastsTheSchedule() throws Exception {
+    NEWS_UTILS.clearInvocations();
+    Space space = mockSpace();
+    Identity identity = mockIdentity();
+    when(spaceService.isManager(space, "john")).thenReturn(true);
+    mockArticlePageCreation(space, "11");
+    News article = newArticle("5");
+    article.setPublicationState(NewsService.STAGED);
+
+    newsService.scheduleNews(article, identity, DRAFT);
+
+    ArgumentCaptor<News> scheduled = ArgumentCaptor.forClass(News.class);
+    NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.SCHEDULE_NEWS), eq("john"), scheduled.capture()));
+    assertEquals("11", scheduled.getValue().getId());
+  }
+
   @Test
   public void testGetScheduledArticles() throws Exception {
     NewsFilter newsFilter = new NewsFilter();
@@ -1794,6 +1816,50 @@ public class NewsServiceTest {
     ArgumentCaptor<Map<String, String>> properties = ArgumentCaptor.forClass(Map.class);
     verify(metadataService).createMetadataItem(any(NewsDraftObject.class), any(MetadataKey.class), properties.capture(), anyLong(), anyBoolean());
     assertEquals("7", properties.getValue().get(NewsService.ORIGIN_PAGE_ID));
+    Map<String, Object> permissions = capturePermissionsData();
+    assertEquals("8", permissions.get(NewsService.ARTICLE_ID));
+    assertEquals(Boolean.TRUE, permissions.get(NewsService.ARTICLE_DRAFT));
+    // A REST or MCP caller unscheduling with the staged state (the UI sends
+    // draft): the event names the draft all the same. Mutant: entityType read
+    // from the state alone.
+    assertEquals("WIKI_DRAFT_PAGES", permissions.get("entityType"));
+    assertEquals("8", permissions.get("entityId"));
+  }
+
+  /**
+   * The permissions update of the draft of an existing article names the
+   * article's page, not the draft. Mutant: the draft's own id sent fails it.
+   */
+  @Test
+  public void testLatestDraftPermissionsUpdateNamesTheArticlePage() throws Exception {
+    NEWS_UTILS.clearInvocations();
+    Space space = mockSpace();
+    when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(new org.exoplatform.social.core.identity.model.Identity("1"));
+    Page articlePage = new Page();
+    articlePage.setId("9");
+    DraftPage latestDraft = new DraftPage();
+    latestDraft.setId("12");
+    latestDraft.setTargetPageId("9");
+    latestDraft.setContent("body");
+    when(noteService.createDraftForExistPage(any(DraftPage.class), eq(articlePage), nullable(String.class), anyLong(), anyString())).thenReturn(latestDraft);
+    News draft = newArticle("9");
+    draft.setPublicationState(DRAFT);
+
+    newsService.createDraftForExistingPage(draft, "john", articlePage, 1L, space);
+
+    Map<String, Object> permissions = capturePermissionsData();
+    assertEquals("9", permissions.get(NewsService.ARTICLE_ID));
+    assertEquals(Boolean.FALSE, permissions.get(NewsService.ARTICLE_DRAFT));
+  }
+
+  /**
+   * @return the data of the last {@code content.update.permissions} broadcast
+   */
+  @SuppressWarnings("unchecked")
+  private Map<String, Object> capturePermissionsData() {
+    ArgumentCaptor<Object> data = ArgumentCaptor.forClass(Object.class);
+    NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.UPDATE_CONTENT_PERMISSIONS), any(), data.capture()), atLeast(1));
+    return (Map<String, Object>) data.getValue();
   }
 
   /**
