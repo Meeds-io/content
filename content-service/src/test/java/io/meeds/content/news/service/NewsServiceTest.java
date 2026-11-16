@@ -1629,6 +1629,53 @@ public class NewsServiceTest {
     MENTION_UTILS.when(() -> MentionUtils.substituteUsernames(anyString(), anyString())).thenReturn("content");
   }
 
+  /**
+   * A caller's parameters never set a key the service computes, whether the
+   * article gives a value for it or not, and their other keys are kept.
+   * Mutants: the parameters merged after the computed keys, or any one key
+   * left out of {@code COMPUTED_ARTICLE_PROPERTY_KEYS}, fail it.
+   */
+  @Test
+  public void testCreateArticleKeepsComputedKeysOverParameters() throws Exception {
+    mockSpace();
+    Page articlePage = new Page();
+    articlePage.setId("7");
+    articlePage.setParentPageId("1");
+    when(noteService.getNoteById("7")).thenReturn(articlePage);
+    PageVersion pageVersion = mock(PageVersion.class);
+    when(pageVersion.getId()).thenReturn("70");
+    when(pageVersion.getAuthor()).thenReturn("john");
+    when(noteService.getPublishedVersionByPageIdAndLang(7L, null)).thenReturn(pageVersion);
+    when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(new org.exoplatform.social.core.identity.model.Identity("1"));
+
+    News article = new News();
+    article.setId("7");
+    article.setSpaceId("1");
+    article.setPublicationState(POSTED);
+    article.setPublished(false);
+    Map<String, String> parameters = new HashMap<>();
+    NewsService.COMPUTED_ARTICLE_PROPERTY_KEYS.forEach(key -> parameters.put(key, "callerValue"));
+    parameters.put("eventId", "12");
+    article.setParameters(parameters);
+
+    newsService.createArticleFromExistingPage(article, "john");
+
+    ArgumentCaptor<Map<String, String>> properties = ArgumentCaptor.forClass(Map.class);
+    verify(metadataService).createMetadataItem(any(NewsPageObject.class), any(MetadataKey.class), properties.capture(), anyLong(), anyBoolean());
+    Map<String, String> stored = properties.getValue();
+    for (String key : NewsService.COMPUTED_ARTICLE_PROPERTY_KEYS) {
+      assertNotEquals("Computed key " + key + " set by the caller", "callerValue", stored.get(key));
+    }
+    assertEquals(POSTED, stored.get(NEWS_PUBLICATION_STATE));
+    assertEquals("false", stored.get(PUBLISHED));
+    assertEquals("true", stored.get(EXTERNAL_PAGE));
+    assertEquals("12", stored.get("eventId"));
+    // The activities an article is shared with are written by its share
+    // flow only, never at creation. Mutant: NEWS_ACTIVITIES left out of the
+    // set fails it.
+    assertNull(stored.get(NEWS_ACTIVITIES));
+  }
+
   private Space mockSpace() {
     Space space = mock(Space.class);
     when(space.getId()).thenReturn("1");

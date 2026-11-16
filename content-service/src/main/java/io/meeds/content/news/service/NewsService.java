@@ -207,6 +207,30 @@ public class NewsService {
   public static final MetadataKey  NEWS_METADATA_KEY                      =
                                                      new MetadataKey(NEWS_METADATA_TYPE.getName(), NEWS_METADATA_NAME, 0);
 
+  /**
+   * The keys of an article's {@code newsPage} metadata item that the service
+   * writes itself: those {@link #buildNewArticleProperties} computes from the
+   * article, and those other flows maintain (its activities, its viewers). A
+   * caller's {@link News#getParameters()} never sets them, whether the article
+   * gives a value for them or not.
+   */
+  static final Set<String>         COMPUTED_ARTICLE_PROPERTY_KEYS         = Set.of(NEWS_AUDIENCE,
+                                                                                   NEWS_ACTIVITIES,
+                                                                                   NEWS_VIEWERS,
+                                                                                   NEWS_VIEWS,
+                                                                                   SCHEDULE_POST_DATE,
+                                                                                   UNPUBLISH_SCHEDULED,
+                                                                                   UNPUBLISH_SCHEDULED_DATE,
+                                                                                   NEWS_PUBLICATION_STATE,
+                                                                                   EXTERNAL_PAGE,
+                                                                                   NEWS_ACTIVITY_POSTED,
+                                                                                   NEWS_ACTIVITY_CATEGORIES,
+                                                                                   PUBLISHED,
+                                                                                   NEWS_DELETED,
+                                                                                   PUBLISHER,
+                                                                                   PAGE_REFERRED,
+                                                                                   DE_REFER_PAGE_ID);
+
   private static final Log         LOG                                    = ExoLogger.getLogger(NewsService.class);
 
   @Autowired
@@ -1695,6 +1719,22 @@ public class NewsService {
     NewsUtils.broadcastEvent(NewsUtils.CREATE_PUBLISH_CONTENT, poster, new ContentPublishEvent(null, news));
   }
 
+  /**
+   * Creates the metadata items of a new article: its page version item, and
+   * its {@code newsPage} item holding the properties computed from the article.
+   * The caller's {@link News#getParameters()} adds only keys outside
+   * {@link #COMPUTED_ARTICLE_PROPERTY_KEYS}, so that no caller sets the
+   * audience, the publication state, the schedule, {@code published} or the
+   * other computed keys of the article it creates.
+   *
+   * @param article the article created
+   * @param articlePage its page
+   * @param creator the username of its creator
+   * @param spaceId the id of its space
+   * @param versionId the id of its page version
+   * @param externalPage true for an existing page posted as an article
+   * @throws Exception when a metadata item cannot be created
+   */
   private void buildNewArticleProperties(News article,
                                          Page articlePage,
                                          String creator,
@@ -1720,6 +1760,13 @@ public class NewsService {
                                                        null,
                                                        Long.parseLong(spaceId));
     Map<String, String> newsPageProperties = new HashMap<>();
+    if (MapUtils.isNotEmpty(article.getParameters())) {
+      article.getParameters()
+             .entrySet()
+             .stream()
+             .filter(parameter -> !COMPUTED_ARTICLE_PROPERTY_KEYS.contains(parameter.getKey()))
+             .forEach(parameter -> newsPageProperties.put(parameter.getKey(), parameter.getValue()));
+    }
     if (StringUtils.isNotEmpty(article.getAudience())) {
       newsPageProperties.put(NEWS_AUDIENCE, article.getAudience());
     }
@@ -1738,9 +1785,6 @@ public class NewsService {
     newsPageProperties.put(NEWS_DELETED, String.valueOf(articlePage.isDeleted()));
     newsPageProperties.put(PUBLISHER, creatorIdentity.getProfile().getFullName());
 
-    if (MapUtils.isNotEmpty(article.getParameters())) {
-      newsPageProperties.putAll(article.getParameters());
-    }
     // A brand-new article page is indexed into the notes index immediately
     // by PageIndexingListener.postAddPage - without this, it stays
     // duplicated (once as news, once as notes) until the article's first
