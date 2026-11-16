@@ -1067,8 +1067,10 @@ public class NewsService {
    * Un-schedule publishing a News. A staged article written in the news editor
    * goes back to a new draft, whose {@link #ORIGIN_CHAIN} starts with its page;
    * the page is then deleted, and {@link NewsUtils#ARTICLE_ID_CHANGED}
-   * broadcast. A page posted as an article keeps its id and only loses its
-   * article items.
+   * broadcast. The chain and the event name only a staged article of the
+   * given space that its unscheduler may schedule: any other article names
+   * no origin and broadcasts no id change. A page posted as an article keeps
+   * its id and only loses its article items.
    *
    * @param news news article
    * @param space owner space
@@ -1082,14 +1084,20 @@ public class NewsService {
       if (news.getProperties() != null) {
         news.getProperties().setDraft(true);
       }
-      String originChain = extendOriginChain(new ArticleRef(existingNews.getId(), false),
-                                             readOriginChain(NEWS_METADATA_PAGE_OBJECT_TYPE, existingNews.getId(), space.getId()));
+      boolean ownStagedArticle = isOwnStagedArticle(existingNews, space, articleCreator);
+      String originChain = ownStagedArticle ? extendOriginChain(new ArticleRef(existingNews.getId(), false),
+                                                                readOriginChain(NEWS_METADATA_PAGE_OBJECT_TYPE,
+                                                                                existingNews.getId(),
+                                                                                space.getId()))
+                                            : null;
       news = createDraftArticleForNewPage(news, space.getGroupId(), articleCreator, System.currentTimeMillis(), originChain);
       broadcastUnScheduleArticleEvent(existingNews, news.getId());
       deleteArticle(existingNews, articleCreator);
-      NewsUtils.broadcastEvent(NewsUtils.ARTICLE_ID_CHANGED,
-                               articleCreator,
-                               new ArticleIdChange(existingNews.getId(), false, news.getId(), true, space.getId()));
+      if (ownStagedArticle) {
+        NewsUtils.broadcastEvent(NewsUtils.ARTICLE_ID_CHANGED,
+                                 articleCreator,
+                                 new ArticleIdChange(existingNews.getId(), false, news.getId(), true, space.getId()));
+      }
       return buildDraftArticle(news.getId(), userAcl.getUserIdentity(articleCreator));
     } else if (existingNews != null) {
       PageVersion pageVersion = noteService.getPublishedVersionByPageIdAndLang(Long.parseLong(existingNews.getId()), null);
@@ -2097,6 +2105,19 @@ public class NewsService {
   private static boolean isListedArticlePage(Map<String, String> properties) {
     return properties == null
         || !(Boolean.parseBoolean(properties.get(NEWS_DELETED)) || Boolean.parseBoolean(properties.get(EXTERNAL_PAGE)));
+  }
+
+  /**
+   * @param article an article being unscheduled
+   * @param space the space it is unscheduled in
+   * @param username its unscheduler
+   * @return true when the article is staged, of that space, and the user may
+   *         schedule it: only then is it the origin of the new draft
+   */
+  private boolean isOwnStagedArticle(News article, Space space, String username) {
+    Identity identity = username == null ? null : NewsUtils.getUserIdentity(username);
+    return identity != null && space != null && space.getId().equals(article.getSpaceId())
+        && STAGED.equals(article.getPublicationState()) && canScheduleNews(space.getId(), identity, article);
   }
 
   /**

@@ -1817,8 +1817,7 @@ public class NewsServiceTest {
   /**
    * A draft of another space, or one the poster may not edit, is never the
    * origin of the article posted with its id: no origin is recorded and no
-   * id change broadcast, so another writer's draft never moves to the
-   * poster's article. Mutants: the space check or the edit check removed
+   * id change broadcast. Mutants: the space check or the edit check removed
    * fail it.
    */
   @Test
@@ -1881,6 +1880,8 @@ public class NewsServiceTest {
     News existingArticle = new News();
     existingArticle.setId("7");
     existingArticle.setSpaceId("1");
+    existingArticle.setPublicationState(NewsService.STAGED);
+    when(spaceService.isManager(space, "john")).thenReturn(true);
     NewsService service = spy(newsService);
     doReturn(existingArticle).when(service).getNewsArticleById("7");
     AtomicBoolean pageDeleted = new AtomicBoolean();
@@ -1917,6 +1918,60 @@ public class NewsServiceTest {
     // from the state alone.
     assertEquals("WIKI_DRAFT_PAGES", permissions.get("entityType"));
     assertEquals("8", permissions.get("entityId"));
+  }
+
+  /**
+   * Unscheduling an article of another space, one that is not staged, or one
+   * its unscheduler may not schedule, names no origin on the new draft and
+   * broadcasts no id change. Mutants: any one of the three checks removed
+   * fails it.
+   */
+  @Test
+  public void testUnscheduleNamesOnlyAStagedArticleOfItsSpaceAsOrigin() throws Exception {
+    Space space = mockSpace();
+    mockIdentity();
+    mockArticlesRoot(space);
+    when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(new org.exoplatform.social.core.identity.model.Identity("1"));
+    DraftPage createdDraft = new DraftPage();
+    createdDraft.setId("8");
+    createdDraft.setContent("body");
+    when(noteService.createDraftForNewPage(any(DraftPage.class), anyLong(), anyLong())).thenReturn(createdDraft);
+    PageVersion pageVersion = mock(PageVersion.class);
+    when(pageVersion.getId()).thenReturn("70");
+    when(noteService.getPublishedVersionByPageIdAndLang(7L, null)).thenReturn(pageVersion);
+
+    News otherSpace = new News();
+    otherSpace.setId("7");
+    otherSpace.setSpaceId("2");
+    otherSpace.setPublicationState(NewsService.STAGED);
+    News posted = new News();
+    posted.setId("7");
+    posted.setSpaceId("1");
+    posted.setPublicationState(POSTED);
+    News notSchedulable = new News();
+    notSchedulable.setId("7");
+    notSchedulable.setSpaceId("1");
+    notSchedulable.setPublicationState(NewsService.STAGED);
+    for (News existing : List.of(otherSpace, posted, notSchedulable)) {
+      // john schedules in space 1 for the first two cases only
+      when(spaceService.isManager(space, "john")).thenReturn(existing != notSchedulable);
+      NEWS_UTILS.clearInvocations();
+      clearInvocations(metadataService);
+      NewsService service = spy(newsService);
+      doReturn(existing).when(service).getNewsArticleById("7");
+      doNothing().when(service).deleteArticle(any(News.class), anyString());
+      News staged = new News();
+      staged.setId("7");
+      staged.setBody("body");
+      staged.setPublicationState(NewsService.STAGED);
+
+      service.unScheduleNews(staged, space, "john");
+
+      NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.ARTICLE_ID_CHANGED), any(), any()), never());
+      ArgumentCaptor<Map<String, String>> properties = ArgumentCaptor.forClass(Map.class);
+      verify(metadataService).createMetadataItem(any(NewsDraftObject.class), any(MetadataKey.class), properties.capture(), anyLong(), anyBoolean());
+      assertNull(properties.getValue().get(NewsService.ORIGIN_CHAIN));
+    }
   }
 
   /**
