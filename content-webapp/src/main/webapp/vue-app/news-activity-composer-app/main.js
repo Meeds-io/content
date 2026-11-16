@@ -69,6 +69,7 @@ export function init(maxToUpload, maxFileSize) {
     });
   }).finally(() => {
     Vue.prototype.$utils.includeExtensions('AutomaticTranslationNotesEditorExtension');
+    Vue.prototype.$utils.includeExtensions('NewsEditorExtension');
   });
 }
 
