@@ -95,6 +95,7 @@ import org.exoplatform.wiki.service.PageUpdateType;
 import org.exoplatform.wiki.service.WikiService;
 import org.exoplatform.wiki.service.plugin.WikiDraftPageAttachmentPlugin;
 
+import io.meeds.content.news.model.ArticleIdChange;
 import io.meeds.content.news.model.ArticleTarget;
 import io.meeds.content.news.model.ContentPublishEvent;
 import io.meeds.content.news.model.News;
@@ -204,6 +205,18 @@ public class NewsService {
 
   public static final String       UNPUBLISH_SCHEDULED_DATE               = "unpublishScheduledDate";
 
+  /**
+   * The {@code newsPage} property naming the draft an article page was created
+   * from, when it was posted or scheduled from a draft of a new article.
+   */
+  public static final String       ORIGIN_DRAFT_ID                        = "originDraftId";
+
+  /**
+   * The {@code newsDraftPage} property naming the article page a draft was
+   * created from, when a staged article was unscheduled back to a draft.
+   */
+  public static final String       ORIGIN_PAGE_ID                         = "originPageId";
+
   public static final MetadataKey  NEWS_METADATA_KEY                      =
                                                      new MetadataKey(NEWS_METADATA_TYPE.getName(), NEWS_METADATA_NAME, 0);
 
@@ -229,7 +242,8 @@ public class NewsService {
                                                                                    NEWS_DELETED,
                                                                                    PUBLISHER,
                                                                                    PAGE_REFERRED,
-                                                                                   DE_REFER_PAGE_ID);
+                                                                                   DE_REFER_PAGE_ID,
+                                                                                   ORIGIN_DRAFT_ID);
 
   private static final Log         LOG                                    = ExoLogger.getLogger(NewsService.class);
 
@@ -1028,7 +1042,11 @@ public class NewsService {
   }
 
   /**
-   * Un-schedule publishing a News
+   * Un-schedule publishing a News. A staged article written in the news editor
+   * goes back to a new draft, which names its page ({@link #ORIGIN_PAGE_ID});
+   * the page is then deleted, and {@link NewsUtils#ARTICLE_ID_CHANGED}
+   * broadcast. A page posted as an article keeps its id and only loses its
+   * article items.
    *
    * @param news news article
    * @param space owner space
@@ -1042,9 +1060,12 @@ public class NewsService {
       if (news.getProperties() != null) {
         news.getProperties().setDraft(true);
       }
-      news = createDraftArticleForNewPage(news, space.getGroupId(), articleCreator, System.currentTimeMillis());
+      news = createDraftArticleForNewPage(news, space.getGroupId(), articleCreator, System.currentTimeMillis(), existingNews.getId());
       broadcastUnScheduleArticleEvent(existingNews, news.getId());
       deleteArticle(existingNews, articleCreator);
+      NewsUtils.broadcastEvent(NewsUtils.ARTICLE_ID_CHANGED,
+                               articleCreator,
+                               new ArticleIdChange(existingNews.getId(), false, news.getId(), true, space.getId()));
       return buildDraftArticle(news.getId(), userAcl.getUserIdentity(articleCreator));
     } else if (existingNews != null) {
       PageVersion pageVersion = noteService.getPublishedVersionByPageIdAndLang(Long.parseLong(existingNews.getId()), null);
@@ -1220,10 +1241,12 @@ public class NewsService {
   }
 
   /**
+   * Creates the draft of a new article.
+   *
    * @param draftArticle {@link News} news draft article to be created
-   * @param pageOwnerId
-   * @param draftArticleCreator
-   * @param creationDate
+   * @param pageOwnerId the group id of the space's wiki
+   * @param draftArticleCreator the username of its creator
+   * @param creationDate its creation date
    * @return the created draft news article
    * @throws Exception when error occurs
    */
@@ -1231,6 +1254,27 @@ public class NewsService {
                                            String pageOwnerId,
                                            String draftArticleCreator,
                                            long creationDate) throws Exception {
+    return createDraftArticleForNewPage(draftArticle, pageOwnerId, draftArticleCreator, creationDate, null);
+  }
+
+  /**
+   * Creates the draft of a new article, its {@code newsDraftPage} item naming
+   * the article page it was created from when there is one.
+   *
+   * @param draftArticle {@link News} news draft article to be created
+   * @param pageOwnerId the group id of the space's wiki
+   * @param draftArticleCreator the username of its creator
+   * @param creationDate its creation date
+   * @param originPageId the id of the article page the draft replaces, stored
+   *          as {@link #ORIGIN_PAGE_ID}; null for none
+   * @return the created draft news article
+   * @throws Exception when error occurs
+   */
+  private News createDraftArticleForNewPage(News draftArticle,
+                                            String pageOwnerId,
+                                            String draftArticleCreator,
+                                            long creationDate,
+                                            String originPageId) throws Exception {
     Wiki wiki = wikiService.getWikiByTypeAndOwner(WikiType.GROUP.name().toLowerCase(), pageOwnerId);
     Page newsArticlesRootNotePage = null;
     if (wiki != null) {
@@ -1279,6 +1323,9 @@ public class NewsService {
                                                                        Long.parseLong(draftArticleSpace.getId()));
       String draftArticleMetadataItemCreatorIdentityId = identityManager.getOrCreateUserIdentity(draftArticleCreator).getId();
       Map<String, String> draftArticleMetadataItemProperties = new HashMap<>();
+      if (originPageId != null) {
+        draftArticleMetadataItemProperties.put(ORIGIN_PAGE_ID, originPageId);
+      }
       metadataService.createMetadataItem(draftArticleMetaDataObject,
                                          NEWS_METADATA_KEY,
                                          draftArticleMetadataItemProperties,
@@ -1306,7 +1353,7 @@ public class NewsService {
       PageVersion pageVersion = noteService.getPublishedVersionByPageIdAndLang(Long.parseLong(articlePage.getId()), null);
       article.setAuthor(pageVersion != null ? pageVersion.getAuthor() : articlePage.getAuthor());
       article.setIllustrationURL(NewsUtils.buildIllustrationUrl(articlePage.getProperties(), articlePage.getLang()));
-      buildNewArticleProperties(article, articlePage, creator, space.getId(), pageVersion.getId(), true);
+      buildNewArticleProperties(article, articlePage, creator, space.getId(), pageVersion.getId(), true, null);
     }
     return article;
   }
@@ -1378,8 +1425,17 @@ public class NewsService {
   }
 
   /**
-   * @param newsArticle {@link News} news article to be created
-   * @param newsArticleCreator
+   * Creates the page of a new article, then deletes the draft of a new article
+   * it was written in, when there is one. In that case the page's
+   * {@code newsPage} item names the draft ({@link #ORIGIN_DRAFT_ID}), and
+   * {@link NewsUtils#ARTICLE_ID_CHANGED} is broadcast once the draft is
+   * deleted: a value write still in flight then either commits before the
+   * move, or finds its object gone. An article created with no draft, as the MCP
+   * {@code create_news} tool does, broadcasts nothing.
+   *
+   * @param newsArticle {@link News} news article to be created, its id the
+   *          draft's when it was written in one
+   * @param newsArticleCreator the username of its creator
    * @return the created news article
    * @throws Exception when error occurs
    */
@@ -1389,6 +1445,7 @@ public class NewsService {
     String draftNewsId = newsArticle.getId();
 
     Identity poster = NewsUtils.getUserIdentity(newsArticleCreator);
+    DraftPage originDraft = getNewArticleDraft(draftNewsId, poster);
     Space space = spaceService.getSpaceById(newsArticle.getSpaceId());
     String pageOwnerId = space.getGroupId();
 
@@ -1435,9 +1492,20 @@ public class NewsService {
         newsArticle.setLatestVersionId(pageVersion.getId());
         newsArticle.setIllustrationURL(NewsUtils.buildIllustrationUrl(newsArticlePage.getProperties(), newsArticle.getLang()));
 
-        buildNewArticleProperties(newsArticle, newsArticlePage, newsArticleCreator, space.getId(), pageVersion.getId(), false);
+        buildNewArticleProperties(newsArticle,
+                                  newsArticlePage,
+                                  newsArticleCreator,
+                                  space.getId(),
+                                  pageVersion.getId(),
+                                  false,
+                                  originDraft == null ? null : originDraft.getId());
         // delete the draft
         deleteDraftArticle(draftNewsId, poster.getUserId());
+        if (originDraft != null) {
+          NewsUtils.broadcastEvent(NewsUtils.ARTICLE_ID_CHANGED,
+                                   newsArticleCreator,
+                                   new ArticleIdChange(originDraft.getId(), true, newsArticlePage.getId(), false, space.getId()));
+        }
         return newsArticle;
       }
     }
@@ -1733,6 +1801,8 @@ public class NewsService {
    * @param spaceId the id of its space
    * @param versionId the id of its page version
    * @param externalPage true for an existing page posted as an article
+   * @param originDraftId the id of the draft of a new article the page was
+   *          created from, stored as {@link #ORIGIN_DRAFT_ID}; null for none
    * @throws Exception when a metadata item cannot be created
    */
   private void buildNewArticleProperties(News article,
@@ -1740,7 +1810,8 @@ public class NewsService {
                                          String creator,
                                          String spaceId,
                                          String versionId,
-                                         boolean externalPage) throws Exception {
+                                         boolean externalPage,
+                                         String originDraftId) throws Exception {
     NewsPageVersionObject articleVersionMetaDataObject = new NewsPageVersionObject(NEWS_METADATA_PAGE_VERSION_OBJECT_TYPE,
                                                                                    versionId,
                                                                                    null,
@@ -1784,6 +1855,9 @@ public class NewsService {
     newsPageProperties.put(PUBLISHED, String.valueOf(article.isPublished()));
     newsPageProperties.put(NEWS_DELETED, String.valueOf(articlePage.isDeleted()));
     newsPageProperties.put(PUBLISHER, creatorIdentity.getProfile().getFullName());
+    if (originDraftId != null) {
+      newsPageProperties.put(ORIGIN_DRAFT_ID, originDraftId);
+    }
 
     // A brand-new article page is indexed into the notes index immediately
     // by PageIndexingListener.postAddPage - without this, it stays
@@ -1796,6 +1870,21 @@ public class NewsService {
                                        newsPageProperties,
                                        Long.parseLong(creatorIdentity.getId()),
                                        false);
+  }
+
+  /**
+   * @param draftId an id as a caller gave it for the article's draft, or null
+   * @param creator the user the draft is read as
+   * @return the draft of a new article carrying that id, or null when the id
+   *         names none, or names the draft of an existing article
+   * @throws Exception when the draft cannot be read
+   */
+  private DraftPage getNewArticleDraft(String draftId, Identity creator) throws Exception {
+    if (!StringUtils.isNumeric(draftId) || creator == null) {
+      return null;
+    }
+    DraftPage draft = noteService.getDraftNoteById(draftId, creator.getUserId());
+    return draft == null || draft.getTargetPageId() != null ? null : draft;
   }
 
   private void referOrDeReferArticlePage(News article, Page articlePage, Map<String, String> properties) {
