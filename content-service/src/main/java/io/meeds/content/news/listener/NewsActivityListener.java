@@ -63,8 +63,6 @@ public class NewsActivityListener extends ActivityListenerPlugin {
 
   private static final String NEWS_ID = "newsId";
 
-  private static final String NEWS_ACTIVITY_TYPE = "news";
-
   private static final String KUDOS_ACTIVITY_COMMENT_TYPE = "exokudos:activity";
 
   @Autowired
@@ -145,7 +143,7 @@ public class NewsActivityListener extends ActivityListenerPlugin {
   @Override
   public void hideActivity(ActivityLifeCycleEvent event) {
     ExoSocialActivity activity = event.getActivity();
-    if (activity != null && activity.getType().equals(NEWS_ACTIVITY_TYPE) && activity.getTemplateParams() != null
+    if (activity != null && activity.getType().equals(NewsService.NEWS_ACTIVITY_TYPE) && activity.getTemplateParams() != null
         && activity.getTemplateParams().containsKey(NEWS_ID)) {
       updateNewsPageMetadataObjectItem(activity);
     }
