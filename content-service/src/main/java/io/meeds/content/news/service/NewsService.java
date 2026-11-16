@@ -1662,6 +1662,54 @@ public class NewsService {
   }
 
   /**
+   * Reads the draft of a new article, whoever asks: <strong>no right is
+   * checked</strong>, as {@link #getNewsArticleById} checks none. Callers
+   * that serve a user must check access through
+   * {@code getNewsById(id, identity, editMode, "draft")}. Only a draft that
+   * carries its {@code newsDraftPage} item and has no target page is
+   * returned: a notes draft, or the draft of an existing article, is not the
+   * draft of a new article.
+   *
+   * @param draftId the draft's id
+   * @return the draft's id, title, author, owner, space, dates and properties,
+   *         its state {@code draft}; null when the id names no draft of a new
+   *         article
+   */
+  public News getDraftArticleById(String draftId) {
+    if (!StringUtils.isNumeric(draftId)) {
+      return null;
+    }
+    DraftPage draft = noteService.getDraftNoteById(draftId);
+    if (draft == null || StringUtils.isNotBlank(draft.getTargetPageId())) {
+      return null;
+    }
+    Space space = spaceService.getSpaceByGroupId(draft.getWikiOwner());
+    if (space == null) {
+      return null;
+    }
+    List<MetadataItem> items = metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY,
+                                                                                   new MetadataObject(NEWS_METADATA_DRAFT_OBJECT_TYPE,
+                                                                                                      draftId,
+                                                                                                      null,
+                                                                                                      Long.parseLong(space.getId())));
+    if (CollectionUtils.isEmpty(items)) {
+      return null;
+    }
+    News article = new News();
+    article.setId(draft.getId());
+    article.setTitle(draft.getTitle());
+    article.setAuthor(draft.getAuthor());
+    article.setOwner(draft.getOwner());
+    article.setSpaceId(space.getId());
+    article.setCreationDate(draft.getCreatedDate());
+    article.setUpdateDate(draft.getUpdatedDate());
+    article.setLang(draft.getLang());
+    article.setProperties(draft.getProperties());
+    article.setPublicationState(DRAFT);
+    return article;
+  }
+
+  /**
    * Lists a space's articles by keyset: its article pages that are not
    * deleted, then the drafts of its new articles, each ascending by numeric
    * id. A page posted from an existing note is a note, never listed; the

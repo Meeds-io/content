@@ -1964,6 +1964,50 @@ public class NewsServiceTest {
   }
 
   /**
+   * The draft of a new article is read whoever asks; a notes draft with no
+   * article item, the draft of an existing article and an unknown or
+   * malformed id read nothing. Mutants: the item check or the target page
+   * check removed fail it.
+   */
+  @Test
+  public void testDraftArticleIsReadOnlyForTheDraftOfANewArticle() {
+    Space space = mockSpace();
+    DraftPage draft = new DraftPage();
+    draft.setId("5");
+    draft.setTitle("draft title");
+    draft.setOwner("mary");
+    draft.setWikiOwner(space.getGroupId());
+    when(noteService.getDraftNoteById("5")).thenReturn(draft);
+    DraftPage notesDraft = new DraftPage();
+    notesDraft.setId("6");
+    notesDraft.setWikiOwner(space.getGroupId());
+    when(noteService.getDraftNoteById("6")).thenReturn(notesDraft);
+    DraftPage latestDraft = new DraftPage();
+    latestDraft.setId("7");
+    latestDraft.setTargetPageId("9");
+    latestDraft.setWikiOwner(space.getGroupId());
+    when(noteService.getDraftNoteById("7")).thenReturn(latestDraft);
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class), any(MetadataObject.class))).thenAnswer(invocation -> {
+      MetadataObject object = invocation.getArgument(1);
+      return NewsService.NEWS_METADATA_DRAFT_OBJECT_TYPE.equals(object.getType()) && !"6".equals(object.getId()) ? List.of(mock(MetadataItem.class))
+                                                                                                                 : List.of();
+    });
+
+    News article = newsService.getDraftArticleById("5");
+
+    assertEquals("5", article.getId());
+    assertEquals("draft title", article.getTitle());
+    assertEquals("mary", article.getOwner());
+    assertEquals("1", article.getSpaceId());
+    assertEquals(DRAFT, article.getPublicationState());
+    assertNull(newsService.getDraftArticleById("6"));
+    assertNull(newsService.getDraftArticleById("7"));
+    assertNull(newsService.getDraftArticleById("40"));
+    assertNull(newsService.getDraftArticleById("draft-5"));
+    assertNull(newsService.getDraftArticleById(null));
+  }
+
+  /**
    * @param objectType the item's object type
    * @param objectId the item's object id
    * @param properties its properties
