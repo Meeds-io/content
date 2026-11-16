@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -41,6 +42,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -96,6 +98,7 @@ import org.exoplatform.wiki.service.WikiService;
 import org.exoplatform.wiki.service.plugin.WikiDraftPageAttachmentPlugin;
 
 import io.meeds.content.news.model.ArticleIdChange;
+import io.meeds.content.news.model.ArticleRef;
 import io.meeds.content.news.model.ArticleTarget;
 import io.meeds.content.news.model.ContentPublishEvent;
 import io.meeds.content.news.model.News;
@@ -253,6 +256,11 @@ public class NewsService {
                                                                                    PAGE_REFERRED,
                                                                                    DE_REFER_PAGE_ID,
                                                                                    ORIGIN_DRAFT_ID);
+
+  /** The keyset order of a space's articles: pages, then drafts, each by numeric id. */
+  private static final Comparator<ArticleRef> ARTICLE_REF_ORDER =
+                                                                Comparator.comparing(ArticleRef::draft)
+                                                                          .thenComparingLong(article -> Long.parseLong(article.id()));
 
   private static final Log         LOG                                    = ExoLogger.getLogger(NewsService.class);
 
@@ -1643,6 +1651,37 @@ public class NewsService {
               .toList();
   }
 
+  /**
+   * Lists a space's articles by keyset: its article pages that are not
+   * deleted, then the drafts of its new articles, each ascending by numeric
+   * id. A page posted from an existing note is a note, never listed; the
+   * draft of an existing article is its page, never listed twice. The space's
+   * article items are read in one query, never the pages' content.
+   *
+   * @param spaceId the space id
+   * @param after the last article of the previous page, or null for the first
+   *          page
+   * @param limit the most articles
+   * @return the articles after that one, in that order
+   */
+  public List<ArticleRef> getArticleRefs(String spaceId, ArticleRef after, int limit) {
+    if (limit <= 0) {
+      return List.of();
+    }
+    return readArticleRefs(spaceId).stream()
+                                   .filter(article -> after == null || ARTICLE_REF_ORDER.compare(article, after) > 0)
+                                   .limit(limit)
+                                   .toList();
+  }
+
+  /**
+   * @param spaceId the space id
+   * @return the number of the space's articles {@link #getArticleRefs} lists
+   */
+  public int countArticles(String spaceId) {
+    return readArticleRefs(spaceId).size();
+  }
+
   public void removeArticleMetadataProperty(String articleId, String propertyKey, long updater) {
     News article = getNewsArticleById(articleId);
     if (article == null) {
@@ -1895,6 +1934,51 @@ public class NewsService {
     }
     DraftPage draft = noteService.getDraftNoteById(draftId, creator.getUserId());
     return draft == null || draft.getTargetPageId() != null ? null : draft;
+  }
+
+  /**
+   * Reads a space's articles in {@link #ARTICLE_REF_ORDER}, from its
+   * {@code newsPage} and {@code newsDraftPage} items in one query: a page
+   * whose item says it is deleted (an unscheduled article) or an external page
+   * (a note posted as an article) is left out, and an id is kept once.
+   *
+   * @param spaceId the space id
+   * @return the space's articles; none for an id that is not a number
+   */
+  private List<ArticleRef> readArticleRefs(String spaceId) {
+    if (!StringUtils.isNumeric(spaceId)) {
+      return List.of();
+    }
+    MetadataFilter metadataFilter = new MetadataFilter();
+    metadataFilter.setMetadataName(NEWS_METADATA_NAME);
+    metadataFilter.setMetadataTypeName(NEWS_METADATA_TYPE.getName());
+    metadataFilter.setMetadataObjectTypes(List.of(NEWS_METADATA_PAGE_OBJECT_TYPE, NEWS_METADATA_DRAFT_OBJECT_TYPE));
+    metadataFilter.setMetadataSpaceIds(List.of(Long.parseLong(spaceId)));
+    // No limit: a single query, since the filter's order is not stable
+    // enough for offset paging (creation date, then the metadata's own id)
+    List<MetadataItem> items = metadataService.getMetadataItemsByFilter(metadataFilter, 0, 0);
+    Set<ArticleRef> articles = new TreeSet<>(ARTICLE_REF_ORDER);
+    for (MetadataItem item : items) {
+      if (item == null || !StringUtils.isNumeric(item.getObjectId())) {
+        continue;
+      }
+      if (NEWS_METADATA_DRAFT_OBJECT_TYPE.equals(item.getObjectType())) {
+        articles.add(new ArticleRef(item.getObjectId(), true));
+      } else if (NEWS_METADATA_PAGE_OBJECT_TYPE.equals(item.getObjectType()) && isListedArticlePage(item.getProperties())) {
+        articles.add(new ArticleRef(item.getObjectId(), false));
+      }
+    }
+    return List.copyOf(articles);
+  }
+
+  /**
+   * @param properties the properties of an article page's {@code newsPage}
+   *          item
+   * @return false when the page is deleted or is an external page
+   */
+  private static boolean isListedArticlePage(Map<String, String> properties) {
+    return properties == null
+        || !(Boolean.parseBoolean(properties.get(NEWS_DELETED)) || Boolean.parseBoolean(properties.get(EXTERNAL_PAGE)));
   }
 
   private void referOrDeReferArticlePage(News article, Page articlePage, Map<String, String> properties) {

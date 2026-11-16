@@ -108,6 +108,7 @@ import org.exoplatform.wiki.service.NoteService;
 import org.exoplatform.wiki.service.WikiService;
 
 import io.meeds.content.news.model.ArticleIdChange;
+import io.meeds.content.news.model.ArticleRef;
 import io.meeds.content.news.model.News;
 import io.meeds.content.news.model.NewsDraftObject;
 import io.meeds.content.news.model.NewsPageObject;
@@ -1850,6 +1851,55 @@ public class NewsServiceTest {
     Map<String, Object> permissions = capturePermissionsData();
     assertEquals("9", permissions.get(NewsService.ARTICLE_ID));
     assertEquals(Boolean.FALSE, permissions.get(NewsService.ARTICLE_DRAFT));
+  }
+
+  /**
+   * A space's articles are its live article pages, then the drafts of its new
+   * articles, each by numeric id, counted exactly: a soft-deleted page, a note
+   * posted as an article and the draft of an existing article are left out.
+   * A page and a draft sharing a number are both walked across a page
+   * boundary, neither skipped nor repeated. Mutants: the deleted or the
+   * external filter removed, the latest draft type accepted, or the cursor
+   * compared on the id alone, fail it.
+   */
+  @Test
+  public void testArticleRefsWalkPagesThenDraftsByKeyset() {
+    List<MetadataItem> items = List.of(articleItem(NewsService.NEWS_METADATA_PAGE_OBJECT_TYPE, "42", Map.of(NEWS_DELETED, "false")),
+                                       articleItem(NewsService.NEWS_METADATA_PAGE_OBJECT_TYPE, "43", Map.of(NEWS_DELETED, "true")),
+                                       articleItem(NewsService.NEWS_METADATA_PAGE_OBJECT_TYPE, "44", Map.of(EXTERNAL_PAGE, "true")),
+                                       articleItem(NewsService.NEWS_METADATA_PAGE_OBJECT_TYPE, "7", Map.of()),
+                                       articleItem(NewsService.NEWS_METADATA_DRAFT_OBJECT_TYPE, "42", Map.of()),
+                                       articleItem(NewsService.NEWS_METADATA_LATEST_DRAFT_OBJECT_TYPE, "45", Map.of()),
+                                       articleItem(NewsService.NEWS_METADATA_DRAFT_OBJECT_TYPE, "5", Map.of()));
+    when(metadataService.getMetadataItemsByFilter(any(MetadataFilter.class), eq(0L), eq(0L))).thenReturn(items);
+
+    assertEquals(4, newsService.countArticles("3"));
+    List<ArticleRef> first = newsService.getArticleRefs("3", null, 2);
+    assertEquals(List.of(new ArticleRef("7", false), new ArticleRef("42", false)), first);
+    List<ArticleRef> second = newsService.getArticleRefs("3", first.get(1), 2);
+    assertEquals(List.of(new ArticleRef("5", true), new ArticleRef("42", true)), second);
+    assertEquals(List.of(), newsService.getArticleRefs("3", second.get(1), 2));
+    assertEquals(List.of(new ArticleRef("42", true)), newsService.getArticleRefs("3", new ArticleRef("5", true), 5));
+
+    ArgumentCaptor<MetadataFilter> filter = ArgumentCaptor.forClass(MetadataFilter.class);
+    verify(metadataService, atLeast(1)).getMetadataItemsByFilter(filter.capture(), eq(0L), eq(0L));
+    assertEquals(List.of(3L), filter.getValue().getMetadataSpaceIds());
+    assertFalse(filter.getValue().getMetadataObjectTypes().contains(NewsService.NEWS_METADATA_LATEST_DRAFT_OBJECT_TYPE));
+    assertEquals(0, newsService.countArticles("not-a-number"));
+  }
+
+  /**
+   * @param objectType the item's object type
+   * @param objectId the item's object id
+   * @param properties its properties
+   * @return a news metadata item of space 3
+   */
+  private static MetadataItem articleItem(String objectType, String objectId, Map<String, String> properties) {
+    MetadataItem item = new MetadataItem();
+    item.setObjectType(objectType);
+    item.setObjectId(objectId);
+    item.setProperties(properties);
+    return item;
   }
 
   /**
