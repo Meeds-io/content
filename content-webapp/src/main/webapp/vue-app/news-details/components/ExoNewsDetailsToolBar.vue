@@ -20,7 +20,6 @@
 -->
 <template>
   <div
-    :class="{'me-5': !showEditButton}"
     class="newsDetailsTopBar d-flex align-center">
     <v-btn
       class="go-back-button"
@@ -91,10 +90,11 @@
         :news="news"
         :activity-id="activityId"
         :icon-size="20"
+        :small="false"
         class="me-2" />
       <v-btn
         v-if="publicationState === 'staged'"
-        class="btn btn-primary me-3"
+        class="btn btn-primary me-7"
         outlined
         @click="$emit('open-publication-drawer')">
         <v-icon
