@@ -33,6 +33,8 @@
       :suggester-space-pretty-name="spacePrettyName"
       :suggester-space-id="spaceId"
       :app-name="appName"
+      :note-space-id="articleSpaceId"
+      :space-resolved="!!articleSpaceId"
       :languages="languages"
       :translations="translations"
       :selected-language="selectedLanguage"
@@ -150,6 +152,16 @@ export default {
     }
   },
   computed: {
+    /**
+     * @returns {string} the space of the article written, the stored
+     *          article's own, else the one the editor was opened in; none
+     *          while it is not known, which keeps the assistant of the
+     *          article's Properties off, since an article belongs to a space
+     *          that may not be shared with it
+     */
+    articleSpaceId() {
+      return this.article?.spaceId || this.spaceId || null;
+    },
     scheduled() {
       return !!this.article.schedulePostDate || this.staged;
     },
