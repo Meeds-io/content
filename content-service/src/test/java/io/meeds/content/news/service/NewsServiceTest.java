@@ -40,9 +40,11 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
@@ -217,7 +219,7 @@ public class NewsServiceTest {
 
     // Given
     News draftArticle = new News();
-    draftArticle.setAuthor("john");
+    draftArticle.setAuthor("mary");
     draftArticle.setTitle("draft article for new page");
     draftArticle.setBody("draft body");
     draftArticle.setPublicationState("draft");
@@ -232,7 +234,7 @@ public class NewsServiceTest {
     draftPage.setContent(draftArticle.getBody());
     draftPage.setTitle(draftArticle.getTitle());
     draftPage.setId("1");
-    draftPage.setAuthor("john");
+    draftPage.setAuthor("mary");
 
     Identity identity = mock(Identity.class);
     when(identity.getUserId()).thenReturn("john");
@@ -261,12 +263,14 @@ public class NewsServiceTest {
     when(identity1.getId()).thenReturn("1");
     NEWS_UTILS.when(() -> NewsUtils.canPublishNews(anyString(), any(Identity.class))).thenReturn(true);
     when(spaceService.canRedactOnSpace(any(Space.class), any(Identity.class))).thenReturn(true);
+    NEWS_UTILS.clearInvocations();
 
     // When
     savedDraftArticle = newsService.createNews(draftArticle, identity);
 
     // Then
     assertNotNull(savedDraftArticle);
+    assertPermissionsEventNames("john");
     verify(metadataService, times(1)).createMetadataItem(any(NewsDraftObject.class),
                                                          any(MetadataKey.class),
                                                          any(Map.class),
@@ -332,7 +336,7 @@ public class NewsServiceTest {
     draftPage.setContent("draft body");
     draftPage.setTitle("draft article for new page");
     draftPage.setId("1");
-    draftPage.setAuthor("john");
+    draftPage.setAuthor("mary");
     draftPage.setWikiOwner("/space/groupId");
 
     Space space = mockSpace();
@@ -356,7 +360,7 @@ public class NewsServiceTest {
     when(noteService.getDraftNoteById(anyString(), anyString())).thenReturn(draftPage);
     NEWS_UTILS.when(() -> NewsUtils.getUserIdentity(anyString())).thenReturn(identity);
     News news = new News();
-    news.setAuthor("john");
+    news.setAuthor("mary");
     news.setTitle("new draft title");
     news.setBody("draft body");
     news.setId("1");
@@ -388,12 +392,14 @@ public class NewsServiceTest {
     when(noteService.updateDraftForNewPage(any(DraftPage.class), anyLong(), anyLong())).thenReturn(expecteddraftPage);
 
     // When
+    NEWS_UTILS.clearInvocations();
     newsService.updateNews(news,
                            "john",
                            false,
                            false,
                            NewsUtils.NewsObjectType.DRAFT.name().toLowerCase(),
                            CONTENT_AND_TITLE.name());
+    assertPermissionsEventNames("john");
 
     // Then
     verify(noteService, times(1)).updateDraftForNewPage(eq(expecteddraftPage), anyLong(), anyLong());
@@ -754,7 +760,7 @@ public class NewsServiceTest {
     PageVersion pageVersion = mock(PageVersion.class);
     when(noteService.getPublishedVersionByPageIdAndLang(1L, null)).thenReturn(pageVersion);
 
-    when(existingPage.getAuthor()).thenReturn("john");
+    when(existingPage.getAuthor()).thenReturn("mary");
     when(pageVersion.getTitle()).thenReturn("title");
     when(pageVersion.getContent()).thenReturn("content");
     when(pageVersion.getUpdatedDate()).thenReturn(new Date());
@@ -772,7 +778,7 @@ public class NewsServiceTest {
     when(noteService.getLatestDraftPageByUserAndTargetPageAndLang(anyLong(), anyString(), anyString())).thenReturn(null);
 
     News news = new News();
-    news.setAuthor("john");
+    news.setAuthor("mary");
     news.setTitle("new draft title");
     news.setBody("draft body");
     news.setId("1");
@@ -799,7 +805,7 @@ public class NewsServiceTest {
     DraftPage draftPage = mock(DraftPage.class);
     when(draftPage.getUpdatedDate()).thenReturn(new Date());
     when(draftPage.getCreatedDate()).thenReturn(new Date());
-    when(draftPage.getAuthor()).thenReturn("john");
+    when(draftPage.getAuthor()).thenReturn("mary");
     when(draftPage.getId()).thenReturn("1");
     when(draftPage.getContent()).thenReturn("content");
     when(noteService.createDraftForExistPage(any(DraftPage.class),
@@ -809,7 +815,9 @@ public class NewsServiceTest {
                                              anyString())).thenReturn(draftPage);
 
     // When
+    NEWS_UTILS.clearInvocations();
     newsService.updateNews(news, "john", false, false, LATEST_DRAFT.name().toLowerCase(), CONTENT_AND_TITLE.name());
+    assertPermissionsEventNames("john");
 
     // Then
     verify(noteService, times(1)).createDraftForExistPage(any(DraftPage.class),
@@ -851,7 +859,7 @@ public class NewsServiceTest {
     DraftPage draftPage = mock(DraftPage.class);
     when(draftPage.getUpdatedDate()).thenReturn(new Date());
     when(draftPage.getCreatedDate()).thenReturn(new Date());
-    when(draftPage.getAuthor()).thenReturn("john");
+    when(draftPage.getAuthor()).thenReturn("mary");
     when(draftPage.getId()).thenReturn("1");
     when(draftPage.getContent()).thenReturn("body");
     when(draftPage.getWikiOwner()).thenReturn("/space/groupId");
@@ -861,7 +869,7 @@ public class NewsServiceTest {
                                                                   nullable(String.class))).thenReturn(draftPage);
 
     News news = new News();
-    news.setAuthor("john");
+    news.setAuthor("mary");
     news.setTitle("new draft title");
     news.setBody("draft body");
     news.setId("1");
@@ -894,7 +902,9 @@ public class NewsServiceTest {
     PageVersion pageVersion = mock(PageVersion.class);
     when(noteService.getPublishedVersionByPageIdAndLang(1L, null)).thenReturn(pageVersion);
     // When
+    NEWS_UTILS.clearInvocations();
     newsService.updateNews(news, "john", false, false, LATEST_DRAFT.name().toLowerCase(), CONTENT_AND_TITLE.name());
+    assertPermissionsEventNames("john");
 
     // Then
     verify(noteService, times(1)).updateDraftForExistPage(any(DraftPage.class),
@@ -939,13 +949,13 @@ public class NewsServiceTest {
                                                                   anyString(),
                                                                   nullable(String.class))).thenReturn(draftPage);
 
-    when(existingPage.getAuthor()).thenReturn("john");
-    when(pageVersion.getAuthor()).thenReturn("john");
+    when(existingPage.getAuthor()).thenReturn("mary");
+    when(pageVersion.getAuthor()).thenReturn("mary");
     when(pageVersion.getUpdatedDate()).thenReturn(new Date());
     when(pageVersion.getAuthorFullName()).thenReturn("full name");
 
     News news = new News();
-    news.setAuthor("john");
+    news.setAuthor("mary");
     news.setTitle("new draft title");
     news.setBody("draft body");
     news.setId("1");
@@ -971,8 +981,12 @@ public class NewsServiceTest {
 
     when(noteService.updateNote(any(Page.class), any(), any(), anyBoolean())).thenReturn(existingPage);
 
-    // When
+    // When: the article was posted in a space, whose access to its attachments the update renews
+    properties.put(NEWS_ACTIVITIES, "1:" + ACTIVITY_ID);
+    when(pageVersion.getContent()).thenReturn("<p>body</p>");
+    NEWS_UTILS.clearInvocations();
     newsService.updateNews(news, "john", false, false, ARTICLE.name().toLowerCase(), CONTENT_AND_TITLE.name());
+    assertPermissionsEventNames("john");
 
     // Then
     verify(noteService, times(1)).updateNote(any(Page.class), any(), any(), anyBoolean());
@@ -1394,14 +1408,14 @@ public class NewsServiceTest {
                                                                   anyString(),
                                                                   anyString())).thenReturn(draftPage);
 
-    when(existingPage.getAuthor()).thenReturn("john");
-    when(pageVersion.getAuthor()).thenReturn("john");
+    when(existingPage.getAuthor()).thenReturn("mary");
+    when(pageVersion.getAuthor()).thenReturn("mary");
     when(pageVersion.getUpdatedDate()).thenReturn(new Date());
     when(pageVersion.getAuthorFullName()).thenReturn("full name");
     when(pageVersion.getContent()).thenReturn("content");
 
     News news = new News();
-    news.setAuthor("john");
+    news.setAuthor("mary");
     news.setTitle("new draft title");
     news.setBody("draft body");
     news.setId("1");
@@ -1428,7 +1442,9 @@ public class NewsServiceTest {
 
     when(noteService.updateNote(any(Page.class), any(), any(), anyBoolean())).thenReturn(existingPage);
     // When
+    NEWS_UTILS.clearInvocations();
     newsService.updateNews(news, "john", false, false, ARTICLE.name().toLowerCase(), CONTENT_AND_TITLE.name());
+    assertPermissionsEventNames("john");
 
     // Then
     verify(noteService, times(1)).updateNote(any(Page.class), any(), any(), anyBoolean());
@@ -1813,6 +1829,77 @@ public class NewsServiceTest {
     assertNull(service.postNoteArticle(orphanSpaceNote, johnIdentity));
     assertNull(service.postNoteArticle(null, johnIdentity));
     verify(service, never()).postNews(any(News.class), anyString());
+  }
+
+  @Test
+  public void testPublishNamesThePublisherInThePermissionsEvent() throws Exception {
+    NewsService service = actingUserService();
+
+    service.publishNews(authoredArticle(), "mary");
+
+    assertPermissionsEventNames("mary");
+  }
+
+  @Test
+  public void testUnpublishNamesTheUnpublisherInThePermissionsEvent() throws Exception {
+    NewsService service = actingUserService();
+
+    service.unpublishNews("12", "mary", false);
+
+    assertPermissionsEventNames("mary");
+  }
+
+  @Test
+  public void testShareNamesTheSharingUserInThePermissionsEvent() throws Exception {
+    NewsService service = actingUserService();
+    org.exoplatform.social.core.identity.model.Identity mary = mock(org.exoplatform.social.core.identity.model.Identity.class);
+    when(mary.getRemoteId()).thenReturn("mary");
+    when(mary.getId()).thenReturn("2");
+    doReturn(true).when(service).canViewNews(any(News.class), eq("mary"));
+
+    service.shareNews(authoredArticle(), space(), mary, ACTIVITY_ID);
+
+    assertPermissionsEventNames("mary");
+  }
+
+  /**
+   * A service whose article "12", written by john, is acted on by mary
+   */
+  private NewsService actingUserService() {
+    MetadataItem newsPageItem = new MetadataItem();
+    newsPageItem.setProperties(new HashMap<>());
+    when(metadataService.getMetadataItemsByMetadataAndObject(eq(NewsService.NEWS_METADATA_KEY),
+                                                             any(NewsPageObject.class))).thenReturn(List.of(newsPageItem));
+    when(spaceService.getSpaceById("3")).thenReturn(space());
+    Identity maryIdentity = mock(Identity.class);
+    when(maryIdentity.getUserId()).thenReturn("mary");
+    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity("mary")).thenReturn(maryIdentity);
+    org.exoplatform.social.core.identity.model.Identity socialMary = mock(org.exoplatform.social.core.identity.model.Identity.class);
+    when(socialMary.getId()).thenReturn("2");
+    when(identityManager.getOrCreateUserIdentity("mary")).thenReturn(socialMary);
+    NewsService service = spy(newsService);
+    doReturn(authoredArticle()).when(service).getNewsArticleById("12");
+    NEWS_UTILS.clearInvocations();
+    return service;
+  }
+
+  private News authoredArticle() {
+    News article = existingArticle(NewsService.POSTED, true);
+    article.setAuthor("john");
+    article.setBody("<p>body</p>");
+    return article;
+  }
+
+  /**
+   * The event that grants the article's spaces access to its attachments
+   * names the user acting on the article under "username", the key the ecms
+   * permissions listener reads
+   */
+  private void assertPermissionsEventNames(String username) {
+    NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.UPDATE_CONTENT_PERMISSIONS),
+                                                     any(),
+                                                     argThat((Map<String, Object> data) -> username.equals(data.get("username")))),
+                      atLeastOnce());
   }
 
   private NewsService spaceNoteService(List<MetadataItem> newsPageItems) {

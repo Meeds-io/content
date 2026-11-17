@@ -504,7 +504,7 @@ public class NewsService {
 
     Space space = spaceService.getSpaceById(news.getSpaceId());
     // Update content permissions
-    updateArticlePermissions(List.of(space), news);
+    updateArticlePermissions(List.of(space), news, publisher);
     try {
       sendNotification(publisher, news, NotificationConstants.NOTIFICATION_CONTEXT.PUBLISH_NEWS);
     } catch (Error | Exception e) {
@@ -555,7 +555,7 @@ public class NewsService {
         String publisherId = identityManager.getOrCreateUserIdentity(publisher).getId();
         metadataService.updateMetadataItem(newsMetadataItem, Long.parseLong(publisherId), false);
         // Update content permissions
-        updateArticlePermissions(List.of(space), news);
+        updateArticlePermissions(List.of(space), news, publisher);
       }
     }
   }
@@ -1176,7 +1176,7 @@ public class NewsService {
       metadataItem.setProperties(properties);
       metadataService.updateMetadataItem(metadataItem, Long.parseLong(userIdentity.getId()), false);
       // Update content permissions
-      updateArticlePermissions(List.of(space), news);
+      updateArticlePermissions(List.of(space), news, userIdentity.getRemoteId());
       NewsUtils.broadcastEvent(NewsUtils.SHARE_NEWS, userIdentity.getRemoteId(), news);
     }
 
@@ -1263,7 +1263,7 @@ public class NewsService {
                                          Long.parseLong(draftArticleMetadataItemCreatorIdentityId),
                                          false);
       // Update content permissions
-      updateArticlePermissions(List.of(draftArticleSpace), draftArticle);
+      updateArticlePermissions(List.of(draftArticleSpace), draftArticle, draftArticleCreator);
       return draftArticle;
     }
     return null;
@@ -1473,7 +1473,7 @@ public class NewsService {
                                        false);
 
     // Update content permissions
-    updateArticlePermissions(List.of(space), draftArticle);
+    updateArticlePermissions(List.of(space), draftArticle, updater);
     return draftArticle;
   }
 
@@ -1790,7 +1790,7 @@ public class NewsService {
       draftArticle.setIllustrationURL(NewsUtils.buildIllustrationUrl(draftPage.getProperties(), draftArticle.getLang()));
 
       // Update content permissions
-      updateArticlePermissions(List.of(space), draftArticle);
+      updateArticlePermissions(List.of(space), draftArticle, draftArticleUpdater);
       return draftArticle;
     }
     return null;
@@ -2523,7 +2523,7 @@ public class NewsService {
             articleSpaces.add(space);
           }
         }
-        updateArticlePermissions(articleSpaces, news);
+        updateArticlePermissions(articleSpaces, news, updater.getUserId());
       }
       return news;
     }
@@ -2699,7 +2699,7 @@ public class NewsService {
 
       }
       // Update content permissions
-      updateArticlePermissions(List.of(space), news);
+      updateArticlePermissions(List.of(space), news, updater);
     } catch (Exception exception) {
       return null;
     }
@@ -2848,13 +2848,18 @@ public class NewsService {
         String newsTranslationId = news.getId().concat("-").concat(news.getLang());
         indexingService.index(NewsIndexingServiceConnector.TYPE, newsTranslationId);
       }
-      updateArticlePermissions(List.of(space), news);
+      updateArticlePermissions(List.of(space), news, versionCreator.getUserId());
       return news;
     }
     return null;
   }
 
-  private void updateArticlePermissions(List<Space> spaces, News article) {
+  /**
+   * Broadcasts the event that grants the article's spaces access to its
+   * attachments, naming the user who acts on the article, the one a space's
+   * "Limit Access Management" setting is applied to.
+   */
+  private void updateArticlePermissions(List<Space> spaces, News article, String username) {
     Map<String, Object> updateContentPermissionEventListenerData = new HashMap<>();
     if (CollectionUtils.isNotEmpty(article.getSharedInSpacesList())) {
       List<Space> spaceList = article.getSharedInSpacesList().stream().map(spaceId -> {
@@ -2873,6 +2878,9 @@ public class NewsService {
     String entityId = entityType.equals("WIKI_DRAFT_PAGES") ? article.getId() : article.getLatestVersionId();
     updateContentPermissionEventListenerData.put("entityId", entityId);
     updateContentPermissionEventListenerData.put("entityType", entityType);
+    if (StringUtils.isNotBlank(username)) {
+      updateContentPermissionEventListenerData.put(NewsUtils.UPDATE_CONTENT_PERMISSIONS_USERNAME, username);
+    }
     if (article.getAudience() != null) {
       updateContentPermissionEventListenerData.put(NEWS_AUDIENCE, article.getAudience());
     }
