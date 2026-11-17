@@ -421,35 +421,28 @@ export default {
         draftPage: true
       };
       if (this.article.id) {
-        if (this.article.title || this.article.body) {
-          article.id = this.article.id;
-          this.$newsServices.updateNews(article, false, this.articleType)
-            .then((updatedArticle) => {
-              if (this.article.body !== updatedArticle.body) {
-                this.imagesURLs = this.extractImagesURLsDiffs(this.article.body, updatedArticle.body);
-              }
-              this.article.owner = updatedArticle.owner;
-              this.article.draftPage = true;
-              this.article.id = updatedArticle.id;
-              this.article.properties = updatedArticle?.properties;
-              document.dispatchEvent(new CustomEvent('update-processed-image-url', {detail: {
-                content: updatedArticle.body
-              }}));
-            })
-            .then(() => this.$emit('draftUpdated'))
-            .then(() => {
-              this.draftSavingStatus = this.$t('news.composer.draft.savedDraftStatus');
-              this.savingDraft = false;
-            });
-        } else {
-          this.$newsServices.deleteDraft(this.article.id)
-            .then(() => this.$emit('draftDeleted'))
-            .then(() => {
-              this.draftSavingStatus = this.$t('news.composer.draft.savedDraftStatus');
-              this.savingDraft = false;
-            });
-          this.article.id = null;
-        }
+        // A saved draft is always updated, its title and body cleared
+        // included: autoSave never saves a draft left with no summary and no
+        // cover either, and the article keeps one id while it is written.
+        article.id = this.article.id;
+        this.$newsServices.updateNews(article, false, this.articleType)
+          .then((updatedArticle) => {
+            if (this.article.body !== updatedArticle.body) {
+              this.imagesURLs = this.extractImagesURLsDiffs(this.article.body, updatedArticle.body);
+            }
+            this.article.owner = updatedArticle.owner;
+            this.article.draftPage = true;
+            this.article.id = updatedArticle.id;
+            this.article.properties = updatedArticle?.properties;
+            document.dispatchEvent(new CustomEvent('update-processed-image-url', {detail: {
+              content: updatedArticle.body
+            }}));
+          })
+          .then(() => this.$emit('draftUpdated'))
+          .then(() => {
+            this.draftSavingStatus = this.$t('news.composer.draft.savedDraftStatus');
+            this.savingDraft = false;
+          });
       } else if (this.article.title || this.article.body) {
         article.publicationState = 'draft';
         this.$newsServices.saveNews(article).then((createdArticle) => {
