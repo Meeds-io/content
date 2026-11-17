@@ -489,6 +489,7 @@ public class NewsServiceTest {
     when(metadataItem.getProperties()).thenReturn(properties);
 
     mockBuildArticle(metadataItems);
+    when(spaceService.canViewSpace(any(Space.class), eq("john"))).thenReturn(true);
 
     List<News> newsList = newsService.getNews(newsFilter, johnIdentity);
     assertNotNull(newsList);
@@ -536,6 +537,7 @@ public class NewsServiceTest {
     when(identity.getId()).thenReturn("1");
     when(identityManager.getOrCreateUserIdentity(newsFilter.getAuthor())).thenReturn(identity);
     mockBuildArticle(metadataItems);
+    when(spaceService.canViewSpace(any(Space.class), eq("john"))).thenReturn(true);
 
     List<News> newsList = newsService.getNews(newsFilter, johnIdentity);
     assertNotNull(newsList);
@@ -1850,6 +1852,98 @@ public class NewsServiceTest {
     space.setId("3");
     space.setGroupId("/spaces/engineering");
     return space;
+  }
+
+  @Test
+  public void testGetNewsKeepsOnlyTheSpacesTheUserCanView() throws Exception {
+    Identity identity = spaceViewer("mary");
+    NewsFilter filter = spacesFilter("1", "2");
+
+    newsService.getNews(filter, identity);
+
+    NEWS_UTILS.verify(() -> NewsUtils.getMyFilteredSpacesIds(identity, List.of("1")));
+    verify(metadataService).getMetadataItemsByFilter(any(), anyLong(), anyLong());
+  }
+
+  @Test
+  public void testGetNewsOfASpaceTheUserCanViewQueriesThatSpace() throws Exception {
+    Identity identity = spaceViewer("mary");
+    NewsFilter filter = spacesFilter("1");
+
+    newsService.getNews(filter, identity);
+
+    assertEquals(List.of("1"), filter.getSpaces());
+    NEWS_UTILS.verify(() -> NewsUtils.getMyFilteredSpacesIds(identity, List.of("1")));
+    verify(metadataService).getMetadataItemsByFilter(any(), anyLong(), anyLong());
+  }
+
+  @Test
+  public void testGetNewsOfOnlySpacesTheUserCannotViewGivesNoNews() throws Exception {
+    Identity identity = spaceViewer("mary");
+    List<NewsFilter> filters = new ArrayList<>();
+    filters.add(spacesFilter("2"));
+    filters.add(spacesFilter("2", "404", "notANumber"));
+    NewsFilter pinned = spacesFilter("2");
+    pinned.setPublishedNews(true);
+    filters.add(pinned);
+    NewsFilter drafts = spacesFilter("2");
+    drafts.setDraftNews(true);
+    filters.add(drafts);
+    NewsFilter scheduled = spacesFilter("2");
+    scheduled.setScheduledNews(true);
+    filters.add(scheduled);
+    NewsFilter authored = spacesFilter("2");
+    authored.setAuthor("mary");
+    filters.add(authored);
+
+    for (NewsFilter filter : filters) {
+      assertTrue(newsService.getNews(filter, identity).isEmpty());
+    }
+
+    NEWS_UTILS.verify(() -> NewsUtils.getMyFilteredSpacesIds(eq(identity), any()), never());
+    verify(metadataService, never()).getMetadataItemsByFilter(any(), anyLong(), anyLong());
+  }
+
+  @Test
+  public void testGetNewsWithSearchTextKeepsTheSpaceIdentities() throws Exception {
+    Identity identity = spaceViewer("mary");
+    NewsFilter filter = spacesFilter("10");
+    filter.setSearchText("roadmap");
+
+    newsService.getNews(filter, identity);
+
+    assertEquals(List.of("10"), filter.getSpaces());
+    verify(newsSearchConnector).search(any(), eq(filter));
+    verify(spaceService, never()).getSpaceById(nullable(String.class));
+  }
+
+  /**
+   * @param username the user name of the returned identity, who can view the
+   *          space "1" and not the space "2"
+   * @return the identity
+   */
+  private Identity spaceViewer(String username) {
+    Identity identity = mock(Identity.class);
+    when(identity.getUserId()).thenReturn(username);
+    org.exoplatform.social.core.identity.model.Identity userIdentity =
+                                                                     mock(org.exoplatform.social.core.identity.model.Identity.class);
+    when(userIdentity.getId()).thenReturn("7");
+    when(identityManager.getOrCreateUserIdentity(username)).thenReturn(userIdentity);
+    Space viewableSpace = mock(Space.class);
+    Space otherSpace = mock(Space.class);
+    when(spaceService.getSpaceById("1")).thenReturn(viewableSpace);
+    when(spaceService.getSpaceById("2")).thenReturn(otherSpace);
+    when(spaceService.canViewSpace(viewableSpace, username)).thenReturn(true);
+    when(spaceService.canViewSpace(otherSpace, username)).thenReturn(false);
+    return identity;
+  }
+
+  private NewsFilter spacesFilter(String... spaceIds) {
+    NewsFilter filter = new NewsFilter();
+    filter.setSpaces(new ArrayList<>(List.of(spaceIds)));
+    filter.setOffset(0);
+    filter.setLimit(10);
+    return filter;
   }
 }
 
