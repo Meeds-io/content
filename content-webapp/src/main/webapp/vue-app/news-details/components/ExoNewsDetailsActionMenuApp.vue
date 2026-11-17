@@ -27,7 +27,7 @@
     eager
     bottom
     offset-y
-    class="px-0 mx-2 pa-0 py-0 overflow-hidden newsMenu">
+    class="px-0 pa-0 py-0 overflow-hidden newsMenu">
     <template #activator="{ on, attrs }">
       <v-btn
         v-bind="attrs"

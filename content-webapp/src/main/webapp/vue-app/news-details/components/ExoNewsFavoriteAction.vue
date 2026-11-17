@@ -28,6 +28,7 @@
     :template-params="templateParams"
     :space-id="spaceId"
     :icon-size="iconSize"
+    :small="small"
     type="news"
     type-label="News"
     @removed="removed"
@@ -62,6 +63,14 @@ export default {
     iconSize: {
       type: Number,
       default: () => 16,
+    },
+    /**
+     * Whether the button is the small one; the article view's header turns
+     * it off so that its box matches the header's other actions.
+     */
+    small: {
+      type: Boolean,
+      default: true,
     },
   },
   data: () => ({
