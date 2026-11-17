@@ -104,6 +104,9 @@ public class NewsUtils {
 
   public static final String UPDATE_CONTENT_PERMISSIONS      = "content.update.permissions";
 
+  /** Event data key of {@link #UPDATE_CONTENT_PERMISSIONS}: the user acting on the article. */
+  public static final String UPDATE_CONTENT_PERMISSIONS_USERNAME = "username";
+
   public static final String PUBLISHED_DATE                  = "publishedDate";
 
   public static final String CREATE_PUBLISH_CONTENT          = "createPublishContent";
