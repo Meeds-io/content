@@ -80,6 +80,9 @@
     <note-editor-metadata-drawer
       ref="metadataDrawer"
       :has-featured-image="!!localNews?.illustrationURL"
+      :space-id="spaceId"
+      :space-resolved="!!spaceId"
+      kind="news"
       @metadata-updated="saveMetadata" />
     <note-editor-featured-image-drawer
       :note="localNews"
