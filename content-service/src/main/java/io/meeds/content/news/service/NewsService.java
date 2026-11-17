@@ -33,14 +33,18 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -95,6 +99,8 @@ import org.exoplatform.wiki.service.PageUpdateType;
 import org.exoplatform.wiki.service.WikiService;
 import org.exoplatform.wiki.service.plugin.WikiDraftPageAttachmentPlugin;
 
+import io.meeds.content.news.model.ArticleIdChange;
+import io.meeds.content.news.model.ArticleRef;
 import io.meeds.content.news.model.ArticleTarget;
 import io.meeds.content.news.model.ContentPublishEvent;
 import io.meeds.content.news.model.News;
@@ -206,8 +212,61 @@ public class NewsService {
 
   public static final String       UNPUBLISH_SCHEDULED_DATE               = "unpublishScheduledDate";
 
+  /**
+   * The property of a {@code newsPage} or {@code newsDraftPage} item naming the
+   * objects the article was stored under before, most recent first, as
+   * {@code draft:<id>} and {@code page:<id>} joined with {@code ;}: the object
+   * it replaces, then that object's own chain, at most
+   * {@link #ORIGIN_CHAIN_MAX} entries, the oldest dropped. Posting or scheduling
+   * a new article's draft writes it on the page's item; unscheduling a staged
+   * article writes it on the new draft's item.
+   */
+  public static final String       ORIGIN_CHAIN                           = "originChain";
+
+  /** The most entries an {@link #ORIGIN_CHAIN} keeps. */
+  public static final int          ORIGIN_CHAIN_MAX                       = 20;
+
+  /** The {@code content.update.permissions} data key holding the article's id. */
+  public static final String       ARTICLE_ID                             = "articleId";
+
+  /**
+   * The {@code content.update.permissions} data key telling, as a Boolean,
+   * whether {@link #ARTICLE_ID} is the id of the draft of a new article.
+   */
+  public static final String       ARTICLE_DRAFT                          = "articleDraft";
+
   public static final MetadataKey  NEWS_METADATA_KEY                      =
                                                      new MetadataKey(NEWS_METADATA_TYPE.getName(), NEWS_METADATA_NAME, 0);
+
+  /**
+   * The keys of an article's {@code newsPage} metadata item that the service
+   * writes itself: those {@link #buildNewArticleProperties} computes from the
+   * article, and those other flows maintain (its activities, its viewers). A
+   * caller's {@link News#getParameters()} never sets them, whether the article
+   * gives a value for them or not.
+   */
+  static final Set<String>         COMPUTED_ARTICLE_PROPERTY_KEYS         = Set.of(NEWS_AUDIENCE,
+                                                                                   NEWS_ACTIVITIES,
+                                                                                   NEWS_VIEWERS,
+                                                                                   NEWS_VIEWS,
+                                                                                   SCHEDULE_POST_DATE,
+                                                                                   UNPUBLISH_SCHEDULED,
+                                                                                   UNPUBLISH_SCHEDULED_DATE,
+                                                                                   NEWS_PUBLICATION_STATE,
+                                                                                   EXTERNAL_PAGE,
+                                                                                   NEWS_ACTIVITY_POSTED,
+                                                                                   NEWS_ACTIVITY_CATEGORIES,
+                                                                                   PUBLISHED,
+                                                                                   NEWS_DELETED,
+                                                                                   PUBLISHER,
+                                                                                   PAGE_REFERRED,
+                                                                                   DE_REFER_PAGE_ID,
+                                                                                   ORIGIN_CHAIN);
+
+  /** The keyset order of a space's articles: pages, then drafts, each by numeric id. */
+  private static final Comparator<ArticleRef> ARTICLE_REF_ORDER =
+                                                                Comparator.comparing(ArticleRef::draft)
+                                                                          .thenComparingLong(article -> Long.parseLong(article.id()));
 
   private static final Log         LOG                                    = ExoLogger.getLogger(NewsService.class);
 
@@ -991,6 +1050,7 @@ public class NewsService {
       // set the url and the space url to the scheduled news
       news.setUrl(NewsUtils.buildNewsArticleUrl(news, currentIdentity.getUserId()));
       news.setSpaceUrl(NewsUtils.buildSpaceUrl(news.getSpaceId()));
+      NewsUtils.broadcastEvent(NewsUtils.SCHEDULE_NEWS, currentIdentity.getUserId(), news);
       if (originalArticle != null && !originalArticle.getPublicationState().equalsIgnoreCase(STAGED)) {
         NewsUtils.broadcastEvent(NewsUtils.UPDATE_PUBLISH_CONTENT,
                                  currentIdentity.getUserId(),
@@ -1006,7 +1066,13 @@ public class NewsService {
   }
 
   /**
-   * Un-schedule publishing a News
+   * Un-schedule publishing a News. A staged article written in the news editor
+   * goes back to a new draft, whose {@link #ORIGIN_CHAIN} starts with its page;
+   * the page is then deleted, and {@link NewsUtils#ARTICLE_ID_CHANGED}
+   * broadcast. The chain and the event name only a staged article of the
+   * given space that its unscheduler may schedule: any other article names
+   * no origin and broadcasts no id change. A page posted as an article keeps
+   * its id and only loses its article items.
    *
    * @param news news article
    * @param space owner space
@@ -1020,9 +1086,20 @@ public class NewsService {
       if (news.getProperties() != null) {
         news.getProperties().setDraft(true);
       }
-      news = createDraftArticleForNewPage(news, space.getGroupId(), articleCreator, System.currentTimeMillis());
+      boolean ownStagedArticle = isOwnStagedArticle(existingNews, space, articleCreator);
+      String originChain = ownStagedArticle ? extendOriginChain(new ArticleRef(existingNews.getId(), false),
+                                                                readOriginChain(NEWS_METADATA_PAGE_OBJECT_TYPE,
+                                                                                existingNews.getId(),
+                                                                                space.getId()))
+                                            : null;
+      news = createDraftArticleForNewPage(news, space.getGroupId(), articleCreator, System.currentTimeMillis(), originChain);
       broadcastUnScheduleArticleEvent(existingNews, news.getId());
       deleteArticle(existingNews, articleCreator);
+      if (ownStagedArticle) {
+        NewsUtils.broadcastEvent(NewsUtils.ARTICLE_ID_CHANGED,
+                                 articleCreator,
+                                 new ArticleIdChange(existingNews.getId(), false, news.getId(), true, space.getId()));
+      }
       return buildDraftArticle(news.getId(), userAcl.getUserIdentity(articleCreator));
     } else if (existingNews != null) {
       PageVersion pageVersion = noteService.getPublishedVersionByPageIdAndLang(Long.parseLong(existingNews.getId()), null);
@@ -1198,10 +1275,12 @@ public class NewsService {
   }
 
   /**
+   * Creates the draft of a new article.
+   *
    * @param draftArticle {@link News} news draft article to be created
-   * @param pageOwnerId
-   * @param draftArticleCreator
-   * @param creationDate
+   * @param pageOwnerId the group id of the space's wiki
+   * @param draftArticleCreator the username of its creator
+   * @param creationDate its creation date
    * @return the created draft news article
    * @throws Exception when error occurs
    */
@@ -1209,6 +1288,27 @@ public class NewsService {
                                            String pageOwnerId,
                                            String draftArticleCreator,
                                            long creationDate) throws Exception {
+    return createDraftArticleForNewPage(draftArticle, pageOwnerId, draftArticleCreator, creationDate, null);
+  }
+
+  /**
+   * Creates the draft of a new article, its {@code newsDraftPage} item naming
+   * the article page it was created from when there is one.
+   *
+   * @param draftArticle {@link News} news draft article to be created
+   * @param pageOwnerId the group id of the space's wiki
+   * @param draftArticleCreator the username of its creator
+   * @param creationDate its creation date
+   * @param originChain the {@link #ORIGIN_CHAIN} of the draft, starting with
+   *          the article page it replaces; null for none
+   * @return the created draft news article
+   * @throws Exception when error occurs
+   */
+  private News createDraftArticleForNewPage(News draftArticle,
+                                            String pageOwnerId,
+                                            String draftArticleCreator,
+                                            long creationDate,
+                                            String originChain) throws Exception {
     Wiki wiki = wikiService.getWikiByTypeAndOwner(WikiType.GROUP.name().toLowerCase(), pageOwnerId);
     Page newsArticlesRootNotePage = null;
     if (wiki != null) {
@@ -1257,13 +1357,16 @@ public class NewsService {
                                                                        Long.parseLong(draftArticleSpace.getId()));
       String draftArticleMetadataItemCreatorIdentityId = identityManager.getOrCreateUserIdentity(draftArticleCreator).getId();
       Map<String, String> draftArticleMetadataItemProperties = new HashMap<>();
+      if (originChain != null) {
+        draftArticleMetadataItemProperties.put(ORIGIN_CHAIN, originChain);
+      }
       metadataService.createMetadataItem(draftArticleMetaDataObject,
                                          NEWS_METADATA_KEY,
                                          draftArticleMetadataItemProperties,
                                          Long.parseLong(draftArticleMetadataItemCreatorIdentityId),
                                          false);
       // Update content permissions
-      updateArticlePermissions(List.of(draftArticleSpace), draftArticle);
+      updateArticlePermissions(List.of(draftArticleSpace), draftArticle, true);
       return draftArticle;
     }
     return null;
@@ -1284,7 +1387,7 @@ public class NewsService {
       PageVersion pageVersion = noteService.getPublishedVersionByPageIdAndLang(Long.parseLong(articlePage.getId()), null);
       article.setAuthor(pageVersion != null ? pageVersion.getAuthor() : articlePage.getAuthor());
       article.setIllustrationURL(NewsUtils.buildIllustrationUrl(articlePage.getProperties(), articlePage.getLang()));
-      buildNewArticleProperties(article, articlePage, creator, space.getId(), pageVersion.getId(), true);
+      buildNewArticleProperties(article, articlePage, creator, space.getId(), pageVersion.getId(), true, null);
     }
     return article;
   }
@@ -1356,8 +1459,17 @@ public class NewsService {
   }
 
   /**
-   * @param newsArticle {@link News} news article to be created
-   * @param newsArticleCreator
+   * Creates the page of a new article, then deletes the draft of a new article
+   * it was written in, when there is one. In that case the page's
+   * {@code newsPage} item's {@link #ORIGIN_CHAIN} starts with the draft, and
+   * {@link NewsUtils#ARTICLE_ID_CHANGED} is broadcast once the draft is
+   * deleted: a value write still in flight then either commits before the
+   * move, or finds its object gone. An article created with no draft, as the MCP
+   * {@code create_news} tool does, broadcasts nothing.
+   *
+   * @param newsArticle {@link News} news article to be created, its id the
+   *          draft's when it was written in one
+   * @param newsArticleCreator the username of its creator
    * @return the created news article
    * @throws Exception when error occurs
    */
@@ -1367,6 +1479,7 @@ public class NewsService {
     String draftNewsId = newsArticle.getId();
 
     Identity poster = NewsUtils.getUserIdentity(newsArticleCreator);
+    News originDraft = getNewArticleDraft(draftNewsId, poster, newsArticle.getSpaceId());
     Space space = spaceService.getSpaceById(newsArticle.getSpaceId());
     String pageOwnerId = space.getGroupId();
 
@@ -1413,9 +1526,24 @@ public class NewsService {
         newsArticle.setLatestVersionId(pageVersion.getId());
         newsArticle.setIllustrationURL(NewsUtils.buildIllustrationUrl(newsArticlePage.getProperties(), newsArticle.getLang()));
 
-        buildNewArticleProperties(newsArticle, newsArticlePage, newsArticleCreator, space.getId(), pageVersion.getId(), false);
+        buildNewArticleProperties(newsArticle,
+                                  newsArticlePage,
+                                  newsArticleCreator,
+                                  space.getId(),
+                                  pageVersion.getId(),
+                                  false,
+                                  originDraft == null ? null
+                                                      : extendOriginChain(new ArticleRef(originDraft.getId(), true),
+                                                                          readOriginChain(NEWS_METADATA_DRAFT_OBJECT_TYPE,
+                                                                                          originDraft.getId(),
+                                                                                          space.getId())));
         // delete the draft
         deleteDraftArticle(draftNewsId, poster.getUserId());
+        if (originDraft != null) {
+          NewsUtils.broadcastEvent(NewsUtils.ARTICLE_ID_CHANGED,
+                                   newsArticleCreator,
+                                   new ArticleIdChange(originDraft.getId(), true, newsArticlePage.getId(), false, space.getId()));
+        }
         return newsArticle;
       }
     }
@@ -1543,7 +1671,117 @@ public class NewsService {
               .toList();
   }
 
+  /**
+   * Reads the draft of a new article, whoever asks: <strong>no right is
+   * checked</strong>, as {@link #getNewsArticleById} checks none. Callers
+   * that serve a user must check access through
+   * {@code getNewsById(id, identity, editMode, "draft")}. Only a draft that
+   * carries its {@code newsDraftPage} item and has no target page is
+   * returned: a notes draft, or the draft of an existing article, is not the
+   * draft of a new article.
+   *
+   * @param draftId the draft's id
+   * @return the draft's id, title, author, owner, space, dates and properties,
+   *         its state {@code draft}; null when the id names no draft of a new
+   *         article
+   */
+  public News getDraftArticleById(String draftId) {
+    if (!StringUtils.isNumeric(draftId)) {
+      return null;
+    }
+    DraftPage draft = noteService.getDraftNoteById(draftId);
+    if (draft == null || StringUtils.isNotBlank(draft.getTargetPageId())) {
+      return null;
+    }
+    Space space = spaceService.getSpaceByGroupId(draft.getWikiOwner());
+    if (space == null) {
+      return null;
+    }
+    List<MetadataItem> items = metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY,
+                                                                                   new MetadataObject(NEWS_METADATA_DRAFT_OBJECT_TYPE,
+                                                                                                      draftId,
+                                                                                                      null,
+                                                                                                      Long.parseLong(space.getId())));
+    if (CollectionUtils.isEmpty(items)) {
+      return null;
+    }
+    News article = new News();
+    article.setId(draft.getId());
+    article.setTitle(draft.getTitle());
+    article.setAuthor(draft.getAuthor());
+    article.setOwner(draft.getOwner());
+    article.setSpaceId(space.getId());
+    article.setCreationDate(draft.getCreatedDate());
+    article.setUpdateDate(draft.getUpdatedDate());
+    article.setLang(draft.getLang());
+    article.setProperties(draft.getProperties());
+    article.setPublicationState(DRAFT);
+    return article;
+  }
+
+  /**
+   * Lists a space's articles by keyset: its article pages that are not
+   * deleted, then the drafts of its new articles, each ascending by numeric
+   * id. A page posted from an existing note is a note, never listed; the
+   * draft of an existing article is its page, never listed twice. The space's
+   * article items are read in one query, never the pages' content.
+   *
+   * @param spaceId the space id
+   * @param after the last article of the previous page, or null for the first
+   *          page
+   * @param limit the most articles
+   * @return the articles after that one, in that order
+   */
+  public List<ArticleRef> getArticleRefs(String spaceId, ArticleRef after, int limit) {
+    if (limit <= 0) {
+      return List.of();
+    }
+    return readArticleRefs(spaceId).stream()
+                                   .filter(article -> after == null || ARTICLE_REF_ORDER.compare(article, after) > 0)
+                                   .limit(limit)
+                                   .toList();
+  }
+
+  /**
+   * @param spaceId the space id
+   * @return the number of the space's articles {@link #getArticleRefs} lists
+   */
+  public int countArticles(String spaceId) {
+    return readArticleRefs(spaceId).size();
+  }
+
+  /**
+   * Tells, for each article of a space {@link #getArticleRefs} lists, the
+   * objects it was stored under before, from the same read: its
+   * {@link #ORIGIN_CHAIN}, most recent first. A gone draft or page found in a
+   * chain is the past of the live article holding that chain.
+   *
+   * @param spaceId the space id
+   * @return each live article and its past objects, in
+   *         {@link #getArticleRefs}' order; an article with no past maps to an
+   *         empty list
+   */
+  public Map<ArticleRef, List<ArticleRef>> getArticleOrigins(String spaceId) {
+    Map<ArticleRef, List<ArticleRef>> origins = new LinkedHashMap<>();
+    readArticleItems(spaceId).forEach((article, properties) -> origins.put(article,
+                                                                           parseOriginChain(properties == null ? null
+                                                                                                               : properties.get(ORIGIN_CHAIN))));
+    return origins;
+  }
+
+  /**
+   * Removes a property an add-on set on an article's {@code newsPage} item. A
+   * key the service computes ({@link #COMPUTED_ARTICLE_PROPERTY_KEYS}) is
+   * never removed.
+   *
+   * @param articleId the article id
+   * @param propertyKey the property to remove
+   * @param updater the identity id of the updater
+   */
   public void removeArticleMetadataProperty(String articleId, String propertyKey, long updater) {
+    if (COMPUTED_ARTICLE_PROPERTY_KEYS.contains(propertyKey)) {
+      return;
+    }
     News article = getNewsArticleById(articleId);
     if (article == null) {
       return;
@@ -1561,6 +1799,19 @@ public class NewsService {
     metadataService.updateMetadataItem(metadataItem, updater, false);
   }
 
+  /**
+   * Merges properties an add-on sets on an article's {@code newsPage} item
+   * (publish-extension metadata such as {@code eventId}) over the stored
+   * ones. A key the service computes ({@link #COMPUTED_ARTICLE_PROPERTY_KEYS})
+   * is ignored: no caller sets the article's state, audience, schedule,
+   * origin or the other computed keys through it.
+   *
+   * @param articleId the article id
+   * @param properties the properties to set
+   * @param updater the identity id of the updater
+   * @return the item's properties once merged
+   * @throws ObjectNotFoundException when no article carries the id
+   */
   public Map<String, String> updateMetadataProperties(String articleId,
                                                       Map<String, String> properties,
                                                       Long updater) throws ObjectNotFoundException {
@@ -1574,7 +1825,10 @@ public class NewsService {
 
     if (existingItem != null) {
       Map<String, String> mergedProperties = new HashMap<>(existingItem.getProperties());
-      mergedProperties.putAll(properties);
+      properties.entrySet()
+                .stream()
+                .filter(property -> !COMPUTED_ARTICLE_PROPERTY_KEYS.contains(property.getKey()))
+                .forEach(property -> mergedProperties.put(property.getKey(), property.getValue()));
       existingItem.setProperties(mergedProperties);
       metadataService.updateMetadataItem(existingItem, updater, false);
       updateNewsActivity(article, false, article.isActivityPosted(), false);
@@ -1697,12 +1951,31 @@ public class NewsService {
     NewsUtils.broadcastEvent(NewsUtils.CREATE_PUBLISH_CONTENT, poster, new ContentPublishEvent(null, news));
   }
 
+  /**
+   * Creates the metadata items of a new article: its page version item, and
+   * its {@code newsPage} item holding the properties computed from the article.
+   * The caller's {@link News#getParameters()} adds only keys outside
+   * {@link #COMPUTED_ARTICLE_PROPERTY_KEYS}, so that no caller sets the
+   * audience, the publication state, the schedule, {@code published} or the
+   * other computed keys of the article it creates.
+   *
+   * @param article the article created
+   * @param articlePage its page
+   * @param creator the username of its creator
+   * @param spaceId the id of its space
+   * @param versionId the id of its page version
+   * @param externalPage true for an existing page posted as an article
+   * @param originChain the page's {@link #ORIGIN_CHAIN}, starting with the
+   *          draft of a new article it was created from; null for none
+   * @throws Exception when a metadata item cannot be created
+   */
   private void buildNewArticleProperties(News article,
                                          Page articlePage,
                                          String creator,
                                          String spaceId,
                                          String versionId,
-                                         boolean externalPage) throws Exception {
+                                         boolean externalPage,
+                                         String originChain) throws Exception {
     NewsPageVersionObject articleVersionMetaDataObject = new NewsPageVersionObject(NEWS_METADATA_PAGE_VERSION_OBJECT_TYPE,
                                                                                    versionId,
                                                                                    null,
@@ -1722,6 +1995,13 @@ public class NewsService {
                                                        null,
                                                        Long.parseLong(spaceId));
     Map<String, String> newsPageProperties = new HashMap<>();
+    if (MapUtils.isNotEmpty(article.getParameters())) {
+      article.getParameters()
+             .entrySet()
+             .stream()
+             .filter(parameter -> !COMPUTED_ARTICLE_PROPERTY_KEYS.contains(parameter.getKey()))
+             .forEach(parameter -> newsPageProperties.put(parameter.getKey(), parameter.getValue()));
+    }
     if (StringUtils.isNotEmpty(article.getAudience())) {
       newsPageProperties.put(NEWS_AUDIENCE, article.getAudience());
     }
@@ -1739,10 +2019,10 @@ public class NewsService {
     newsPageProperties.put(PUBLISHED, String.valueOf(article.isPublished()));
     newsPageProperties.put(NEWS_DELETED, String.valueOf(articlePage.isDeleted()));
     newsPageProperties.put(PUBLISHER, creatorIdentity.getProfile().getFullName());
-
-    if (MapUtils.isNotEmpty(article.getParameters())) {
-      newsPageProperties.putAll(article.getParameters());
+    if (originChain != null) {
+      newsPageProperties.put(ORIGIN_CHAIN, originChain);
     }
+
     // A brand-new article page is indexed into the notes index immediately
     // by PageIndexingListener.postAddPage - without this, it stays
     // duplicated (once as news, once as notes) until the article's first
@@ -1754,6 +2034,149 @@ public class NewsService {
                                        newsPageProperties,
                                        Long.parseLong(creatorIdentity.getId()),
                                        false);
+  }
+
+  /**
+   * The draft an article is posted from, as its origin: only the draft of a
+   * new article of the same space, which the poster may edit; any other id
+   * names no origin.
+   *
+   * @param draftId an id as a caller gave it for the article's draft, or null
+   * @param creator the poster
+   * @param spaceId the space of the article posted
+   * @return the draft, or null when the id names no such draft
+   */
+  private News getNewArticleDraft(String draftId, Identity creator, String spaceId) {
+    if (creator == null || spaceId == null) {
+      return null;
+    }
+    News draft = getDraftArticleById(draftId);
+    return draft != null && spaceId.equals(draft.getSpaceId()) && canEditNews(draft, creator.getUserId()) ? draft : null;
+  }
+
+  /**
+   * @param spaceId the space id
+   * @return the space's articles in {@link #ARTICLE_REF_ORDER}, as
+   *         {@link #readArticleItems} reads them
+   */
+  private List<ArticleRef> readArticleRefs(String spaceId) {
+    return List.copyOf(readArticleItems(spaceId).keySet());
+  }
+
+  /**
+   * Reads a space's articles in {@link #ARTICLE_REF_ORDER}, from its
+   * {@code newsPage} and {@code newsDraftPage} items in one query: a page
+   * whose item says it is deleted (an unscheduled article) or an external page
+   * (a note posted as an article) is left out, and an id is kept once.
+   *
+   * @param spaceId the space id
+   * @return each of the space's articles with its item's properties; none for
+   *         an id that is not a number
+   */
+  private SortedMap<ArticleRef, Map<String, String>> readArticleItems(String spaceId) {
+    SortedMap<ArticleRef, Map<String, String>> articles = new TreeMap<>(ARTICLE_REF_ORDER);
+    if (!StringUtils.isNumeric(spaceId)) {
+      return articles;
+    }
+    MetadataFilter metadataFilter = new MetadataFilter();
+    metadataFilter.setMetadataName(NEWS_METADATA_NAME);
+    metadataFilter.setMetadataTypeName(NEWS_METADATA_TYPE.getName());
+    metadataFilter.setMetadataObjectTypes(List.of(NEWS_METADATA_PAGE_OBJECT_TYPE, NEWS_METADATA_DRAFT_OBJECT_TYPE));
+    metadataFilter.setMetadataSpaceIds(List.of(Long.parseLong(spaceId)));
+    // No limit: a single query, since the filter's order is not stable
+    // enough for offset paging (creation date, then the metadata's own id)
+    List<MetadataItem> items = metadataService.getMetadataItemsByFilter(metadataFilter, 0, 0);
+    for (MetadataItem item : items) {
+      if (item == null || !StringUtils.isNumeric(item.getObjectId())) {
+        continue;
+      }
+      if (NEWS_METADATA_DRAFT_OBJECT_TYPE.equals(item.getObjectType())) {
+        articles.putIfAbsent(new ArticleRef(item.getObjectId(), true), item.getProperties());
+      } else if (NEWS_METADATA_PAGE_OBJECT_TYPE.equals(item.getObjectType()) && isListedArticlePage(item.getProperties())) {
+        articles.putIfAbsent(new ArticleRef(item.getObjectId(), false), item.getProperties());
+      }
+    }
+    return articles;
+  }
+
+  /**
+   * @param properties the properties of an article page's {@code newsPage}
+   *          item
+   * @return false when the page is deleted or is an external page
+   */
+  private static boolean isListedArticlePage(Map<String, String> properties) {
+    return properties == null
+        || !(Boolean.parseBoolean(properties.get(NEWS_DELETED)) || Boolean.parseBoolean(properties.get(EXTERNAL_PAGE)));
+  }
+
+  /**
+   * @param article an article being unscheduled
+   * @param space the space it is unscheduled in
+   * @param username its unscheduler
+   * @return true when the article is staged, of that space, and the user may
+   *         schedule it: only then is it the origin of the new draft
+   */
+  private boolean isOwnStagedArticle(News article, Space space, String username) {
+    Identity identity = username == null ? null : NewsUtils.getUserIdentity(username);
+    return identity != null && space != null && space.getId().equals(article.getSpaceId())
+        && STAGED.equals(article.getPublicationState()) && canScheduleNews(space.getId(), identity, article);
+  }
+
+  /**
+   * Reads the {@link #ORIGIN_CHAIN} of an article object from its own metadata
+   * item, never from a caller's {@link News#getParameters()}.
+   *
+   * @param objectType {@code newsPage} or {@code newsDraftPage}
+   * @param objectId the page's or the draft's id
+   * @param spaceId the article's space id
+   * @return the stored chain, null when the object's item carries none
+   */
+  private String readOriginChain(String objectType, String objectId, String spaceId) {
+    List<MetadataItem> items = metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY,
+                                                                                   new MetadataObject(objectType,
+                                                                                                      objectId,
+                                                                                                      null,
+                                                                                                      Long.parseLong(spaceId)));
+    return CollectionUtils.isEmpty(items) || items.getFirst() == null || items.getFirst().getProperties() == null ? null
+                                                                                                                  : items.getFirst()
+                                                                                                                         .getProperties()
+                                                                                                                         .get(ORIGIN_CHAIN);
+  }
+
+  /**
+   * @param replaced the object the article was stored under until now
+   * @param replacedChain that object's own {@link #ORIGIN_CHAIN}, or null
+   * @return the chain of the object replacing it: that object first, then its
+   *         chain, at most {@link #ORIGIN_CHAIN_MAX} entries
+   */
+  static String extendOriginChain(ArticleRef replaced, String replacedChain) {
+    List<ArticleRef> chain = new ArrayList<>();
+    chain.add(replaced);
+    chain.addAll(parseOriginChain(replacedChain));
+    return chain.stream()
+                .limit(ORIGIN_CHAIN_MAX)
+                .map(article -> (article.draft() ? "draft:" : "page:") + article.id())
+                .collect(Collectors.joining(";"));
+  }
+
+  /**
+   * @param originChain a stored {@link #ORIGIN_CHAIN}, or null
+   * @return its entries, most recent first; an entry that is not
+   *         {@code draft:<id>} or {@code page:<id>} with a numeric id is
+   *         dropped
+   */
+  static List<ArticleRef> parseOriginChain(String originChain) {
+    if (StringUtils.isBlank(originChain)) {
+      return List.of();
+    }
+    List<ArticleRef> chain = new ArrayList<>();
+    for (String entry : originChain.split(";")) {
+      String id = StringUtils.substringAfter(entry, ":");
+      if (StringUtils.isNumeric(id) && (entry.startsWith("draft:") || entry.startsWith("page:"))) {
+        chain.add(new ArticleRef(id, entry.startsWith("draft:")));
+      }
+    }
+    return chain;
   }
 
   private void referOrDeReferArticlePage(News article, Page articlePage, Map<String, String> properties) {
@@ -1790,7 +2213,7 @@ public class NewsService {
       draftArticle.setIllustrationURL(NewsUtils.buildIllustrationUrl(draftPage.getProperties(), draftArticle.getLang()));
 
       // Update content permissions
-      updateArticlePermissions(List.of(space), draftArticle);
+      updateArticlePermissions(List.of(space), draftArticle, true);
       return draftArticle;
     }
     return null;
@@ -2854,7 +3277,35 @@ public class NewsService {
     return null;
   }
 
+  /**
+   * Broadcasts {@link NewsUtils#UPDATE_CONTENT_PERMISSIONS} for an article's
+   * content: its spaces, its body, the stored entity it is read from, its
+   * audience, and the article itself, as {@link #ARTICLE_ID} (its page id, the
+   * page's for the draft of an existing article) and {@link #ARTICLE_DRAFT}
+   * ({@code true} for the draft of a new article, whose id is the draft's).
+   *
+   * @param spaces the article's space, and the spaces it is shared in are
+   *          added
+   * @param article the article, a page or the draft of an existing article
+   */
   private void updateArticlePermissions(List<Space> spaces, News article) {
+    updateArticlePermissions(spaces, article, false);
+  }
+
+  /**
+   * Broadcasts {@link NewsUtils#UPDATE_CONTENT_PERMISSIONS} for an article's
+   * content, as {@link #updateArticlePermissions(List, News)} does.
+   *
+   * @param spaces the article's space, and the spaces it is shared in are
+   *          added
+   * @param article the article
+   * @param newArticleDraft true when the article is the draft of a new
+   *          article: the event then names the draft ({@code WIKI_DRAFT_PAGES}
+   *          and the draft's id), whatever the article's state, since a staged
+   *          article unscheduled back to a draft keeps its staged state until
+   *          saved
+   */
+  private void updateArticlePermissions(List<Space> spaces, News article, boolean newArticleDraft) {
     Map<String, Object> updateContentPermissionEventListenerData = new HashMap<>();
     if (CollectionUtils.isNotEmpty(article.getSharedInSpacesList())) {
       List<Space> spaceList = article.getSharedInSpacesList().stream().map(spaceId -> {
@@ -2869,10 +3320,14 @@ public class NewsService {
       spaces.addAll(spaceList);
     }
     updateContentPermissionEventListenerData.putAll(Map.of("spaces", spaces, ARTICLE_CONTENT, article.getBody()));
-    String entityType = article.getPublicationState().equals(DRAFT) ? "WIKI_DRAFT_PAGES" : "WIKI_PAGE_VERSIONS";
+    String entityType = newArticleDraft || DRAFT.equals(article.getPublicationState()) ? "WIKI_DRAFT_PAGES" : "WIKI_PAGE_VERSIONS";
     String entityId = entityType.equals("WIKI_DRAFT_PAGES") ? article.getId() : article.getLatestVersionId();
     updateContentPermissionEventListenerData.put("entityId", entityId);
     updateContentPermissionEventListenerData.put("entityType", entityType);
+    updateContentPermissionEventListenerData.put(ARTICLE_ID,
+                                                 newArticleDraft || StringUtils.isBlank(article.getTargetPageId()) ? article.getId()
+                                                                                                                   : article.getTargetPageId());
+    updateContentPermissionEventListenerData.put(ARTICLE_DRAFT, newArticleDraft);
     if (article.getAudience() != null) {
       updateContentPermissionEventListenerData.put(NEWS_AUDIENCE, article.getAudience());
     }

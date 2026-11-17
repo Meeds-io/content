@@ -65,6 +65,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.exoplatform.commons.exception.ObjectNotFoundException;
 import org.exoplatform.social.core.space.SpaceUtils;
@@ -106,6 +107,8 @@ import org.exoplatform.wiki.model.Wiki;
 import org.exoplatform.wiki.service.NoteService;
 import org.exoplatform.wiki.service.WikiService;
 
+import io.meeds.content.news.model.ArticleIdChange;
+import io.meeds.content.news.model.ArticleRef;
 import io.meeds.content.news.model.News;
 import io.meeds.content.news.model.NewsDraftObject;
 import io.meeds.content.news.model.NewsPageObject;
@@ -1235,6 +1238,28 @@ public class NewsServiceTest {
     verify(noteService, times(1)).createNote(any(Wiki.class), anyString(), any(Page.class), any(Identity.class), anyBoolean());
   }
 
+  /**
+   * Every schedule is broadcast, with the scheduled article: the Forms index
+   * refreshes a staged article's keys on it. Mutant: the broadcast removed
+   * fails it.
+   */
+  @Test
+  public void testScheduleNewsBroadcastsTheSchedule() throws Exception {
+    NEWS_UTILS.clearInvocations();
+    Space space = mockSpace();
+    Identity identity = mockIdentity();
+    when(spaceService.isManager(space, "john")).thenReturn(true);
+    mockArticlePageCreation(space, "11");
+    News article = newArticle("5");
+    article.setPublicationState(NewsService.STAGED);
+
+    newsService.scheduleNews(article, identity, DRAFT);
+
+    ArgumentCaptor<News> scheduled = ArgumentCaptor.forClass(News.class);
+    NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.SCHEDULE_NEWS), eq("john"), scheduled.capture()));
+    assertEquals("11", scheduled.getValue().getId());
+  }
+
   @Test
   public void testGetScheduledArticles() throws Exception {
     NewsFilter newsFilter = new NewsFilter();
@@ -1518,9 +1543,14 @@ public class NewsServiceTest {
     when(existingMetadataItem.getProperties()).thenReturn(existingProperties);
     when(existingMetadataItem.getId()).thenReturn(1L);
 
+    existingProperties.put(PUBLISHED, "false");
     Map<String, String> newProperties = new HashMap<>();
     newProperties.put("key1", "newValue");
     newProperties.put("key2", "value2");
+    // computed keys a caller sends are ignored. Mutant: the filter removed
+    // fails it.
+    newProperties.put(PUBLISHED, "true");
+    newProperties.put(NewsService.ORIGIN_CHAIN, "draft:1");
 
     // When
     Map<String, String> mergedResult = newsService.updateMetadataProperties("1", newProperties, 1L);
@@ -1531,6 +1561,20 @@ public class NewsServiceTest {
     assertEquals("newValue", mergedResult.get("key1"));
     assertEquals("value2", mergedResult.get("key2"));
     assertEquals("existingValue", mergedResult.get("existingKey"));
+    assertEquals("false", mergedResult.get(PUBLISHED));
+    assertNull(mergedResult.get(NewsService.ORIGIN_CHAIN));
+  }
+
+  /**
+   * A computed key is never removed through the add-ons' property removal,
+   * and nothing is read for it. Mutant: the guard removed fails it.
+   */
+  @Test
+  public void testRemoveArticleMetadataPropertyKeepsComputedKeys() {
+    newsService.removeArticleMetadataProperty("1", NEWS_DELETED, 1L);
+    newsService.removeArticleMetadataProperty("1", NewsService.ORIGIN_CHAIN, 1L);
+    verify(noteService, never()).getNoteById(anyString());
+    verify(metadataService, never()).updateMetadataItem(any(MetadataItem.class), anyLong(), anyBoolean());
   }
 
   @Test
@@ -1627,6 +1671,543 @@ public class NewsServiceTest {
 
     when(noteService.getPublishedVersionByPageIdAndLang(1L, null)).thenReturn(pageVersion);
     MENTION_UTILS.when(() -> MentionUtils.substituteUsernames(anyString(), anyString())).thenReturn("content");
+  }
+
+  /**
+   * A caller's parameters never set a key the service computes, whether the
+   * article gives a value for it or not, and their other keys are kept.
+   * Mutants: the parameters merged after the computed keys, or any one key
+   * left out of {@code COMPUTED_ARTICLE_PROPERTY_KEYS}, fail it: the keys
+   * are spelled out in the test, never read from the set.
+   */
+  @Test
+  public void testCreateArticleKeepsComputedKeysOverParameters() throws Exception {
+    mockSpace();
+    Page articlePage = new Page();
+    articlePage.setId("7");
+    articlePage.setParentPageId("1");
+    when(noteService.getNoteById("7")).thenReturn(articlePage);
+    PageVersion pageVersion = mock(PageVersion.class);
+    when(pageVersion.getId()).thenReturn("70");
+    when(pageVersion.getAuthor()).thenReturn("john");
+    when(noteService.getPublishedVersionByPageIdAndLang(7L, null)).thenReturn(pageVersion);
+    when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(new org.exoplatform.social.core.identity.model.Identity("1"));
+
+    News article = new News();
+    article.setId("7");
+    article.setSpaceId("1");
+    article.setPublicationState(POSTED);
+    article.setPublished(false);
+    // Spelled out here, never read from the set under test: a key dropped
+    // from the set must still be sent, and seen refused.
+    List<String> serviceKeys = List.of("audience",
+                                       "schedulePostDate",
+                                       "unpublishScheduled",
+                                       "unpublishScheduledDate",
+                                       "publicationState",
+                                       "externalPage",
+                                       "activityPosted",
+                                       "activityCategories",
+                                       "published",
+                                       "deleted",
+                                       "publisher",
+                                       "pageReferred",
+                                       "deReferPageId",
+                                       "originChain",
+                                       "activities",
+                                       "viewers",
+                                       "viewsCount");
+    Map<String, String> parameters = new HashMap<>();
+    serviceKeys.forEach(key -> parameters.put(key, "callerValue"));
+    parameters.put("eventId", "12");
+    article.setParameters(parameters);
+
+    newsService.createArticleFromExistingPage(article, "john");
+
+    ArgumentCaptor<Map<String, String>> properties = ArgumentCaptor.forClass(Map.class);
+    verify(metadataService).createMetadataItem(any(NewsPageObject.class), any(MetadataKey.class), properties.capture(), anyLong(), anyBoolean());
+    Map<String, String> stored = properties.getValue();
+    for (String key : serviceKeys) {
+      assertNotEquals("Computed key " + key + " set by the caller", "callerValue", stored.get(key));
+    }
+    assertEquals(new java.util.HashSet<>(serviceKeys), NewsService.COMPUTED_ARTICLE_PROPERTY_KEYS);
+    assertEquals(POSTED, stored.get(NEWS_PUBLICATION_STATE));
+    assertEquals("false", stored.get(PUBLISHED));
+    assertEquals("true", stored.get(EXTERNAL_PAGE));
+    assertEquals("12", stored.get("eventId"));
+    // The activities an article is shared with are written by its share
+    // flow only, never at creation. Mutant: NEWS_ACTIVITIES left out of the
+    // set fails it.
+    assertNull(stored.get(NEWS_ACTIVITIES));
+  }
+
+  /**
+   * Posting the draft of a new article names the draft on the page's item and
+   * broadcasts the id change once the draft is deleted. Mutants: no origin
+   * property, the event broadcast before the deletion, or not at all, fail it.
+   */
+  @Test
+  public void testCreateArticlePageFromDraftBroadcastsIdChangeAfterDraftDeletion() throws Exception {
+    NEWS_UTILS.clearInvocations();
+    Space space = mockSpace();
+    mockIdentity();
+    mockArticlePageCreation(space, "11");
+    DraftPage draft = new DraftPage();
+    draft.setId("5");
+    draft.setWikiOwner(space.getGroupId());
+    when(noteService.getDraftNoteById("5", "john")).thenReturn(draft);
+    when(noteService.getDraftNoteById("5")).thenReturn(draft);
+    when(spaceService.isManager(any(Space.class), eq("john"))).thenReturn(true);
+    MetadataItem draftItem = mock(MetadataItem.class);
+    when(draftItem.getProperties()).thenReturn(Map.of(NewsService.ORIGIN_CHAIN, "page:3;draft:2"));
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+                                                             any(MetadataObject.class))).thenReturn(List.of(draftItem));
+    AtomicBoolean draftDeleted = new AtomicBoolean();
+    doAnswer(invocation -> {
+      draftDeleted.set(true);
+      return null;
+    }).when(noteService).removeDraftById("5");
+    AtomicBoolean deletedAtBroadcast = new AtomicBoolean();
+    NEWS_UTILS.when(() -> NewsUtils.broadcastEvent(eq(NewsUtils.ARTICLE_ID_CHANGED), any(), any())).thenAnswer(invocation -> {
+      deletedAtBroadcast.set(draftDeleted.get());
+      return null;
+    });
+
+    newsService.createNewsArticlePage(newArticle("5"), "john");
+
+    ArgumentCaptor<Object> change = ArgumentCaptor.forClass(Object.class);
+    NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.ARTICLE_ID_CHANGED), eq("john"), change.capture()));
+    assertEquals(new ArticleIdChange("5", true, "11", false, "1"), change.getValue());
+    assertTrue("The draft must be deleted before the id change is broadcast", deletedAtBroadcast.get());
+    assertEquals("The page's chain is its draft, then the draft's own chain",
+                 "draft:5;page:3;draft:2",
+                 capturePageProperties().get(NewsService.ORIGIN_CHAIN));
+  }
+
+  /**
+   * An article created with no draft (the MCP {@code create_news} tool), or
+   * from the draft of an existing article, broadcasts no id change and names
+   * no origin. Mutant: the latest-draft guard removed fails it.
+   */
+  @Test
+  public void testCreateArticlePageWithoutNewArticleDraftBroadcastsNothing() throws Exception {
+    Space space = mockSpace();
+    mockIdentity();
+    mockArticlePageCreation(space, "11");
+    DraftPage latestDraft = new DraftPage();
+    latestDraft.setId("6");
+    latestDraft.setTargetPageId("9");
+    latestDraft.setWikiOwner(space.getGroupId());
+    when(noteService.getDraftNoteById("6", "john")).thenReturn(latestDraft);
+    when(noteService.getDraftNoteById("6")).thenReturn(latestDraft);
+    when(spaceService.isManager(any(Space.class), eq("john"))).thenReturn(true);
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+                                                             any(MetadataObject.class))).thenReturn(List.of(mock(MetadataItem.class)));
+
+    for (String draftId : Arrays.asList("6", "40")) {
+      NEWS_UTILS.clearInvocations();
+      clearInvocations(metadataService);
+      newsService.createNewsArticlePage(newArticle(draftId), "john");
+
+      NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.ARTICLE_ID_CHANGED), any(), any()), never());
+      assertNull(capturePageProperties().get(NewsService.ORIGIN_CHAIN));
+    }
+  }
+
+  /**
+   * A draft of another space, or one the poster may not edit, is never the
+   * origin of the article posted with its id: no origin is recorded and no
+   * id change broadcast. Mutants: the space check or the edit check removed
+   * fail it.
+   */
+  @Test
+  public void testCreateArticlePageNamesOnlyAnEditableDraftOfItsSpaceAsOrigin() throws Exception {
+    Space space = mockSpace();
+    mockIdentity();
+    mockArticlePageCreation(space, "11");
+    Space otherSpace = mock(Space.class);
+    when(otherSpace.getId()).thenReturn("2");
+    when(otherSpace.getGroupId()).thenReturn("/spaces/other");
+    when(spaceService.getSpaceByGroupId("/spaces/other")).thenReturn(otherSpace);
+    when(spaceService.getSpaceById("2")).thenReturn(otherSpace);
+    DraftPage otherSpaceDraft = new DraftPage();
+    otherSpaceDraft.setId("21");
+    otherSpaceDraft.setWikiOwner("/spaces/other");
+    when(noteService.getDraftNoteById("21")).thenReturn(otherSpaceDraft);
+    DraftPage someoneElsesDraft = new DraftPage();
+    someoneElsesDraft.setId("22");
+    someoneElsesDraft.setOwner("mary");
+    someoneElsesDraft.setWikiOwner(space.getGroupId());
+    when(noteService.getDraftNoteById("22")).thenReturn(someoneElsesDraft);
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+                                                             any(MetadataObject.class))).thenReturn(List.of(mock(MetadataItem.class)));
+    // john may edit in space 2 only: draft 22, owned by mary in space 1, is not his to edit
+    when(spaceService.isManager(otherSpace, "john")).thenReturn(true);
+
+    for (String draftId : List.of("21", "22")) {
+      NEWS_UTILS.clearInvocations();
+      clearInvocations(metadataService);
+      newsService.createNewsArticlePage(newArticle(draftId), "john");
+
+      NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.ARTICLE_ID_CHANGED), any(), any()), never());
+      assertNull(draftId, capturePageProperties().get(NewsService.ORIGIN_CHAIN));
+    }
+  }
+
+  /**
+   * Unscheduling a staged article names its page on the new draft's item and
+   * broadcasts the id change once the page is deleted. Mutants: no origin
+   * property, the event broadcast before the deletion, or not at all, fail it.
+   */
+  @Test
+  public void testUnscheduleArticleBroadcastsIdChangeAfterPageDeletion() throws Exception {
+    NEWS_UTILS.clearInvocations();
+    Space space = mockSpace();
+    mockIdentity();
+    mockArticlesRoot(space);
+    when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(new org.exoplatform.social.core.identity.model.Identity("1"));
+    DraftPage createdDraft = new DraftPage();
+    createdDraft.setId("8");
+    createdDraft.setContent("body");
+    when(noteService.createDraftForNewPage(any(DraftPage.class), anyLong(), anyLong())).thenReturn(createdDraft);
+    PageVersion pageVersion = mock(PageVersion.class);
+    when(pageVersion.getId()).thenReturn("70");
+    when(noteService.getPublishedVersionByPageIdAndLang(7L, null)).thenReturn(pageVersion);
+
+    MetadataItem pageItem = mock(MetadataItem.class);
+    when(pageItem.getProperties()).thenReturn(Map.of(NewsService.ORIGIN_CHAIN, "draft:5"));
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class), any(MetadataObject.class))).thenReturn(List.of(pageItem));
+    News existingArticle = new News();
+    existingArticle.setId("7");
+    existingArticle.setSpaceId("1");
+    existingArticle.setPublicationState(NewsService.STAGED);
+    when(spaceService.isManager(space, "john")).thenReturn(true);
+    NewsService service = spy(newsService);
+    doReturn(existingArticle).when(service).getNewsArticleById("7");
+    AtomicBoolean pageDeleted = new AtomicBoolean();
+    doAnswer(invocation -> {
+      pageDeleted.set(true);
+      return null;
+    }).when(service).deleteArticle(any(News.class), anyString());
+    AtomicBoolean deletedAtBroadcast = new AtomicBoolean();
+    NEWS_UTILS.when(() -> NewsUtils.broadcastEvent(eq(NewsUtils.ARTICLE_ID_CHANGED), any(), any())).thenAnswer(invocation -> {
+      deletedAtBroadcast.set(pageDeleted.get());
+      return null;
+    });
+    News staged = new News();
+    staged.setId("7");
+    staged.setTitle("staged");
+    staged.setBody("body");
+    staged.setAuthor("john");
+    staged.setPublicationState(NewsService.STAGED);
+
+    service.unScheduleNews(staged, space, "john");
+
+    ArgumentCaptor<Object> change = ArgumentCaptor.forClass(Object.class);
+    NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.ARTICLE_ID_CHANGED), eq("john"), change.capture()));
+    assertEquals(new ArticleIdChange("7", false, "8", true, "1"), change.getValue());
+    assertTrue("The page must be deleted before the id change is broadcast", deletedAtBroadcast.get());
+    ArgumentCaptor<Map<String, String>> properties = ArgumentCaptor.forClass(Map.class);
+    verify(metadataService).createMetadataItem(any(NewsDraftObject.class), any(MetadataKey.class), properties.capture(), anyLong(), anyBoolean());
+    assertEquals("page:7;draft:5", properties.getValue().get(NewsService.ORIGIN_CHAIN));
+    Map<String, Object> permissions = capturePermissionsData();
+    assertEquals("8", permissions.get(NewsService.ARTICLE_ID));
+    assertEquals(Boolean.TRUE, permissions.get(NewsService.ARTICLE_DRAFT));
+    // A REST or MCP caller unscheduling with the staged state (the UI sends
+    // draft): the event names the draft all the same. Mutant: entityType read
+    // from the state alone.
+    assertEquals("WIKI_DRAFT_PAGES", permissions.get("entityType"));
+    assertEquals("8", permissions.get("entityId"));
+  }
+
+  /**
+   * Unscheduling an article of another space, one that is not staged, or one
+   * its unscheduler may not schedule, names no origin on the new draft and
+   * broadcasts no id change. Mutants: any one of the three checks removed
+   * fails it.
+   */
+  @Test
+  public void testUnscheduleNamesOnlyAStagedArticleOfItsSpaceAsOrigin() throws Exception {
+    Space space = mockSpace();
+    mockIdentity();
+    mockArticlesRoot(space);
+    when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(new org.exoplatform.social.core.identity.model.Identity("1"));
+    DraftPage createdDraft = new DraftPage();
+    createdDraft.setId("8");
+    createdDraft.setContent("body");
+    when(noteService.createDraftForNewPage(any(DraftPage.class), anyLong(), anyLong())).thenReturn(createdDraft);
+    PageVersion pageVersion = mock(PageVersion.class);
+    when(pageVersion.getId()).thenReturn("70");
+    when(noteService.getPublishedVersionByPageIdAndLang(7L, null)).thenReturn(pageVersion);
+
+    News otherSpace = new News();
+    otherSpace.setId("7");
+    otherSpace.setSpaceId("2");
+    otherSpace.setPublicationState(NewsService.STAGED);
+    News posted = new News();
+    posted.setId("7");
+    posted.setSpaceId("1");
+    posted.setPublicationState(POSTED);
+    News notSchedulable = new News();
+    notSchedulable.setId("7");
+    notSchedulable.setSpaceId("1");
+    notSchedulable.setPublicationState(NewsService.STAGED);
+    for (News existing : List.of(otherSpace, posted, notSchedulable)) {
+      // john schedules in space 1 for the first two cases only
+      when(spaceService.isManager(space, "john")).thenReturn(existing != notSchedulable);
+      NEWS_UTILS.clearInvocations();
+      clearInvocations(metadataService);
+      NewsService service = spy(newsService);
+      doReturn(existing).when(service).getNewsArticleById("7");
+      doNothing().when(service).deleteArticle(any(News.class), anyString());
+      News staged = new News();
+      staged.setId("7");
+      staged.setBody("body");
+      staged.setPublicationState(NewsService.STAGED);
+
+      service.unScheduleNews(staged, space, "john");
+
+      NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.ARTICLE_ID_CHANGED), any(), any()), never());
+      ArgumentCaptor<Map<String, String>> properties = ArgumentCaptor.forClass(Map.class);
+      verify(metadataService).createMetadataItem(any(NewsDraftObject.class), any(MetadataKey.class), properties.capture(), anyLong(), anyBoolean());
+      assertNull(properties.getValue().get(NewsService.ORIGIN_CHAIN));
+    }
+  }
+
+  /**
+   * The permissions update of the draft of an existing article names the
+   * article's page, not the draft. Mutant: the draft's own id sent fails it.
+   */
+  @Test
+  public void testLatestDraftPermissionsUpdateNamesTheArticlePage() throws Exception {
+    NEWS_UTILS.clearInvocations();
+    Space space = mockSpace();
+    when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(new org.exoplatform.social.core.identity.model.Identity("1"));
+    Page articlePage = new Page();
+    articlePage.setId("9");
+    DraftPage latestDraft = new DraftPage();
+    latestDraft.setId("12");
+    latestDraft.setTargetPageId("9");
+    latestDraft.setContent("body");
+    when(noteService.createDraftForExistPage(any(DraftPage.class), eq(articlePage), nullable(String.class), anyLong(), anyString())).thenReturn(latestDraft);
+    News draft = newArticle("9");
+    draft.setPublicationState(DRAFT);
+
+    newsService.createDraftForExistingPage(draft, "john", articlePage, 1L, space);
+
+    Map<String, Object> permissions = capturePermissionsData();
+    assertEquals("9", permissions.get(NewsService.ARTICLE_ID));
+    assertEquals(Boolean.FALSE, permissions.get(NewsService.ARTICLE_DRAFT));
+  }
+
+  /**
+   * A space's articles are its live article pages, then the drafts of its new
+   * articles, each by numeric id, counted exactly: a soft-deleted page, a note
+   * posted as an article and the draft of an existing article are left out.
+   * A page and a draft sharing a number are both walked across a page
+   * boundary, neither skipped nor repeated. Mutants: the deleted or the
+   * external filter removed, the latest draft type accepted, or the cursor
+   * compared on the id alone, fail it.
+   */
+  @Test
+  public void testArticleRefsWalkPagesThenDraftsByKeyset() {
+    List<MetadataItem> items = List.of(articleItem(NewsService.NEWS_METADATA_PAGE_OBJECT_TYPE, "42", Map.of(NEWS_DELETED, "false")),
+                                       articleItem(NewsService.NEWS_METADATA_PAGE_OBJECT_TYPE, "43", Map.of(NEWS_DELETED, "true")),
+                                       articleItem(NewsService.NEWS_METADATA_PAGE_OBJECT_TYPE, "44", Map.of(EXTERNAL_PAGE, "true")),
+                                       articleItem(NewsService.NEWS_METADATA_PAGE_OBJECT_TYPE, "7", Map.of()),
+                                       articleItem(NewsService.NEWS_METADATA_DRAFT_OBJECT_TYPE, "42", Map.of()),
+                                       articleItem(NewsService.NEWS_METADATA_LATEST_DRAFT_OBJECT_TYPE, "45", Map.of()),
+                                       articleItem(NewsService.NEWS_METADATA_DRAFT_OBJECT_TYPE, "5", Map.of()));
+    when(metadataService.getMetadataItemsByFilter(any(MetadataFilter.class), eq(0L), eq(0L))).thenReturn(items);
+
+    assertEquals(4, newsService.countArticles("3"));
+    List<ArticleRef> first = newsService.getArticleRefs("3", null, 2);
+    assertEquals(List.of(new ArticleRef("7", false), new ArticleRef("42", false)), first);
+    List<ArticleRef> second = newsService.getArticleRefs("3", first.get(1), 2);
+    assertEquals(List.of(new ArticleRef("5", true), new ArticleRef("42", true)), second);
+    assertEquals(List.of(), newsService.getArticleRefs("3", second.get(1), 2));
+    assertEquals(List.of(new ArticleRef("42", true)), newsService.getArticleRefs("3", new ArticleRef("5", true), 5));
+
+    ArgumentCaptor<MetadataFilter> filter = ArgumentCaptor.forClass(MetadataFilter.class);
+    verify(metadataService, atLeast(1)).getMetadataItemsByFilter(filter.capture(), eq(0L), eq(0L));
+    assertEquals(List.of(3L), filter.getValue().getMetadataSpaceIds());
+    assertFalse(filter.getValue().getMetadataObjectTypes().contains(NewsService.NEWS_METADATA_LATEST_DRAFT_OBJECT_TYPE));
+    assertEquals(0, newsService.countArticles("not-a-number"));
+  }
+
+  /**
+   * A chain keeps the most recent {@code ORIGIN_CHAIN_MAX} entries, the
+   * replaced object first, and a stored entry that is not a typed numeric id
+   * is dropped. Mutants: the cap removed, the oldest kept instead of the
+   * newest, or the type prefix ignored, fail it.
+   */
+  @Test
+  public void testOriginChainKeepsTheMostRecentEntries() {
+    String longChain = java.util.stream.IntStream.rangeClosed(1, 25)
+                                                 .mapToObj(index -> (index % 2 == 0 ? "draft:" : "page:") + index)
+                                                 .collect(java.util.stream.Collectors.joining(";"));
+    List<ArticleRef> chain = NewsService.parseOriginChain(NewsService.extendOriginChain(new ArticleRef("100", true), longChain));
+    assertEquals(NewsService.ORIGIN_CHAIN_MAX, chain.size());
+    assertEquals(new ArticleRef("100", true), chain.get(0));
+    assertEquals(new ArticleRef("1", false), chain.get(1));
+    assertEquals(new ArticleRef("19", false), chain.get(19));
+
+    assertEquals(List.of(new ArticleRef("4", false), new ArticleRef("6", true)),
+                 NewsService.parseOriginChain("page:4;x:5;draft:6;draft:abc;7"));
+    assertEquals(List.of(), NewsService.parseOriginChain(null));
+  }
+
+  /**
+   * Each live article of a space comes with its past objects, read from its
+   * own item, in the keyset order; a deleted page's chain is not offered.
+   * Mutant: the chain read from another item, or a deleted page listed, fail
+   * it.
+   */
+  @Test
+  public void testArticleOriginsMapEachLiveArticleToItsPast() {
+    List<MetadataItem> items = List.of(articleItem(NewsService.NEWS_METADATA_PAGE_OBJECT_TYPE,
+                                                   "12",
+                                                   Map.of(NewsService.ORIGIN_CHAIN, "draft:8;page:7;draft:5")),
+                                       articleItem(NewsService.NEWS_METADATA_PAGE_OBJECT_TYPE,
+                                                   "7",
+                                                   Map.of(NEWS_DELETED, "true", NewsService.ORIGIN_CHAIN, "draft:5")),
+                                       articleItem(NewsService.NEWS_METADATA_DRAFT_OBJECT_TYPE, "9", Map.of()));
+    when(metadataService.getMetadataItemsByFilter(any(MetadataFilter.class), eq(0L), eq(0L))).thenReturn(items);
+
+    Map<ArticleRef, List<ArticleRef>> origins = newsService.getArticleOrigins("3");
+
+    assertEquals(List.of(new ArticleRef("12", false), new ArticleRef("9", true)), List.copyOf(origins.keySet()));
+    assertEquals(List.of(new ArticleRef("8", true), new ArticleRef("7", false), new ArticleRef("5", true)),
+                 origins.get(new ArticleRef("12", false)));
+    assertEquals(List.of(), origins.get(new ArticleRef("9", true)));
+  }
+
+  /**
+   * The draft of a new article is read whoever asks; a notes draft with no
+   * article item, the draft of an existing article and an unknown or
+   * malformed id read nothing. Mutants: the item check or the target page
+   * check removed fail it.
+   */
+  @Test
+  public void testDraftArticleIsReadOnlyForTheDraftOfANewArticle() {
+    Space space = mockSpace();
+    DraftPage draft = new DraftPage();
+    draft.setId("5");
+    draft.setTitle("draft title");
+    draft.setOwner("mary");
+    draft.setWikiOwner(space.getGroupId());
+    when(noteService.getDraftNoteById("5")).thenReturn(draft);
+    DraftPage notesDraft = new DraftPage();
+    notesDraft.setId("6");
+    notesDraft.setWikiOwner(space.getGroupId());
+    when(noteService.getDraftNoteById("6")).thenReturn(notesDraft);
+    DraftPage latestDraft = new DraftPage();
+    latestDraft.setId("7");
+    latestDraft.setTargetPageId("9");
+    latestDraft.setWikiOwner(space.getGroupId());
+    when(noteService.getDraftNoteById("7")).thenReturn(latestDraft);
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class), any(MetadataObject.class))).thenAnswer(invocation -> {
+      MetadataObject object = invocation.getArgument(1);
+      return NewsService.NEWS_METADATA_DRAFT_OBJECT_TYPE.equals(object.getType()) && !"6".equals(object.getId()) ? List.of(mock(MetadataItem.class))
+                                                                                                                 : List.of();
+    });
+
+    News article = newsService.getDraftArticleById("5");
+
+    assertEquals("5", article.getId());
+    assertEquals("draft title", article.getTitle());
+    assertEquals("mary", article.getOwner());
+    assertEquals("1", article.getSpaceId());
+    assertEquals(DRAFT, article.getPublicationState());
+    assertNull(newsService.getDraftArticleById("6"));
+    assertNull(newsService.getDraftArticleById("7"));
+    assertNull(newsService.getDraftArticleById("40"));
+    assertNull(newsService.getDraftArticleById("draft-5"));
+    assertNull(newsService.getDraftArticleById(null));
+  }
+
+  /**
+   * @param objectType the item's object type
+   * @param objectId the item's object id
+   * @param properties its properties
+   * @return a news metadata item of space 3
+   */
+  private static MetadataItem articleItem(String objectType, String objectId, Map<String, String> properties) {
+    MetadataItem item = new MetadataItem();
+    item.setObjectType(objectType);
+    item.setObjectId(objectId);
+    item.setProperties(properties);
+    return item;
+  }
+
+  /**
+   * @return the data of the last {@code content.update.permissions} broadcast
+   */
+  @SuppressWarnings("unchecked")
+  private Map<String, Object> capturePermissionsData() {
+    ArgumentCaptor<Object> data = ArgumentCaptor.forClass(Object.class);
+    NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.UPDATE_CONTENT_PERMISSIONS), any(), data.capture()), atLeast(1));
+    return (Map<String, Object>) data.getValue();
+  }
+
+  /**
+   * @param draftId the id the article is posted with
+   * @return an article of space 1 posted with that id
+   */
+  private News newArticle(String draftId) {
+    News article = new News();
+    article.setId(draftId);
+    article.setSpaceId("1");
+    article.setTitle("title");
+    article.setBody("body");
+    article.setAuthor("john");
+    article.setPublicationState(POSTED);
+    return article;
+  }
+
+  /**
+   * Stubs the space's wiki and its « Articles » root page.
+   *
+   * @param space the article's space
+   */
+  private void mockArticlesRoot(Space space) {
+    Wiki wiki = mock(Wiki.class);
+    when(wikiService.getWikiByTypeAndOwner(anyString(), anyString())).thenReturn(wiki);
+    Page rootPage = mock(Page.class);
+    when(rootPage.getName()).thenReturn(NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME);
+    when(rootPage.getId()).thenReturn("1");
+    when(noteService.getNoteOfNoteBookByName("group", space.getGroupId(), NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME)).thenReturn(rootPage);
+  }
+
+  /**
+   * Stubs the creation of an article page.
+   *
+   * @param space the article's space
+   * @param pageId the id of the page created
+   */
+  private void mockArticlePageCreation(Space space, String pageId) throws Exception {
+    mockArticlesRoot(space);
+    Page createdPage = new Page();
+    createdPage.setId(pageId);
+    when(noteService.createNote(any(Wiki.class), anyString(), any(Page.class), any(Identity.class), anyBoolean())).thenReturn(createdPage);
+    PageVersion pageVersion = mock(PageVersion.class);
+    when(pageVersion.getId()).thenReturn(pageId + "0");
+    when(noteService.getPublishedVersionByPageIdAndLang(Long.parseLong(pageId), null)).thenReturn(pageVersion);
+    when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(new org.exoplatform.social.core.identity.model.Identity("1"));
+  }
+
+  /**
+   * @return the properties the last created {@code newsPage} item was stored
+   *         with
+   */
+  private Map<String, String> capturePageProperties() throws Exception {
+    ArgumentCaptor<Map<String, String>> properties = ArgumentCaptor.forClass(Map.class);
+    verify(metadataService, atLeast(1)).createMetadataItem(any(NewsPageObject.class),
+                                                           any(MetadataKey.class),
+                                                           properties.capture(),
+                                                           anyLong(),
+                                                           anyBoolean());
+    return properties.getValue();
   }
 
   private Space mockSpace() {
