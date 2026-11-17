@@ -86,6 +86,12 @@ public class NewsUtils {
 
   public static final String UNSCHEDULE_NEWS                 = "exo.news.unscheduleArticle";
 
+  /**
+   * Broadcast when an article is stored under another object, with an
+   * {@link io.meeds.content.news.model.ArticleIdChange} as data.
+   */
+  public static final String ARTICLE_ID_CHANGED              = "content.article.id.changed";
+
   public static final String NEWS_METADATA_OBJECT_TYPE       = "news";
 
   public static final String DISPLAYED_STATUS                = "displayed";
