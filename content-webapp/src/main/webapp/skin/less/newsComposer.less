@@ -19,7 +19,7 @@
  */
  
 @import "./variables.less";
-@grayDark: #333;
+@grayDark: var(--allPagesDarkGrey, #333);
 
 .newsComposer {
   #form_msg_error {
@@ -96,7 +96,7 @@
   .newsComposerToolbar {
     width: 100%;
     z-index: 10;
-    background-color: #FFFFFF;
+    background-color: var(--allPagesBaseBackground, #FFFFFF);
 
     .selectMenuClass{
       padding-top: 5px;
@@ -202,7 +202,7 @@
 
     .cke_toolbox {
       flex-flow: wrap;
-      background-color: #fafafa;
+      background-color: var(--skinGreyLighten4, #fafafa);
       border-bottom: 0;
     }
 
@@ -215,7 +215,7 @@
     padding: 2px 0;
     overflow: auto;
     z-index: 5;
-    background-color: #eeeeee;
+    background-color: var(--skinGreyLighten3, #eeeeee);
 
     .newsTitle {
       border-bottom: solid 1px @greyColorDefault !important;
@@ -257,7 +257,7 @@
             margin-bottom: 0px;
 
             &.imageUploaded {
-              background-color: #fff;
+              background-color: var(--allPagesBaseBackground, #fff);
               display: none;
             }
 
@@ -270,7 +270,7 @@
                 top: 11px;
                 left: -20px ~'; /** orientation=lt */ ';
                 right: -20px ~'; /** orientation=rt */ ';
-                color: #e1e8ee;
+                color: var(--skinGreyLighten2, #e1e8ee);
                 border-radius: 50%;
                 background-color: #abb6c7;
                 border: 1px solid #abb6c7;
@@ -309,7 +309,7 @@
         }
 
         .uiIconIllustrationUpload:before {
-          color: #e1e8ee;
+          color: var(--skinGreyLighten2, #e1e8ee);
           font-size: 50px;
           content: "\ea08";
         }
