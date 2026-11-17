@@ -148,6 +148,7 @@
             <extension-registry-components
               v-if="mdAndDown"
               v-show="!hideElementsForSavingPDF"
+              :key="eventExtensionsKey"
               :params="contentDetailsExtensionsParams"
               name="ContentDetails"
               type="content-event-detail"
@@ -162,6 +163,7 @@
           <extension-registry-components
             v-if="!mdAndDown"
             v-show="!hideElementsForSavingPDF"
+            :key="eventExtensionsKey"
             :params="contentDetailsExtensionsParams"
             name="ContentDetails"
             type="content-event-detail"
@@ -248,11 +250,21 @@ export default {
     this.$root.$on('update-news-summary', this.setNewsSummary);
     this.$root.$on('update-news-body', this.setNewsContent);
   },
+  beforeDestroy() {
+    this.$root.$off('update-news-title', this.setNewsTitle);
+    this.$root.$off('update-news-summary', this.setNewsSummary);
+    this.$root.$off('update-news-body', this.setNewsContent);
+  },
   computed: {
     contentDetailsExtensionsParams() {
       return {
         eventId: this.news?.parameters?.eventId
       };
+    },
+    eventExtensionsKey() {
+      // extension-registry-components evaluates each extension's isEnabled(params)
+      // only when it is created: recreate it when the article's event changes.
+      return `content-event-detail-${this.contentDetailsExtensionsParams.eventId || ''}`;
     },
     showUpdaterInfo() {
       return !this.isPublicAccess && !this.hideAuthor;

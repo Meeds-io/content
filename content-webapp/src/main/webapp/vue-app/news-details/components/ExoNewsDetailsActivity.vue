@@ -93,20 +93,25 @@ export default {
       this.selectedTranslation.value = params.get('lang');
     }
     this.originalVersion = { value: '', text: this.$root.$t('article.label.translation.originalVersion') };
-    this.$root.$on('change-article-translation', (lang) => {
-      this.previousSelectedTranslation = this.selectedTranslation.value;
-      this.changeTranslation(lang);
-    });
+    this.$root.$on('change-article-translation', this.handleChangeArticleTranslation);
     this.markAsRead();
-    this.$root.$on('update-content-selected-translation', (translation) => {
-      this.updateSelectedTranslation(translation);
-      this.previousSelectedTranslation = translation.value;
-    });
-    window.addEventListener('popstate', () => {
-      this.handleUrlUpdate();
-    });
+    this.$root.$on('update-content-selected-translation', this.handleUpdateContentSelectedTranslation);
+    window.addEventListener('popstate', this.handleUrlUpdate);
+  },
+  beforeDestroy() {
+    this.$root.$off('change-article-translation', this.handleChangeArticleTranslation);
+    this.$root.$off('update-content-selected-translation', this.handleUpdateContentSelectedTranslation);
+    window.removeEventListener('popstate', this.handleUrlUpdate);
   },
   methods: {
+    handleChangeArticleTranslation(lang) {
+      this.previousSelectedTranslation = this.selectedTranslation.value;
+      this.changeTranslation(lang);
+    },
+    handleUpdateContentSelectedTranslation(translation) {
+      this.updateSelectedTranslation(translation);
+      this.previousSelectedTranslation = translation.value;
+    },
     handleUrlUpdate() {
       const url = new URL(window.location.href);
       const params = new URLSearchParams(url.search);
