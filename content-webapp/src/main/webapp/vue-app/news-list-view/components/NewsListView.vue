@@ -192,7 +192,7 @@ export default {
       };
     },
     hideEmptyNewsTemplate() {
-      return this.selectedViewExtension?.id === 'NewsEmptyTemplate' && !this.canManageNewsList && !this.canCreateNews;
+      return this.selectedViewExtension?.id === 'NewsEmptyTemplate' && !this.canManageNewsList && !this.canAddArticle;
     },
     newsListViewClass() {
       let newsListViewClass = 'list-view-card';
@@ -216,6 +216,9 @@ export default {
     },
     canCreateNews() {
       return this.$root.canCreateNews;
+    },
+    canAddArticle() {
+      return this.canCreateNews && this.articlesSourceOption !== 'target';
     },
     canCreateNewsTarget() {
       return this.$root.canCreateNewsTarget;

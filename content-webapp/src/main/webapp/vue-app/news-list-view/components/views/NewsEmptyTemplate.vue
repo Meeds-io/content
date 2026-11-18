@@ -38,7 +38,7 @@
         </v-sheet>
         <div class="d-flex flex-grow-1 mb-6 align-center justify-center">
           <v-btn
-            v-if="canCreateNews"
+            v-if="canAddArticle"
             class="btn btn-primary"
             outlined
             @click="openNewsEditor">
@@ -67,8 +67,11 @@ export default {
     canCreateNews() {
       return this.$root.canCreateNews;
     },
+    canAddArticle() {
+      return this.canCreateNews && this.$root.articlesSourceOption !== 'target';
+    },
     displayEmptyTemplateOptions() {
-      return this.canManageNewsList || this.canCreateNews ;
+      return this.canManageNewsList || this.canAddArticle;
     }
   },
   methods: {
