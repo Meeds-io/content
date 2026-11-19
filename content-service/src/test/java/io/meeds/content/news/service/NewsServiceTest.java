@@ -67,6 +67,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.function.Predicate;
 import java.util.Set;
 
 import org.exoplatform.commons.exception.ObjectNotFoundException;
@@ -1929,15 +1930,7 @@ public class NewsServiceTest {
     news.setPublished(true);
     news.setCanPublish(true);
     news.setAudience(NewsUtils.ALL_NEWS_AUDIENCE);
-    MetadataItem newsPageItem = new MetadataItem();
-    newsPageItem.setProperties(new HashMap<>(Map.of(NEWS_ACTIVITIES, "1:38")));
-    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
-                                                             any(MetadataObject.class))).thenReturn(List.of(newsPageItem));
-    org.exoplatform.social.core.identity.model.Identity updaterIdentity =
-                                                                        mock(org.exoplatform.social.core.identity.model.Identity.class);
-    when(updaterIdentity.getId()).thenReturn("1");
-    when(updaterIdentity.getProfile()).thenReturn(mock(Profile.class));
-    when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(updaterIdentity);
+    MetadataItem newsPageItem = mockPostedArticleMetadata(Map.of(NEWS_ACTIVITIES, "1:38"));
     NewsService service = spy(newsService);
     doNothing().when(service).unpublishNews("1", "john", false);
     NEWS_UTILS.clearInvocations();
@@ -1949,8 +1942,105 @@ public class NewsServiceTest {
     NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.UPDATE_CONTENT_PERMISSIONS), any(), any()), atLeastOnce());
     NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.UPDATE_CONTENT_PERMISSIONS),
                                                      any(),
-                                                     argThat((Map<String, Object> data) -> data.get(NewsService.NEWS_AUDIENCE) != null)),
+                                                     permissionsData(data -> data.get(NewsService.NEWS_AUDIENCE) != null)),
                       never());
+  }
+
+  /**
+   * Narrowing a published article's audience from all to its space sends the
+   * space audience for each translation too, whose attachments and images a
+   * publication to all opened to "any"
+   */
+  @Test
+  public void testNarrowingTheAudienceToTheSpaceSendsItForEachTranslation() throws Exception {
+    updateThePublishedArticleAudience(NewsUtils.ALL_NEWS_AUDIENCE, NewsUtils.SPACE_NEWS_AUDIENCE);
+
+    NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.UPDATE_CONTENT_PERMISSIONS),
+                                                     any(),
+                                                     permissionsData(data -> "21".equals(data.get("entityId"))
+                                                         && NewsUtils.SPACE_NEWS_AUDIENCE.equals(data.get(NewsService.NEWS_AUDIENCE)))),
+                      times(1));
+  }
+
+  /**
+   * An update that keeps the space audience narrows nothing: the translations'
+   * permissions are left to the events that changed them
+   */
+  @Test
+  public void testAnUpdateKeepingTheSpaceAudienceSendsNothingForTheTranslations() throws Exception {
+    updateThePublishedArticleAudience(NewsUtils.SPACE_NEWS_AUDIENCE, NewsUtils.SPACE_NEWS_AUDIENCE);
+
+    NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.UPDATE_CONTENT_PERMISSIONS), any(), any()), atLeastOnce());
+    NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.UPDATE_CONTENT_PERMISSIONS),
+                                                     any(),
+                                                     permissionsData(data -> "21".equals(data.get("entityId")))),
+                      never());
+  }
+
+  /**
+   * Matches the data of a permissions event, a map, against the predicate;
+   * the data of the other events an update broadcasts is never a map
+   */
+  private static Object permissionsData(Predicate<Map<?, ?>> predicate) {
+    return argThat(data -> data instanceof Map<?, ?> map && predicate.test(map));
+  }
+
+  /**
+   * An update of an article that stays published to all narrows nothing: its
+   * translations keep the "any" READ entry its readers outside the space use
+   */
+  @Test
+  public void testAnUpdateKeepingTheAllAudienceSendsNothingForTheTranslations() throws Exception {
+    updateThePublishedArticleAudience(NewsUtils.ALL_NEWS_AUDIENCE, NewsUtils.ALL_NEWS_AUDIENCE);
+
+    NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.UPDATE_CONTENT_PERMISSIONS), any(), any()), atLeastOnce());
+    NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.UPDATE_CONTENT_PERMISSIONS),
+                                                     any(),
+                                                     permissionsData(data -> "21".equals(data.get("entityId")))),
+                      never());
+  }
+
+  /**
+   * Updates, with the requested audience, an article published and posted,
+   * whose stored audience is the given one and which has a french translation
+   * whose version is "21"
+   */
+  private void updateThePublishedArticleAudience(String storedAudience, String requestedAudience) throws Exception {
+    News news = mockUpdatableArticle();
+    news.setPublished(true);
+    news.setCanPublish(true);
+    news.setAudience(requestedAudience);
+    mockPostedArticleMetadata(Map.of(NEWS_ACTIVITIES, "1:38", NewsService.NEWS_AUDIENCE, storedAudience));
+    News frenchTranslation = new News();
+    frenchTranslation.setId("1");
+    frenchTranslation.setSpaceId("1");
+    frenchTranslation.setLang("fr");
+    frenchTranslation.setPublicationState(POSTED);
+    frenchTranslation.setLatestVersionId("21");
+    frenchTranslation.setBody("<p>corps</p>");
+    NewsService service = spy(newsService);
+    doReturn(List.of("fr")).when(service).getArticleLanguages("1", false);
+    doReturn(frenchTranslation).when(service).getNewsArticleByIdAndLang("1", "fr");
+    NEWS_UTILS.clearInvocations();
+
+    service.updateNews(news, "john", null, true, ARTICLE.name().toLowerCase(), POSTING_AND_PUBLISHING.name());
+  }
+
+  /**
+   * The news metadata item of an article posted in its space, holding the
+   * given properties, and an updater whose profile the publishing update reads
+   */
+  private MetadataItem mockPostedArticleMetadata(Map<String, String> properties) {
+    MetadataItem newsPageItem = new MetadataItem();
+    newsPageItem.setProperties(new HashMap<>(properties));
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+                                                             any(MetadataObject.class))).thenReturn(List.of(newsPageItem));
+    org.exoplatform.social.core.identity.model.Identity updaterIdentity =
+                                                                        mock(org.exoplatform.social.core.identity.model.Identity.class);
+    when(updaterIdentity.getId()).thenReturn("1");
+    when(updaterIdentity.getProfile()).thenReturn(mock(Profile.class));
+    when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(updaterIdentity);
+    return newsPageItem;
   }
 
   @Test
