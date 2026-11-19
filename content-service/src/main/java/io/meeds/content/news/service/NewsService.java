@@ -381,6 +381,10 @@ public class NewsService {
         publishNews(news, updater);
       } else {
         unpublishNews(newsId, updater, false);
+        // unpublishNews removed the stored audience: the article update below
+        // must neither store the request's audience again nor send it to the
+        // permissions listener, which would give "any" READ back
+        news.setAudience(null);
       }
     }
     if (publish == news.isPublished() && news.isPublished() && canPublish) {
@@ -554,8 +558,19 @@ public class NewsService {
         newsMetadataItem.setUpdatedDate(updatedDate.getTime());
         String publisherId = identityManager.getOrCreateUserIdentity(publisher).getId();
         metadataService.updateMetadataItem(newsMetadataItem, Long.parseLong(publisherId), false);
-        // Update content permissions
+        // An unpublished article is no longer read by all: the space audience
+        // makes the permissions listener remove the "any" READ entry that a
+        // publication to all gave the attachments and images of the latest
+        // version of its default language and of each translation
+        news.setAudience(NewsUtils.SPACE_NEWS_AUDIENCE);
         updateArticlePermissions(List.of(space), news, publisher);
+        for (String lang : getArticleLanguages(newsId, false)) {
+          News translation = getNewsArticleByIdAndLang(newsId, lang);
+          if (translation != null) {
+            translation.setAudience(NewsUtils.SPACE_NEWS_AUDIENCE);
+            updateArticlePermissions(List.of(space), translation, publisher);
+          }
+        }
       }
     }
   }
