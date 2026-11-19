@@ -33,6 +33,7 @@ import static io.meeds.content.news.utils.NewsUtils.NewsObjectType.ARTICLE;
 import static io.meeds.content.news.utils.NewsUtils.NewsObjectType.LATEST_DRAFT;
 import static io.meeds.content.news.utils.NewsUtils.NewsUpdateType.CATEGORIES;
 import static io.meeds.content.news.utils.NewsUtils.NewsUpdateType.CONTENT_AND_TITLE;
+import static io.meeds.content.news.utils.NewsUtils.NewsUpdateType.POSTING_AND_PUBLISHING;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -88,6 +89,7 @@ import org.exoplatform.portal.config.UserACL;
 import org.exoplatform.portal.config.model.PortalConfig;
 import org.exoplatform.services.security.ConversationState;
 import org.exoplatform.services.security.Identity;
+import org.exoplatform.social.core.identity.model.Profile;
 import org.exoplatform.social.core.manager.ActivityManager;
 import org.exoplatform.social.core.manager.IdentityManager;
 import org.exoplatform.social.core.space.model.Space;
@@ -1849,6 +1851,106 @@ public class NewsServiceTest {
     service.unpublishNews("12", "mary", false);
 
     assertPermissionsEventNames("mary");
+  }
+
+  /**
+   * Unpublishing an article published to all sends the space audience, on
+   * which the ecms permissions listener removes the "any" READ entry of the
+   * attachments, never "all", on which it would grant that entry again
+   */
+  @Test
+  public void testUnpublishSendsTheSpaceAudienceInThePermissionsEvent() throws Exception {
+    NewsService service = actingUserService();
+    News publishedToAll = authoredArticle();
+    publishedToAll.setAudience(NewsUtils.ALL_NEWS_AUDIENCE);
+    doReturn(publishedToAll).when(service).getNewsArticleById("12");
+
+    service.unpublishNews("12", "mary", false);
+
+    NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.UPDATE_CONTENT_PERMISSIONS),
+                                                     any(),
+                                                     argThat((Map<String, Object> data) -> NewsUtils.SPACE_NEWS_AUDIENCE.equals(data.get(NewsService.NEWS_AUDIENCE)))),
+                      times(1));
+    NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.UPDATE_CONTENT_PERMISSIONS),
+                                                     any(),
+                                                     argThat((Map<String, Object> data) -> !NewsUtils.SPACE_NEWS_AUDIENCE.equals(data.get(NewsService.NEWS_AUDIENCE)))),
+                      never());
+  }
+
+  /**
+   * A translation written while the article was published to all gave "any"
+   * READ to its own attachments and images: the unpublish sends the space
+   * audience, with the article's space, for each translation's version as
+   * well as for the default one
+   */
+  @Test
+  public void testUnpublishSendsTheSpaceAudienceForEachTranslation() throws Exception {
+    NewsService service = actingUserService();
+    News publishedToAll = authoredArticle();
+    publishedToAll.setAudience(NewsUtils.ALL_NEWS_AUDIENCE);
+    publishedToAll.setLatestVersionId("20");
+    doReturn(publishedToAll).when(service).getNewsArticleById("12");
+    News frenchTranslation = authoredArticle();
+    frenchTranslation.setLang("fr");
+    frenchTranslation.setAudience(NewsUtils.ALL_NEWS_AUDIENCE);
+    frenchTranslation.setLatestVersionId("21");
+    doReturn(List.of("fr")).when(service).getArticleLanguages("12", false);
+    doReturn(frenchTranslation).when(service).getNewsArticleByIdAndLang("12", "fr");
+
+    service.unpublishNews("12", "mary", false);
+
+    for (String versionId : List.of("20", "21")) {
+      NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.UPDATE_CONTENT_PERMISSIONS),
+                                                       any(),
+                                                       argThat((Map<String, Object> data) -> versionId.equals(data.get("entityId"))
+                                                           && NewsUtils.SPACE_NEWS_AUDIENCE.equals(data.get(NewsService.NEWS_AUDIENCE))
+                                                           && data.get("spaces") instanceof List<?> spaces
+                                                           && spaces.stream()
+                                                                    .map(space -> ((Space) space).getGroupId())
+                                                                    .toList()
+                                                                    .equals(List.of("/spaces/engineering")))),
+                        times(1));
+    }
+    NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.UPDATE_CONTENT_PERMISSIONS),
+                                                     any(),
+                                                     argThat((Map<String, Object> data) -> !NewsUtils.SPACE_NEWS_AUDIENCE.equals(data.get(NewsService.NEWS_AUDIENCE)))),
+                      never());
+  }
+
+  /**
+   * The publication drawer unpublishes through an update that still carries
+   * the stored audience: once unpublishNews has removed it, the article update
+   * neither stores "all" again nor sends it to the permissions listener, which
+   * would give the attachments their "any" READ entry back
+   */
+  @Test
+  public void testUnpublishThroughTheUpdateNeitherStoresNorSendsTheRequestAudience() throws Exception {
+    News news = mockUpdatableArticle();
+    news.setPublished(true);
+    news.setCanPublish(true);
+    news.setAudience(NewsUtils.ALL_NEWS_AUDIENCE);
+    MetadataItem newsPageItem = new MetadataItem();
+    newsPageItem.setProperties(new HashMap<>(Map.of(NEWS_ACTIVITIES, "1:38")));
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+                                                             any(MetadataObject.class))).thenReturn(List.of(newsPageItem));
+    org.exoplatform.social.core.identity.model.Identity updaterIdentity =
+                                                                        mock(org.exoplatform.social.core.identity.model.Identity.class);
+    when(updaterIdentity.getId()).thenReturn("1");
+    when(updaterIdentity.getProfile()).thenReturn(mock(Profile.class));
+    when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(updaterIdentity);
+    NewsService service = spy(newsService);
+    doNothing().when(service).unpublishNews("1", "john", false);
+    NEWS_UTILS.clearInvocations();
+
+    service.updateNews(news, "john", null, false, ARTICLE.name().toLowerCase(), POSTING_AND_PUBLISHING.name());
+
+    verify(service).unpublishNews("1", "john", false);
+    assertFalse(newsPageItem.getProperties().containsKey(NewsService.NEWS_AUDIENCE));
+    NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.UPDATE_CONTENT_PERMISSIONS), any(), any()), atLeastOnce());
+    NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.UPDATE_CONTENT_PERMISSIONS),
+                                                     any(),
+                                                     argThat((Map<String, Object> data) -> data.get(NewsService.NEWS_AUDIENCE) != null)),
+                      never());
   }
 
   @Test
