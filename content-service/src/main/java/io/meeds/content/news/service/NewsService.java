@@ -564,13 +564,7 @@ public class NewsService {
         // version of its default language and of each translation
         news.setAudience(NewsUtils.SPACE_NEWS_AUDIENCE);
         updateArticlePermissions(List.of(space), news, publisher);
-        for (String lang : getArticleLanguages(newsId, false)) {
-          News translation = getNewsArticleByIdAndLang(newsId, lang);
-          if (translation != null) {
-            translation.setAudience(NewsUtils.SPACE_NEWS_AUDIENCE);
-            updateArticlePermissions(List.of(space), translation, publisher);
-          }
-        }
+        updateTranslationsPermissionsForSpaceAudience(List.of(space), newsId, publisher);
       }
     }
   }
@@ -2495,8 +2489,11 @@ public class NewsService {
                                                            .stream()
                                                            .findFirst()
                                                            .orElse(null);
+      boolean audienceNarrowedToSpace = false;
       if (existingPageMetadataItem != null) {
         Map<String, String> newsPageProperties = existingPageMetadataItem.getProperties();
+        audienceNarrowedToSpace = NewsUtils.ALL_NEWS_AUDIENCE.equals(newsPageProperties.get(NEWS_AUDIENCE))
+            && NewsUtils.SPACE_NEWS_AUDIENCE.equals(news.getAudience());
         if (StringUtils.isNotEmpty(news.getAudience())) {
           newsPageProperties.put(NEWS_AUDIENCE, news.getAudience());
         }
@@ -2557,6 +2554,9 @@ public class NewsService {
           }
         }
         updateArticlePermissions(articleSpaces, news, updater.getUserId());
+        if (audienceNarrowedToSpace) {
+          updateTranslationsPermissionsForSpaceAudience(articleSpaces, newsId, updater.getUserId());
+        }
       }
       return news;
     }
@@ -2918,6 +2918,25 @@ public class NewsService {
       updateContentPermissionEventListenerData.put(NEWS_AUDIENCE, article.getAudience());
     }
     NewsUtils.broadcastEvent(NewsUtils.UPDATE_CONTENT_PERMISSIONS, this, updateContentPermissionEventListenerData);
+  }
+
+  /**
+   * Sends the space audience for the latest version of each translation of an
+   * article, which holds attachments and images of its own: the permissions
+   * listener then removes the "any" READ entry a publication to all gave them.
+   *
+   * @param spaces the spaces the article is read in
+   * @param articleId the identifier of the article's page, never a draft's
+   * @param username the user acting on the article
+   */
+  private void updateTranslationsPermissionsForSpaceAudience(List<Space> spaces, String articleId, String username) {
+    for (String lang : getArticleLanguages(articleId, false)) {
+      News translation = getNewsArticleByIdAndLang(articleId, lang);
+      if (translation != null) {
+        translation.setAudience(NewsUtils.SPACE_NEWS_AUDIENCE);
+        updateArticlePermissions(spaces, translation, username);
+      }
+    }
   }
 
   private void broadcastUnScheduleArticleEvent(News unscheduledArticle, String createdDraftId) {
