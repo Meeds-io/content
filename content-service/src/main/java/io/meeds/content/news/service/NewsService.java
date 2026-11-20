@@ -2543,9 +2543,9 @@ public class NewsService {
         }
       }
       Map<String, String> metadataItemProperties = existingPageMetadataItem.getProperties();
+      List<Space> articleSpaces = new ArrayList<>();
       if (metadataItemProperties.containsKey(NEWS_ACTIVITIES) && metadataItemProperties.get(NEWS_ACTIVITIES) != null) {
         String[] articleActivities = metadataItemProperties.get(NEWS_ACTIVITIES).split(";");
-        List<Space> articleSpaces = new ArrayList<>();
         for (int i = 0; i < articleActivities.length; i++) {
           String sharedInSpaceId = articleActivities[i].split(":")[0];
           Space space = spaceService.getSpaceById(sharedInSpaceId);
@@ -2554,9 +2554,17 @@ public class NewsService {
           }
         }
         updateArticlePermissions(articleSpaces, news, updater.getUserId());
-        if (audienceNarrowedToSpace) {
-          updateTranslationsPermissionsForSpaceAudience(articleSpaces, newsId, updater.getUserId());
+      }
+      if (audienceNarrowedToSpace) {
+        if (articleSpaces.isEmpty()) {
+          // An article not posted yet, a scheduled one, has no activity: its
+          // translations are read in the space its page belongs to
+          Space space = spaceService.getSpaceByGroupId(existingPage.getWikiOwner());
+          if (space != null) {
+            articleSpaces.add(space);
+          }
         }
+        updateTranslationsPermissionsForSpaceAudience(articleSpaces, newsId, updater.getUserId());
       }
       return news;
     }
