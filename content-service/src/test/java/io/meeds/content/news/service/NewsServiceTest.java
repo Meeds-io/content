@@ -1987,6 +1987,32 @@ public class NewsServiceTest {
   }
 
   /**
+   * Narrowing to its space the audience of an article not posted yet, a
+   * scheduled one whose metadata holds no activity, sends the space audience
+   * for each translation too, in the space its page belongs to, never in a
+   * space the request names
+   */
+  @Test
+  public void testNarrowingAnArticleNotPostedYetSendsTheSpaceAudienceForEachTranslation() throws Exception {
+    Space pageSpace = mock(Space.class);
+    when(pageSpace.getId()).thenReturn("7");
+    when(pageSpace.getGroupId()).thenReturn("/space/groupId");
+    when(pageSpace.getAvatarUrl()).thenReturn("space/avatar/url");
+    when(pageSpace.getDisplayName()).thenReturn("spaceDisplayName");
+    when(pageSpace.getVisibility()).thenReturn("public");
+    updateTheArticleAudience(Map.of(NewsService.NEWS_AUDIENCE, NewsUtils.ALL_NEWS_AUDIENCE),
+                             NewsUtils.SPACE_NEWS_AUDIENCE,
+                             () -> when(spaceService.getSpaceByGroupId("/space/groupId")).thenReturn(pageSpace));
+
+    NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.UPDATE_CONTENT_PERMISSIONS),
+                                                     any(),
+                                                     permissionsData(data -> "21".equals(data.get("entityId"))
+                                                         && NewsUtils.SPACE_NEWS_AUDIENCE.equals(data.get(NewsService.NEWS_AUDIENCE))
+                                                         && List.of(pageSpace).equals(data.get("spaces")))),
+                      times(1));
+  }
+
+  /**
    * An update that keeps the space audience narrows nothing: the translations'
    * permissions are left to the events that changed them
    */
@@ -2030,11 +2056,31 @@ public class NewsServiceTest {
    * whose version is "21"
    */
   private void updateThePublishedArticleAudience(String storedAudience, String requestedAudience) throws Exception {
+    updateTheArticleAudience(Map.of(NEWS_ACTIVITIES, "1:38", NewsService.NEWS_AUDIENCE, storedAudience), requestedAudience);
+  }
+
+  /**
+   * Updates, with the requested audience, a published article whose news
+   * metadata holds the given properties and which has a french translation
+   * whose version is "21"
+   */
+  private void updateTheArticleAudience(Map<String, String> metadataProperties, String requestedAudience) throws Exception {
+    updateTheArticleAudience(metadataProperties, requestedAudience, () -> {
+    });
+  }
+
+  /**
+   * Updates the article as {@link #updateTheArticleAudience(Map, String)}
+   * does, running the given stubbing once the article's mocks are in place
+   */
+  private void updateTheArticleAudience(Map<String, String> metadataProperties,
+                                        String requestedAudience,
+                                        Runnable stubbing) throws Exception {
     News news = mockUpdatableArticle();
     news.setPublished(true);
     news.setCanPublish(true);
     news.setAudience(requestedAudience);
-    mockPostedArticleMetadata(Map.of(NEWS_ACTIVITIES, "1:38", NewsService.NEWS_AUDIENCE, storedAudience));
+    mockPostedArticleMetadata(metadataProperties);
     News frenchTranslation = new News();
     frenchTranslation.setId("1");
     frenchTranslation.setSpaceId("1");
@@ -2045,14 +2091,16 @@ public class NewsServiceTest {
     NewsService service = spy(newsService);
     doReturn(List.of("fr")).when(service).getArticleLanguages("1", false);
     doReturn(frenchTranslation).when(service).getNewsArticleByIdAndLang("1", "fr");
+    stubbing.run();
     NEWS_UTILS.clearInvocations();
 
     service.updateNews(news, "john", null, true, ARTICLE.name().toLowerCase(), POSTING_AND_PUBLISHING.name());
   }
 
   /**
-   * The news metadata item of an article posted in its space, holding the
-   * given properties, and an updater whose profile the publishing update reads
+   * The news metadata item of an article, holding the given properties (its
+   * activities among them once it is posted), and an updater whose profile the
+   * publishing update reads
    */
   private MetadataItem mockPostedArticleMetadata(Map<String, String> properties) {
     MetadataItem newsPageItem = new MetadataItem();
