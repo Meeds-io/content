@@ -1947,6 +1947,30 @@ public class NewsServiceTest {
   }
 
   /**
+   * Publishing again through the drawer, once an unpublish removed the stored
+   * audience, stores the audience the request carries: only the unpublish
+   * clears it, and an article stored without an audience is read outside its
+   * space
+   */
+  @Test
+  public void testPublishThroughTheUpdateStoresTheRequestAudience() throws Exception {
+    for (String audience : List.of(NewsUtils.SPACE_NEWS_AUDIENCE, NewsUtils.ALL_NEWS_AUDIENCE)) {
+      News news = mockUpdatableArticle();
+      news.setPublished(false);
+      news.setCanPublish(true);
+      news.setAudience(audience);
+      MetadataItem newsPageItem = mockPostedArticleMetadata(Map.of(NEWS_ACTIVITIES, "1:38"));
+      NewsService service = spy(newsService);
+      doNothing().when(service).publishNews(any(News.class), eq("john"));
+
+      service.updateNews(news, "john", null, true, ARTICLE.name().toLowerCase(), POSTING_AND_PUBLISHING.name());
+
+      verify(service).publishNews(any(News.class), eq("john"));
+      assertEquals(audience, newsPageItem.getProperties().get(NewsService.NEWS_AUDIENCE));
+    }
+  }
+
+  /**
    * Narrowing a published article's audience from all to its space sends the
    * space audience for each translation too, whose attachments and images a
    * publication to all opened to "any"
