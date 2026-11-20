@@ -441,12 +441,16 @@ public class NewsService {
     } else if (ARTICLE.name().equalsIgnoreCase(newsObjectType) && PAGE_REFERENCE.name().equalsIgnoreCase(newsUpdateType)) {
       return updateArticle(news, updaterIdentity, newsUpdateType);
     }
+    boolean unpublish = false;
     if (publish != news.isPublished() && news.isCanPublish()) {
       news.setPublished(publish);
       if (news.isPublished()) {
         publishNews(news, updater);
       } else {
-        unpublishNews(newsId, updater, false);
+        unpublish = true;
+        // The article update below gives its images and attachments to its
+        // spaces only, and the unpublish after it removes the audience
+        news.setAudience(NewsUtils.SPACE_NEWS_AUDIENCE);
       }
     }
     if (publish == news.isPublished() && news.isPublished() && canPublish) {
@@ -464,6 +468,9 @@ public class NewsService {
     // members from notification.
     if (ARTICLE.name().toLowerCase().equals(newsObjectType)) {
       news = updateArticle(news, updaterIdentity, newsUpdateType);
+    }
+    if (unpublish) {
+      unpublishNews(newsId, updater, false);
     }
 
     if (POSTED.equals(news.getPublicationState())) {
@@ -687,8 +694,19 @@ public class NewsService {
         newsMetadataItem.setUpdatedDate(updatedDate.getTime());
         String publisherId = identityManager.getOrCreateUserIdentity(publisher).getId();
         metadataService.updateMetadataItem(newsMetadataItem, Long.parseLong(publisherId), false);
-        // Update content permissions
+        // An unpublished article's images and attachments are readable by its
+        // spaces only, as for an article published to its space
+        news.setAudience(NewsUtils.SPACE_NEWS_AUDIENCE);
         updateArticlePermissions(List.of(space), news);
+        // and so are those of its translations
+        for (String lang : getArticleLanguages(news.getId(), false)) {
+          PageVersion translation = noteService.getPublishedVersionByPageIdAndLang(Long.valueOf(news.getId()), lang);
+          if (translation != null) {
+            news.setLatestVersionId(translation.getId());
+            news.setBody(translation.getContent());
+            updateArticlePermissions(List.of(space), news);
+          }
+        }
       }
     }
   }
