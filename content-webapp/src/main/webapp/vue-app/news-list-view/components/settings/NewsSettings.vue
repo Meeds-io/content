@@ -22,7 +22,7 @@
   <v-sheet 
     v-if="showSettingsContainer"
     min-height="30"
-    class="background-transparent d-flex flex-row align-center text-start px-2">
+    class="hover-swap-parent background-transparent d-flex flex-row align-center text-start px-2">
     <div class="d-flex latestNewsTitleContainer flex-column flex-grow-1 min-width-0 my-1">
       <span
         v-if="showHeader"
@@ -33,8 +33,9 @@
     </div>
     <div v-if="showSeeAll && !hideSeeAllButton" class="d-flex flex-column my-auto me-2">
       <v-btn
-        v-if="$root.canManageNewsList && isHovering"
-        class="primary--text my-auto"
+        v-if="$root.canManageNewsList"
+        :aria-label="$t('news.published.seeAll')"
+        class="hover-swap-alt primary--text my-auto"
         icon
         small
         @click="seeAllNews">
@@ -45,7 +46,9 @@
         </v-icon>
       </v-btn>
       <v-btn
-        v-else-if="!isHovering || !$root.canManageNewsList"
+        :tabindex="$root.canManageNewsList ? '-1' : null"
+        :aria-hidden="$root.canManageNewsList ? 'true' : null"
+        :class="$root.canManageNewsList && 'hover-swap-default'"
         color="primary"
         class="pa-0 text-font-size"
         small
@@ -63,7 +66,7 @@
       <v-btn
         v-if="$root.canManageNewsList && showSettingsIcon"
         :class="classButtonOpenSettings"
-        class="icon-default-color white-background"
+        class="hover-reveal icon-default-color white-background"
         :title="$t('news.list.openSettings.title')"
         :aria-label="$t('news.latest.openSettings')"
         :width="settingButtonSize"
@@ -87,11 +90,6 @@ export default {
     settingButtonSize: {
       type: Number,
       default: null
-    },
-    isHovering: {
-      type: Boolean,
-      required: false,
-      default: true
     },
     hideOpenSettingButton: {
       type: Boolean,
@@ -122,7 +120,7 @@ export default {
       return this.showHeader || this.showSeeAll || this.$root.canManageNewsList ;
     },
     showSettingsIcon() {
-      return this.isHovering && !this.hideOpenSettingButton;
+      return !this.hideOpenSettingButton;
     }
   },
   created() {
