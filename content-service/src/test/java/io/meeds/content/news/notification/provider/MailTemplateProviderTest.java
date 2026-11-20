@@ -49,7 +49,6 @@ import org.exoplatform.commons.notification.impl.NotificationContextImpl;
 import org.exoplatform.commons.notification.template.TemplateUtils;
 import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.commons.utils.HTMLEntityEncoder;
-import org.exoplatform.commons.utils.PropertyManager;
 import org.exoplatform.commons.utils.TimeConvertUtils;
 import org.exoplatform.container.xml.InitParams;
 import org.exoplatform.container.xml.ValueParam;
@@ -74,7 +73,6 @@ public class MailTemplateProviderTest {
 
   private static final MockedStatic<TemplateContext>          TEMPLATE_CONTEXT           = mockStatic(TemplateContext.class);
 
-  private static final MockedStatic<PropertyManager>          PROPERTY_MANAGER           = mockStatic(PropertyManager.class);
 
   private static final MockedStatic<HTMLEntityEncoder>        HTML_ENTITY_ENCODER        = mockStatic(HTMLEntityEncoder.class);
 
@@ -102,7 +100,6 @@ public class MailTemplateProviderTest {
     PLUGIN_KEY.close();
     NOTIFICATION_PLUGIN_UTILS.close();
     TEMPLATE_CONTEXT.close();
-    PROPERTY_MANAGER.close();
     HTML_ENTITY_ENCODER.close();
     NOTIFICATION_MESSAGE_UTILS.close();
     TIME_CONVERT_UTILS.close();
@@ -137,7 +134,6 @@ public class MailTemplateProviderTest {
     when(notification.getValueOwnerParameter("CURRENT_USER")).thenReturn("root");
     when(notification.getValueOwnerParameter("CONTENT_TITLE")).thenReturn("title");
     when(notification.getValueOwnerParameter("CONTENT_SPACE")).thenReturn("space1");
-    PROPERTY_MANAGER.when(() -> PropertyManager.getProperty("gatein.email.domain.url")).thenReturn("http://localhost:8080");
     when(notification.getValueOwnerParameter("CONTENT_SPACE")).thenReturn("space1");
     when(notification.getValueOwnerParameter("CONTEXT")).thenReturn("COMMENT MY NEWS");
     when(notification.getValueOwnerParameter("ACTIVITY_LINK")).thenReturn("http://localhost:8080/portal/intranet/activity?id=39");
@@ -146,7 +142,6 @@ public class MailTemplateProviderTest {
     when(encoder.encode("title")).thenReturn("title");
     when(encoder.encode("space1")).thenReturn("space1");
     when(encoder.encode("jean")).thenReturn("jean");
-    when(encoder.encode("http://localhost:8080/content/images/newsImageDefault.png")).thenReturn("http://localhost:8080/content/images/newsImageDefault.png");
     when(encoder.encode("COMMENT MY NEWS")).thenReturn("COMMENT MY NEWS");
     when(notification.getValueOwnerParameter("read")).thenReturn("true");
     when(notification.getId()).thenReturn("NotifId123");
