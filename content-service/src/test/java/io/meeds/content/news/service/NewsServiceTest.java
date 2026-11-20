@@ -33,6 +33,7 @@ import static io.meeds.content.news.utils.NewsUtils.NewsObjectType.ARTICLE;
 import static io.meeds.content.news.utils.NewsUtils.NewsObjectType.LATEST_DRAFT;
 import static io.meeds.content.news.utils.NewsUtils.NewsUpdateType.CATEGORIES;
 import static io.meeds.content.news.utils.NewsUtils.NewsUpdateType.CONTENT_AND_TITLE;
+import static io.meeds.content.news.utils.NewsUtils.NewsUpdateType.POSTING_AND_PUBLISHING;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -47,6 +48,7 @@ import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
@@ -73,6 +75,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
@@ -322,6 +325,88 @@ public class NewsServiceTest {
     assertEquals(space.getDisplayName(), news.getSpaceDisplayName());
     assertEquals(space.getAvatarUrl(), news.getSpaceAvatarUrl());
     assertEquals("url", news.getUrl());
+  }
+
+  /**
+   * Unpublishing an article published to all users leaves its images and
+   * attachments to its spaces only, as an article published to its space.
+   */
+  @Test
+  public void testUnpublishAnArticlePublishedToAllGivesItsFilesToItsSpacesOnly() throws Exception {
+    Space space = mockSpace();
+    News article = new News();
+    article.setId("1");
+    article.setSpaceId(space.getId());
+    article.setPublicationState("published");
+    article.setLatestVersionId("5");
+    article.setBody("body");
+    article.setAudience(NewsUtils.ALL_NEWS_AUDIENCE);
+    NewsService service = spy(newsService);
+    doReturn(article).when(service).getNewsArticleById("1");
+    MetadataItem metadataItem = mock(MetadataItem.class);
+    Map<String, String> properties = new HashMap<>(Map.of("published", "true", "audience", NewsUtils.ALL_NEWS_AUDIENCE));
+    when(metadataItem.getProperties()).thenReturn(properties);
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+                                                             any(MetadataObject.class))).thenReturn(List.of(metadataItem));
+    org.exoplatform.social.core.identity.model.Identity publisher = mock(org.exoplatform.social.core.identity.model.Identity.class);
+    when(publisher.getId()).thenReturn("1");
+    when(identityManager.getOrCreateUserIdentity("john")).thenReturn(publisher);
+    when(noteService.getPageAvailableTranslationLanguages(1L, false)).thenReturn(List.of("fr"));
+    PageVersion translation = mock(PageVersion.class);
+    when(translation.getId()).thenReturn("7");
+    when(translation.getContent()).thenReturn("corps");
+    when(noteService.getPublishedVersionByPageIdAndLang(1L, "fr")).thenReturn(translation);
+    NEWS_UTILS.clearInvocations();
+
+    service.unpublishNews("1", "john", false);
+
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<Map<String, Object>> eventData = ArgumentCaptor.forClass(Map.class);
+    NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.UPDATE_CONTENT_PERMISSIONS), any(), eventData.capture()),
+                      times(2));
+    Map<String, Object> original = eventData.getAllValues().get(0);
+    assertEquals("5", original.get("entityId"));
+    assertEquals("body", original.get("content"));
+    assertEquals(NewsUtils.SPACE_NEWS_AUDIENCE, original.get("audience"));
+    assertEquals(List.of(space), original.get("spaces"));
+    Map<String, Object> translated = eventData.getAllValues().get(1);
+    assertEquals("7", translated.get("entityId"));
+    assertEquals("corps", translated.get("content"));
+    assertEquals(NewsUtils.SPACE_NEWS_AUDIENCE, translated.get("audience"));
+    assertEquals(List.of(space), translated.get("spaces"));
+    assertEquals("false", properties.get("published"));
+    assertFalse("an unpublished article stores no audience", properties.containsKey("audience"));
+  }
+
+  @Test
+  public void testUnpublishAnArticleFromItsEditorGivesItsFilesToItsSpacesOnly() throws Exception {
+    News news = mockUpdatableArticle();
+    MetadataItem postedArticle = mock(MetadataItem.class);
+    when(postedArticle.getProperties()).thenReturn(new HashMap<>(Map.of("activities", "1:38")));
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+                                                             any(MetadataObject.class))).thenReturn(List.of(postedArticle));
+    news.setPublished(true);
+    news.setCanPublish(true);
+    news.setAudience(NewsUtils.ALL_NEWS_AUDIENCE);
+    org.exoplatform.social.core.identity.model.Identity publisher = mock(org.exoplatform.social.core.identity.model.Identity.class);
+    when(publisher.getId()).thenReturn("1");
+    when(publisher.getProfile()).thenReturn(mock(org.exoplatform.social.core.identity.model.Profile.class));
+    when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(publisher);
+    NewsService service = spy(newsService);
+    doNothing().when(service).unpublishNews("1", "john", false);
+
+    NEWS_UTILS.clearInvocations();
+
+    service.updateNews(news, "john", null, false, ARTICLE.name().toLowerCase(), POSTING_AND_PUBLISHING.name());
+
+    // the unpublish, which removes the stored audience, runs after the article update
+    InOrder order = inOrder(metadataService, service);
+    order.verify(metadataService).updateMetadataItem(eq(postedArticle), anyLong(), anyBoolean());
+    order.verify(service).unpublishNews("1", "john", false);
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<Map<String, Object>> eventData = ArgumentCaptor.forClass(Map.class);
+    NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.UPDATE_CONTENT_PERMISSIONS), any(), eventData.capture()));
+    assertEquals(NewsUtils.SPACE_NEWS_AUDIENCE, eventData.getValue().get("audience"));
   }
 
   @Test
