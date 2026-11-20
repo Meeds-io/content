@@ -34,7 +34,6 @@ import org.exoplatform.commons.api.notification.service.template.TemplateContext
 import org.exoplatform.commons.notification.template.TemplateUtils;
 import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.commons.utils.HTMLEntityEncoder;
-import org.exoplatform.commons.utils.PropertyManager;
 import org.exoplatform.commons.utils.TimeConvertUtils;
 import org.exoplatform.container.PortalContainer;
 import org.exoplatform.container.xml.InitParams;
@@ -83,8 +82,6 @@ public class MailTemplateProvider extends TemplateProvider {
       String contentTitle = notification.getValueOwnerParameter(NotificationConstants.CONTENT_TITLE);
       String contentSpaceName = notification.getValueOwnerParameter(NotificationConstants.CONTENT_SPACE);
       String authorAvatarUrl = notification.getValueOwnerParameter(NotificationConstants.AUTHOR_AVATAR_URL);
-      String baseUrl = PropertyManager.getProperty("gatein.email.domain.url");
-      String illustrationUrl = baseUrl.concat("/content/images/newsImageDefault.png");
       String activityLink = notification.getValueOwnerParameter(NotificationConstants.ACTIVITY_LINK);
       String context = notification.getValueOwnerParameter(NotificationConstants.CONTEXT);
 
@@ -93,7 +90,6 @@ public class MailTemplateProvider extends TemplateProvider {
       templateContext.put(NotificationConstants.CONTENT_SPACE, encoder.encode(contentSpaceName));
       templateContext.put("CONTENT_AUTHOR", encoder.encode(contentAuthor));
       templateContext.put("CURRENT_USER", currentUser);
-      templateContext.put("ILLUSTRATION_URL", encoder.encode(illustrationUrl));
       templateContext.put("AUTHOR_AVATAR_URL", encoder.encode(authorAvatarUrl));
       templateContext.put("CONTEXT", encoder.encode(context));
       StringBuilder activityUrl = new StringBuilder();
