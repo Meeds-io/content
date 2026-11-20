@@ -20,13 +20,9 @@ package io.meeds.content.portlet;
 
 import static io.meeds.content.image.plugin.ImageAttachmentPlugin.OBJECT_TYPE;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.net.URL;
-import java.nio.file.Files;
 import java.util.Collections;
 import java.util.List;
-import java.util.Random;
 
 import javax.portlet.PortletConfig;
 import javax.portlet.PortletException;
@@ -34,34 +30,27 @@ import javax.portlet.PortletPreferences;
 import javax.portlet.RenderRequest;
 import javax.portlet.RenderResponse;
 
-import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import org.exoplatform.container.ExoContainerContext;
 import org.exoplatform.container.configuration.ConfigurationManager;
-import org.exoplatform.services.log.ExoLogger;
-import org.exoplatform.services.log.Log;
 import org.exoplatform.social.attachment.AttachmentService;
 import org.exoplatform.social.attachment.model.ObjectAttachmentDetail;
 import org.exoplatform.social.attachment.model.ObjectAttachmentList;
-import org.exoplatform.social.attachment.model.UploadedAttachmentDetail;
 import org.exoplatform.social.rest.api.RestUtils;
-import org.exoplatform.upload.UploadResource;
 
+import io.meeds.content.image.service.ImageService;
 import io.meeds.social.portlet.CMSPortlet;
 
 import lombok.SneakyThrows;
 
 public class ImagePortlet extends CMSPortlet {
 
-  private static final Log         LOG             = ExoLogger.getLogger(ImagePortlet.class);
-
   public static final String       IMAGE_PATH_PREF = "image-path";
 
-  private static final Random      RANDOM          = new Random();
-
   private static AttachmentService attachmentService;
+
+  private static ImageService      imageService;
 
   @Override
   public void init(PortletConfig config) throws PortletException {
@@ -108,35 +97,12 @@ public class ImagePortlet extends CMSPortlet {
 
   @SneakyThrows
   private void initImageAttachmentContent(String name, String imageContent) {
-    File tempFile = File.createTempFile("image", ".png");
-    try {
-      try (FileOutputStream outputStream = new FileOutputStream(tempFile)) {
-        IOUtils.write(Base64.decodeBase64(imageContent), outputStream);
-      }
-      initImageWithAttachmentFullPath(name, tempFile.getAbsolutePath());
-    } finally {
-      try {
-        Files.delete(tempFile.toPath());
-      } catch (Exception e) {
-        LOG.warn("Error deleting temporary file {}", tempFile.getAbsoluteFile(), e);
-      }
-    }
+    getImageService().importImage(name, imageContent, RestUtils.getCurrentUserIdentityId());
   }
 
   @SneakyThrows
   private void initImageWithAttachmentFullPath(String name, String resourcePath) {
-    String uploadId = "ImagePortlet" + RANDOM.nextLong();
-    UploadResource uploadResource = new UploadResource(uploadId);
-    uploadResource.setFileName(new File(resourcePath).getName());
-    uploadResource.setMimeType("image/png");
-    uploadResource.setStatus(UploadResource.UPLOADED_STATUS);
-    uploadResource.setStoreLocation(resourcePath);
-    UploadedAttachmentDetail uploadedAttachmentDetail = new UploadedAttachmentDetail(uploadResource);
-    getAttachmentService().saveAttachment(uploadedAttachmentDetail,
-                                          OBJECT_TYPE,
-                                          name,
-                                          null,
-                                          RestUtils.getCurrentUserIdentityId());
+    getImageService().importImageFile(name, resourcePath, RestUtils.getCurrentUserIdentityId());
   }
 
   private static AttachmentService getAttachmentService() {
@@ -144,6 +110,13 @@ public class ImagePortlet extends CMSPortlet {
       attachmentService = ExoContainerContext.getService(AttachmentService.class);
     }
     return attachmentService;
+  }
+
+  private static ImageService getImageService() {
+    if (imageService == null) {
+      imageService = ExoContainerContext.getService(ImageService.class);
+    }
+    return imageService;
   }
 
 }
