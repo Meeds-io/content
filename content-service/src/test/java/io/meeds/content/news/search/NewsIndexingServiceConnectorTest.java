@@ -98,6 +98,8 @@ public class NewsIndexingServiceConnectorTest {
     ArgumentCaptor<MetadataFilter> filter = ArgumentCaptor.forClass(MetadataFilter.class);
     // The empty answer after a last page filled to the limit reads nothing again
     verify(metadataService, times(1)).getMetadataItemsByFilter(filter.capture(), eq(0L), eq(0L));
+    assertEquals(NewsService.NEWS_METADATA_NAME, filter.getValue().getMetadataName());
+    assertEquals(NewsService.NEWS_METADATA_TYPE.getName(), filter.getValue().getMetadataTypeName());
     assertEquals(NewsService.NEWS_METADATA_PAGE_OBJECT_TYPE, filter.getValue().getMetadataObjectTypes().get(0));
     assertEquals(NewsService.POSTED, filter.getValue().getMetadataProperties().get(NewsService.NEWS_PUBLICATION_STATE));
     assertEquals("false", filter.getValue().getMetadataProperties().get(NewsService.NEWS_DELETED));
