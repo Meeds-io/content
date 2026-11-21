@@ -1457,6 +1457,126 @@ public class NewsServiceTest {
   }
 
   @Test
+  public void testPostNewsDeletesThePostersOwnDraftOfTheSpace() throws Exception {
+    DraftPage draft = draftOf("john", "/space/groupId");
+
+    postNewsFromDraft(draft);
+
+    verify(noteService, times(1)).removeDraftById("1");
+  }
+
+  @Test
+  public void testPostNewsKeepsTheDraftOfAnotherUser() throws Exception {
+    DraftPage draft = draftOf("mary", "/space/groupId");
+
+    postNewsFromDraft(draft);
+
+    verify(noteService, never()).removeDraftById(anyString());
+  }
+
+  @Test
+  public void testPostNewsKeepsTheDraftOfAnotherSpace() throws Exception {
+    DraftPage draft = draftOf("john", "/space/otherGroupId");
+    Space otherSpace = mock(Space.class);
+    when(otherSpace.getId()).thenReturn("2");
+    postNewsFromDraft(draft, otherSpace);
+
+    verify(noteService, never()).removeDraftById(anyString());
+  }
+
+  @Test
+  public void testPostNewsDeletesTheDraftOfAnotherUserWhenThePosterManagesTheSpace() throws Exception {
+    DraftPage draft = draftOf("mary", "/space/groupId");
+    when(spaceService.isManager(any(Space.class), eq("john"))).thenReturn(true);
+
+    postNewsFromDraft(draft);
+
+    verify(noteService, times(1)).removeDraftById("1");
+  }
+
+  @Test
+  public void testPostNewsCompletesAndKeepsTheDraftThePosterCannotRead() throws Exception {
+    DraftPage draft = draftOf("mary", "/space/groupId");
+
+    News posted = postNewsFromDraft(draft, null, true);
+
+    assertNotNull(posted);
+    verify(noteService, never()).removeDraftById(anyString());
+  }
+
+  @Test
+  public void testPostNewsKeepsADraftOutsideAnySpace() throws Exception {
+    DraftPage draft = draftOf("john", "john");
+
+    News posted = postNewsFromDraft(draft, null, false, () -> when(spaceService.getSpaceByGroupId("john")).thenReturn(null));
+
+    assertNotNull(posted);
+    verify(noteService, never()).removeDraftById(anyString());
+  }
+
+  private DraftPage draftOf(String owner, String wikiOwner) {
+    DraftPage draft = new DraftPage();
+    draft.setId("1");
+    draft.setOwner(owner);
+    draft.setAuthor(owner);
+    draft.setWikiOwner(wikiOwner);
+    return draft;
+  }
+
+  private void postNewsFromDraft(DraftPage draft) throws Exception {
+    postNewsFromDraft(draft, null, false);
+  }
+
+  private void postNewsFromDraft(DraftPage draft, Space draftSpace) throws Exception {
+    postNewsFromDraft(draft, draftSpace, false);
+  }
+
+  private News postNewsFromDraft(DraftPage draft, Space draftSpace, boolean unreadable) throws Exception {
+    return postNewsFromDraft(draft, draftSpace, unreadable, () -> {
+    });
+  }
+
+  private News postNewsFromDraft(DraftPage draft, Space draftSpace, boolean unreadable, Runnable extraStubs) throws Exception {
+    News news = new News();
+    news.setAuthor("john");
+    news.setTitle("title");
+    news.setBody("body");
+    news.setId("1");
+    Identity identity = mockIdentity();
+    Space space = mockSpace();
+    extraStubs.run();
+    if (draftSpace != null) {
+      when(spaceService.getSpaceByGroupId(draft.getWikiOwner())).thenReturn(draftSpace);
+    }
+    when(spaceService.canRedactOnSpace(any(Space.class), any(Identity.class))).thenReturn(true);
+    Wiki wiki = mock(Wiki.class);
+    when(wikiService.getWikiByTypeAndOwner(anyString(), anyString())).thenReturn(wiki);
+    org.exoplatform.wiki.model.Page rootPage = mock(org.exoplatform.wiki.model.Page.class);
+    when(rootPage.getName()).thenReturn(NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME);
+    when(rootPage.getId()).thenReturn("1");
+    when(noteService.getNoteOfNoteBookByName("group",
+                                             space.getGroupId(),
+                                             NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME)).thenReturn(rootPage);
+    Page createdPage = mock(Page.class);
+    when(createdPage.getId()).thenReturn("1");
+    when(noteService.createNote(any(), anyString(), any(Page.class), any(), anyBoolean())).thenReturn(createdPage);
+    PageVersion pageVersion = mock(PageVersion.class);
+    when(noteService.getPublishedVersionByPageIdAndLang(1L, null)).thenReturn(pageVersion);
+    when(pageVersion.getAuthor()).thenReturn("john");
+    when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(new org.exoplatform.social.core.identity.model.Identity("1"));
+    if (unreadable) {
+      when(noteService.getDraftNoteById(anyString(), anyString())).thenThrow(new IllegalAccessException());
+    } else {
+      when(noteService.getDraftNoteById(anyString(), anyString())).thenReturn(draft);
+    }
+    MetadataItem draftItem = mock(MetadataItem.class);
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+                                                             any(MetadataObject.class))).thenReturn(List.of(draftItem));
+
+    return newsService.postNews(news, identity.getUserId());
+  }
+
+  @Test
   public void testRescheduleNewsOfAnArticleWithAnUnknownStoredStateSucceeds() throws Exception {
     News news = mockUpdatableArticle();
     news.setPublicationState(NewsService.STAGED);
