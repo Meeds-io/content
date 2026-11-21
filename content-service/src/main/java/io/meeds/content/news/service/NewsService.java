@@ -260,6 +260,7 @@ public class NewsService {
    * @throws Exception when error
    */
   public News createNews(News news, Identity currentIdentity) throws Exception {
+    checkPublicationState(news);
     Space space = spaceService.getSpaceById(news.getSpaceId());
     try {
       if (!canCreateNews(space, currentIdentity)) {
@@ -361,6 +362,8 @@ public class NewsService {
 
     String newsId = news.getTargetPageId() != null ? news.getTargetPageId() : news.getId();
     News originalNews = getNewsById(newsId, updaterIdentity, false, newsObjectType);
+    // An unchanged stored state sent back by the client is accepted
+    checkPublicationState(news.getPublicationState(), originalNews.getPublicationState());
     List<ArticleTarget> oldTargets = newsTargetingService.getTargetsByNews(news);
     boolean canPublish = NewsUtils.canPublishNews(news.getSpaceId(), updaterIdentity);
     Space space = spaceService.getSpaceById(news.getSpaceId());
@@ -975,6 +978,7 @@ public class NewsService {
    * @throws Exception when error occurs
    */
   public News scheduleNews(News news, Identity currentIdentity, String newsObjectType) throws Exception {
+    checkPublicationState(news);
     if (!canScheduleNews(news.getSpaceId(), currentIdentity, news)) {
       throw new IllegalArgumentException("User " + currentIdentity.getUserId() + " is not authorized to schedule news");
     }
@@ -1077,6 +1081,45 @@ public class NewsService {
   }
 
   /**
+   * @param state publication state
+   * @return true when the state is not empty and is none of {@link #POSTED},
+   *         {@link #STAGED} and {@link #DRAFT}
+   */
+  private static boolean isUnknownPublicationState(String state) {
+    return StringUtils.isNotEmpty(state)
+        && !POSTED.equals(state)
+        && !STAGED.equals(state)
+        && !DRAFT.equals(state);
+  }
+
+  /**
+   * Refuses a news whose publication state, when set, is none of the known ones
+   *
+   * @param news news coming from a client
+   * @throws InvalidPublicationStateException when the state is unknown
+   */
+  private static void checkPublicationState(News news) {
+    if (news != null) {
+      checkPublicationState(news.getPublicationState(), null);
+    }
+  }
+
+  /**
+   * Refuses a publication state that is unknown, unless it is the one already
+   * stored (an unchanged state sent back by a client)
+   *
+   * @param state publication state about to be stored
+   * @param storedState publication state currently stored, if any
+   * @throws InvalidPublicationStateException when the state is unknown and
+   *           differs from the stored one
+   */
+  private static void checkPublicationState(String state, String storedState) {
+    if (isUnknownPublicationState(state) && !state.equals(storedState)) {
+      throw new InvalidPublicationStateException("Unknown news publication state");
+    }
+  }
+
+  /**
    * Checks if the user can view the News
    *
    * @param news {@link News} to check
@@ -1092,6 +1135,11 @@ public class NewsService {
         return false;
       } else if (spaceService.isSuperManager(space, authenticatedUser)) {
         return true;
+      }
+      if (isUnknownPublicationState(news.getPublicationState())) {
+        // Fail closed: only those who can edit the article see an article
+        // whose state is none of the known ones
+        return canEditNews(news, authenticatedUser);
       }
       if (!news.isPublished() && StringUtils.equals(news.getPublicationState(), POSTED)
           && !(spaceService.canViewSpace(space, authenticatedUser) || canViewSharedInSpaces(news, authenticatedUser))) {
@@ -1584,6 +1632,9 @@ public class NewsService {
     MetadataItem existingItem = getArticlePageMetadataItem(article);
 
     if (existingItem != null) {
+      checkPublicationState(properties.get(NEWS_PUBLICATION_STATE),
+                            existingItem.getProperties() == null ? null
+                                                                 : existingItem.getProperties().get(NEWS_PUBLICATION_STATE));
       Map<String, String> mergedProperties = new HashMap<>(existingItem.getProperties());
       mergedProperties.putAll(properties);
       existingItem.setProperties(mergedProperties);
@@ -1738,9 +1789,6 @@ public class NewsService {
     }
     setScheduleProperties(article, newsPageProperties);
 
-    if (StringUtils.isNotEmpty(article.getPublicationState())) {
-      newsPageProperties.put(NEWS_PUBLICATION_STATE, article.getPublicationState());
-    }
     newsPageProperties.put(EXTERNAL_PAGE, String.valueOf(externalPage));
     newsPageProperties.put(NEWS_ACTIVITY_POSTED, String.valueOf(article.isActivityPosted()));
     if (article.getSchedulePostDate() != null && CollectionUtils.isNotEmpty(article.getCategories())) {
@@ -1753,6 +1801,13 @@ public class NewsService {
 
     if (MapUtils.isNotEmpty(article.getParameters())) {
       newsPageProperties.putAll(article.getParameters());
+    }
+    // The article publication state is the stored one; an unknown state is
+    // never stored
+    if (StringUtils.isNotEmpty(article.getPublicationState())) {
+      newsPageProperties.put(NEWS_PUBLICATION_STATE, article.getPublicationState());
+    } else if (isUnknownPublicationState(newsPageProperties.get(NEWS_PUBLICATION_STATE))) {
+      newsPageProperties.remove(NEWS_PUBLICATION_STATE);
     }
     // A brand-new article page is indexed into the notes index immediately
     // by PageIndexingListener.postAddPage - without this, it stays
@@ -2960,4 +3015,16 @@ public class NewsService {
       }
     }
   }
+
+  /**
+   * Thrown when a news is submitted with an unknown publication state
+   */
+  public static class InvalidPublicationStateException extends IllegalArgumentException {
+    private static final long serialVersionUID = 6172440251965318545L;
+
+    public InvalidPublicationStateException(String message) {
+      super(message);
+    }
+  }
+
 }

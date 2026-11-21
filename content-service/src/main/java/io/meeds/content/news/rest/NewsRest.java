@@ -176,6 +176,8 @@ public class NewsRest {
       News createdNews = newsService.createNews(news, currentIdentity);
 
       return ResponseEntity.ok(createdNews);
+    } catch (NewsService.InvalidPublicationStateException e) {
+      return ResponseEntity.badRequest().build();
     } catch (IllegalAccessException e) {
       LOG.warn("User '{}' is not authorized to create news", currentIdentity.getUserId(), e);
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
@@ -264,6 +266,8 @@ public class NewsRest {
                                     newsUpdateType);
 
       return ResponseEntity.ok(news);
+    } catch (NewsService.InvalidPublicationStateException e) {
+      return ResponseEntity.badRequest().build();
     } catch (IllegalAccessException e) {
       LOG.warn("User '{}' is not authorized to update news", currentIdentity.getUserId(), e);
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
@@ -705,6 +709,8 @@ public class NewsRest {
         }
       }
       return ResponseEntity.ok(newsService.scheduleNews(scheduledNews, currentIdentity, newsObjectType));
+    } catch (NewsService.InvalidPublicationStateException e) {
+      return ResponseEntity.badRequest().build();
     } catch (IllegalAccessException e) {
       LOG.warn("User '{}' is not autorized to schedule news", currentIdentity.getUserId(), e);
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
@@ -935,6 +941,8 @@ public class NewsRest {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
       }
       return ResponseEntity.ok(newsService.updateMetadataProperties(articleId, properties, currentUserId));
+    } catch (NewsService.InvalidPublicationStateException e) {
+      return ResponseEntity.badRequest().build();
     } catch (ObjectNotFoundException e) {
       return ResponseEntity.notFound().build();
     } catch (Exception e) {
