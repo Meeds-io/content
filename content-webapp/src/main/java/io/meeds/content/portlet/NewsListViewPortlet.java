@@ -40,10 +40,13 @@ import org.apache.commons.lang3.StringUtils;
 import org.exoplatform.commons.api.settings.SettingService;
 import org.exoplatform.commons.api.settings.SettingValue;
 import org.exoplatform.container.ExoContainerContext;
+import org.exoplatform.services.security.ConversationState;
+import org.exoplatform.services.security.Identity;
 
 import io.meeds.content.news.service.NewsTargetingService;
 import io.meeds.content.news.utils.NewsUtils;
 import io.meeds.content.util.NewsListSettingValues;
+import io.meeds.social.cms.service.CMSService;
 import io.meeds.social.portlet.CMSPortlet;
 
 public class NewsListViewPortlet extends CMSPortlet {
@@ -74,6 +77,8 @@ public class NewsListViewPortlet extends CMSPortlet {
   private TranslationService translationService;
 
   private NewsTargetingService newsTargetingService;
+
+  private CMSService cmsService;
 
   @Override
   public void init(PortletConfig config) throws PortletException {
@@ -130,10 +135,22 @@ public class NewsListViewPortlet extends CMSPortlet {
         && NewsListSettingValues.isKnownTarget(request.getParameter("newsTarget"), getNewsTargetingService());
   }
 
-  // the instance's edit right, the one the view's canEdit applies
+  // the instance's edit right of the current user
   private boolean canEditSettings(PortletPreferences preferences) {
     String name = preferences.getValue(NAME, null);
-    return StringUtils.isNotBlank(name) && canEdit(name, null);
+    if (StringUtils.isBlank(name)) {
+      return false;
+    }
+    ConversationState conversationState = ConversationState.getCurrent();
+    Identity currentIdentity = conversationState == null ? null : conversationState.getIdentity();
+    return getCmsService().hasEditPermission(currentIdentity, contentType, name);
+  }
+
+  private CMSService getCmsService() {
+    if (cmsService == null) {
+      cmsService = ExoContainerContext.getService(CMSService.class);
+    }
+    return cmsService;
   }
 
   private String getOrCreateApplicationId(PortletPreferences preferences) {

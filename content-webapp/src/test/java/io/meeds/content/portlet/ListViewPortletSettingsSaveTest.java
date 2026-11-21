@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.mock;
@@ -152,7 +153,9 @@ class ListViewPortletSettingsSaveTest {
 
   @Test
   void theNewsListSaveIsAcceptedFromAnEditorOfTheInstance() throws Exception {
-    when(cmsService.hasEditPermission(any(), any(), eq(SETTING_NAME))).thenReturn(true);
+    when(cmsService.hasEditPermission(argThat(identity -> identity != null && USERNAME.equals(identity.getUserId())),
+                                      any(),
+                                      eq(SETTING_NAME))).thenReturn(true);
     parameters.put("limit", "6");
 
     new NewsListViewPortlet().processAction(request, mock(ActionResponse.class));
