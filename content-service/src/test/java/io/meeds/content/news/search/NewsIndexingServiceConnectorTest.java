@@ -116,6 +116,23 @@ public class NewsIndexingServiceConnectorTest {
   }
 
   @Test
+  public void testGetAllIdsKeepsListingWhenTheTranslationsOfOneArticleCannotBeRead() {
+    newsIndexingServiceConnector = new NewsIndexingServiceConnector(identityManager,
+                                                                    getParams(),
+                                                                    newsService,
+                                                                    activityManager,
+                                                                    metadataService);
+    when(metadataService.getMetadataItemsByFilter(any(MetadataFilter.class), eq(0L), eq(0L))).thenReturn(List.of(item("1"),
+                                                                                                                  item("2"),
+                                                                                                                  item("3")));
+    when(newsService.getArticleLanguages("1", false)).thenReturn(List.of("fr"));
+    when(newsService.getArticleLanguages("2", false)).thenThrow(new IllegalStateException("translations unreadable"));
+    when(newsService.getArticleLanguages("3", false)).thenReturn(List.of("en"));
+
+    assertEquals(List.of("1", "2", "3", "1-fr", "3-en"), newsIndexingServiceConnector.getAllIds(0, 10));
+  }
+
+  @Test
   public void testGetAllIdsListsAgainWhenAReindexStartsAfterAnInterruptedOne() {
     newsIndexingServiceConnector = new NewsIndexingServiceConnector(identityManager,
                                                                     getParams(),

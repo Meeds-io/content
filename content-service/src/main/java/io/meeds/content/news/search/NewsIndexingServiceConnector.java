@@ -143,9 +143,16 @@ public class NewsIndexingServiceConnector extends ElasticIndexingServiceConnecto
     }
     Set<String> ids = new LinkedHashSet<>(articleIds);
     for (String articleId : articleIds) {
-      List<String> languages = newsService.getArticleLanguages(articleId, false);
-      if (languages != null) {
-        languages.forEach(lang -> ids.add(articleId + "-" + lang));
+      try {
+        List<String> languages = newsService.getArticleLanguages(articleId, false);
+        if (languages != null) {
+          languages.forEach(lang -> ids.add(articleId + "-" + lang));
+        }
+      } catch (Exception e) {
+        // The article stays listed without its translations. A failed database
+        // read marks the reindex transaction rollback-only and still ends the
+        // reindex
+        LOG.warn("Error listing the translations of news '{}', they are not indexed again", articleId, e);
       }
     }
     return new ArrayList<>(ids);
