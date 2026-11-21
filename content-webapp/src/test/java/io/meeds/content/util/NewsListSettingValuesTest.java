@@ -45,6 +45,8 @@ class NewsListSettingValuesTest {
     assertFalse(NewsListSettingValues.isValidLimit("4a"));
     assertFalse(NewsListSettingValues.isValidLimit("2.5"));
     assertFalse(NewsListSettingValues.isValidLimit("99999999999"));
+    assertFalse(NewsListSettingValues.isValidLimit("9999999999"));
+    assertTrue(NewsListSettingValues.isValidLimit("999999999"));
     assertEquals("6", NewsListSettingValues.limitOrDefault("6"));
     assertEquals("250", NewsListSettingValues.limitOrDefault("250"));
     // an invalid stored limit stands for none: the view applies its template's own default
@@ -66,7 +68,7 @@ class NewsListSettingValuesTest {
   }
 
   @Test
-  void targetIsOneOfTheInstanceTargets() {
+  void targetIsAnExistingTarget() {
     NewsTargetingService service = mock(NewsTargetingService.class);
     when(service.isTarget("sliderNews")).thenReturn(true);
 

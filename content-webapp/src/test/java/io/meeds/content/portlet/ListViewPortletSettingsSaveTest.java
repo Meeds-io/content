@@ -28,6 +28,7 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
@@ -76,10 +77,6 @@ class ListViewPortletSettingsSaveTest {
 
   private MockedStatic<ExoContainerContext> containerContext;
 
-  private MockedStatic<SpaceUtils>    spaceUtils;
-
-  private MockedStatic<CommonsUtils>  commonsUtils;
-
   private CMSService                  cmsService;
 
   private PortletPreferences          preferences;
@@ -93,10 +90,6 @@ class ListViewPortletSettingsSaveTest {
     cmsService = mock(CMSService.class);
     containerContext = mockStatic(ExoContainerContext.class);
     containerContext.when(() -> ExoContainerContext.getService(CMSService.class)).thenReturn(cmsService);
-    spaceUtils = mockStatic(SpaceUtils.class);
-    commonsUtils = mockStatic(CommonsUtils.class);
-    commonsUtils.when(() -> CommonsUtils.getService(SpaceService.class)).thenReturn(SPACE_SERVICE);
-    reset(SPACE_SERVICE);
     preferences = mock(PortletPreferences.class);
     when(preferences.getValue(NAME, null)).thenReturn(SETTING_NAME);
     parameters = new HashMap<>();
@@ -110,8 +103,6 @@ class ListViewPortletSettingsSaveTest {
   @AfterEach
   void tearDown() {
     ConversationState.setCurrent(null);
-    commonsUtils.close();
-    spaceUtils.close();
     containerContext.close();
   }
 
@@ -166,19 +157,28 @@ class ListViewPortletSettingsSaveTest {
     verify(preferences).store();
   }
 
+  /**
+   * The save reads the instance's edit right and no separate publish right
+   */
   @Test
   void theNewsListSaveIsRefusedToAPublisherWithoutTheInstanceRight() throws Exception {
     Space space = new Space();
     space.setId(SPACE_ID);
-    spaceUtils.when(SpaceUtils::getSpaceByContext).thenReturn(space);
-    when(SPACE_SERVICE.getSpaceById(SPACE_ID)).thenReturn(space);
-    when(SPACE_SERVICE.canPublishOnSpace(any(), any())).thenReturn(true);
+    reset(SPACE_SERVICE);
+    lenient().when(SPACE_SERVICE.getSpaceById(SPACE_ID)).thenReturn(space);
+    lenient().when(SPACE_SERVICE.canPublishOnSpace(any(), any())).thenReturn(true);
     when(cmsService.hasEditPermission(any(), any(), eq(SETTING_NAME))).thenReturn(false);
     parameters.put("limit", "6");
     NewsListViewPortlet portlet = new NewsListViewPortlet();
     ActionResponse response = mock(ActionResponse.class);
 
-    assertThrows(PortletException.class, () -> portlet.processAction(request, response));
+    try (MockedStatic<SpaceUtils> spaceUtils = mockStatic(SpaceUtils.class);
+        MockedStatic<CommonsUtils> commonsUtils = mockStatic(CommonsUtils.class)) {
+      spaceUtils.when(SpaceUtils::getSpaceByContext).thenReturn(space);
+      commonsUtils.when(() -> CommonsUtils.getService(SpaceService.class)).thenReturn(SPACE_SERVICE);
+
+      assertThrows(PortletException.class, () -> portlet.processAction(request, response));
+    }
     verify(preferences, never()).store();
   }
 
@@ -215,24 +215,16 @@ class ListViewPortletSettingsSaveTest {
 
   @Test
   void theNewsListSaveIsRefusedToAnyoneElse() throws Exception {
-    Space space = new Space();
-    space.setId(SPACE_ID);
-    spaceUtils.when(SpaceUtils::getSpaceByContext).thenReturn(space);
-    // a signed-in member of the page's space who may not publish there
-    when(SPACE_SERVICE.getSpaceById(SPACE_ID)).thenReturn(space);
-    when(SPACE_SERVICE.canPublishOnSpace(space, USERNAME)).thenReturn(false);
+    // the right is held by a signed-in identity only
+    when(cmsService.hasEditPermission(argThat(identity -> identity != null), any(), eq(SETTING_NAME))).thenReturn(true);
     parameters.put("limit", "6");
     NewsListViewPortlet portlet = new NewsListViewPortlet();
     ActionResponse response = mock(ActionResponse.class);
 
+    // a visitor who is not signed in
+    ConversationState.setCurrent(null);
     assertThrows(PortletException.class, () -> portlet.processAction(request, response));
     verify(preferences, never()).setValue(nullable(String.class), nullable(String.class));
-    verify(preferences, never()).store();
-
-    // and a visitor who is not signed in
-    ConversationState.setCurrent(null);
-    when(SPACE_SERVICE.canPublishOnSpace(any(), any())).thenReturn(true);
-    assertThrows(PortletException.class, () -> portlet.processAction(request, response));
     verify(preferences, never()).store();
   }
 
