@@ -96,6 +96,7 @@
           v-show="showAdvancedSettings"
           :show-article-summary="showArticleSummary"
           :show-see-all="showSeeAll"
+          :see-all-url-invalid="seeAllUrlInvalid"
           :show-header="showHeader"
           :show-article-author="showArticleAuthor"
           :view-template="viewTemplate"
@@ -225,8 +226,19 @@ export default {
       const limit = String(this.limit ?? '').trim();
       return limit !== '' && (!/^\d{1,9}$/.test(limit) || Number(limit) < 1);
     },
+    seeAllUrlInvalid() {
+      // the rule the server saves with: a link read as a browser reads it, with no scheme or an http(s) one
+      const url = String(this.seeAllUrl ?? '').replace(/[\t\r\n]/g, '');
+      let start = 0;
+      while (start < url.length && url.charCodeAt(start) <= 0x20) {
+        start++;
+      }
+      const scheme = url.substring(start).match(/^([A-Za-z][A-Za-z0-9+.-]*):/);
+      return !!scheme && !['http', 'https'].includes(scheme[1].toLowerCase());
+    },
     disabled() {
       return (this.showSeeAll && !this.isValidSeeAllUrl)
+          || this.seeAllUrlInvalid
           || (this.isTargetSourceOption && !this.newsTarget)
           || (this.isSelectedListSourceOption && !this.selectedArticles?.length)
           || this.limitExceeded

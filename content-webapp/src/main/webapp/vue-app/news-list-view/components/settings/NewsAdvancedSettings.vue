@@ -99,6 +99,11 @@
             @keyup="$emit('see-all-url', seeAllUrl)"
             @change="$emit('see-all-url', seeAllUrl)"
             class="seeLink input-block-level ignore-vuetify-classes">
+          <span
+            v-if="seeAllUrlInvalid"
+            class="error--text text-caption">
+            {{ $t('news.list.settings.drawer.advancedSettings.seeAllUrlError') }}
+          </span>
         </v-list-item-action>
       </v-list-item-content>
     </v-list-item>
@@ -231,6 +236,10 @@ export default {
       default: false,
     },
     showSeeAll: {
+      type: Boolean,
+      default: false,
+    },
+    seeAllUrlInvalid: {
       type: Boolean,
       default: false,
     },
