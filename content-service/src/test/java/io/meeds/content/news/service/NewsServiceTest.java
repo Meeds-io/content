@@ -418,6 +418,121 @@ public class NewsServiceTest {
   }
 
   @Test
+  public void testNarrowAPublishedArticleToItsSpaceGivesItsTranslationsFilesToItsSpacesOnly() throws Exception {
+    List<Map<String, Object>> events = updatePublishedArticleAudience(NewsUtils.ALL_NEWS_AUDIENCE, NewsUtils.SPACE_NEWS_AUDIENCE);
+
+    Map<String, Object> translated = events.stream().filter(event -> "7".equals(event.get("entityId"))).findFirst().orElseThrow();
+    assertEquals(NewsUtils.SPACE_NEWS_AUDIENCE, translated.get("audience"));
+    assertEquals("corps", translated.get("content"));
+  }
+
+  @Test
+  public void testOpenAPublishedArticleToAllGivesItsTranslationsFilesToAll() throws Exception {
+    List<Map<String, Object>> events = updatePublishedArticleAudience(NewsUtils.SPACE_NEWS_AUDIENCE, NewsUtils.ALL_NEWS_AUDIENCE);
+
+    Map<String, Object> translated = events.stream().filter(event -> "7".equals(event.get("entityId"))).findFirst().orElseThrow();
+    assertEquals(NewsUtils.ALL_NEWS_AUDIENCE, translated.get("audience"));
+  }
+
+  @Test
+  public void testPublishAnArticleGivesItsTranslationsFilesItsAudience() throws Exception {
+    Space space = mockSpace();
+    News article = new News();
+    article.setId("1");
+    article.setSpaceId(space.getId());
+    article.setPublicationState(POSTED);
+    article.setLatestVersionId("5");
+    article.setBody("body");
+    NewsService service = spy(newsService);
+    doReturn(article).when(service).getNewsArticleById("1");
+    MetadataItem metadataItem = mock(MetadataItem.class);
+    when(metadataItem.getProperties()).thenReturn(new HashMap<>());
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+                                                             any(MetadataObject.class))).thenReturn(List.of(metadataItem));
+    Identity publisherIdentity = mock(Identity.class);
+    when(publisherIdentity.getUserId()).thenReturn("john");
+    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity("john")).thenReturn(publisherIdentity);
+    org.exoplatform.social.core.identity.model.Identity publisher = mock(org.exoplatform.social.core.identity.model.Identity.class);
+    when(publisher.getId()).thenReturn("1");
+    when(identityManager.getOrCreateUserIdentity("john")).thenReturn(publisher);
+    when(noteService.getPageAvailableTranslationLanguages(1L, false)).thenReturn(List.of("fr"));
+    PageVersion translation = mock(PageVersion.class);
+    when(translation.getId()).thenReturn("7");
+    when(translation.getContent()).thenReturn("corps");
+    when(noteService.getPublishedVersionByPageIdAndLang(1L, "fr")).thenReturn(translation);
+    News toPublish = new News();
+    toPublish.setId("1");
+    toPublish.setAudience(NewsUtils.ALL_NEWS_AUDIENCE);
+    NEWS_UTILS.clearInvocations();
+
+    service.publishNews(toPublish, "john");
+
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<Map<String, Object>> eventData = ArgumentCaptor.forClass(Map.class);
+    NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.UPDATE_CONTENT_PERMISSIONS), any(), eventData.capture()),
+                      times(2));
+    Map<String, Object> translated = eventData.getAllValues().get(1);
+    assertEquals("7", translated.get("entityId"));
+    assertEquals("corps", translated.get("content"));
+    assertEquals(NewsUtils.ALL_NEWS_AUDIENCE, translated.get("audience"));
+  }
+
+  @Test
+  public void testUpdateAPublishedArticleWithItsAudienceLeavesItsTranslationsAsTheyAre() throws Exception {
+    List<Map<String, Object>> events = updatePublishedArticleAudience(NewsUtils.ALL_NEWS_AUDIENCE, NewsUtils.ALL_NEWS_AUDIENCE);
+
+    assertTrue(events.stream().noneMatch(event -> "7".equals(event.get("entityId"))));
+  }
+
+  @Test
+  public void testPublishAnArticleFromItsEditorLeavesItsTranslationsToThePublication() throws Exception {
+    List<Map<String, Object>> events = updatePublishedArticleAudience(null, NewsUtils.ALL_NEWS_AUDIENCE, false);
+
+    // the publication gives the translations their access, once
+    assertTrue(events.stream().noneMatch(event -> "7".equals(event.get("entityId"))));
+  }
+
+  private List<Map<String, Object>> updatePublishedArticleAudience(String audience, String newAudience) throws Exception {
+    return updatePublishedArticleAudience(audience, newAudience, true);
+  }
+
+  private List<Map<String, Object>> updatePublishedArticleAudience(String audience,
+                                                                   String newAudience,
+                                                                   boolean published) throws Exception {
+    News news = mockUpdatableArticle();
+    news.setPublished(published);
+    news.setCanPublish(true);
+    news.setAudience(newAudience);
+    News original = new News();
+    original.setId("1");
+    original.setSpaceId("1");
+    original.setPublished(published);
+    original.setAudience(audience);
+    original.setOriginalBody("body");
+    org.exoplatform.social.core.identity.model.Identity publisher = mock(org.exoplatform.social.core.identity.model.Identity.class);
+    when(publisher.getId()).thenReturn("1");
+    when(publisher.getProfile()).thenReturn(mock(org.exoplatform.social.core.identity.model.Profile.class));
+    when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(publisher);
+    NewsService service = spy(newsService);
+    doReturn(original).when(service).getNewsById(eq("1"), any(Identity.class), eq(false), anyString());
+    doNothing().when(service).publishNews(any(News.class), anyString());
+    when(noteService.getPageAvailableTranslationLanguages(1L, false)).thenReturn(List.of("fr"));
+    PageVersion translation = mock(PageVersion.class);
+    when(translation.getId()).thenReturn("7");
+    when(translation.getContent()).thenReturn("corps");
+    when(noteService.getPublishedVersionByPageIdAndLang(1L, "fr")).thenReturn(translation);
+    NEWS_UTILS.clearInvocations();
+
+    service.updateNews(news, "john", null, true, ARTICLE.name().toLowerCase(), POSTING_AND_PUBLISHING.name());
+
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<Map<String, Object>> eventData = ArgumentCaptor.forClass(Map.class);
+    NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.UPDATE_CONTENT_PERMISSIONS), any(), eventData.capture()),
+                      atLeast(0));
+    return eventData.getAllValues();
+  }
+
+  @Test
   public void testUpdateDraftArticle() throws Exception {
 
     // Given

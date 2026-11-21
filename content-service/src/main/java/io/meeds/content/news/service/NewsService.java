@@ -441,11 +441,13 @@ public class NewsService {
     } else if (ARTICLE.name().equalsIgnoreCase(newsObjectType) && PAGE_REFERENCE.name().equalsIgnoreCase(newsUpdateType)) {
       return updateArticle(news, updaterIdentity, newsUpdateType);
     }
+    boolean published = false;
     boolean unpublish = false;
     if (publish != news.isPublished() && news.isCanPublish()) {
       news.setPublished(publish);
       if (news.isPublished()) {
         publishNews(news, updater);
+        published = true;
       } else {
         unpublish = true;
         // The article update below gives its images and attachments to its
@@ -453,6 +455,10 @@ public class NewsService {
         news.setAudience(NewsUtils.SPACE_NEWS_AUDIENCE);
       }
     }
+    // A published article whose audience changes gives the images and
+    // attachments of its translations the same access as its own
+    boolean audienceChanged = !published && news.isPublished() && news.getAudience() != null
+        && !news.getAudience().equals(originalNews.getAudience());
     if (publish == news.isPublished() && news.isPublished() && canPublish) {
       if (news.getTargets() != null && (oldTargets == null || !oldTargets.equals(news.getTargets()))) {
         updateArticleTargets(news, oldTargets, updater);
@@ -471,6 +477,8 @@ public class NewsService {
     }
     if (unpublish) {
       unpublishNews(newsId, updater, false);
+    } else if (audienceChanged) {
+      updateTranslationsPermissions(space, news);
     }
 
     if (POSTED.equals(news.getPublicationState())) {
@@ -645,6 +653,9 @@ public class NewsService {
     Space space = spaceService.getSpaceById(news.getSpaceId());
     // Update content permissions
     updateArticlePermissions(List.of(space), news);
+    if (news.getAudience() != null) {
+      updateTranslationsPermissions(space, news);
+    }
     try {
       sendNotification(publisher, news, NotificationConstants.NOTIFICATION_CONTEXT.PUBLISH_NEWS);
     } catch (Error | Exception e) {
@@ -699,14 +710,7 @@ public class NewsService {
         news.setAudience(NewsUtils.SPACE_NEWS_AUDIENCE);
         updateArticlePermissions(List.of(space), news);
         // and so are those of its translations
-        for (String lang : getArticleLanguages(news.getId(), false)) {
-          PageVersion translation = noteService.getPublishedVersionByPageIdAndLang(Long.valueOf(news.getId()), lang);
-          if (translation != null) {
-            news.setLatestVersionId(translation.getId());
-            news.setBody(translation.getContent());
-            updateArticlePermissions(List.of(space), news);
-          }
-        }
+        updateTranslationsPermissions(space, news);
       }
     }
   }
@@ -3213,6 +3217,22 @@ public class NewsService {
       return news;
     }
     return null;
+  }
+
+  private void updateTranslationsPermissions(Space space, News article) {
+    for (String lang : getArticleLanguages(article.getId(), false)) {
+      PageVersion translation = noteService.getPublishedVersionByPageIdAndLang(Long.valueOf(article.getId()), lang);
+      if (translation != null) {
+        News translatedArticle = new News();
+        translatedArticle.setId(article.getId());
+        translatedArticle.setSharedInSpacesList(article.getSharedInSpacesList());
+        translatedArticle.setPublicationState(article.getPublicationState());
+        translatedArticle.setAudience(article.getAudience());
+        translatedArticle.setLatestVersionId(translation.getId());
+        translatedArticle.setBody(translation.getContent());
+        updateArticlePermissions(List.of(space), translatedArticle);
+      }
+    }
   }
 
   private void updateArticlePermissions(List<Space> spaces, News article) {
