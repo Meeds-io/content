@@ -1,5 +1,5 @@
 <%@ taglib uri="http://java.sun.com/portlet_2_0" prefix="portlet" %>
-<%@ page import="org.apache.commons.text.StringEscapeUtils" %>
+<%@ page import="org.exoplatform.social.webui.Utils" %>
 
 <portlet:defineObjects />
 <portlet:actionURL var="saveSettingsURL" />
@@ -31,16 +31,16 @@
   <div class="content-list-view-app" id="<%= appId %>">
     <script type="text/javascript">
       require(['PORTLET/content/ContentListView'], app => app.init({
-        appId: '<%=appId%>',
-        applicationId: <%= "'" + applicationId + "'" %>,
-        saveSettingsURL: <%= "'" + saveSettingsURL + "'" %>,
+        appId: <%=Utils.toScriptString(appId)%>,
+        applicationId: <%=Utils.toScriptString(applicationId)%>,
+        saveSettingsURL: <%=Utils.toScriptString(saveSettingsURL)%>,
         canEdit: <%= canEdit %>,
-        showHeader: <%= "'" + StringEscapeUtils.escapeEcmaScript(showHeader) + "'" %>,
-        headerTitle: <%= headerTitle == null ? null : "'" + StringEscapeUtils.escapeEcmaScript(headerTitle) + "'" %>,
-        allowFilteringPerCategory: <%= "'" + StringEscapeUtils.escapeEcmaScript(allowFilteringPerCategory) + "'" %>,
-        categoryDepth: <%= "'" + StringEscapeUtils.escapeEcmaScript(categoryDepth) + "'" %>,
-        categoryIds: <%= "'" + StringEscapeUtils.escapeEcmaScript(categoryIds) + "'" %>,
-        excludeCategoryIds: <%= "'" + StringEscapeUtils.escapeEcmaScript(excludeCategoryIds) + "'" %>
+        showHeader: <%=Utils.toScriptString(showHeader)%>,
+        headerTitle: <%=headerTitle == null ? "null" : Utils.toScriptString(headerTitle)%>,
+        allowFilteringPerCategory: <%=Utils.toScriptString(allowFilteringPerCategory)%>,
+        categoryDepth: <%=Utils.toScriptString(categoryDepth)%>,
+        categoryIds: <%=Utils.toScriptString(categoryIds)%>,
+        excludeCategoryIds: <%=Utils.toScriptString(excludeCategoryIds)%>
       }));
     </script>
   </div>
