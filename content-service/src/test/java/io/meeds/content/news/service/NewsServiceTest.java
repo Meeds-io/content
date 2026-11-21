@@ -53,6 +53,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
@@ -1004,6 +1005,247 @@ public class NewsServiceTest {
     newsService.updateNews(news, "john", false, false, ARTICLE.name().toLowerCase(), CATEGORIES.name());
 
     verify(activityReportService, never()).markReportsStale(any());
+  }
+
+  @Test
+  public void testUpdateNewsWithUnknownPublicationStateIsRefused() throws Exception {
+    News news = mockUpdatableArticle();
+    news.setPublicationState("archived");
+
+    assertThrows(NewsService.InvalidPublicationStateException.class,
+                 () -> newsService.updateNews(news, "john", false, false, ARTICLE.name().toLowerCase(), CONTENT_AND_TITLE.name()));
+
+    verify(noteService, never()).updateNote(any(Page.class), any(), any(), anyBoolean());
+    verify(metadataService, never()).updateMetadataItem(any(), anyLong(), anyBoolean());
+  }
+
+  @Test
+  public void testUpdateNewsWithKnownPublicationStateIsAccepted() throws Exception {
+    News news = mockUpdatableArticle();
+    news.setPublicationState(DRAFT);
+
+    newsService.updateNews(news, "john", false, false, ARTICLE.name().toLowerCase(), CATEGORIES.name());
+
+    verify(noteService, atLeast(1)).getNoteById(anyString());
+  }
+
+  @Test
+  public void testCreateNewsWithUnknownPublicationStateIsRefused() throws Exception {
+    News news = new News();
+    news.setAuthor("john");
+    news.setTitle("title");
+    news.setSpaceId("1");
+    news.setPublicationState("archived");
+    Identity identity = mock(Identity.class);
+
+    assertThrows(NewsService.InvalidPublicationStateException.class, () -> newsService.createNews(news, identity));
+
+    verifyNoInteractions(noteService, metadataService, spaceService);
+  }
+
+  @Test
+  public void testCreateNewsWithKnownOrNoPublicationStateIsAccepted() throws Exception {
+    Identity identity = mock(Identity.class);
+    for (String state : new String[] { null, "", DRAFT, POSTED, NewsService.STAGED }) {
+      News news = new News();
+      news.setAuthor("john");
+      news.setTitle("title");
+      news.setSpaceId("1");
+      news.setPublicationState(state);
+
+      newsService.createNews(news, identity);
+    }
+
+    verify(spaceService, times(5)).getSpaceById("1");
+  }
+
+  @Test
+  public void testScheduleNewsWithUnknownPublicationStateIsRefused() throws Exception {
+    News news = new News();
+    news.setId("1");
+    news.setSpaceId("1");
+    news.setPublicationState("archived");
+    Identity identity = mock(Identity.class);
+
+    assertThrows(NewsService.InvalidPublicationStateException.class,
+                 () -> newsService.scheduleNews(news, identity, ARTICLE.name().toLowerCase()));
+
+    verifyNoInteractions(noteService, metadataService);
+  }
+
+  @Test
+  public void testUpdateNewsSendingBackTheStoredUnknownPublicationStateIsAccepted() throws Exception {
+    News news = mockUpdatableArticle();
+    news.setPublicationState("archived");
+    Map<String, String> storedProperties = new HashMap<>();
+    storedProperties.put(NEWS_PUBLICATION_STATE, "archived");
+    MetadataItem storedItem = mock(MetadataItem.class);
+    when(storedItem.getProperties()).thenReturn(storedProperties);
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+                                                             any(MetadataObject.class))).thenReturn(List.of(storedItem));
+
+    newsService.updateNews(news, "john", false, false, ARTICLE.name().toLowerCase(), CONTENT_AND_TITLE.name());
+
+    verify(noteService, times(1)).updateNote(any(Page.class), any(), any(), anyBoolean());
+    assertEquals("archived", storedProperties.get(NEWS_PUBLICATION_STATE));
+  }
+
+  @Test
+  public void testUpdateNewsChangingToAnUnknownPublicationStateIsRefusedWhenAnotherIsStored() throws Exception {
+    News news = mockUpdatableArticle();
+    news.setPublicationState("archived");
+    Map<String, String> storedProperties = new HashMap<>();
+    storedProperties.put(NEWS_PUBLICATION_STATE, "retired");
+    MetadataItem storedItem = mock(MetadataItem.class);
+    when(storedItem.getProperties()).thenReturn(storedProperties);
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+                                                             any(MetadataObject.class))).thenReturn(List.of(storedItem));
+
+    assertThrows(NewsService.InvalidPublicationStateException.class,
+                 () -> newsService.updateNews(news, "john", false, false, ARTICLE.name().toLowerCase(), CONTENT_AND_TITLE.name()));
+
+    verify(noteService, never()).updateNote(any(Page.class), any(), any(), anyBoolean());
+  }
+
+  @Test
+  public void testPostNewsStoresTheArticlePublicationState() throws Exception {
+    Map<String, String> stored = postNewsAndGetStoredProperties(POSTED, "archived");
+
+    assertEquals(POSTED, stored.get(NEWS_PUBLICATION_STATE));
+  }
+
+  @Test
+  public void testPostNewsWithoutStateKeepsAKnownStoredState() throws Exception {
+    Map<String, String> stored = postNewsAndGetStoredProperties(null, DRAFT);
+
+    assertEquals(DRAFT, stored.get(NEWS_PUBLICATION_STATE));
+  }
+
+  @Test
+  public void testPostNewsWithoutStateStoresNoUnknownState() throws Exception {
+    Map<String, String> stored = postNewsAndGetStoredProperties(null, "archived");
+
+    assertFalse(stored.containsKey(NEWS_PUBLICATION_STATE));
+  }
+
+  private Map<String, String> postNewsAndGetStoredProperties(String articleState, String otherState) throws Exception {
+    News news = new News();
+    news.setAuthor("john");
+    news.setTitle("title");
+    news.setBody("body");
+    news.setId("1");
+    news.setPublicationState(articleState);
+    news.setParameters(Map.of(NEWS_PUBLICATION_STATE, otherState));
+    Identity identity = mockIdentity();
+    Space space = mockSpace();
+    when(spaceService.canRedactOnSpace(any(Space.class), any(Identity.class))).thenReturn(true);
+    Wiki wiki = mock(Wiki.class);
+    when(wikiService.getWikiByTypeAndOwner(anyString(), anyString())).thenReturn(wiki);
+    org.exoplatform.wiki.model.Page rootPage = mock(org.exoplatform.wiki.model.Page.class);
+    when(rootPage.getName()).thenReturn(NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME);
+    when(rootPage.getId()).thenReturn("1");
+    when(noteService.getNoteOfNoteBookByName("group",
+                                             space.getGroupId(),
+                                             NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME)).thenReturn(rootPage);
+    Page createdPage = mock(Page.class);
+    when(createdPage.getId()).thenReturn("1");
+    when(noteService.createNote(any(), anyString(), any(Page.class), any(), anyBoolean())).thenReturn(createdPage);
+    PageVersion pageVersion = mock(PageVersion.class);
+    when(noteService.getPublishedVersionByPageIdAndLang(1L, null)).thenReturn(pageVersion);
+    when(pageVersion.getAuthor()).thenReturn("john");
+    when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(new org.exoplatform.social.core.identity.model.Identity("1"));
+
+    newsService.postNews(news, identity.getUserId());
+
+    ArgumentCaptor<Map<String, String>> properties = ArgumentCaptor.forClass(Map.class);
+    verify(metadataService, atLeast(1)).createMetadataItem(any(MetadataObject.class),
+                                                           any(MetadataKey.class),
+                                                           properties.capture(),
+                                                           anyLong(),
+                                                           anyBoolean());
+    return properties.getAllValues().stream().filter(m -> m.containsKey(NEWS_ACTIVITY_POSTED)).findFirst().orElseThrow();
+  }
+
+  @Test
+  public void testRescheduleNewsOfAnArticleWithAnUnknownStoredStateSucceeds() throws Exception {
+    News news = mockUpdatableArticle();
+    news.setPublicationState(NewsService.STAGED);
+    news.setParameters(Map.of(NEWS_PUBLICATION_STATE, "archived"));
+    NewsService service = spy(newsService);
+    doReturn(true).when(service).canScheduleNews(anyString(), any(Identity.class), any(News.class));
+    doReturn(existingArticle("archived", true)).when(service).getNewsArticleById("1");
+    NEWS_UTILS.when(() -> NewsUtils.buildNewsArticleUrl(any(), any())).thenReturn("url");
+
+    News result = service.scheduleNews(news, mockIdentity(), ARTICLE.name().toLowerCase());
+
+    assertNotNull(result);
+    assertEquals(NewsService.STAGED, result.getPublicationState());
+  }
+
+  @Test
+  public void testUpdateMetadataPropertiesWithUnknownPublicationStateIsRefused() throws Exception {
+    NewsService service = spaceNoteService(List.of());
+    MetadataItem item = metadataItemWithState(POSTED);
+    doReturn(existingArticle(POSTED, true)).when(service).getNewsArticleById("12");
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+                                                             any(MetadataObject.class))).thenReturn(List.of(item));
+
+    assertThrows(NewsService.InvalidPublicationStateException.class,
+                 () -> service.updateMetadataProperties("12", Map.of(NEWS_PUBLICATION_STATE, "archived"), 1L));
+
+    verify(metadataService, never()).updateMetadataItem(any(), anyLong(), anyBoolean());
+  }
+
+  @Test
+  public void testUpdateMetadataPropertiesWithoutOrWithKnownPublicationStateIsUnchanged() throws Exception {
+    NewsService service = spaceNoteService(List.of());
+    MetadataItem item = metadataItemWithState(POSTED);
+    doReturn(existingArticle(POSTED, true)).when(service).getNewsArticleById("12");
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+                                                             any(MetadataObject.class))).thenReturn(List.of(item));
+
+    Map<String, String> result = service.updateMetadataProperties("12", Map.of("other", "value"), 1L);
+    assertEquals("value", result.get("other"));
+    result = service.updateMetadataProperties("12", Map.of(NEWS_PUBLICATION_STATE, DRAFT), 1L);
+    assertEquals(DRAFT, result.get(NEWS_PUBLICATION_STATE));
+
+    verify(metadataService, times(2)).updateMetadataItem(any(), anyLong(), anyBoolean());
+  }
+
+  private MetadataItem metadataItemWithState(String state) {
+    MetadataItem item = mock(MetadataItem.class);
+    Map<String, String> properties = new HashMap<>();
+    properties.put(NEWS_PUBLICATION_STATE, state);
+    when(item.getProperties()).thenReturn(properties);
+    return item;
+  }
+
+  @Test
+  public void testCanViewNewsWithUnknownPublicationStateIsRefusedToANonEditor() {
+    Space space = space();
+    when(spaceService.getSpaceById("3")).thenReturn(space);
+    when(spaceService.canViewSpace(space, "mary")).thenReturn(true);
+    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity("mary")).thenReturn(mock(Identity.class));
+
+    assertFalse(newsService.canViewNews(existingArticle("archived", true), "mary"));
+  }
+
+  @Test
+  public void testCanViewNewsWithUnknownPublicationStateIsAllowedToAnEditor() {
+    Space space = space();
+    when(spaceService.getSpaceById("3")).thenReturn(space);
+    when(spaceService.isManager(space, "mary")).thenReturn(true);
+    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity("mary")).thenReturn(mock(Identity.class));
+
+    assertTrue(newsService.canViewNews(existingArticle("archived", true), "mary"));
+  }
+
+  @Test
+  public void testCanViewNewsWithoutPublicationStateIsUnchanged() {
+    Space space = space();
+    when(spaceService.getSpaceById("3")).thenReturn(space);
+
+    assertTrue(newsService.canViewNews(existingArticle(null, false), "outsider"));
   }
 
   private News mockUpdatableArticle() throws Exception {
