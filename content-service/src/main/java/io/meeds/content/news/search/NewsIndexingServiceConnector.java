@@ -18,6 +18,7 @@
  */
 package io.meeds.content.news.search;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -39,6 +40,7 @@ import org.exoplatform.social.core.identity.provider.OrganizationIdentityProvide
 import org.exoplatform.social.core.manager.ActivityManager;
 import org.exoplatform.social.core.manager.IdentityManager;
 import org.exoplatform.social.core.search.DocumentWithMetadata;
+import org.exoplatform.social.metadata.MetadataFilter;
 import org.exoplatform.social.metadata.MetadataService;
 import org.exoplatform.social.metadata.model.MetadataItem;
 import org.exoplatform.social.metadata.model.MetadataObject;
@@ -53,6 +55,8 @@ public class NewsIndexingServiceConnector extends ElasticIndexingServiceConnecto
 
   public static final String    TYPE             = "news";
 
+  private static final int      ALL_IDS_PAGE_SIZE = 200;
+
   private static final Log      LOG              = ExoLogger.getLogger(NewsIndexingServiceConnector.class);
 
   private final NewsService     newsService;
@@ -62,6 +66,8 @@ public class NewsIndexingServiceConnector extends ElasticIndexingServiceConnecto
   private final ActivityManager activityManager;
 
   private final MetadataService metadataService;
+
+  private List<String>          allIds;
 
 
   public NewsIndexingServiceConnector(IdentityManager identityManager,
@@ -92,8 +98,55 @@ public class NewsIndexingServiceConnector extends ElasticIndexingServiceConnecto
   }
 
   @Override
-  public List<String> getAllIds(int offset, int limit) {
-    throw new UnsupportedOperationException();
+  public synchronized List<String> getAllIds(int offset, int limit) {
+    if (offset <= 0 || allIds == null) {
+      // The list is built once per full reindex, when its first page is requested
+      allIds = loadAllIds();
+    }
+    if (offset >= allIds.size()) {
+      allIds = null;
+      return Collections.emptyList();
+    }
+    int end = Math.min(allIds.size(), offset + Math.max(limit, 0));
+    List<String> page = new ArrayList<>(allIds.subList(offset, end));
+    if (end >= allIds.size()) {
+      allIds = null;
+    }
+    return page;
+  }
+
+  /**
+   * Lists the ids of the documents of the index: each posted article id, then
+   * the id of each of its translations, in the form
+   * <code>articleId-lang</code> used to index them.
+   */
+  private List<String> loadAllIds() {
+    List<String> articleIds = new ArrayList<>();
+    List<String> translationIds = new ArrayList<>();
+    MetadataFilter filter = new MetadataFilter();
+    filter.setMetadataName(NewsService.NEWS_METADATA_NAME);
+    filter.setMetadataTypeName(NewsService.NEWS_METADATA_TYPE.getName());
+    filter.setMetadataObjectTypes(List.of(NewsService.NEWS_METADATA_PAGE_OBJECT_TYPE));
+    filter.setMetadataProperties(Map.of(NewsService.NEWS_PUBLICATION_STATE,
+                                        NewsService.POSTED,
+                                        NewsService.NEWS_DELETED,
+                                        "false"));
+    int offset = 0;
+    List<MetadataItem> items;
+    do {
+      items = metadataService.getMetadataItemsByFilter(filter, offset, ALL_IDS_PAGE_SIZE);
+      for (MetadataItem item : items) {
+        String articleId = item.getObjectId();
+        articleIds.add(articleId);
+        List<String> languages = newsService.getArticleLanguages(articleId, false);
+        if (languages != null) {
+          languages.forEach(lang -> translationIds.add(articleId + "-" + lang));
+        }
+      }
+      offset += ALL_IDS_PAGE_SIZE;
+    } while (items.size() == ALL_IDS_PAGE_SIZE);
+    articleIds.addAll(translationIds);
+    return articleIds;
   }
 
   private Document getDocument(String id) {

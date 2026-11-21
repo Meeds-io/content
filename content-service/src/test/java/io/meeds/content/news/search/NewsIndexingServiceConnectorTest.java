@@ -20,13 +20,22 @@ package io.meeds.content.news.search;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Date;
+import java.util.List;
+import java.util.stream.IntStream;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
@@ -41,7 +50,9 @@ import org.exoplatform.social.core.identity.model.Profile;
 import org.exoplatform.social.core.identity.provider.OrganizationIdentityProvider;
 import org.exoplatform.social.core.manager.ActivityManager;
 import org.exoplatform.social.core.manager.IdentityManager;
+import org.exoplatform.social.metadata.MetadataFilter;
 import org.exoplatform.social.metadata.MetadataService;
+import org.exoplatform.social.metadata.model.MetadataItem;
 
 import io.meeds.content.news.model.News;
 import io.meeds.content.news.service.NewsService;
@@ -64,18 +75,52 @@ public class NewsIndexingServiceConnectorTest {
   MetadataService              metadataService;
 
   @Test
-  public void testGetAllIds() {
+  public void testGetAllIdsListsArticlesThenTheirTranslationsByPage() {
     newsIndexingServiceConnector = new NewsIndexingServiceConnector(identityManager,
                                                                     getParams(),
                                                                     newsService,
                                                                     activityManager,
                                                                     metadataService);
-    try {
-      newsIndexingServiceConnector.getAllIds(0, 10);
-      fail("getAllIds shouldn't be supported");
-    } catch (UnsupportedOperationException e) {
-      // Expected
-    }
+    when(metadataService.getMetadataItemsByFilter(any(MetadataFilter.class), eq(0L), anyLong())).thenReturn(List.of(item("1"),
+                                                                                                                  item("2"),
+                                                                                                                  item("3")));
+    when(newsService.getArticleLanguages("1", false)).thenReturn(List.of("fr", "en"));
+    when(newsService.getArticleLanguages("2", false)).thenReturn(List.of());
+    when(newsService.getArticleLanguages("3", false)).thenReturn(List.of("fr"));
+
+    assertEquals(List.of("1", "2"), newsIndexingServiceConnector.getAllIds(0, 2));
+    assertEquals(List.of("3", "1-fr"), newsIndexingServiceConnector.getAllIds(2, 2));
+    assertEquals(List.of("1-en", "3-fr"), newsIndexingServiceConnector.getAllIds(4, 2));
+    assertTrue(newsIndexingServiceConnector.getAllIds(6, 2).isEmpty());
+
+    ArgumentCaptor<MetadataFilter> filter = ArgumentCaptor.forClass(MetadataFilter.class);
+    verify(metadataService, atLeastOnce()).getMetadataItemsByFilter(filter.capture(), eq(0L), anyLong());
+    assertEquals(NewsService.NEWS_METADATA_PAGE_OBJECT_TYPE, filter.getValue().getMetadataObjectTypes().get(0));
+    assertEquals(NewsService.POSTED, filter.getValue().getMetadataProperties().get(NewsService.NEWS_PUBLICATION_STATE));
+    assertEquals("false", filter.getValue().getMetadataProperties().get(NewsService.NEWS_DELETED));
+  }
+
+  @Test
+  public void testGetAllIdsReadsEverySourcePage() {
+    newsIndexingServiceConnector = new NewsIndexingServiceConnector(identityManager,
+                                                                    getParams(),
+                                                                    newsService,
+                                                                    activityManager,
+                                                                    metadataService);
+    List<MetadataItem> firstPage = IntStream.range(0, 200).mapToObj(i -> item(String.valueOf(i))).toList();
+    when(metadataService.getMetadataItemsByFilter(any(MetadataFilter.class), eq(0L), anyLong())).thenReturn(firstPage);
+    when(metadataService.getMetadataItemsByFilter(any(MetadataFilter.class), eq(200L), anyLong())).thenReturn(List.of(item("200")));
+
+    List<String> ids = newsIndexingServiceConnector.getAllIds(0, 1000);
+
+    assertEquals(201, ids.size());
+    assertEquals("200", ids.get(200));
+  }
+
+  private MetadataItem item(String articleId) {
+    MetadataItem item = new MetadataItem();
+    item.setObjectId(articleId);
+    return item;
   }
 
   @Test
