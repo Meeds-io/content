@@ -429,6 +429,17 @@ public class NewsRestTest {
   }
 
   @Test
+  public void shouldGetForbiddenWhenUpdatingMetadataPropertiesWithoutTheRightToEditTheArticle() throws Exception {
+    REST_UTILS.when(() -> RestUtils.getCurrentUserIdentityId()).thenReturn(1L);
+    Map<String, String> properties = Map.of("other", "value");
+    when(newsService.updateMetadataProperties("1", properties, 1L)).thenThrow(new IllegalAccessException("forbidden"));
+
+    ResponseEntity<Map<String, String>> response = newsRestController.updateNewsMetadataProperties("1", properties);
+
+    assertEquals(Response.Status.FORBIDDEN.getStatusCode(), response.getStatusCode().value());
+  }
+
+  @Test
   public void shouldGetBadRequestWhenUpdatingMetadataPropertiesWithAnUnknownPublicationState() throws Exception {
     REST_UTILS.when(() -> RestUtils.getCurrentUserIdentityId()).thenReturn(1L);
     Map<String, String> properties = Map.of("publicationState", "archived");

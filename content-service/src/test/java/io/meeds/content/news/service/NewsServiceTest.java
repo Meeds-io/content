@@ -1475,6 +1475,7 @@ public class NewsServiceTest {
   @Test
   public void testUpdateMetadataPropertiesWithUnknownPublicationStateIsRefused() throws Exception {
     NewsService service = spaceNoteService(List.of());
+    allowMetadataEdit(service);
     MetadataItem item = metadataItemWithState(POSTED);
     doReturn(existingArticle(POSTED, true)).when(service).getNewsArticleById("12");
     when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
@@ -1489,6 +1490,7 @@ public class NewsServiceTest {
   @Test
   public void testUpdateMetadataPropertiesWithoutOrWithKnownPublicationStateIsUnchanged() throws Exception {
     NewsService service = spaceNoteService(List.of());
+    allowMetadataEdit(service);
     MetadataItem item = metadataItemWithState(POSTED);
     doReturn(existingArticle(POSTED, true)).when(service).getNewsArticleById("12");
     when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
@@ -1500,6 +1502,60 @@ public class NewsServiceTest {
     assertEquals(DRAFT, result.get(NEWS_PUBLICATION_STATE));
 
     verify(metadataService, times(2)).updateMetadataItem(any(), anyLong(), anyBoolean());
+  }
+
+  @Test
+  public void testUpdateMetadataPropertiesIsRefusedWithoutTheRightToEditTheArticle() throws Exception {
+    NewsService service = spaceNoteService(List.of());
+    MetadataItem item = metadataItemWithState(POSTED);
+    doReturn(existingArticle(POSTED, true)).when(service).getNewsArticleById("12");
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+                                                             any(MetadataObject.class))).thenReturn(List.of(item));
+    org.exoplatform.social.core.identity.model.Identity updaterIdentity = mock(org.exoplatform.social.core.identity.model.Identity.class);
+    when(updaterIdentity.getRemoteId()).thenReturn("mary");
+    when(identityManager.getIdentity("1")).thenReturn(updaterIdentity);
+    doReturn(false).when(service).canEditNews(any(News.class), eq("mary"));
+    doReturn(true).when(service).canViewNews(any(News.class), eq("mary"));
+
+    Map<String, String> properties = Map.of("other", "value");
+    assertThrows(IllegalAccessException.class, () -> service.updateMetadataProperties("12", properties, 1L));
+
+    verify(metadataService, never()).updateMetadataItem(any(), anyLong(), anyBoolean());
+  }
+
+  @Test
+  public void testUpdateMetadataPropertiesAnswersNotFoundToACallerWhoCannotViewTheArticle() throws Exception {
+    NewsService service = spaceNoteService(List.of());
+    doReturn(existingArticle(POSTED, true)).when(service).getNewsArticleById("12");
+    org.exoplatform.social.core.identity.model.Identity updaterIdentity = mock(org.exoplatform.social.core.identity.model.Identity.class);
+    when(updaterIdentity.getRemoteId()).thenReturn("mary");
+    when(identityManager.getIdentity("1")).thenReturn(updaterIdentity);
+    doReturn(false).when(service).canEditNews(any(News.class), eq("mary"));
+    doReturn(false).when(service).canViewNews(any(News.class), eq("mary"));
+
+    Map<String, String> properties = Map.of("other", "value");
+    assertThrows(ObjectNotFoundException.class, () -> service.updateMetadataProperties("12", properties, 1L));
+
+    verify(metadataService, never()).updateMetadataItem(any(), anyLong(), anyBoolean());
+  }
+
+  @Test
+  public void testUpdateMetadataPropertiesIsRefusedWhenTheUpdaterIdentityIsUnknown() throws Exception {
+    NewsService service = spaceNoteService(List.of());
+    doReturn(existingArticle(POSTED, true)).when(service).getNewsArticleById("12");
+    when(identityManager.getIdentity("1")).thenReturn(null);
+
+    Map<String, String> properties = Map.of("other", "value");
+    assertThrows(IllegalAccessException.class, () -> service.updateMetadataProperties("12", properties, 1L));
+
+    verify(metadataService, never()).updateMetadataItem(any(), anyLong(), anyBoolean());
+  }
+
+  private void allowMetadataEdit(NewsService service) {
+    org.exoplatform.social.core.identity.model.Identity updaterIdentity = mock(org.exoplatform.social.core.identity.model.Identity.class);
+    when(updaterIdentity.getRemoteId()).thenReturn("john");
+    when(identityManager.getIdentity("1")).thenReturn(updaterIdentity);
+    doReturn(true).when(service).canEditNews(any(News.class), eq("john"));
   }
 
   private MetadataItem metadataItemWithState(String state) {
@@ -2058,10 +2114,12 @@ public class NewsServiceTest {
 
     Map<String, String> inputProperties = new HashMap<>();
     inputProperties.put("key1", "value1");
+    NewsService service = spy(newsService);
+    allowMetadataEdit(service);
 
     // When, Then
     assertThrows(ObjectNotFoundException.class,
-                 () -> newsService.updateMetadataProperties("99", inputProperties, 1L));
+                 () -> service.updateMetadataProperties("99", inputProperties, 1L));
 
     Page existingPage = mock(Page.class);
     when(existingPage.getId()).thenReturn("1");
@@ -2096,7 +2154,7 @@ public class NewsServiceTest {
         .thenReturn(new ArrayList<>());
 
     assertThrows(ObjectNotFoundException.class,
-                 () -> newsService.updateMetadataProperties("1", inputProperties, 1L));
+                 () -> service.updateMetadataProperties("1", inputProperties, 1L));
 
     MetadataItem existingMetadataItem = mock(MetadataItem.class);
     Map<String, String> existingProperties = new HashMap<>();
@@ -2114,7 +2172,7 @@ public class NewsServiceTest {
     newProperties.put("key2", "value2");
 
     // When
-    Map<String, String> mergedResult = newsService.updateMetadataProperties("1", newProperties, 1L);
+    Map<String, String> mergedResult = service.updateMetadataProperties("1", newProperties, 1L);
 
     // Then
     verify(metadataService, times(1)).updateMetadataItem(eq(existingMetadataItem), eq(1L), eq(false));

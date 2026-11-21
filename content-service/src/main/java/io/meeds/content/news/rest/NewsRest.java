@@ -929,6 +929,7 @@ public class NewsRest {
       @ApiResponse(responseCode = "200", description = "Request fulfilled"),
       @ApiResponse(responseCode = "400", description = "Invalid query input"),
       @ApiResponse(responseCode = "401", description = "User not authorized"),
+      @ApiResponse(responseCode = "403", description = "User not allowed to edit the article"),
       @ApiResponse(responseCode = "404", description = "Article not found"),
       @ApiResponse(responseCode = "500", description = "Internal server error") })
   public ResponseEntity<Map<String, String>> updateNewsMetadataProperties(
@@ -945,6 +946,8 @@ public class NewsRest {
       return ResponseEntity.ok(newsService.updateMetadataProperties(articleId, properties, currentUserId));
     } catch (InvalidPublicationStateException e) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+    } catch (IllegalAccessException e) {
+      return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     } catch (ObjectNotFoundException e) {
       return ResponseEntity.notFound().build();
     } catch (Exception e) {
