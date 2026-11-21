@@ -2,7 +2,7 @@
 <%@page import="org.exoplatform.services.security.Identity"%>
 <%@ page import="io.meeds.content.news.utils.NewsUtils" %>
 <%@ page import="io.meeds.content.news.service.NewsTargetingService" %>
-<%@ page import="io.meeds.content.portlet.NewsListSettingValues" %>
+<%@ page import="io.meeds.content.util.NewsListSettingValues" %>
 <%@ page import="org.exoplatform.container.ExoContainerContext" %>
 <%@ page import="org.exoplatform.web.PortalHttpServletResponseWrapper" %>
 <%@ page import="org.exoplatform.portal.application.PortalRequestContext" %>

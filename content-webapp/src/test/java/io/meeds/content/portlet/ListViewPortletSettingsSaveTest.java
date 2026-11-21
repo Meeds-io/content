@@ -151,12 +151,8 @@ class ListViewPortletSettingsSaveTest {
   }
 
   @Test
-  void theNewsListSaveIsAcceptedFromAPublisherOfThePageSpace() throws Exception {
-    Space space = new Space();
-    space.setId(SPACE_ID);
-    spaceUtils.when(SpaceUtils::getSpaceByContext).thenReturn(space);
-    when(SPACE_SERVICE.getSpaceById(SPACE_ID)).thenReturn(space);
-    when(SPACE_SERVICE.canPublishOnSpace(space, USERNAME)).thenReturn(true);
+  void theNewsListSaveIsAcceptedFromAnEditorOfTheInstance() throws Exception {
+    when(cmsService.hasEditPermission(any(), any(), eq(SETTING_NAME))).thenReturn(true);
     parameters.put("limit", "6");
 
     new NewsListViewPortlet().processAction(request, mock(ActionResponse.class));
@@ -165,6 +161,34 @@ class ListViewPortletSettingsSaveTest {
     // a setting the save does not post keeps its stored value
     verify(preferences, never()).setValue(eq("viewTemplate"), nullable(String.class));
     verify(preferences).store();
+  }
+
+  @Test
+  void theNewsListSaveIsRefusedToAPublisherWithoutTheInstanceRight() throws Exception {
+    Space space = new Space();
+    space.setId(SPACE_ID);
+    spaceUtils.when(SpaceUtils::getSpaceByContext).thenReturn(space);
+    when(SPACE_SERVICE.getSpaceById(SPACE_ID)).thenReturn(space);
+    when(SPACE_SERVICE.canPublishOnSpace(any(), any())).thenReturn(true);
+    when(cmsService.hasEditPermission(any(), any(), eq(SETTING_NAME))).thenReturn(false);
+    parameters.put("limit", "6");
+    NewsListViewPortlet portlet = new NewsListViewPortlet();
+    ActionResponse response = mock(ActionResponse.class);
+
+    assertThrows(PortletException.class, () -> portlet.processAction(request, response));
+    verify(preferences, never()).store();
+  }
+
+  @Test
+  void theNewsListSaveIsRefusedForABlankInstanceName() throws Exception {
+    when(preferences.getValue(NAME, null)).thenReturn(" ");
+    when(cmsService.hasEditPermission(any(), any(), nullable(String.class))).thenReturn(true);
+    parameters.put("limit", "6");
+    NewsListViewPortlet portlet = new NewsListViewPortlet();
+    ActionResponse response = mock(ActionResponse.class);
+
+    assertThrows(PortletException.class, () -> portlet.processAction(request, response));
+    verify(preferences, never()).store();
   }
 
   @Test
@@ -180,7 +204,7 @@ class ListViewPortletSettingsSaveTest {
   }
 
   @Test
-  void theNewsListViewShowsItsSettingsToTheEditorsTheSaveAccepts() throws Exception {
+  void theNewsListViewTakesItsSettingsRightFromTheInstanceCanEdit() throws Exception {
     String view = Files.readString(Path.of("src/main/webapp/WEB-INF/jsp/newsListView.jsp"), StandardCharsets.UTF_8);
     assertTrue(view.contains("boolean hasEditPermission = Boolean.TRUE.equals(request.getAttribute(\"canEdit\"));"));
     assertFalse(view.contains("UserACL"));
@@ -202,8 +226,6 @@ class ListViewPortletSettingsSaveTest {
     verify(preferences, never()).setValue(nullable(String.class), nullable(String.class));
     verify(preferences, never()).store();
 
-    verify(SPACE_SERVICE).canPublishOnSpace(space, USERNAME);
-
     // and a visitor who is not signed in
     ConversationState.setCurrent(null);
     when(SPACE_SERVICE.canPublishOnSpace(any(), any())).thenReturn(true);
@@ -215,7 +237,7 @@ class ListViewPortletSettingsSaveTest {
   void theNewsListSaveIsRefusedForAValueOfAnotherShape() throws Exception {
     when(cmsService.hasEditPermission(any(), any(), eq(SETTING_NAME))).thenReturn(true);
     NewsTargetingService targetingService = mock(NewsTargetingService.class);
-    when(targetingService.getAllTargets()).thenReturn(List.of());
+    when(targetingService.isTarget(anyString())).thenReturn(false);
     containerContext.when(() -> ExoContainerContext.getService(NewsTargetingService.class)).thenReturn(targetingService);
     NewsListViewPortlet portlet = new NewsListViewPortlet();
     ActionResponse response = mock(ActionResponse.class);
@@ -234,7 +256,7 @@ class ListViewPortletSettingsSaveTest {
   void theNewsListSaveAcceptsTheValuesTheDrawerPosts() throws Exception {
     when(cmsService.hasEditPermission(any(), any(), eq(SETTING_NAME))).thenReturn(true);
     NewsTargetingService targetingService = mock(NewsTargetingService.class);
-    when(targetingService.getAllTargets()).thenReturn(List.of());
+    when(targetingService.isTarget(anyString())).thenReturn(false);
     containerContext.when(() -> ExoContainerContext.getService(NewsTargetingService.class)).thenReturn(targetingService);
     parameters.put("newsTarget", "null");
     parameters.put("seeAllUrl", "www.example.org");

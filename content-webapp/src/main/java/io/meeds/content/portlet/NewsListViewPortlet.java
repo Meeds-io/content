@@ -40,13 +40,10 @@ import org.apache.commons.lang3.StringUtils;
 import org.exoplatform.commons.api.settings.SettingService;
 import org.exoplatform.commons.api.settings.SettingValue;
 import org.exoplatform.container.ExoContainerContext;
-import org.exoplatform.services.security.ConversationState;
-import org.exoplatform.services.security.Identity;
-import org.exoplatform.social.core.space.SpaceUtils;
-import org.exoplatform.social.core.space.model.Space;
 
 import io.meeds.content.news.service.NewsTargetingService;
 import io.meeds.content.news.utils.NewsUtils;
+import io.meeds.content.util.NewsListSettingValues;
 import io.meeds.social.portlet.CMSPortlet;
 
 public class NewsListViewPortlet extends CMSPortlet {
@@ -133,17 +130,10 @@ public class NewsListViewPortlet extends CMSPortlet {
         && NewsListSettingValues.isKnownTarget(request.getParameter("newsTarget"), getNewsTargetingService());
   }
 
-  // the editors of the instance, as the view's canEdit, and the publishers of
-  // the page's space, as the view's canPublishNews
+  // the instance's edit right, the one the view's canEdit applies
   private boolean canEditSettings(PortletPreferences preferences) {
     String name = preferences.getValue(NAME, null);
-    if (StringUtils.isNotBlank(name) && canEdit(name, null)) {
-      return true;
-    }
-    ConversationState conversationState = ConversationState.getCurrent();
-    Identity currentIdentity = conversationState == null ? null : conversationState.getIdentity();
-    Space space = SpaceUtils.getSpaceByContext();
-    return space != null && NewsUtils.canPublishNews(space.getId(), currentIdentity);
+    return StringUtils.isNotBlank(name) && canEdit(name, null);
   }
 
   private String getOrCreateApplicationId(PortletPreferences preferences) {

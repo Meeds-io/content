@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
-package io.meeds.content.portlet;
+package io.meeds.content.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -24,11 +24,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.util.List;
-
 import org.junit.jupiter.api.Test;
 
-import io.meeds.content.news.rest.model.NewsTargetingEntity;
 import io.meeds.content.news.service.NewsTargetingService;
 
 class NewsListSettingValuesTest {
@@ -71,9 +68,7 @@ class NewsListSettingValuesTest {
   @Test
   void targetIsOneOfTheInstanceTargets() {
     NewsTargetingService service = mock(NewsTargetingService.class);
-    NewsTargetingEntity target = new NewsTargetingEntity();
-    target.setName("sliderNews");
-    when(service.getAllTargets()).thenReturn(List.of(target));
+    when(service.isTarget("sliderNews")).thenReturn(true);
 
     assertTrue(NewsListSettingValues.isKnownTarget(null, service));
     assertTrue(NewsListSettingValues.isKnownTarget("", service));

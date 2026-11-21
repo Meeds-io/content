@@ -16,14 +16,13 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
-package io.meeds.content.portlet;
+package io.meeds.content.util;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
 
-import io.meeds.content.news.rest.model.NewsTargetingEntity;
 import io.meeds.content.news.service.NewsTargetingService;
 
 /**
@@ -68,7 +67,7 @@ public final class NewsListSettingValues {
 
   public static boolean isKnownTarget(String target, NewsTargetingService newsTargetingService) {
     return isBlankTarget(target)
-        || newsTargetingService.getAllTargets().stream().map(NewsTargetingEntity::getName).anyMatch(target::equals);
+        || newsTargetingService.isTarget(target);
   }
 
   /**
