@@ -192,7 +192,7 @@ export default {
       };
     },
     hideEmptyNewsTemplate() {
-      return this.selectedViewExtension?.id === 'NewsEmptyTemplate' && !this.canManageNewsList && !this.$root.canPublishNews && !this.canAddArticle;
+      return this.selectedViewExtension?.id === 'NewsEmptyTemplate' && !this.canManageNewsList && !this.canAddArticle;
     },
     newsListViewClass() {
       let newsListViewClass = 'list-view-card';
