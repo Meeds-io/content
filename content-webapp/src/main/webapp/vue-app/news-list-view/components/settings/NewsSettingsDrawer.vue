@@ -290,7 +290,7 @@ export default {
       this.newsTargets.push(newTarget);
       this.newsTarget = newTarget.name;
     });
-    this.saveSettingsURL = (this.$root.canManageNewsList || this.$root.canPublishNews) && this.$root.saveSettingsURL || null;
+    this.saveSettingsURL = this.$root.canManageNewsList && this.$root.saveSettingsURL || null;
   },
   methods: {
     open() {

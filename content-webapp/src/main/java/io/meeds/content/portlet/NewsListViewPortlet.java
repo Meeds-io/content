@@ -100,8 +100,8 @@ public class NewsListViewPortlet extends CMSPortlet {
   public void processAction(ActionRequest request, ActionResponse response) throws PortletException, IOException {
     PortletPreferences preferences = request.getPreferences();
     if (!canEditSettings(preferences)) {
-      // Refused like the Content List save; the view shows the settings drawer
-      // only to those this check accepts
+      // The instance's edit right only, like the Content List save; the view
+      // offers the settings to the holders of that right
       throw new PortletException("Current user is not authorized to edit this News List instance");
     }
     if (!areValidValues(request)) {

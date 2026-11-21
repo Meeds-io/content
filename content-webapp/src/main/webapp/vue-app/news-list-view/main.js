@@ -125,7 +125,7 @@ export function init(params) {
                                                   || params.headerTitle;
         });
         this.canPublishNews = await  this.$newsServices.canPublishNews();
-        this.canManageNewsList = this.canEditNewsList || this.canPublishNews;
+        this.canManageNewsList = this.canEditNewsList;
         if (this.spaceId) {
           this.canCreateNews = await this.$newsServices.canUserCreateNews(this.spaceId);
         }

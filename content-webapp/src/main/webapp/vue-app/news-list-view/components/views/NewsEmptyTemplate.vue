@@ -71,7 +71,7 @@ export default {
       return this.canCreateNews && this.$root.articlesSourceOption !== 'target';
     },
     displayEmptyTemplateOptions() {
-      return this.canManageNewsList || this.canAddArticle;
+      return this.canManageNewsList || this.$root.canPublishNews || this.canAddArticle;
     }
   },
   methods: {
