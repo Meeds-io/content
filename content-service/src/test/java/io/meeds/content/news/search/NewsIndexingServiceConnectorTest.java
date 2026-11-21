@@ -25,7 +25,6 @@ import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -97,13 +96,18 @@ public class NewsIndexingServiceConnectorTest {
     assertTrue(newsIndexingServiceConnector.getAllIds(6, 2).isEmpty());
 
     ArgumentCaptor<MetadataFilter> filter = ArgumentCaptor.forClass(MetadataFilter.class);
-    verify(metadataService, atLeastOnce()).getMetadataItemsByFilter(filter.capture(), eq(0L), eq(0L));
+    // The empty answer after a last page filled to the limit reads nothing again
+    verify(metadataService, times(1)).getMetadataItemsByFilter(filter.capture(), eq(0L), eq(0L));
     assertEquals(NewsService.NEWS_METADATA_PAGE_OBJECT_TYPE, filter.getValue().getMetadataObjectTypes().get(0));
     assertEquals(NewsService.POSTED, filter.getValue().getMetadataProperties().get(NewsService.NEWS_PUBLICATION_STATE));
     assertEquals("false", filter.getValue().getMetadataProperties().get(NewsService.NEWS_DELETED));
     // Without space ids the DAO reads the combined properties only
     assertEquals(filter.getValue().getMetadataProperties(), filter.getValue().getCombinedMetadataProperties());
     assertTrue(CollectionUtils.isEmpty(filter.getValue().getMetadataSpaceIds()));
+
+    // A new reindex lists the articles again
+    assertEquals(List.of("1", "2"), newsIndexingServiceConnector.getAllIds(0, 2));
+    verify(metadataService, times(2)).getMetadataItemsByFilter(any(MetadataFilter.class), eq(0L), eq(0L));
   }
 
   @Test

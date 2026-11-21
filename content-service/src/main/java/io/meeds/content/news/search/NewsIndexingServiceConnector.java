@@ -104,12 +104,14 @@ public class NewsIndexingServiceConnector extends ElasticIndexingServiceConnecto
       allIds = loadAllIds();
     }
     if (offset >= allIds.size()) {
+      // Answer to the call that follows a last page filled to the limit
       allIds = null;
       return Collections.emptyList();
     }
     int end = Math.min(allIds.size(), offset + Math.max(limit, 0));
     List<String> page = new ArrayList<>(allIds.subList(offset, end));
-    if (end >= allIds.size()) {
+    if (page.size() < limit) {
+      // A short page ends the reindex: nothing carries over to the next one
       allIds = null;
     }
     return page;
