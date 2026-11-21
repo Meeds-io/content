@@ -36,7 +36,9 @@ import static org.mockito.Mockito.when;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.portlet.ActionRequest;
@@ -57,6 +59,7 @@ import org.exoplatform.social.core.space.SpaceUtils;
 import org.exoplatform.social.core.space.model.Space;
 import org.exoplatform.social.core.space.spi.SpaceService;
 
+import io.meeds.content.news.service.NewsTargetingService;
 import io.meeds.social.cms.service.CMSService;
 
 class ListViewPortletSettingsSaveTest {
@@ -99,6 +102,7 @@ class ListViewPortletSettingsSaveTest {
     request = mock(ActionRequest.class);
     when(request.getPreferences()).thenReturn(preferences);
     when(request.getParameter(anyString())).thenAnswer(invocation -> parameters.get(invocation.<String> getArgument(0)));
+    when(request.getParameterNames()).thenAnswer(invocation -> Collections.enumeration(parameters.keySet()));
     ConversationState.setCurrent(new ConversationState(new Identity(USERNAME)));
   }
 
@@ -127,10 +131,23 @@ class ListViewPortletSettingsSaveTest {
         "showSeeAll", "showArticleTitle", "showArticleSummary", "showArticleImage", "showArticleAuthor", "showArticleSpace",
         "showArticleReactions", "showArticleDate", "seeAllUrl", "limit" };
     postDrawerSettingsAndOthers(drawerSettings);
+    parameters.put("newsTarget", "");
+    parameters.put("seeAllUrl", "/portal/news");
+    parameters.put("limit", "5");
 
     new NewsListViewPortlet().processAction(request, mock(ActionResponse.class));
 
-    verifyOnlyDrawerSettingsStored(drawerSettings);
+    for (String setting : drawerSettings) {
+      String value = switch (setting) {
+        case "newsTarget" -> "";
+        case "seeAllUrl" -> "/portal/news";
+        case "limit" -> "5";
+        default -> setting + "-value";
+      };
+      verify(preferences).setValue(setting, value);
+    }
+    verifyOtherSettingsNeverStored();
+    verify(preferences).store();
   }
 
   @Test
@@ -195,6 +212,33 @@ class ListViewPortletSettingsSaveTest {
   }
 
   @Test
+  void theNewsListSaveIsRefusedForAValueOfAnotherShape() throws Exception {
+    when(cmsService.hasEditPermission(any(), any(), eq(SETTING_NAME))).thenReturn(true);
+    NewsTargetingService targetingService = mock(NewsTargetingService.class);
+    when(targetingService.getAllTargets()).thenReturn(List.of());
+    containerContext.when(() -> ExoContainerContext.getService(NewsTargetingService.class)).thenReturn(targetingService);
+    NewsListViewPortlet portlet = new NewsListViewPortlet();
+    ActionResponse response = mock(ActionResponse.class);
+
+    for (String[] setting : new String[][] { { "limit", "many" }, { "seeAllUrl", "news/all" }, { "newsTarget", "unknown" } }) {
+      parameters.clear();
+      parameters.put("showHeader", "true");
+      parameters.put(setting[0], setting[1]);
+      assertThrows(PortletException.class, () -> portlet.processAction(request, response));
+    }
+    verify(preferences, never()).setValue(nullable(String.class), nullable(String.class));
+    verify(preferences, never()).store();
+  }
+
+  @Test
+  void theNewsListViewReadsItsStoredValuesThroughTheirRules() throws Exception {
+    String view = Files.readString(Path.of("src/main/webapp/WEB-INF/jsp/newsListView.jsp"), StandardCharsets.UTF_8);
+    assertTrue(view.contains("NewsListSettingValues.targetOrDefault("));
+    assertTrue(view.contains("NewsListSettingValues.limitOrDefault("));
+    assertTrue(view.contains("NewsListSettingValues.seeAllUrlOrDefault("));
+  }
+
+  @Test
   void theContentListSaveIsRefusedToANonEditor() throws Exception {
     parameters.put("headerTitle", "x");
     ContentListViewPortlet portlet = new ContentListViewPortlet();
@@ -218,11 +262,15 @@ class ListViewPortletSettingsSaveTest {
     for (String setting : drawerSettings) {
       verify(preferences).setValue(setting, setting + "-value");
     }
+    verifyOtherSettingsNeverStored();
+    verify(preferences).store();
+  }
+
+  private void verifyOtherSettingsNeverStored() throws Exception {
     verify(preferences, never()).setValue(eq(NAME), anyString());
     verify(preferences, never()).setValue(eq("applicationId"), anyString());
     verify(preferences, never()).setValue(eq("header"), anyString());
     verify(preferences, never()).setValue(eq("data.init"), anyString());
-    verify(preferences).store();
   }
 
 }

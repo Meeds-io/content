@@ -45,6 +45,7 @@ import org.exoplatform.services.security.Identity;
 import org.exoplatform.social.core.space.SpaceUtils;
 import org.exoplatform.social.core.space.model.Space;
 
+import io.meeds.content.news.service.NewsTargetingService;
 import io.meeds.content.news.utils.NewsUtils;
 import io.meeds.social.portlet.CMSPortlet;
 
@@ -75,6 +76,8 @@ public class NewsListViewPortlet extends CMSPortlet {
 
   private TranslationService translationService;
 
+  private NewsTargetingService newsTargetingService;
+
   @Override
   public void init(PortletConfig config) throws PortletException {
     super.init(config);
@@ -104,6 +107,9 @@ public class NewsListViewPortlet extends CMSPortlet {
       // only to those this check accepts
       throw new PortletException("Current user is not authorized to edit this News List instance");
     }
+    if (!areValidValues(request)) {
+      throw new PortletException("The News List settings hold a value of an unexpected shape");
+    }
     for (String settingName : SETTING_NAMES) {
       String value = request.getParameter(settingName);
       if (value != null) {
@@ -118,6 +124,12 @@ public class NewsListViewPortlet extends CMSPortlet {
     String applicationId = getOrCreateApplicationId(request.getPreferences());
     request.getPreferences().setValue(APPLICATION_ID, applicationId);
     super.doView(request, response);
+  }
+
+  private boolean areValidValues(ActionRequest request) {
+    return NewsListSettingValues.isValidLimit(request.getParameter("limit"))
+        && NewsListSettingValues.isValidSeeAllUrl(request.getParameter("seeAllUrl"))
+        && NewsListSettingValues.isKnownTarget(request.getParameter("newsTarget"), getNewsTargetingService());
   }
 
   // the editors of the instance, as the view's canEdit, and the publishers of
@@ -154,6 +166,13 @@ public class NewsListViewPortlet extends CMSPortlet {
                               applicationId,
                               SettingValue.create(settingName));
     }
+  }
+
+  private NewsTargetingService getNewsTargetingService() {
+    if (newsTargetingService == null) {
+      newsTargetingService = ExoContainerContext.getService(NewsTargetingService.class);
+    }
+    return newsTargetingService;
   }
 
   private SettingService getSettingService() {
