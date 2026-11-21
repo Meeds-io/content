@@ -20,6 +20,7 @@ package io.meeds.content.news.search;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
@@ -101,7 +102,8 @@ public class NewsIndexingServiceConnectorTest {
     verify(metadataService, times(1)).getMetadataItemsByFilter(filter.capture(), eq(0L), eq(0L));
     assertEquals(NewsService.NEWS_METADATA_NAME, filter.getValue().getMetadataName());
     assertEquals(NewsService.NEWS_METADATA_TYPE.getName(), filter.getValue().getMetadataTypeName());
-    assertEquals(NewsService.NEWS_METADATA_PAGE_OBJECT_TYPE, filter.getValue().getMetadataObjectTypes().get(0));
+    assertEquals(List.of(NewsService.NEWS_METADATA_PAGE_OBJECT_TYPE), filter.getValue().getMetadataObjectTypes());
+    assertNull(filter.getValue().getCreatorId());
     assertEquals(Map.of(NewsService.NEWS_PUBLICATION_STATE, NewsService.POSTED, NewsService.NEWS_DELETED, "false"),
                  filter.getValue().getMetadataProperties());
     // Without space ids the DAO reads the combined properties only
