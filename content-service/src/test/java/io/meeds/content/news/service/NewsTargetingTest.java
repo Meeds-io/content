@@ -29,6 +29,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -146,7 +147,7 @@ public class NewsTargetingTest {
     assertFalse(newsTargetingService.isTarget("unknown"));
 
     verify(metadataService, never()).getMetadatas(anyString(), anyLong());
-    NEWS_UTILS.verify(() -> NewsUtils.getUserIdentity(anyString()), never());
+    NEWS_UTILS.verify(() -> NewsUtils.getUserIdentity(nullable(String.class)), never());
   }
 
   @Test
