@@ -111,6 +111,29 @@ public class NewsIndexingServiceConnectorTest {
   }
 
   @Test
+  public void testGetAllIdsListsAgainWhenAReindexStartsAfterAnInterruptedOne() {
+    newsIndexingServiceConnector = new NewsIndexingServiceConnector(identityManager,
+                                                                    getParams(),
+                                                                    newsService,
+                                                                    activityManager,
+                                                                    metadataService);
+    when(metadataService.getMetadataItemsByFilter(any(MetadataFilter.class), eq(0L), eq(0L))).thenReturn(List.of(item("1"),
+                                                                                                                  item("2"),
+                                                                                                                  item("3"),
+                                                                                                                  item("4")))
+                                                                                             .thenReturn(List.of(item("7"),
+                                                                                                                 item("8"),
+                                                                                                                 item("9")));
+
+    // The first reindex stops after two full pages, the listing still cached
+    assertEquals(List.of("1", "2"), newsIndexingServiceConnector.getAllIds(0, 2));
+    assertEquals(List.of("3", "4"), newsIndexingServiceConnector.getAllIds(2, 2));
+
+    assertEquals(List.of("7", "8"), newsIndexingServiceConnector.getAllIds(0, 2));
+    verify(metadataService, times(2)).getMetadataItemsByFilter(any(MetadataFilter.class), eq(0L), eq(0L));
+  }
+
+  @Test
   public void testGetAllIdsReadsTheWholeListingInOneQueryWithoutDuplicates() {
     newsIndexingServiceConnector = new NewsIndexingServiceConnector(identityManager,
                                                                     getParams(),
