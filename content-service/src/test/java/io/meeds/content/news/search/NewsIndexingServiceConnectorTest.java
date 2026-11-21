@@ -21,11 +21,14 @@ package io.meeds.content.news.search;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -35,6 +38,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.IntStream;
+
+import jakarta.persistence.PersistenceException;
+import jakarta.persistence.QueryTimeoutException;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.junit.Test;
@@ -130,6 +136,40 @@ public class NewsIndexingServiceConnectorTest {
     when(newsService.getArticleLanguages("3", false)).thenReturn(List.of("en"));
 
     assertEquals(List.of("1", "2", "3", "1-fr", "3-en"), newsIndexingServiceConnector.getAllIds(0, 10));
+  }
+
+  @Test
+  public void testGetAllIdsEndsAtTheFirstFailedDatabaseRead() {
+    newsIndexingServiceConnector = new NewsIndexingServiceConnector(identityManager,
+                                                                    getParams(),
+                                                                    newsService,
+                                                                    activityManager,
+                                                                    metadataService);
+    when(metadataService.getMetadataItemsByFilter(any(MetadataFilter.class), eq(0L), eq(0L))).thenReturn(List.of(item("1"),
+                                                                                                                  item("2")));
+    PersistenceException failure = new PersistenceException("database unreachable");
+    when(newsService.getArticleLanguages("1", false)).thenThrow(failure);
+
+    PersistenceException thrown = assertThrows(PersistenceException.class,
+                                               () -> newsIndexingServiceConnector.getAllIds(0, 10));
+    assertSame(failure, thrown);
+    verify(newsService, never()).getArticleLanguages("2", false);
+  }
+
+  @Test
+  public void testGetAllIdsKeepsListingWhenTheTranslationsReadTimesOut() {
+    newsIndexingServiceConnector = new NewsIndexingServiceConnector(identityManager,
+                                                                    getParams(),
+                                                                    newsService,
+                                                                    activityManager,
+                                                                    metadataService);
+    when(metadataService.getMetadataItemsByFilter(any(MetadataFilter.class), eq(0L), eq(0L))).thenReturn(List.of(item("1"),
+                                                                                                                  item("2")));
+    when(newsService.getArticleLanguages("1", false)).thenThrow(new QueryTimeoutException("query timed out"));
+    when(newsService.getArticleLanguages("2", false)).thenReturn(List.of("en"));
+
+    assertEquals(List.of("1", "2", "2-en"), newsIndexingServiceConnector.getAllIds(0, 10));
+    verify(newsService).getArticleLanguages("2", false);
   }
 
   @Test

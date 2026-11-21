@@ -26,6 +26,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import jakarta.persistence.LockTimeoutException;
+import jakarta.persistence.PersistenceException;
+import jakarta.persistence.QueryTimeoutException;
+
 import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.commons.lang3.StringUtils;
 
@@ -148,14 +152,23 @@ public class NewsIndexingServiceConnector extends ElasticIndexingServiceConnecto
         if (languages != null) {
           languages.forEach(lang -> ids.add(articleId + "-" + lang));
         }
+      } catch (QueryTimeoutException | LockTimeoutException e) {
+        // These do not mark the transaction rollback-only: the reindex goes on
+        logTranslationsError(articleId, e);
+      } catch (PersistenceException e) {
+        // A failed database read that marks the reindex transaction
+        // rollback-only ends the reindex anyway: end the listing at once
+        throw e;
       } catch (Exception e) {
-        // The article stays listed without its translations. A failed database
-        // read marks the reindex transaction rollback-only and still ends the
-        // reindex
-        LOG.warn("Error listing the translations of news '{}', they are not indexed again", articleId, e);
+        // Any other error leaves the article listed without its translations
+        logTranslationsError(articleId, e);
       }
     }
     return new ArrayList<>(ids);
+  }
+
+  private void logTranslationsError(String articleId, Exception e) {
+    LOG.warn("Error listing the translations of news '{}', they are not indexed again", articleId, e);
   }
 
   private Document getDocument(String id) {
