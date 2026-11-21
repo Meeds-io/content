@@ -21,7 +21,6 @@ package io.meeds.content.news.search;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -60,12 +59,15 @@ import io.meeds.content.news.model.News;
 import io.meeds.content.news.service.NewsService;
 
 /**
- * Plays the upgrade of the news index against a real engine: the previous
- * index is copied into the new one (what the engine-side reindex does), then
+ * Plays the upgrade of the news index against a real engine, in the order the
+ * indexing processor runs it with {@code reindexOnUpgrade}: the previous index
+ * is copied into the new one (engine-side reindex), every document of the new
+ * index is deleted (the {@code DELETE_ALL} queued before the listing), then
  * the documents the connector lists with {@code getAllIds} are built again
- * from the database and indexed (what {@code reindexOnUpgrade} asks the
- * indexing processor for). An article the engine rejected before the fix is
- * absent from the previous index: only the second step brings it back.
+ * from the database and indexed. The processor itself is not run here. An
+ * article the engine rejected before the fix is absent from the previous
+ * index and comes back with the listing; a document the listing leaves out
+ * does not survive the copy.
  */
 public class NewsIndexUpgradeIT extends AbstractElasticsearchIT {
 
@@ -78,6 +80,8 @@ public class NewsIndexUpgradeIT extends AbstractElasticsearchIT {
   private static final String     INDEXED_ID      = "10";
 
   private static final String     MISSING_ID      = "11";
+
+  private static final String     REMOVED_ID      = "12";
 
   private static final HttpClient HTTP_CLIENT     = HttpClient.newHttpClient();
 
@@ -98,11 +102,20 @@ public class NewsIndexUpgradeIT extends AbstractElasticsearchIT {
          "/" + PREVIOUS_INDEX + "/_doc/" + INDEXED_ID + "?refresh=true",
          "{\"id\": \"10\", \"title\": \"Indexed before\", \"permissions\": [5], \"lastUpdatedTime\": 1}");
 
+    send("PUT",
+         "/" + PREVIOUS_INDEX + "/_doc/" + REMOVED_ID + "?refresh=true",
+         "{\"id\": \"12\", \"title\": \"Deleted since\", \"permissions\": [5], \"lastUpdatedTime\": 1}");
+
     // Engine-side copy of the previous index
     send("POST",
          "/_reindex?refresh=true",
          "{\"source\":{\"index\":\"" + PREVIOUS_INDEX + "\"},\"dest\":{\"index\":\"" + CURRENT_INDEX + "\"}}");
-    assertEquals(List.of(INDEXED_ID), idsOf(CURRENT_INDEX));
+    assertEquals(List.of(INDEXED_ID, REMOVED_ID), idsOf(CURRENT_INDEX));
+
+    // DELETE_ALL of the new index, queued before the first listed id
+    send("POST", "/" + CURRENT_INDEX + "/_delete_by_query?conflicts=proceed&wait_for_completion=true&refresh=true",
+         "{\"query\":{\"match_all\":{}}}");
+    assertEquals(List.of(), idsOf(CURRENT_INDEX));
 
     // Rebuild from the database, as the indexing processor does for each listed id
     NewsIndexingServiceConnector connector = connector();
@@ -129,7 +142,7 @@ public class NewsIndexUpgradeIT extends AbstractElasticsearchIT {
     ActivityManager activityManager = mock(ActivityManager.class);
     MetadataService metadataService = mock(MetadataService.class);
 
-    when(metadataService.getMetadataItemsByFilter(any(MetadataFilter.class), eq(0L), anyLong())).thenReturn(List.of(item(INDEXED_ID),
+    when(metadataService.getMetadataItemsByFilter(any(MetadataFilter.class), eq(0L), eq(0L))).thenReturn(List.of(item(INDEXED_ID),
                                                                                                                   item(MISSING_ID)));
     when(newsService.getArticleLanguages(INDEXED_ID, false)).thenReturn(List.of());
     when(newsService.getArticleLanguages(MISSING_ID, false)).thenReturn(List.of("fr"));
