@@ -60,8 +60,7 @@ public final class NewsListSettingValues {
     if (StringUtils.isBlank(url)) {
       return true;
     }
-    // read as a browser reads a link: tab and line breaks removed anywhere,
-    // leading control characters and spaces stripped, then the scheme
+    // a link is read as a browser reads it
     String link = LEADING_CONTROL.matcher(url.replaceAll("[\\t\\r\\n]", "")).replaceFirst("");
     Matcher scheme = LINK_SCHEME.matcher(link);
     return !scheme.find() || "http".equalsIgnoreCase(scheme.group(1)) || "https".equalsIgnoreCase(scheme.group(1));

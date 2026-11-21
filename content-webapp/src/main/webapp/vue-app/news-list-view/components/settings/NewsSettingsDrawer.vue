@@ -220,11 +220,17 @@ export default {
     limitExceeded() {
       return this.maxArticlesLimit !== null && Number(this.limit) > this.maxArticlesLimit;
     },
+    limitInvalid() {
+      // the rule the server saves with: blank, or a positive whole number of at most 9 digits
+      const limit = String(this.limit ?? '').trim();
+      return limit !== '' && (!/^\d{1,9}$/.test(limit) || Number(limit) < 1);
+    },
     disabled() {
       return (this.showSeeAll && !this.isValidSeeAllUrl)
           || (this.isTargetSourceOption && !this.newsTarget)
           || (this.isSelectedListSourceOption && !this.selectedArticles?.length)
-          || this.limitExceeded;
+          || this.limitExceeded
+          || this.limitInvalid;
     },
     previewTemplate() {
       if ( this.viewTemplate === 'NewsLatest') {

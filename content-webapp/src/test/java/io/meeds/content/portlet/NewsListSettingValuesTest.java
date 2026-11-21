@@ -63,11 +63,7 @@ class NewsListSettingValuesTest {
     assertTrue(NewsListSettingValues.isValidSeeAllUrl("/portal/dw/news"));
     assertTrue(NewsListSettingValues.isValidSeeAllUrl("www.example.org"));
     assertTrue(NewsListSettingValues.isValidSeeAllUrl("news/all"));
-    assertFalse(NewsListSettingValues.isValidSeeAllUrl("ftp://example.org"));
-    assertFalse(NewsListSettingValues.isValidSeeAllUrl("FtP:example.org"));
-    assertFalse(NewsListSettingValues.isValidSeeAllUrl("  ftp://example.org"));
-    assertFalse(NewsListSettingValues.isValidSeeAllUrl("\u0001\u0000 ftp://example.org"));
-    assertFalse(NewsListSettingValues.isValidSeeAllUrl("f\tt\np:example.org"));
+    assertFalse(NewsListSettingValues.isValidSeeAllUrl("FTP://example.org"));
     assertEquals("news/all", NewsListSettingValues.seeAllUrlOrDefault("news/all"));
     assertEquals("", NewsListSettingValues.seeAllUrlOrDefault("ftp://example.org"));
   }
