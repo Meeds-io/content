@@ -484,6 +484,16 @@ public class NewsServiceTest {
     assertTrue(events.stream().noneMatch(event -> "7".equals(event.get("entityId"))));
   }
 
+  @Test
+  public void testEditAnUnpublishedArticleWithAnAudienceLeavesItsTranslationsAsTheyAre() throws Exception {
+    List<Map<String, Object>> events = updatePublishedArticleAudience(NewsUtils.SPACE_NEWS_AUDIENCE,
+                                                                      NewsUtils.ALL_NEWS_AUDIENCE,
+                                                                      false,
+                                                                      false);
+
+    assertTrue(events.stream().noneMatch(event -> "7".equals(event.get("entityId"))));
+  }
+
   private List<Map<String, Object>> updatePublishedArticleAudience(String audience, String newAudience) throws Exception {
     return updatePublishedArticleAudience(audience, newAudience, true);
   }
@@ -491,6 +501,13 @@ public class NewsServiceTest {
   private List<Map<String, Object>> updatePublishedArticleAudience(String audience,
                                                                    String newAudience,
                                                                    boolean published) throws Exception {
+    return updatePublishedArticleAudience(audience, newAudience, published, true);
+  }
+
+  private List<Map<String, Object>> updatePublishedArticleAudience(String audience,
+                                                                   String newAudience,
+                                                                   boolean published,
+                                                                   boolean publish) throws Exception {
     News news = mockUpdatableArticle();
     news.setPublished(published);
     news.setCanPublish(true);
@@ -514,7 +531,7 @@ public class NewsServiceTest {
     when(noteService.getPublishedVersionByPageIdAndLang(1L, "fr")).thenReturn(translation);
     NEWS_UTILS.clearInvocations();
 
-    service.updateNews(news, "john", null, true, ARTICLE.name().toLowerCase(), POSTING_AND_PUBLISHING.name());
+    service.updateNews(news, "john", null, publish, ARTICLE.name().toLowerCase(), POSTING_AND_PUBLISHING.name());
 
     @SuppressWarnings("unchecked")
     ArgumentCaptor<Map<String, Object>> eventData = ArgumentCaptor.forClass(Map.class);
