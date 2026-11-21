@@ -19,7 +19,7 @@
 package io.meeds.content.portlet;
 
 import java.io.IOException;
-import java.util.Enumeration;
+import java.util.List;
 import java.util.Random;
 
 import javax.portlet.ActionRequest;
@@ -53,6 +53,14 @@ public class ContentListViewPortlet extends CMSPortlet {
 
   private static final String APPLICATION_ID = "applicationId";
 
+  // the settings the Content List settings drawer saves
+  private static final List<String> SETTING_NAMES = List.of("showHeader",
+                                                            "headerTitle",
+                                                            "allowFilteringPerCategory",
+                                                            "categoryDepth",
+                                                            "categoryIds",
+                                                            "excludeCategoryIds");
+
   private static final Random RANDOM         = new Random();
 
   private SettingService settingService;
@@ -80,14 +88,11 @@ public class ContentListViewPortlet extends CMSPortlet {
       // and it gets no state change and no information either way.
       throw new PortletException("Current user is not authorized to edit this Content List instance");
     }
-    Enumeration<String> parameterNames = request.getParameterNames();
-    while (parameterNames.hasMoreElements()) {
-      String name = parameterNames.nextElement();
-      if (StringUtils.equals(name, "action") || StringUtils.contains(name, "portal:")) {
-        continue;
+    for (String settingName : SETTING_NAMES) {
+      String value = request.getParameter(settingName);
+      if (value != null) {
+        preferences.setValue(settingName, value);
       }
-      String value = request.getParameter(name);
-      preferences.setValue(name, value);
     }
     preferences.store();
   }
