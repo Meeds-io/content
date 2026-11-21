@@ -1,4 +1,5 @@
 <%@ taglib uri="http://java.sun.com/portlet_2_0" prefix="portlet" %>
+<%@ page import="org.exoplatform.social.webui.Utils" %>
 <portlet:defineObjects />
 <%
   String name = (String) request.getAttribute("settingName");
@@ -10,7 +11,7 @@
     class="v-application transparent v-application--is-ltr theme--light" flat=""
     id="<%=id%>">
     <script type="text/javascript">
-      require(['PORTLET/content/Links'], app => app.init('<%=id%>', '<%=name%>', <%=canEdit%>));
+      require(['PORTLET/content/Links'], app => app.init(<%=Utils.toScriptString(id)%>, <%=Utils.toScriptString(name)%>, <%=canEdit%>));
     </script>
   </div>
 </div>
