@@ -63,6 +63,12 @@ class NewsListSettingValuesTest {
     assertTrue(NewsListSettingValues.isValidSeeAllUrl("www.example.org"));
     assertTrue(NewsListSettingValues.isValidSeeAllUrl("news/all"));
     assertFalse(NewsListSettingValues.isValidSeeAllUrl("FTP://example.org"));
+    // a link is read as a browser reads it: tab and line breaks dropped, leading control characters and spaces stripped
+    assertFalse(NewsListSettingValues.isValidSeeAllUrl("ft\tp://example.org"));
+    assertFalse(NewsListSettingValues.isValidSeeAllUrl("ft\np://example.org"));
+    assertFalse(NewsListSettingValues.isValidSeeAllUrl("\u0001ftp://example.org"));
+    assertFalse(NewsListSettingValues.isValidSeeAllUrl(" ftp://example.org"));
+    assertTrue(NewsListSettingValues.isValidSeeAllUrl("  /portal/news"));
     assertEquals("news/all", NewsListSettingValues.seeAllUrlOrDefault("news/all"));
     assertEquals("", NewsListSettingValues.seeAllUrlOrDefault("ftp://example.org"));
   }
