@@ -42,7 +42,8 @@
     String[] articlesSourceOptionParams = (String[]) request.getAttribute("articlesSourceOption");
     String[] selectedArticleIdsParams  = (String[]) request.getAttribute("selectedArticleIds");
     String viewTemplate = viewTemplateParams == null || viewTemplateParams.length == 0 ? "": viewTemplateParams[0];
-    String newsTarget = NewsListSettingValues.targetOrDefault(newsTargetParams == null || newsTargetParams.length == 0 ? "": newsTargetParams[0],
+    String storedNewsTarget = newsTargetParams == null || newsTargetParams.length == 0 ? "": newsTargetParams[0];
+    String newsTarget = NewsListSettingValues.targetOrDefault(storedNewsTarget,
                                                               ExoContainerContext.getService(NewsTargetingService.class));
     String headerTitle = headerParams == null || headerParams.length == 0 ? "": headerParams[0];
     String limit = NewsListSettingValues.limitOrDefault(limitParams == null || limitParams.length == 0 ? "4": limitParams[0]);
@@ -56,7 +57,8 @@
     String showArticleSpace = showArticleSpaceParams == null || showArticleSpaceParams.length == 0 ? "true": showArticleSpaceParams[0];
     String showArticleReactions = showArticleReactionsParams == null || showArticleReactionsParams.length == 0 ? "true": showArticleReactionsParams[0];
     String seeAllUrl = NewsListSettingValues.seeAllUrlOrDefault(seeAllUrlParams == null || seeAllUrlParams.length == 0 ? "": seeAllUrlParams[0]);
-    String articlesSourceOption = articlesSourceOptionParams == null || articlesSourceOptionParams.length == 0 ? "" : articlesSourceOptionParams[0];
+    String articlesSourceOption = NewsListSettingValues.sourceOrDefault(storedNewsTarget,
+                                                                        articlesSourceOptionParams == null || articlesSourceOptionParams.length == 0 ? "" : articlesSourceOptionParams[0]);
     String selectedArticleIdsString = selectedArticleIdsParams == null || selectedArticleIdsParams.length == 0 ? null : String.join(",", selectedArticleIdsParams);
 
     ConversationState conversationState = ConversationState.getCurrent();
@@ -67,8 +69,11 @@
 
     PortalRequestContext rcontext = PortalRequestContext.getCurrentInstance();
     PortalHttpServletResponseWrapper responseWrapper = ( PortalHttpServletResponseWrapper ) rcontext.getResponse();
-    String newsListUrl = "/content/rest/contents/byTarget/" + newsTarget + "?offset=0&limit=" + limit + "&returnSize=true";
-    responseWrapper.addHeader("Link", "<" + newsListUrl + ">; rel=prefetch; as=fetch; crossorigin=use-credentials", false);
+    // the prefetch carries the limit the view requests: none to prefetch while the view derives its own
+    if (newsTarget != null && !newsTarget.isBlank() && !limit.isEmpty()) {
+      String newsListUrl = "/content/rest/contents/byTarget/" + newsTarget + "?offset=0&limit=" + limit + "&returnSize=true";
+      responseWrapper.addHeader("Link", "<" + newsListUrl + ">; rel=prefetch; as=fetch; crossorigin=use-credentials", false);
+    }
     // the instance's edit right, the one its settings save checks
     boolean hasEditPermission = Boolean.TRUE.equals(request.getAttribute("canEdit"));
     Space currentSpace = getSpaceByContext();

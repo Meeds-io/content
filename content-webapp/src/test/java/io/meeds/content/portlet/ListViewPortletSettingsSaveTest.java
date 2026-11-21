@@ -270,6 +270,8 @@ class ListViewPortletSettingsSaveTest {
     String view = Files.readString(Path.of("src/main/webapp/WEB-INF/jsp/newsListView.jsp"), StandardCharsets.UTF_8);
     assertTrue(view.contains("NewsListSettingValues.targetOrDefault("));
     assertTrue(view.contains("NewsListSettingValues.limitOrDefault("));
+    assertTrue(view.contains("NewsListSettingValues.sourceOrDefault("));
+    assertTrue(view.contains("&& !limit.isEmpty()) {"));
     assertTrue(view.contains("NewsListSettingValues.seeAllUrlOrDefault("));
   }
 

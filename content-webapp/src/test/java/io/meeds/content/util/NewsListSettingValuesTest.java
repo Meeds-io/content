@@ -68,6 +68,21 @@ class NewsListSettingValuesTest {
   }
 
   @Test
+  void sourceFollowsAStoredTargetWhenNoneIsStored() {
+    // a window saved before the source existed: a remaining target means the target source
+    assertEquals("target", NewsListSettingValues.sourceOrDefault("removedNews", null));
+    assertEquals("target", NewsListSettingValues.sourceOrDefault("removedNews", ""));
+    assertEquals("", NewsListSettingValues.sourceOrDefault(null, null));
+    assertEquals("", NewsListSettingValues.sourceOrDefault("", ""));
+    assertEquals("", NewsListSettingValues.sourceOrDefault("null", " "));
+    assertEquals("posted", NewsListSettingValues.sourceOrDefault("null", "posted"));
+    assertEquals("selectedList", NewsListSettingValues.sourceOrDefault("null", "selectedList"));
+    // a stored source wins
+    assertEquals("posted", NewsListSettingValues.sourceOrDefault("removedNews", "posted"));
+    assertEquals("selectedList", NewsListSettingValues.sourceOrDefault("", "selectedList"));
+  }
+
+  @Test
   void targetIsAnExistingTarget() {
     NewsTargetingService service = mock(NewsTargetingService.class);
     when(service.isTarget("sliderNews")).thenReturn(true);

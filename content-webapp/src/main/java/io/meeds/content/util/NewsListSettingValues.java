@@ -87,6 +87,20 @@ public final class NewsListSettingValues {
     return isValidSeeAllUrl(url) ? url : "";
   }
 
+  /**
+   * @param  target a stored target, as stored
+   * @param  source a stored source of the articles, as stored
+   * @return        the stored source; for a window saved before the source
+   *                existed, the target source when a target remains stored,
+   *                even one that no longer exists; else blank
+   */
+  public static String sourceOrDefault(String target, String source) {
+    if (StringUtils.isNotBlank(source)) {
+      return source;
+    }
+    return isBlankTarget(target) ? "" : "target";
+  }
+
   public static String targetOrDefault(String target, NewsTargetingService newsTargetingService) {
     return !isBlankTarget(target) && isKnownTarget(target, newsTargetingService) ? target : "";
   }
