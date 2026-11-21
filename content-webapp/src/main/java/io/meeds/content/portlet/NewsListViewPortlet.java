@@ -19,7 +19,7 @@
 package io.meeds.content.portlet;
 
 import java.io.IOException;
-import java.util.Enumeration;
+import java.util.List;
 import java.util.Random;
 
 import javax.portlet.ActionRequest;
@@ -40,6 +40,10 @@ import org.apache.commons.lang3.StringUtils;
 import org.exoplatform.commons.api.settings.SettingService;
 import org.exoplatform.commons.api.settings.SettingValue;
 import org.exoplatform.container.ExoContainerContext;
+import org.exoplatform.services.security.ConversationState;
+import org.exoplatform.services.security.Identity;
+import org.exoplatform.social.core.space.SpaceUtils;
+import org.exoplatform.social.core.space.model.Space;
 
 import io.meeds.content.news.utils.NewsUtils;
 import io.meeds.social.portlet.CMSPortlet;
@@ -49,6 +53,23 @@ public class NewsListViewPortlet extends CMSPortlet {
   private static final String OBJECT_TYPE    = "newsListViewPortlet";
 
   private static final String APPLICATION_ID = "applicationId";
+
+  // the settings the News List settings drawer saves
+  private static final List<String> SETTING_NAMES = List.of("viewTemplate",
+                                                            "newsTarget",
+                                                            "selectedArticleIds",
+                                                            "articlesSourceOption",
+                                                            "showHeader",
+                                                            "showSeeAll",
+                                                            "showArticleTitle",
+                                                            "showArticleSummary",
+                                                            "showArticleImage",
+                                                            "showArticleAuthor",
+                                                            "showArticleSpace",
+                                                            "showArticleReactions",
+                                                            "showArticleDate",
+                                                            "seeAllUrl",
+                                                            "limit");
 
   private SettingService settingService;
 
@@ -78,14 +99,16 @@ public class NewsListViewPortlet extends CMSPortlet {
   @Override
   public void processAction(ActionRequest request, ActionResponse response) throws PortletException, IOException {
     PortletPreferences preferences = request.getPreferences();
-    Enumeration<String> parameterNames = request.getParameterNames();
-    while (parameterNames.hasMoreElements()) {
-      String name = parameterNames.nextElement();
-      if (StringUtils.equals(name, "action") || StringUtils.contains(name, "portal:")) {
-        continue;
+    if (!canEditSettings(preferences)) {
+      // Refused like the Content List save; the view shows the settings drawer
+      // only to those this check accepts
+      throw new PortletException("Current user is not authorized to edit this News List instance");
+    }
+    for (String settingName : SETTING_NAMES) {
+      String value = request.getParameter(settingName);
+      if (value != null) {
+        preferences.setValue(settingName, value);
       }
-      String value = request.getParameter(name);
-      preferences.setValue(name, value);
     }
     preferences.store();
   }
@@ -95,6 +118,19 @@ public class NewsListViewPortlet extends CMSPortlet {
     String applicationId = getOrCreateApplicationId(request.getPreferences());
     request.getPreferences().setValue(APPLICATION_ID, applicationId);
     super.doView(request, response);
+  }
+
+  // the editors of the instance, as the view's canEdit, and the publishers of
+  // the page's space, as the view's canPublishNews
+  private boolean canEditSettings(PortletPreferences preferences) {
+    String name = preferences.getValue(NAME, null);
+    if (StringUtils.isNotBlank(name) && canEdit(name, null)) {
+      return true;
+    }
+    ConversationState conversationState = ConversationState.getCurrent();
+    Identity currentIdentity = conversationState == null ? null : conversationState.getIdentity();
+    Space space = SpaceUtils.getSpaceByContext();
+    return space != null && NewsUtils.canPublishNews(space.getId(), currentIdentity);
   }
 
   private String getOrCreateApplicationId(PortletPreferences preferences) {

@@ -3,9 +3,6 @@
 <%@ page import="io.meeds.content.news.utils.NewsUtils" %>
 <%@ page import="org.exoplatform.web.PortalHttpServletResponseWrapper" %>
 <%@ page import="org.exoplatform.portal.application.PortalRequestContext" %>
-<%@ page import="org.exoplatform.commons.utils.CommonsUtils" %>
-<%@ page import="org.exoplatform.portal.config.UserACL" %>
-<%@ page import="org.exoplatform.portal.config.model.Page" %>
 <%@ page import="static org.exoplatform.social.core.space.SpaceUtils.getSpaceByContext" %>
 <%@ page import="org.exoplatform.social.core.space.model.Space" %>
 <%@ page import="org.exoplatform.social.webui.Utils" %>
@@ -68,9 +65,8 @@
     PortalHttpServletResponseWrapper responseWrapper = ( PortalHttpServletResponseWrapper ) rcontext.getResponse();
     String newsListUrl = "/content/rest/contents/byTarget/" + newsTarget + "?offset=0&limit=" + limit + "&returnSize=true";
     responseWrapper.addHeader("Link", "<" + newsListUrl + ">; rel=prefetch; as=fetch; crossorigin=use-credentials", false);
-    UserACL userACL = CommonsUtils.getService(UserACL.class);
-    Page currentPage = rcontext.getPage();
-    boolean hasEditPermission = currentIdentity != null && userACL.hasEditPermission(currentPage, currentIdentity);
+    // the instance's edit right, the one its settings save checks
+    boolean hasEditPermission = Boolean.TRUE.equals(request.getAttribute("canEdit"));
     Space currentSpace = getSpaceByContext();
     boolean canCreateNewsPublishTarget = NewsUtils.canCreateNewsPublishTargets(currentIdentity, currentSpace != null ? currentSpace.getSpaceId() : null);
     boolean canManageNewsPublishTargets = NewsUtils.canManageNewsPublishTargets(currentIdentity);
