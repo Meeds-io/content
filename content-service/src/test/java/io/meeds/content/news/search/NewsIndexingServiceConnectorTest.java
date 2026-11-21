@@ -26,13 +26,16 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.IntStream;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
@@ -81,7 +84,7 @@ public class NewsIndexingServiceConnectorTest {
                                                                     newsService,
                                                                     activityManager,
                                                                     metadataService);
-    when(metadataService.getMetadataItemsByFilter(any(MetadataFilter.class), eq(0L), anyLong())).thenReturn(List.of(item("1"),
+    when(metadataService.getMetadataItemsByFilter(any(MetadataFilter.class), eq(0L), eq(0L))).thenReturn(List.of(item("1"),
                                                                                                                   item("2"),
                                                                                                                   item("3")));
     when(newsService.getArticleLanguages("1", false)).thenReturn(List.of("fr", "en"));
@@ -94,27 +97,30 @@ public class NewsIndexingServiceConnectorTest {
     assertTrue(newsIndexingServiceConnector.getAllIds(6, 2).isEmpty());
 
     ArgumentCaptor<MetadataFilter> filter = ArgumentCaptor.forClass(MetadataFilter.class);
-    verify(metadataService, atLeastOnce()).getMetadataItemsByFilter(filter.capture(), eq(0L), anyLong());
+    verify(metadataService, atLeastOnce()).getMetadataItemsByFilter(filter.capture(), eq(0L), eq(0L));
     assertEquals(NewsService.NEWS_METADATA_PAGE_OBJECT_TYPE, filter.getValue().getMetadataObjectTypes().get(0));
     assertEquals(NewsService.POSTED, filter.getValue().getMetadataProperties().get(NewsService.NEWS_PUBLICATION_STATE));
     assertEquals("false", filter.getValue().getMetadataProperties().get(NewsService.NEWS_DELETED));
+    // Without space ids the DAO reads the combined properties only
+    assertEquals(filter.getValue().getMetadataProperties(), filter.getValue().getCombinedMetadataProperties());
+    assertTrue(CollectionUtils.isEmpty(filter.getValue().getMetadataSpaceIds()));
   }
 
   @Test
-  public void testGetAllIdsReadsEverySourcePage() {
+  public void testGetAllIdsReadsTheWholeListingInOneQueryWithoutDuplicates() {
     newsIndexingServiceConnector = new NewsIndexingServiceConnector(identityManager,
                                                                     getParams(),
                                                                     newsService,
                                                                     activityManager,
                                                                     metadataService);
-    List<MetadataItem> firstPage = IntStream.range(0, 200).mapToObj(i -> item(String.valueOf(i))).toList();
-    when(metadataService.getMetadataItemsByFilter(any(MetadataFilter.class), eq(0L), anyLong())).thenReturn(firstPage);
-    when(metadataService.getMetadataItemsByFilter(any(MetadataFilter.class), eq(200L), anyLong())).thenReturn(List.of(item("200")));
+    List<MetadataItem> items = new ArrayList<>(IntStream.range(0, 450).mapToObj(i -> item(String.valueOf(i))).toList());
+    items.add(item("0"));
+    when(metadataService.getMetadataItemsByFilter(any(MetadataFilter.class), eq(0L), eq(0L))).thenReturn(items);
 
     List<String> ids = newsIndexingServiceConnector.getAllIds(0, 1000);
 
-    assertEquals(201, ids.size());
-    assertEquals("200", ids.get(200));
+    assertEquals(450, ids.size());
+    verify(metadataService, times(1)).getMetadataItemsByFilter(any(MetadataFilter.class), anyLong(), anyLong());
   }
 
   private MetadataItem item(String articleId) {

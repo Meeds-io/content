@@ -21,8 +21,10 @@ package io.meeds.content.news.search;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -54,8 +56,6 @@ import static org.exoplatform.wiki.utils.Utils.html2text;
 public class NewsIndexingServiceConnector extends ElasticIndexingServiceConnector {
 
   public static final String    TYPE             = "news";
-
-  private static final int      ALL_IDS_PAGE_SIZE = 200;
 
   private static final Log      LOG              = ExoLogger.getLogger(NewsIndexingServiceConnector.class);
 
@@ -121,32 +121,32 @@ public class NewsIndexingServiceConnector extends ElasticIndexingServiceConnecto
    * <code>articleId-lang</code> used to index them.
    */
   private List<String> loadAllIds() {
-    List<String> articleIds = new ArrayList<>();
-    List<String> translationIds = new ArrayList<>();
+    Map<String, String> postedAndNotDeleted = Map.of(NewsService.NEWS_PUBLICATION_STATE,
+                                                     NewsService.POSTED,
+                                                     NewsService.NEWS_DELETED,
+                                                     "false");
     MetadataFilter filter = new MetadataFilter();
     filter.setMetadataName(NewsService.NEWS_METADATA_NAME);
     filter.setMetadataTypeName(NewsService.NEWS_METADATA_TYPE.getName());
     filter.setMetadataObjectTypes(List.of(NewsService.NEWS_METADATA_PAGE_OBJECT_TYPE));
-    filter.setMetadataProperties(Map.of(NewsService.NEWS_PUBLICATION_STATE,
-                                        NewsService.POSTED,
-                                        NewsService.NEWS_DELETED,
-                                        "false"));
-    int offset = 0;
-    List<MetadataItem> items;
-    do {
-      items = metadataService.getMetadataItemsByFilter(filter, offset, ALL_IDS_PAGE_SIZE);
-      for (MetadataItem item : items) {
-        String articleId = item.getObjectId();
-        articleIds.add(articleId);
-        List<String> languages = newsService.getArticleLanguages(articleId, false);
-        if (languages != null) {
-          languages.forEach(lang -> translationIds.add(articleId + "-" + lang));
-        }
+    // Without space ids, the DAO builds the properties clause from the combined
+    // properties only
+    filter.setMetadataProperties(postedAndNotDeleted);
+    filter.setCombinedMetadataProperties(postedAndNotDeleted);
+    // One query for the whole listing: a limit of 0 sets no maximum, while
+    // paging by offset over items that share their creation date can skip one
+    Set<String> articleIds = new LinkedHashSet<>();
+    for (MetadataItem item : metadataService.getMetadataItemsByFilter(filter, 0, 0)) {
+      articleIds.add(item.getObjectId());
+    }
+    Set<String> ids = new LinkedHashSet<>(articleIds);
+    for (String articleId : articleIds) {
+      List<String> languages = newsService.getArticleLanguages(articleId, false);
+      if (languages != null) {
+        languages.forEach(lang -> ids.add(articleId + "-" + lang));
       }
-      offset += ALL_IDS_PAGE_SIZE;
-    } while (items.size() == ALL_IDS_PAGE_SIZE);
-    articleIds.addAll(translationIds);
-    return articleIds;
+    }
+    return new ArrayList<>(ids);
   }
 
   private Document getDocument(String id) {
