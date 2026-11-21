@@ -32,6 +32,7 @@ import static org.mockito.Mockito.when;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.IntStream;
 
 import org.apache.commons.collections4.CollectionUtils;
@@ -101,8 +102,8 @@ public class NewsIndexingServiceConnectorTest {
     assertEquals(NewsService.NEWS_METADATA_NAME, filter.getValue().getMetadataName());
     assertEquals(NewsService.NEWS_METADATA_TYPE.getName(), filter.getValue().getMetadataTypeName());
     assertEquals(NewsService.NEWS_METADATA_PAGE_OBJECT_TYPE, filter.getValue().getMetadataObjectTypes().get(0));
-    assertEquals(NewsService.POSTED, filter.getValue().getMetadataProperties().get(NewsService.NEWS_PUBLICATION_STATE));
-    assertEquals("false", filter.getValue().getMetadataProperties().get(NewsService.NEWS_DELETED));
+    assertEquals(Map.of(NewsService.NEWS_PUBLICATION_STATE, NewsService.POSTED, NewsService.NEWS_DELETED, "false"),
+                 filter.getValue().getMetadataProperties());
     // Without space ids the DAO reads the combined properties only
     assertEquals(filter.getValue().getMetadataProperties(), filter.getValue().getCombinedMetadataProperties());
     assertTrue(CollectionUtils.isEmpty(filter.getValue().getMetadataSpaceIds()));
