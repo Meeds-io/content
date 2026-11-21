@@ -34,35 +34,42 @@ import io.meeds.content.news.service.NewsTargetingService;
 class NewsListSettingValuesTest {
 
   @Test
-  void limitIsANumberInTheSupportedRange() {
+  void limitIsAPositiveNumber() {
     assertTrue(NewsListSettingValues.isValidLimit(null));
     assertTrue(NewsListSettingValues.isValidLimit(""));
     assertTrue(NewsListSettingValues.isValidLimit("1"));
-    assertTrue(NewsListSettingValues.isValidLimit("100"));
+    // the templates' own maximums, and a selected list longer than any
+    assertTrue(NewsListSettingValues.isValidLimit("3"));
+    assertTrue(NewsListSettingValues.isValidLimit("4"));
+    assertTrue(NewsListSettingValues.isValidLimit("250"));
+    assertTrue(NewsListSettingValues.isValidLimit("1234"));
     assertFalse(NewsListSettingValues.isValidLimit("0"));
-    assertFalse(NewsListSettingValues.isValidLimit("101"));
     assertFalse(NewsListSettingValues.isValidLimit("-3"));
     assertFalse(NewsListSettingValues.isValidLimit("4a"));
-    assertFalse(NewsListSettingValues.isValidLimit("1234"));
+    assertFalse(NewsListSettingValues.isValidLimit("2.5"));
+    assertFalse(NewsListSettingValues.isValidLimit("99999999999"));
     assertEquals("6", NewsListSettingValues.limitOrDefault("6"));
+    assertEquals("250", NewsListSettingValues.limitOrDefault("250"));
     // an invalid stored limit stands for none: the view applies its template's own default
     assertEquals("", NewsListSettingValues.limitOrDefault("many"));
   }
 
   @Test
-  void seeAllUrlIsAWebOrSiteRelativeAddress() {
+  void seeAllUrlIsRefusedOnlyForAnotherScheme() {
     assertTrue(NewsListSettingValues.isValidSeeAllUrl(null));
     assertTrue(NewsListSettingValues.isValidSeeAllUrl(""));
     assertTrue(NewsListSettingValues.isValidSeeAllUrl("https://example.org/news?page=2"));
     assertTrue(NewsListSettingValues.isValidSeeAllUrl("HTTP://example.org"));
     assertTrue(NewsListSettingValues.isValidSeeAllUrl("/portal/dw/news"));
+    assertTrue(NewsListSettingValues.isValidSeeAllUrl("www.example.org"));
+    assertTrue(NewsListSettingValues.isValidSeeAllUrl("news/all"));
     assertFalse(NewsListSettingValues.isValidSeeAllUrl("ftp://example.org"));
-    assertFalse(NewsListSettingValues.isValidSeeAllUrl("//example.org/news"));
-    assertFalse(NewsListSettingValues.isValidSeeAllUrl("news/all"));
-    assertFalse(NewsListSettingValues.isValidSeeAllUrl("https://example.org/a b"));
-    assertFalse(NewsListSettingValues.isValidSeeAllUrl("data:text/plain,hello"));
-    assertEquals("/portal/news", NewsListSettingValues.seeAllUrlOrDefault("/portal/news"));
-    assertEquals("", NewsListSettingValues.seeAllUrlOrDefault("news/all"));
+    assertFalse(NewsListSettingValues.isValidSeeAllUrl("FtP:example.org"));
+    assertFalse(NewsListSettingValues.isValidSeeAllUrl("  ftp://example.org"));
+    assertFalse(NewsListSettingValues.isValidSeeAllUrl("\u0001\u0000 ftp://example.org"));
+    assertFalse(NewsListSettingValues.isValidSeeAllUrl("f\tt\np:example.org"));
+    assertEquals("news/all", NewsListSettingValues.seeAllUrlOrDefault("news/all"));
+    assertEquals("", NewsListSettingValues.seeAllUrlOrDefault("ftp://example.org"));
   }
 
   @Test
@@ -74,10 +81,12 @@ class NewsListSettingValuesTest {
 
     assertTrue(NewsListSettingValues.isKnownTarget(null, service));
     assertTrue(NewsListSettingValues.isKnownTarget("", service));
+    assertTrue(NewsListSettingValues.isKnownTarget("null", service));
     assertTrue(NewsListSettingValues.isKnownTarget("sliderNews", service));
     assertFalse(NewsListSettingValues.isKnownTarget("otherNews", service));
     assertEquals("sliderNews", NewsListSettingValues.targetOrDefault("sliderNews", service));
     assertEquals("", NewsListSettingValues.targetOrDefault("otherNews", service));
+    assertEquals("", NewsListSettingValues.targetOrDefault("null", service));
   }
 
 }

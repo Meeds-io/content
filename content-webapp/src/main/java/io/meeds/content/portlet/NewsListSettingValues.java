@@ -18,6 +18,7 @@
  */
 package io.meeds.content.portlet;
 
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
@@ -32,13 +33,14 @@ import io.meeds.content.news.service.NewsTargetingService;
  */
 public final class NewsListSettingValues {
 
-  private static final int          MAX_LIMIT       = 100;
+  // what the drawer posts for a cleared target (FormData stringifies null)
+  public static final String        NULL_TARGET     = "null";
 
-  private static final Pattern      NUMBER_PATTERN  = Pattern.compile("\\d{1,3}");
+  private static final Pattern      NUMBER_PATTERN  = Pattern.compile("\\d{1,9}");
 
-  private static final Pattern      ABSOLUTE_LINK   = Pattern.compile("(?i)https?://[^\\s<>\"']+");
+  private static final Pattern      LEADING_CONTROL = Pattern.compile("^[\\u0000-\\u0020]+");
 
-  private static final Pattern      RELATIVE_LINK   = Pattern.compile("/(?!/)[^\\s<>\"'\\\\]*");
+  private static final Pattern      LINK_SCHEME     = Pattern.compile("^([A-Za-z][A-Za-z0-9+.-]*):");
 
   private NewsListSettingValues() {
     // Utility class
@@ -51,17 +53,32 @@ public final class NewsListSettingValues {
     if (!NUMBER_PATTERN.matcher(limit).matches()) {
       return false;
     }
-    int value = Integer.parseInt(limit);
-    return value > 0 && value <= MAX_LIMIT;
+    return Integer.parseInt(limit) > 0;
   }
 
   public static boolean isValidSeeAllUrl(String url) {
-    return StringUtils.isBlank(url) || ABSOLUTE_LINK.matcher(url).matches() || RELATIVE_LINK.matcher(url).matches();
+    if (StringUtils.isBlank(url)) {
+      return true;
+    }
+    // read as a browser reads a link: tab and line breaks removed anywhere,
+    // leading control characters and spaces stripped, then the scheme
+    String link = LEADING_CONTROL.matcher(url.replaceAll("[\\t\\r\\n]", "")).replaceFirst("");
+    Matcher scheme = LINK_SCHEME.matcher(link);
+    return !scheme.find() || "http".equalsIgnoreCase(scheme.group(1)) || "https".equalsIgnoreCase(scheme.group(1));
   }
 
   public static boolean isKnownTarget(String target, NewsTargetingService newsTargetingService) {
-    return StringUtils.isBlank(target)
+    return isBlankTarget(target)
         || newsTargetingService.getAllTargets().stream().map(NewsTargetingEntity::getName).anyMatch(target::equals);
+  }
+
+  /**
+   * @param  target a posted or stored target
+   * @return        true when it stands for no target: blank or the text the
+   *                drawer posts for a cleared one
+   */
+  public static boolean isBlankTarget(String target) {
+    return StringUtils.isBlank(target) || NULL_TARGET.equals(target);
   }
 
   public static String limitOrDefault(String limit) {
@@ -73,7 +90,7 @@ public final class NewsListSettingValues {
   }
 
   public static String targetOrDefault(String target, NewsTargetingService newsTargetingService) {
-    return isKnownTarget(target, newsTargetingService) ? target : "";
+    return !isBlankTarget(target) && isKnownTarget(target, newsTargetingService) ? target : "";
   }
 
 }

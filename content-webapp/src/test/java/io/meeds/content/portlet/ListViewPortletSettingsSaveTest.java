@@ -220,7 +220,7 @@ class ListViewPortletSettingsSaveTest {
     NewsListViewPortlet portlet = new NewsListViewPortlet();
     ActionResponse response = mock(ActionResponse.class);
 
-    for (String[] setting : new String[][] { { "limit", "many" }, { "seeAllUrl", "news/all" }, { "newsTarget", "unknown" } }) {
+    for (String[] setting : new String[][] { { "limit", "many" }, { "seeAllUrl", "ftp://example.org" }, { "newsTarget", "unknown" } }) {
       parameters.clear();
       parameters.put("showHeader", "true");
       parameters.put(setting[0], setting[1]);
@@ -228,6 +228,24 @@ class ListViewPortletSettingsSaveTest {
     }
     verify(preferences, never()).setValue(nullable(String.class), nullable(String.class));
     verify(preferences, never()).store();
+  }
+
+  @Test
+  void theNewsListSaveAcceptsTheValuesTheDrawerPosts() throws Exception {
+    when(cmsService.hasEditPermission(any(), any(), eq(SETTING_NAME))).thenReturn(true);
+    NewsTargetingService targetingService = mock(NewsTargetingService.class);
+    when(targetingService.getAllTargets()).thenReturn(List.of());
+    containerContext.when(() -> ExoContainerContext.getService(NewsTargetingService.class)).thenReturn(targetingService);
+    parameters.put("newsTarget", "null");
+    parameters.put("seeAllUrl", "www.example.org");
+    parameters.put("limit", "250");
+
+    new NewsListViewPortlet().processAction(request, mock(ActionResponse.class));
+
+    verify(preferences).setValue("newsTarget", "");
+    verify(preferences).setValue("seeAllUrl", "www.example.org");
+    verify(preferences).setValue("limit", "250");
+    verify(preferences).store();
   }
 
   @Test

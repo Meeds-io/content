@@ -113,7 +113,8 @@ public class NewsListViewPortlet extends CMSPortlet {
     for (String settingName : SETTING_NAMES) {
       String value = request.getParameter(settingName);
       if (value != null) {
-        preferences.setValue(settingName, value);
+        // a cleared target is stored blank, what the view reads as no target
+        preferences.setValue(settingName, "newsTarget".equals(settingName) && NewsListSettingValues.isBlankTarget(value) ? "" : value);
       }
     }
     preferences.store();
