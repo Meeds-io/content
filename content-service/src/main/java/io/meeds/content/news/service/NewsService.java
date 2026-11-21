@@ -1762,11 +1762,24 @@ public class NewsService {
 
   public Map<String, String> updateMetadataProperties(String articleId,
                                                       Map<String, String> properties,
-                                                      Long updater) throws ObjectNotFoundException {
+                                                      Long updater) throws ObjectNotFoundException, IllegalAccessException {
 
     News article = getNewsArticleById(articleId);
     if (article == null) {
       throw new ObjectNotFoundException("Article not found");
+    }
+
+    org.exoplatform.social.core.identity.model.Identity updaterIdentity =
+                                                                       identityManager.getIdentity(String.valueOf(updater));
+    if (updaterIdentity == null) {
+      throw new IllegalAccessException("User " + updater + " is not authorized to update news metadata");
+    }
+    String updaterUserId = updaterIdentity.getRemoteId();
+    if (!canEditNews(article, updaterUserId)) {
+      if (!canViewNews(article, updaterUserId)) {
+        throw new ObjectNotFoundException("Article not found");
+      }
+      throw new IllegalAccessException("User " + updater + " is not authorized to update news metadata");
     }
 
     MetadataItem existingItem = getArticlePageMetadataItem(article);
