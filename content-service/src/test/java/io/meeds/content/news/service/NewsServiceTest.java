@@ -395,6 +395,7 @@ public class NewsServiceTest {
                                                              any(MetadataObject.class))).thenReturn(List.of(postedArticle));
     news.setPublished(true);
     news.setCanPublish(true);
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(any(), any())).thenReturn(true);
     news.setAudience(NewsUtils.ALL_NEWS_AUDIENCE);
     org.exoplatform.social.core.identity.model.Identity publisher = mock(org.exoplatform.social.core.identity.model.Identity.class);
     when(publisher.getId()).thenReturn("1");
@@ -3720,5 +3721,36 @@ public class NewsServiceTest {
     assertEquals("1", request.getSpaceId());
     NEWS_UTILS.verify(() -> NewsUtils.canPublishNews(eq("2"), any()), never());
     NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.UPDATE_PUBLISH_CONTENT), any(), any()), never());
+  }
+
+  @Test
+  public void testUpdateNewsChecksAndUpdatesTheStoredSpaceNotTheRequestOne() throws Exception {
+    mockSpace();
+    mockIdentity();
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(any(), any())).thenAnswer(invocation -> "2".equals(invocation.getArgument(0)));
+    News stored = new News();
+    stored.setId("1");
+    stored.setSpaceId("1");
+    stored.setPublicationState(POSTED);
+    NewsService service = spy(newsService);
+    doReturn(stored).when(service).getNewsById(eq("1"), any(), eq(false), eq(ARTICLE.name().toLowerCase()));
+    News request = new News();
+    request.setId("1");
+    request.setSpaceId("2");
+    request.setPublicationState(POSTED);
+    request.setCanPublish(true);
+    NEWS_UTILS.clearInvocations();
+
+    assertThrows(IllegalAccessException.class,
+                 () -> service.updateNews(request,
+                                          "john",
+                                          true,
+                                          true,
+                                          ARTICLE.name().toLowerCase(),
+                                          POSTING_AND_PUBLISHING.name()));
+
+    assertEquals("1", request.getSpaceId());
+    verify(service, never()).publishNews(any(News.class), anyString());
+    NEWS_UTILS.verify(() -> NewsUtils.canPublishNews(eq("2"), any()), never());
   }
 }

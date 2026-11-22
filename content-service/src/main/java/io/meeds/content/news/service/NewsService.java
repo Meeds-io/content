@@ -404,6 +404,11 @@ public class NewsService {
     Identity updaterIdentity = NewsUtils.getUserIdentity(updater);
     String newsId = news.getTargetPageId() != null ? news.getTargetPageId() : news.getId();
     News originalNews = getNewsById(newsId, updaterIdentity, false, newsObjectType);
+    if (originalNews != null && originalNews.getSpaceId() != null) {
+      // The rights are checked, and the article is updated, in the space it
+      // is stored in, not in the one the request names
+      news.setSpaceId(originalNews.getSpaceId());
+    }
     // Whatever the update type, only a user who can edit the stored news
     // updates it (the right to edit includes the right to publish and to
     // refer); the request's own flags play no part in that right
@@ -443,7 +448,7 @@ public class NewsService {
     }
     boolean published = false;
     boolean unpublish = false;
-    if (publish != news.isPublished() && news.isCanPublish()) {
+    if (publish != news.isPublished() && canPublish) {
       news.setPublished(publish);
       if (news.isPublished()) {
         publishNews(news, updater);
