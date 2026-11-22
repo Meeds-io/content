@@ -173,6 +173,12 @@ public class NewsRest {
       return ResponseEntity.badRequest().build();
     }
 
+    try {
+      NewsService.validateNewsToCreate(news);
+    } catch (IllegalArgumentException e) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+    }
+
     org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
     try {
       News createdNews = newsService.createNews(news, currentIdentity);

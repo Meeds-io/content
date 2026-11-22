@@ -149,6 +149,8 @@ public class NewsService {
   /** The Constant POSTED. */
   public static final String       POSTED                                 = "posted";
 
+  public static final String       MISSING_DRAFT_ID_MESSAGE               = "news.create.missingDraftId";
+
   /** The Constant DRAFT. */
   public static final String       DRAFT                                  = "draft";
 
@@ -250,6 +252,19 @@ public class NewsService {
   private UserACL                  userAcl;
 
   /**
+   * Checks the fields a news creation request cannot do without, before
+   * anything is created.
+   *
+   * @param news the news to create
+   * @throws IllegalArgumentException when a required field is missing
+   */
+  public static void validateNewsToCreate(News news) {
+    if (POSTED.equals(news.getPublicationState()) && news.getProperties() == null && StringUtils.isBlank(news.getId())) {
+      throw new IllegalArgumentException(MISSING_DRAFT_ID_MESSAGE);
+    }
+  }
+
+  /**
    * Create and publish a News containing the data. If the given News has an id
    * and that a draft already exists with this id, the draft is updated and
    * published.
@@ -260,6 +275,7 @@ public class NewsService {
    * @throws Exception when error
    */
   public News createNews(News news, Identity currentIdentity) throws Exception {
+    validateNewsToCreate(news);
     checkPublicationState(news.getPublicationState(), null);
     Space space = spaceService.getSpaceById(news.getSpaceId());
     try {
