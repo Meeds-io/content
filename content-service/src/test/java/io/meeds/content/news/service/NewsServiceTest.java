@@ -518,6 +518,7 @@ public class NewsServiceTest {
                                                                    boolean published,
                                                                    boolean publish) throws Exception {
     News news = mockUpdatableArticle();
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(any(), any())).thenReturn(true);
     news.setPublished(published);
     news.setCanPublish(true);
     news.setAudience(newAudience);
@@ -3579,6 +3580,12 @@ public class NewsServiceTest {
   }
 
   private String audienceOfCreatedPostedNews(boolean canPublish, String requestedAudience) throws Exception {
+    return propertiesOfCreatedPostedNews(canPublish, requestedAudience, false).get("audience");
+  }
+
+  private Map<String, String> propertiesOfCreatedPostedNews(boolean canPublish,
+                                                            String requestedAudience,
+                                                            boolean requestedPublished) throws Exception {
     Space space = mockSpace();
     Identity identity = mockIdentity();
     NEWS_UTILS.when(() -> NewsUtils.canPublishNews(any(), any())).thenReturn(canPublish);
@@ -3592,13 +3599,21 @@ public class NewsServiceTest {
     article.setId("1");
     article.setSpaceId("1");
     article.setAudience(requestedAudience);
+    article.setPublished(requestedPublished);
 
     newsService.createNews(article, identity);
 
-    return storedAudience();
+    return storedPageProperties();
   }
 
   private String audienceOfScheduledNews(boolean canPublish, String newsObjectType) throws Exception {
+    return propertiesOfScheduledNews(canPublish, newsObjectType, NewsUtils.ALL_NEWS_AUDIENCE, false).get("audience");
+  }
+
+  private Map<String, String> propertiesOfScheduledNews(boolean canPublish,
+                                                        String newsObjectType,
+                                                        String requestedAudience,
+                                                        boolean requestedPublished) throws Exception {
     Space space = mockSpace();
     Identity identity = mockIdentity();
     NEWS_UTILS.when(() -> NewsUtils.canPublishNews(any(), any())).thenReturn(canPublish);
@@ -3614,12 +3629,13 @@ public class NewsServiceTest {
     article.setPublicationState("staged");
     article.setId("1");
     article.setSpaceId("1");
-    article.setAudience(NewsUtils.ALL_NEWS_AUDIENCE);
+    article.setAudience(requestedAudience);
+    article.setPublished(requestedPublished);
     article.setSchedulePostDate("2030-05-30T08:00:00Z");
 
     newsService.scheduleNews(article, identity, newsObjectType);
 
-    return storedAudience();
+    return storedPageProperties();
   }
 
   private String audienceOfCreatedDraft(boolean canPublish) throws Exception {
@@ -3705,6 +3721,108 @@ public class NewsServiceTest {
     when(pageVersion.getId()).thenReturn("5");
     when(noteService.getPublishedVersionByPageIdAndLang(1L, null)).thenReturn(pageVersion);
     when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(new org.exoplatform.social.core.identity.model.Identity("1"));
+  }
+
+  @Test
+  public void testCreateNewsPostedByANonPublisherIsNotPublished() throws Exception {
+    Map<String, String> stored = propertiesOfCreatedPostedNews(false, NewsUtils.ALL_NEWS_AUDIENCE, true);
+
+    assertEquals("false", stored.get("published"));
+    assertEquals(NewsUtils.SPACE_NEWS_AUDIENCE, stored.get("audience"));
+    verify(metadataService, never()).updateMetadataItem(any(MetadataItem.class), anyLong(), anyBoolean());
+  }
+
+  @Test
+  public void testCreateNewsPostedByAPublisherKeepsItsPublication() throws Exception {
+    assertEquals("true", propertiesOfCreatedPostedNews(true, NewsUtils.ALL_NEWS_AUDIENCE, true).get("published"));
+  }
+
+  @Test
+  public void testCreateNewsPostedByANonPublisherWithoutAudienceGetsTheSpaceAudience() throws Exception {
+    assertEquals(NewsUtils.SPACE_NEWS_AUDIENCE, audienceOfCreatedPostedNews(false, ""));
+  }
+
+  @Test
+  public void testScheduleNewsFromDraftByANonPublisherIsNotPublishedAndHasTheSpaceAudienceWhenNoneIsGiven() throws Exception {
+    Map<String, String> stored = propertiesOfScheduledNews(false, DRAFT, "", true);
+
+    assertEquals("false", stored.get("published"));
+    assertEquals(NewsUtils.SPACE_NEWS_AUDIENCE, stored.get("audience"));
+  }
+
+  @Test
+  public void testScheduleNewsFromAnExistingPageByANonPublisherIsNotPublishedAndHasTheSpaceAudienceWhenNoneIsGiven() throws Exception {
+    Map<String, String> stored = propertiesOfScheduledNews(false, "EXISTING_PAGE", "", true);
+
+    assertEquals("false", stored.get("published"));
+    assertEquals(NewsUtils.SPACE_NEWS_AUDIENCE, stored.get("audience"));
+  }
+
+  @Test
+  public void testUpdateNewsByANonPublisherKeepsTheStoredAudience() throws Exception {
+    News news = mockUpdatableArticle();
+    mockUpdaterProfile();
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(any(), any())).thenReturn(false);
+    News stored = new News();
+    stored.setId("1");
+    stored.setSpaceId("1");
+    stored.setPublicationState(POSTED);
+    stored.setAudience(NewsUtils.SPACE_NEWS_AUDIENCE);
+    NewsService service = spy(newsService);
+    doReturn(stored).when(service).getNewsById(eq("1"), any(), eq(false), eq(ARTICLE.name().toLowerCase()));
+    news.setAudience(NewsUtils.ALL_NEWS_AUDIENCE);
+
+    service.updateNews(news, "john", null, false, ARTICLE.name().toLowerCase(), POSTING_AND_PUBLISHING.name());
+
+    assertEquals(NewsUtils.SPACE_NEWS_AUDIENCE, news.getAudience());
+    assertEquals(NewsUtils.SPACE_NEWS_AUDIENCE, storedItemAudience());
+  }
+
+  @Test
+  public void testUpdateNewsByAPublisherChangesTheAudience() throws Exception {
+    News news = mockUpdatableArticle();
+    mockUpdaterProfile();
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(any(), any())).thenReturn(true);
+    News stored = new News();
+    stored.setId("1");
+    stored.setSpaceId("1");
+    stored.setPublicationState(POSTED);
+    stored.setAudience(NewsUtils.SPACE_NEWS_AUDIENCE);
+    NewsService service = spy(newsService);
+    doReturn(stored).when(service).getNewsById(eq("1"), any(), eq(false), eq(ARTICLE.name().toLowerCase()));
+    news.setAudience(NewsUtils.ALL_NEWS_AUDIENCE);
+
+    service.updateNews(news, "john", null, false, ARTICLE.name().toLowerCase(), POSTING_AND_PUBLISHING.name());
+
+    assertEquals(NewsUtils.ALL_NEWS_AUDIENCE, storedItemAudience());
+  }
+
+  @Test
+  public void testScheduleNewsOfAnArticleByANonPublisherKeepsTheStoredAudience() throws Exception {
+    News news = mockUpdatableArticle();
+    mockUpdaterProfile();
+    Identity identity = mockIdentity();
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(any(), any())).thenReturn(false);
+    News stored = new News();
+    stored.setId("1");
+    stored.setSpaceId("1");
+    stored.setPublicationState(POSTED);
+    stored.setAudience(NewsUtils.SPACE_NEWS_AUDIENCE);
+    NewsService service = spy(newsService);
+    doReturn(stored).when(service).getNewsArticleById("1");
+    news.setAudience(NewsUtils.ALL_NEWS_AUDIENCE);
+    news.setSchedulePostDate("2030-05-30T08:00:00Z");
+
+    service.scheduleNews(news, identity, ARTICLE.name());
+
+    assertEquals(NewsUtils.SPACE_NEWS_AUDIENCE, storedItemAudience());
+  }
+
+  private String storedItemAudience() {
+    return metadataService.getMetadataItemsByMetadataAndObject(mock(MetadataKey.class), mock(MetadataObject.class))
+                          .get(0)
+                          .getProperties()
+                          .get("audience");
   }
 
   private Map<String, String> storedPageProperties() throws Exception {

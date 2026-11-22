@@ -464,6 +464,10 @@ public class NewsService {
     } else if (ARTICLE.name().equalsIgnoreCase(newsObjectType) && PAGE_REFERENCE.name().equalsIgnoreCase(newsUpdateType)) {
       return updateArticle(news, updaterIdentity, newsUpdateType);
     }
+    if (!canPublish) {
+      // Only a publisher changes the audience of a stored article
+      news.setAudience(originalNews.getAudience());
+    }
     boolean published = false;
     boolean unpublish = false;
     // The caller asks for the publication change (canPublish) and the right on
@@ -1167,6 +1171,10 @@ public class NewsService {
         // The article is written in the space it is stored in, not in the one
         // the request names
         news.setSpaceId(storedArticle.getSpaceId());
+        if (!NewsUtils.canPublishNews(news.getSpaceId(), currentIdentity)) {
+          // Only a publisher changes the audience of a stored article
+          news.setAudience(storedArticle.getAudience());
+        }
       }
       if (storedArticle == null || !canScheduleNews(storedArticle.getSpaceId(), currentIdentity, storedArticle)) {
         throw new IllegalAccessException("User " + currentIdentity.getUserId() + " is not authorized to schedule news");
@@ -2154,16 +2162,16 @@ public class NewsService {
 
   /**
    * An article created by someone who can create but not publish gets the
-   * audience of its spaces, whatever the request says. Only a publisher
-   * chooses the audience. It is applied where a user's request creates an
+   * audience of its spaces, whatever the request says (an empty one included),
+   * and is never published. Only a publisher chooses the audience and the
+   * publication. It is applied where a user's request creates an
    * article, never in the builders, which the data upgrade also uses to
    * migrate articles unchanged.
    */
   private void restrictNewArticleAudience(News article, String creator) {
-    if (StringUtils.isNotEmpty(article.getAudience())
-        && !NewsUtils.SPACE_NEWS_AUDIENCE.equals(article.getAudience())
-        && !NewsUtils.canPublishNews(article.getSpaceId(), NewsUtils.getUserIdentity(creator))) {
+    if (!NewsUtils.canPublishNews(article.getSpaceId(), NewsUtils.getUserIdentity(creator))) {
       article.setAudience(NewsUtils.SPACE_NEWS_AUDIENCE);
+      article.setPublished(false);
     }
   }
 
