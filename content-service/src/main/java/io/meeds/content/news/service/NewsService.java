@@ -154,7 +154,10 @@ public class NewsService {
                                                                                    "unpublishScheduled",
                                                                                    "unpublishScheduledDate",
                                                                                    "pageReferred",
-                                                                                   "deReferPageId");
+                                                                                   "deReferPageId",
+                                                                                   "activities",
+                                                                                   "viewers",
+                                                                                   "viewsCount");
 
   public static final String       PUBLISHED                              = "published";
 
@@ -452,6 +455,15 @@ public class NewsService {
     checkPublicationState(news.getPublicationState(), originalNews.getPublicationState());
     List<ArticleTarget> oldTargets = newsTargetingService.getTargetsByNews(news);
     boolean canPublish = NewsUtils.canPublishNews(news.getSpaceId(), updaterIdentity);
+    if (!canPublish) {
+      // Only a publisher changes the audience, whatever the kind of update. A
+      // draft, or a new version in a language, has no stored audience of its
+      // own and takes the space one, which the permissions update requires
+      String storedAudience = originalNews.getAudience();
+      boolean takesSpaceAudience = NewsObjectType.DRAFT.name().equalsIgnoreCase(newsObjectType)
+          || LATEST_DRAFT.name().equalsIgnoreCase(newsObjectType) || StringUtils.isNotEmpty(news.getLang());
+      news.setAudience(storedAudience == null && takesSpaceAudience ? NewsUtils.SPACE_NEWS_AUDIENCE : storedAudience);
+    }
     Space space = spaceService.getSpaceById(news.getSpaceId());
     Set<String> previousMentions = NewsUtils.processMentions(originalNews.getOriginalBody(), space);
     if (NewsObjectType.DRAFT.name().toLowerCase().equals(newsObjectType)) {
@@ -463,10 +475,6 @@ public class NewsService {
       return addNewArticleVersionWithLang(news, updaterIdentity, space);
     } else if (ARTICLE.name().equalsIgnoreCase(newsObjectType) && PAGE_REFERENCE.name().equalsIgnoreCase(newsUpdateType)) {
       return updateArticle(news, updaterIdentity, newsUpdateType);
-    }
-    if (!canPublish) {
-      // Only a publisher changes the audience of a stored article
-      news.setAudience(originalNews.getAudience());
     }
     boolean published = false;
     boolean unpublish = false;
