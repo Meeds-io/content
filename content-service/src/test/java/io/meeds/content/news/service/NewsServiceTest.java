@@ -1847,6 +1847,72 @@ public class NewsServiceTest {
     return note;
   }
 
+  @Test
+  public void testGetArticleLanguagesIsNotFoundForMissingOrHiddenArticle() throws Exception {
+    NewsService spiedService = spy(newsService);
+    News article = new News();
+    article.setId("5");
+    doReturn(null).when(spiedService).getNewsArticleByIdAndLang("4", null);
+    doReturn(article).when(spiedService).getNewsArticleByIdAndLang("5", null);
+    doReturn(false).when(spiedService).canViewNews(article, "john");
+
+    ObjectNotFoundException missing = assertThrows(ObjectNotFoundException.class,
+                                                   () -> spiedService.getArticleLanguages("4", true, "john"));
+    ObjectNotFoundException hidden = assertThrows(ObjectNotFoundException.class,
+                                                  () -> spiedService.getArticleLanguages("5", true, "john"));
+    assertEquals(missing.getClass(), hidden.getClass());
+    verify(noteService, never()).getPageAvailableTranslationLanguages(anyLong(), anyBoolean());
+  }
+
+  @Test
+  public void testGetArticleLanguagesIsNotFoundForDeletedArticle() throws Exception {
+    NewsService spiedService = spy(newsService);
+    News article = new News();
+    article.setId("6");
+    article.setDeleted(true);
+    doReturn(article).when(spiedService).getNewsArticleByIdAndLang("6", null);
+    doReturn(true).when(spiedService).canViewNews(article, "john");
+
+    assertThrows(ObjectNotFoundException.class, () -> spiedService.getArticleLanguages("6", true, "john"));
+    verify(noteService, never()).getPageAvailableTranslationLanguages(anyLong(), anyBoolean());
+  }
+
+  @Test
+  public void testGetArticleLanguagesIsNotFoundForMalformedId() throws Exception {
+    assertThrows(ObjectNotFoundException.class, () -> newsService.getArticleLanguages("abc", false, "john"));
+    verify(noteService, never()).getPageAvailableTranslationLanguages(anyLong(), anyBoolean());
+  }
+
+  @Test
+  public void testGetArticleLanguagesWithoutDraftsForViewerOnly() throws Exception {
+    NewsService spiedService = spy(newsService);
+    News article = new News();
+    article.setId("5");
+    doReturn(article).when(spiedService).getNewsArticleByIdAndLang("5", null);
+    doReturn(true).when(spiedService).canViewNews(article, "john");
+    doReturn(false).when(spiedService).canEditNews(article, "john");
+    when(noteService.getPageAvailableTranslationLanguages(5L, false)).thenReturn(List.of("fr"));
+    when(noteService.getPageAvailableTranslationLanguages(5L, true)).thenReturn(List.of("fr", "de"));
+
+    assertEquals(List.of("fr"), spiedService.getArticleLanguages("5", true, "john"));
+    verify(noteService, never()).getPageAvailableTranslationLanguages(5L, true);
+  }
+
+  @Test
+  public void testGetArticleLanguagesWithDraftsForEditorOnlyWhenRequested() throws Exception {
+    NewsService spiedService = spy(newsService);
+    News article = new News();
+    article.setId("5");
+    doReturn(article).when(spiedService).getNewsArticleByIdAndLang("5", null);
+    doReturn(true).when(spiedService).canViewNews(article, "john");
+    doReturn(true).when(spiedService).canEditNews(article, "john");
+    when(noteService.getPageAvailableTranslationLanguages(5L, false)).thenReturn(List.of("fr"));
+    when(noteService.getPageAvailableTranslationLanguages(5L, true)).thenReturn(List.of("fr", "de"));
+
+    assertEquals(List.of("fr", "de"), spiedService.getArticleLanguages("5", true, "john"));
+    assertEquals(List.of("fr"), spiedService.getArticleLanguages("5", false, "john"));
+  }
+
   private Space space() {
     Space space = new Space();
     space.setId("3");
