@@ -743,6 +743,52 @@ public class NewsServiceTest {
   }
 
   @Test
+  public void testPostNewsWithPropertiesAndWithoutIdStillCreatesThePage() throws Exception {
+    News newsArticle = new News();
+    newsArticle.setAuthor("john");
+    newsArticle.setTitle("news article with properties");
+    newsArticle.setBody("news body");
+    newsArticle.setSpaceId("1");
+    newsArticle.setPublicationState(POSTED);
+    newsArticle.setProperties(new NotePageProperties());
+    Identity identity = mockIdentity();
+    Space space = mockSpace();
+    when(spaceService.canRedactOnSpace(any(Space.class), any(Identity.class))).thenReturn(true);
+    Wiki wiki = mock(Wiki.class);
+    when(wikiService.getWikiByTypeAndOwner(anyString(), anyString())).thenReturn(wiki);
+    org.exoplatform.wiki.model.Page rootPage = mock(org.exoplatform.wiki.model.Page.class);
+    when(rootPage.getName()).thenReturn(NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME);
+    when(rootPage.getId()).thenReturn("1");
+    when(noteService.getNoteOfNoteBookByName("group",
+                                             space.getGroupId(),
+                                             NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME)).thenReturn(rootPage);
+
+    newsService.createNews(newsArticle, identity);
+
+    verify(noteService, times(1)).createNote(eq(wiki), eq(NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME), any(Page.class), any(), eq(false));
+  }
+
+  @Test
+  public void testPostNewsWithoutDraftIdIsRefusedBeforeAnythingIsCreated() throws Exception {
+    News newsArticle = new News();
+    newsArticle.setAuthor("john");
+    newsArticle.setTitle("news article without draft");
+    newsArticle.setBody("news body");
+    newsArticle.setSpaceId("1");
+    newsArticle.setPublicationState(POSTED);
+    Identity identity = mockIdentity();
+    mockSpace();
+    when(spaceService.canRedactOnSpace(any(Space.class), any(Identity.class))).thenReturn(true);
+
+    IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                                                      () -> newsService.createNews(newsArticle, identity));
+    assertEquals("news.create.missingDraftId", exception.getMessage());
+
+    verify(noteService, never()).createNote(any(), anyString(), any(Page.class), any(), anyBoolean());
+    verify(wikiService, never()).createWiki(anyString(), anyString());
+  }
+
+  @Test
   public void testCreateDraftArticleForExistingPage() throws Exception {
     // Given
     Page existingPage = mock(Page.class);
@@ -1126,6 +1172,7 @@ public class NewsServiceTest {
     for (String state : new String[] { null, "", DRAFT, POSTED, NewsService.STAGED }) {
       News news = new News();
       news.setAuthor("john");
+      news.setId("1");
       news.setTitle("title");
       news.setSpaceId("1");
       news.setPublicationState(state);
