@@ -831,6 +831,29 @@ public class NewsServiceTest {
   }
 
   @Test
+  public void testCreateNewsWithoutPublicationStateIsRefusedBeforeAnythingIsCreated() throws Exception {
+    News newsArticle = new News();
+    newsArticle.setAuthor("john");
+    newsArticle.setTitle("news article without state");
+    newsArticle.setBody("news body");
+    newsArticle.setSpaceId("1");
+    Identity identity = mockIdentity();
+    mockSpace();
+    when(spaceService.canRedactOnSpace(any(Space.class), any(Identity.class))).thenReturn(true);
+
+    // a blank state is refused with its own code, never as an unknown state
+    for (String state : new String[] { null, "" }) {
+      newsArticle.setPublicationState(state);
+      IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                                                        () -> newsService.createNews(newsArticle, identity));
+      assertEquals("news.create.missingPublicationState", exception.getMessage());
+    }
+
+    verify(noteService, never()).createNote(any(), anyString(), any(Page.class), any(), anyBoolean());
+    verify(wikiService, never()).createWiki(anyString(), anyString());
+  }
+
+  @Test
   public void testCreateDraftArticleForExistingPage() throws Exception {
     // Given
     Page existingPage = mock(Page.class);
@@ -1209,9 +1232,9 @@ public class NewsServiceTest {
   }
 
   @Test
-  public void testCreateNewsWithKnownOrNoPublicationStateIsAccepted() throws Exception {
+  public void testCreateNewsWithKnownPublicationStateIsAccepted() throws Exception {
     Identity identity = mock(Identity.class);
-    for (String state : new String[] { null, "", DRAFT, POSTED, NewsService.STAGED }) {
+    for (String state : new String[] { DRAFT, POSTED, NewsService.STAGED }) {
       News news = new News();
       news.setAuthor("john");
       news.setId("1");
@@ -1222,7 +1245,7 @@ public class NewsServiceTest {
       newsService.createNews(news, identity);
     }
 
-    verify(spaceService, times(5)).getSpaceById("1");
+    verify(spaceService, times(3)).getSpaceById("1");
   }
 
   @Test

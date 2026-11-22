@@ -162,7 +162,7 @@ public class NewsRest {
 
   @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
   @Secured("users")
-  @Operation(summary = "Create a news", method = "POST", description = "This creates the news if the authenticated user is a member of the space or a spaces super manager. The news is created in draft status, unless the publicationState property is set to 'posted'.")
+  @Operation(summary = "Create a news", method = "POST", description = "This creates the news if the authenticated user is a member of the space or a spaces super manager. The publicationState property is required, 'draft' or 'posted'; a request without it is refused with a 400. A posted article needs its draft id (id) or its properties.")
   @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "News created"),
     @ApiResponse(responseCode = "400", description = "Invalid query input"),
     @ApiResponse(responseCode = "401", description = "User not authorized to create the news"),

@@ -152,6 +152,8 @@ public class NewsService {
 
   public static final String       MISSING_DRAFT_ID_MESSAGE               = "news.create.missingDraftId";
 
+  public static final String       MISSING_PUBLICATION_STATE_MESSAGE      = "news.create.missingPublicationState";
+
   /** The Constant DRAFT. */
   public static final String       DRAFT                                  = "draft";
 
@@ -257,10 +259,14 @@ public class NewsService {
    * anything is created.
    *
    * @param news the news to create
-   * @throws IllegalArgumentException when the draft id of a posted article is
-   *           missing, is not a number or does not fit in a long
+   * @throws IllegalArgumentException when the publication state is missing,
+   *           or the draft id of a posted article is missing, is not a number
+   *           or does not fit in a long
    */
   public static void validateNewsToCreate(News news) {
+    if (StringUtils.isBlank(news.getPublicationState())) {
+      throw new IllegalArgumentException(MISSING_PUBLICATION_STATE_MESSAGE);
+    }
     if (POSTED.equals(news.getPublicationState()) && news.getProperties() == null && !isDraftId(news.getId())) {
       throw new IllegalArgumentException(MISSING_DRAFT_ID_MESSAGE);
     }
