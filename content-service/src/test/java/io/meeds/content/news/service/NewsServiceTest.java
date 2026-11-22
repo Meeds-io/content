@@ -3558,6 +3558,26 @@ public class NewsServiceTest {
     assertEquals(NewsUtils.ALL_NEWS_AUDIENCE, audienceOfDraftForExistingPage(true));
   }
 
+  @Test
+  public void testCreateNewsArticlePageDirectlyKeepsTheAudienceItIsGiven() throws Exception {
+    Space space = mockSpace();
+    mockIdentity();
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(any(), any())).thenReturn(false);
+    mockNewArticlePage(space);
+    News article = new News();
+    article.setAuthor("john");
+    article.setTitle("news article");
+    article.setBody("news body");
+    article.setPublicationState(POSTED);
+    article.setId("1");
+    article.setSpaceId("1");
+    article.setAudience(NewsUtils.ALL_NEWS_AUDIENCE);
+
+    newsService.createNewsArticlePage(article, "john");
+
+    assertEquals(NewsUtils.ALL_NEWS_AUDIENCE, storedAudience());
+  }
+
   private String audienceOfCreatedPostedNews(boolean canPublish, String requestedAudience) throws Exception {
     Space space = mockSpace();
     Identity identity = mockIdentity();
@@ -3619,8 +3639,11 @@ public class NewsServiceTest {
     draft.setPublicationState("draft");
     draft.setAudience(NewsUtils.ALL_NEWS_AUDIENCE);
 
+    when(spaceService.canRedactOnSpace(any(Space.class), any(Identity.class))).thenReturn(true);
+    draft.setSpaceId("1");
+
     NEWS_UTILS.clearInvocations();
-    newsService.createDraftArticleForNewPage(draft, space.getGroupId(), "john", System.currentTimeMillis());
+    newsService.createNews(draft, mockIdentity());
 
     return permissionsAudience();
   }
@@ -3651,8 +3674,17 @@ public class NewsServiceTest {
     draft.setPublicationState("draft");
     draft.setAudience(NewsUtils.ALL_NEWS_AUDIENCE);
 
+    when(noteService.getNoteById("1")).thenReturn(existingPage);
+    when(spaceService.isRedactor(any(Space.class), anyString())).thenReturn(true);
+    News stored = new News();
+    stored.setId("1");
+    stored.setSpaceId("1");
+    NewsService service = spy(newsService);
+    doReturn(stored).when(service).getNewsById(eq("1"), any(), eq(false), eq("latest_draft"));
+    draft.setId("1");
+
     NEWS_UTILS.clearInvocations();
-    newsService.createDraftForExistingPage(draft, "john", existingPage, System.currentTimeMillis(), space);
+    service.updateNews(draft, "john", null, false, "latest_draft", "CONTENT_AND_TITLE");
 
     return permissionsAudience();
   }

@@ -322,6 +322,7 @@ public class NewsService {
       if (!canCreateNews(space, currentIdentity)) {
         throw new IllegalAccessException("User " + currentIdentity.getUserId() + " not authorized to create news");
       }
+      restrictNewArticleAudience(news, currentIdentity.getUserId());
       News createdNews;
       if (POSTED.equals(news.getPublicationState())) {
         createdNews = postNews(news, currentIdentity.getUserId());
@@ -357,10 +358,13 @@ public class NewsService {
 
     if (STAGED.equals(news.getPublicationState()) || news.getSchedulePostDate() != null) {
       news = postScheduledArticle(news);
-    } else if (!news.isFromDraft() && noteService.getNoteById(news.getId()) != null) {
-      news = createArticleFromExistingPage(news, poster);
     } else {
-      news = createNewsArticlePage(news, poster);
+      restrictNewArticleAudience(news, poster);
+      if (!news.isFromDraft() && noteService.getNoteById(news.getId()) != null) {
+        news = createArticleFromExistingPage(news, poster);
+      } else {
+        news = createNewsArticlePage(news, poster);
+      }
     }
 
     if (news != null) {
@@ -1159,6 +1163,9 @@ public class NewsService {
     } else if (!canScheduleNews(news.getSpaceId(), currentIdentity, news)) {
       throw new IllegalAccessException("User " + currentIdentity.getUserId() + " is not authorized to schedule news");
     }
+    if (!newsObjectType.equalsIgnoreCase(ARTICLE.name())) {
+      restrictNewArticleAudience(news, currentIdentity.getUserId());
+    }
     if (newsObjectType.equalsIgnoreCase(NewsObjectType.DRAFT.name())) {
       // Create news article with the publication state STAGED without posting
       // or publishing it ( displayed false news target)
@@ -1487,7 +1494,6 @@ public class NewsService {
       draftArticle.setBody(draftArticlePage.getContent());
       Space draftArticleSpace = spaceService.getSpaceByGroupId(pageOwnerId);
       draftArticle.setSpaceId(draftArticleSpace.getId());
-      restrictNewArticleAudience(draftArticle, draftArticleCreator);
       NewsDraftObject draftArticleMetaDataObject = new NewsDraftObject(NEWS_METADATA_DRAFT_OBJECT_TYPE,
                                                                        draftArticlePage.getId(),
                                                                        null,
@@ -1686,7 +1692,6 @@ public class NewsService {
     draftArticlePage.setAuthor(draftArticle.getAuthor());
     draftArticlePage.setLang(draftArticle.getLang());
     draftArticlePage.setProperties(draftArticle.getProperties());
-    restrictNewArticleAudience(draftArticle, updater);
 
     draftArticlePage = noteService.createDraftForExistPage(draftArticlePage, targetArticlePage, null, creationDate, updater);
 
@@ -2062,7 +2067,6 @@ public class NewsService {
                                          String spaceId,
                                          String versionId,
                                          boolean externalPage) throws Exception {
-    restrictNewArticleAudience(article, creator);
     NewsPageVersionObject articleVersionMetaDataObject = new NewsPageVersionObject(NEWS_METADATA_PAGE_VERSION_OBJECT_TYPE,
                                                                                    versionId,
                                                                                    null,
@@ -2128,7 +2132,9 @@ public class NewsService {
   /**
    * An article created by someone who can create but not publish gets the
    * audience of its spaces, whatever the request says. Only a publisher
-   * chooses the audience.
+   * chooses the audience. It is applied where a user's request creates an
+   * article, never in the builders, which the data upgrade also uses to
+   * migrate articles unchanged.
    */
   private void restrictNewArticleAudience(News article, String creator) {
     if (StringUtils.isNotEmpty(article.getAudience())
@@ -3036,6 +3042,7 @@ public class NewsService {
     DraftPage draftPage =
                         noteService.getLatestDraftPageByUserAndTargetPageAndLang(Long.parseLong(pageId), updater, news.getLang());
     if (draftPage == null) {
+      restrictNewArticleAudience(news, updater);
       news = createDraftForExistingPage(news, updater, existingPage, System.currentTimeMillis(), space);
     } else {
       news = updateDraftArticleForExistingPage(news, updater, existingPage, draftPage, space);
