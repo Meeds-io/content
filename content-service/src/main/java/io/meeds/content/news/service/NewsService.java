@@ -448,7 +448,9 @@ public class NewsService {
     }
     boolean published = false;
     boolean unpublish = false;
-    if (publish != news.isPublished() && canPublish) {
+    // The caller asks for the publication change (canPublish) and the right on
+    // the stored space allows it
+    if (publish != news.isPublished() && news.isCanPublish() && canPublish) {
       news.setPublished(publish);
       if (news.isPublished()) {
         publishNews(news, updater);

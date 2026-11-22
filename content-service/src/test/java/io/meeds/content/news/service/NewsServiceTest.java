@@ -3753,4 +3753,60 @@ public class NewsServiceTest {
     verify(service, never()).publishNews(any(News.class), anyString());
     NEWS_UTILS.verify(() -> NewsUtils.canPublishNews(eq("2"), any()), never());
   }
+
+  @Test
+  public void testUpdateNewsWithoutPublishIntentLeavesAPublishedArticlePublished() throws Exception {
+    News news = mockUpdatableArticle();
+    mockUpdaterProfile();
+    news.setPublished(true);
+    news.setCanPublish(false);
+    news.setAudience(NewsUtils.ALL_NEWS_AUDIENCE);
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(any(), any())).thenReturn(true);
+    NewsService service = spy(newsService);
+    doNothing().when(service).unpublishNews(anyString(), anyString(), anyBoolean());
+
+    service.updateNews(news, "john", false, false, ARTICLE.name().toLowerCase(), POSTING_AND_PUBLISHING.name());
+
+    assertTrue(news.isPublished());
+    verify(service, never()).unpublishNews(anyString(), anyString(), anyBoolean());
+  }
+
+  @Test
+  public void testUpdateNewsByAnEditorWithoutThePublishRightOnTheStoredSpaceDoesNotUnpublish() throws Exception {
+    News news = mockUpdatableArticle();
+    mockUpdaterProfile();
+    news.setPublished(true);
+    news.setCanPublish(true);
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(any(), any())).thenReturn(false);
+    NewsService service = spy(newsService);
+    doNothing().when(service).unpublishNews(anyString(), anyString(), anyBoolean());
+
+    service.updateNews(news, "john", false, false, ARTICLE.name().toLowerCase(), POSTING_AND_PUBLISHING.name());
+
+    assertTrue(news.isPublished());
+    verify(service, never()).unpublishNews(anyString(), anyString(), anyBoolean());
+  }
+
+  @Test
+  public void testUpdateNewsByAnEditorWithoutThePublishRightOnTheStoredSpaceDoesNotPublish() throws Exception {
+    News news = mockUpdatableArticle();
+    mockUpdaterProfile();
+    news.setPublished(false);
+    news.setCanPublish(true);
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(any(), any())).thenReturn(false);
+    NewsService service = spy(newsService);
+    doNothing().when(service).publishNews(any(News.class), anyString());
+
+    service.updateNews(news, "john", false, true, ARTICLE.name().toLowerCase(), POSTING_AND_PUBLISHING.name());
+
+    assertFalse(news.isPublished());
+    verify(service, never()).publishNews(any(News.class), anyString());
+  }
+
+  private void mockUpdaterProfile() {
+    org.exoplatform.social.core.identity.model.Identity updater = mock(org.exoplatform.social.core.identity.model.Identity.class);
+    when(updater.getId()).thenReturn("1");
+    when(updater.getProfile()).thenReturn(mock(org.exoplatform.social.core.identity.model.Profile.class));
+    when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(updater);
+  }
 }
