@@ -3818,6 +3818,47 @@ public class NewsServiceTest {
     assertEquals(NewsUtils.SPACE_NEWS_AUDIENCE, storedItemAudience());
   }
 
+  @Test
+  public void testUpdateLatestDraftStoresTheDraftInTheStoredSpaceNotTheRequestOne() throws Exception {
+    mockSpace();
+    mockIdentity();
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(any(), any())).thenReturn(false);
+    when(spaceService.isRedactor(any(Space.class), anyString())).thenReturn(true);
+    org.exoplatform.social.core.identity.model.Identity creator = mock(org.exoplatform.social.core.identity.model.Identity.class);
+    when(creator.getId()).thenReturn("1");
+    when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(creator);
+    Page existingPage = mock(Page.class);
+    when(existingPage.getId()).thenReturn("1");
+    when(noteService.getNoteById("1")).thenReturn(existingPage);
+    DraftPage draftPage = new DraftPage();
+    draftPage.setId("2");
+    draftPage.setContent("body");
+    draftPage.setAuthor("john");
+    when(noteService.createDraftForExistPage(any(DraftPage.class),
+                                             any(Page.class),
+                                             nullable(String.class),
+                                             anyLong(),
+                                             anyString())).thenReturn(draftPage);
+    News stored = new News();
+    stored.setId("1");
+    stored.setSpaceId("1");
+    NewsService service = spy(newsService);
+    doReturn(stored).when(service).getNewsById(eq("1"), any(), eq(false), eq("latest_draft"));
+    News request = new News();
+    request.setId("1");
+    request.setSpaceId("2");
+    request.setTitle("draft");
+    request.setBody("body");
+    request.setPublicationState("draft");
+
+    service.updateNews(request, "john", null, false, "latest_draft", "CONTENT_AND_TITLE");
+
+    ArgumentCaptor<MetadataObject> object = ArgumentCaptor.forClass(MetadataObject.class);
+    verify(metadataService).createMetadataItem(object.capture(), any(MetadataKey.class), any(), anyLong(), anyBoolean());
+    assertEquals(1L, object.getValue().getSpaceId());
+    assertEquals("1", request.getSpaceId());
+  }
+
   private String storedItemAudience() {
     return metadataService.getMetadataItemsByMetadataAndObject(mock(MetadataKey.class), mock(MetadataObject.class))
                           .get(0)
