@@ -1031,7 +1031,23 @@ public class NewsService {
                                 }
                               })
                               .filter(Objects::nonNull)
+                              // The search index knows no publication state: a
+                              // scheduled listing keeps what getScheduledArticles
+                              // selects, a staged article or one with a scheduled
+                              // unpublish.
+                              .filter(news -> !filter.isScheduledNews() || isScheduled(news))
                               .toList();
+  }
+
+  /**
+   * Whether an article belongs to the scheduled listing: it is staged, or it is
+   * posted with a scheduled unpublish (which keeps the posted state).
+   *
+   * @param news the article
+   * @return true when {@code getScheduledArticles} would select it
+   */
+  public static boolean isScheduled(News news) {
+    return StringUtils.equals(news.getPublicationState(), STAGED) || StringUtils.isNotBlank(news.getScheduleUnpublishDate());
   }
 
   /**

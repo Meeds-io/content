@@ -29,6 +29,7 @@ import static io.meeds.content.news.service.NewsService.POSTED;
 import static io.meeds.content.news.service.NewsService.PUBLISHED;
 import static io.meeds.content.news.service.NewsService.SCHEDULE_POST_DATE;
 import static io.meeds.content.news.service.NewsService.UNPUBLISH_SCHEDULED;
+import static io.meeds.content.news.service.NewsService.UNPUBLISH_SCHEDULED_DATE;
 import static io.meeds.content.news.utils.NewsUtils.NewsObjectType.ARTICLE;
 import static io.meeds.content.news.utils.NewsUtils.NewsObjectType.LATEST_DRAFT;
 import static io.meeds.content.news.utils.NewsUtils.NewsUpdateType.CATEGORIES;
@@ -2526,6 +2527,67 @@ public class NewsServiceTest {
     List<News> news = newsService.searchNews(new NewsFilter(), currentIdentity);
     assertNotNull(news);
     assertEquals(news.size(), 1);
+  }
+
+  /**
+   * EXO-93812: under the scheduled filter a text search lists only the scheduled
+   * articles (staged, or with a scheduled unpublish); without it a posted article stays listed.
+   */
+  @Test
+  public void searchNewsUnderScheduledFilterKeepsOnlyStagedArticles() throws Exception {
+    NewsESSearchResult result = new NewsESSearchResult();
+    result.setId("1");
+    when(newsSearchConnector.search(any(), any())).thenReturn(List.of(result));
+    MetadataItem metadataItem = mock(MetadataItem.class);
+    when(metadataItem.getObjectId()).thenReturn("1");
+    when(metadataItem.getProperties()).thenReturn(Map.of(NEWS_PUBLICATION_STATE, "posted", NEWS_DELETED, String.valueOf(false)));
+    mockBuildArticle(List.of(metadataItem));
+    org.exoplatform.social.core.identity.model.Identity currentIdentity =
+                                                                        mock(org.exoplatform.social.core.identity.model.Identity.class);
+
+    NewsFilter scheduledFilter = new NewsFilter();
+    scheduledFilter.setScheduledNews(true);
+    assertEquals(0, newsService.searchNews(scheduledFilter, currentIdentity).size());
+    assertEquals(1, newsService.searchNews(new NewsFilter(), currentIdentity).size());
+  }
+
+  @Test
+  public void searchNewsUnderScheduledFilterListsPostedArticleWithScheduledUnpublish() throws Exception {
+    NewsESSearchResult result = new NewsESSearchResult();
+    result.setId("1");
+    when(newsSearchConnector.search(any(), any())).thenReturn(List.of(result));
+    MetadataItem metadataItem = mock(MetadataItem.class);
+    when(metadataItem.getObjectId()).thenReturn("1");
+    when(metadataItem.getProperties()).thenReturn(Map.of(NEWS_PUBLICATION_STATE,
+                                                         "posted",
+                                                         NEWS_DELETED,
+                                                         String.valueOf(false),
+                                                         UNPUBLISH_SCHEDULED_DATE,
+                                                         "2026-12-01 08:00:00"));
+    mockBuildArticle(List.of(metadataItem));
+    org.exoplatform.social.core.identity.model.Identity currentIdentity =
+                                                                        mock(org.exoplatform.social.core.identity.model.Identity.class);
+
+    NewsFilter scheduledFilter = new NewsFilter();
+    scheduledFilter.setScheduledNews(true);
+    assertEquals(1, newsService.searchNews(scheduledFilter, currentIdentity).size());
+  }
+
+  @Test
+  public void searchNewsUnderScheduledFilterListsStagedArticle() throws Exception {
+    NewsESSearchResult result = new NewsESSearchResult();
+    result.setId("1");
+    when(newsSearchConnector.search(any(), any())).thenReturn(List.of(result));
+    MetadataItem metadataItem = mock(MetadataItem.class);
+    when(metadataItem.getObjectId()).thenReturn("1");
+    when(metadataItem.getProperties()).thenReturn(Map.of(NEWS_PUBLICATION_STATE, "staged", NEWS_DELETED, String.valueOf(false)));
+    mockBuildArticle(List.of(metadataItem));
+    org.exoplatform.social.core.identity.model.Identity currentIdentity =
+                                                                        mock(org.exoplatform.social.core.identity.model.Identity.class);
+
+    NewsFilter scheduledFilter = new NewsFilter();
+    scheduledFilter.setScheduledNews(true);
+    assertEquals(1, newsService.searchNews(scheduledFilter, currentIdentity).size());
   }
 
   @Test
