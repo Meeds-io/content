@@ -427,7 +427,7 @@ public class NewsService {
     News originalNews = getNewsById(newsId, updaterIdentity, false, newsObjectType);
     if (originalNews != null && originalNews.getSpaceId() != null) {
       // The rights are checked, and the article is updated, in the space it
-      // is stored in, not in the one the request names
+      // is stored in
       news.setSpaceId(originalNews.getSpaceId());
     }
     // Whatever the update type, only a user who can edit the stored news
@@ -1176,8 +1176,7 @@ public class NewsService {
       String storedId = news.getTargetPageId() != null ? news.getTargetPageId() : news.getId();
       storedArticle = getNewsArticleById(storedId);
       if (storedArticle != null && newsObjectType.equalsIgnoreCase(ARTICLE.name())) {
-        // The article is written in the space it is stored in, not in the one
-        // the request names
+        // The article is written in the space it is stored in
         news.setSpaceId(storedArticle.getSpaceId());
         if (!NewsUtils.canPublishNews(news.getSpaceId(), currentIdentity)) {
           // Only a publisher changes the audience of a stored article
