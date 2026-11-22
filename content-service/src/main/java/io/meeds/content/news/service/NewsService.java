@@ -1138,6 +1138,11 @@ public class NewsService {
       // the way updateArticle resolves it, not on the request
       String storedId = news.getTargetPageId() != null ? news.getTargetPageId() : news.getId();
       storedArticle = getNewsArticleById(storedId);
+      if (storedArticle != null && newsObjectType.equalsIgnoreCase(ARTICLE.name())) {
+        // The article is written in the space it is stored in, not in the one
+        // the request names
+        news.setSpaceId(storedArticle.getSpaceId());
+      }
       if (storedArticle == null || !canScheduleNews(storedArticle.getSpaceId(), currentIdentity, storedArticle)) {
         throw new IllegalAccessException("User " + currentIdentity.getUserId() + " is not authorized to schedule news");
       }
@@ -1475,6 +1480,7 @@ public class NewsService {
       draftArticle.setBody(draftArticlePage.getContent());
       Space draftArticleSpace = spaceService.getSpaceByGroupId(pageOwnerId);
       draftArticle.setSpaceId(draftArticleSpace.getId());
+      restrictNewArticleAudience(draftArticle, draftArticleCreator);
       NewsDraftObject draftArticleMetaDataObject = new NewsDraftObject(NEWS_METADATA_DRAFT_OBJECT_TYPE,
                                                                        draftArticlePage.getId(),
                                                                        null,
@@ -1673,6 +1679,7 @@ public class NewsService {
     draftArticlePage.setAuthor(draftArticle.getAuthor());
     draftArticlePage.setLang(draftArticle.getLang());
     draftArticlePage.setProperties(draftArticle.getProperties());
+    restrictNewArticleAudience(draftArticle, updater);
 
     draftArticlePage = noteService.createDraftForExistPage(draftArticlePage, targetArticlePage, null, creationDate, updater);
 
@@ -2048,6 +2055,7 @@ public class NewsService {
                                          String spaceId,
                                          String versionId,
                                          boolean externalPage) throws Exception {
+    restrictNewArticleAudience(article, creator);
     NewsPageVersionObject articleVersionMetaDataObject = new NewsPageVersionObject(NEWS_METADATA_PAGE_VERSION_OBJECT_TYPE,
                                                                                    versionId,
                                                                                    null,
@@ -2108,6 +2116,19 @@ public class NewsService {
                                        newsPageProperties,
                                        Long.parseLong(creatorIdentity.getId()),
                                        false);
+  }
+
+  /**
+   * An article created by someone who can create but not publish gets the
+   * audience of its spaces, whatever the request says. Only a publisher
+   * chooses the audience.
+   */
+  private void restrictNewArticleAudience(News article, String creator) {
+    if (StringUtils.isNotEmpty(article.getAudience())
+        && !NewsUtils.SPACE_NEWS_AUDIENCE.equals(article.getAudience())
+        && !NewsUtils.canPublishNews(article.getSpaceId(), NewsUtils.getUserIdentity(creator))) {
+      article.setAudience(NewsUtils.SPACE_NEWS_AUDIENCE);
+    }
   }
 
   private void referOrDeReferArticlePage(News article, Page articlePage, Map<String, String> properties) {

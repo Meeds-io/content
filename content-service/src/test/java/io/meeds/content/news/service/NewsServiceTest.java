@@ -3506,5 +3506,219 @@ public class NewsServiceTest {
     filter.setLimit(10);
     return filter;
   }
-}
 
+  @Test
+  public void testCreateNewsPostedByANonPublisherGetsTheSpaceAudience() throws Exception {
+    assertEquals(NewsUtils.SPACE_NEWS_AUDIENCE, audienceOfCreatedPostedNews(false, NewsUtils.ALL_NEWS_AUDIENCE));
+  }
+
+  @Test
+  public void testCreateNewsPostedByAPublisherKeepsItsAudience() throws Exception {
+    assertEquals(NewsUtils.ALL_NEWS_AUDIENCE, audienceOfCreatedPostedNews(true, NewsUtils.ALL_NEWS_AUDIENCE));
+  }
+
+  @Test
+  public void testScheduleNewsFromDraftByANonPublisherGetsTheSpaceAudience() throws Exception {
+    assertEquals(NewsUtils.SPACE_NEWS_AUDIENCE, audienceOfScheduledNews(false, DRAFT));
+  }
+
+  @Test
+  public void testScheduleNewsFromDraftByAPublisherKeepsItsAudience() throws Exception {
+    assertEquals(NewsUtils.ALL_NEWS_AUDIENCE, audienceOfScheduledNews(true, DRAFT));
+  }
+
+  @Test
+  public void testScheduleNewsFromAnExistingPageByANonPublisherGetsTheSpaceAudience() throws Exception {
+    assertEquals(NewsUtils.SPACE_NEWS_AUDIENCE, audienceOfScheduledNews(false, "EXISTING_PAGE"));
+  }
+
+  @Test
+  public void testScheduleNewsFromAnExistingPageByAPublisherKeepsItsAudience() throws Exception {
+    assertEquals(NewsUtils.ALL_NEWS_AUDIENCE, audienceOfScheduledNews(true, "EXISTING_PAGE"));
+  }
+
+  @Test
+  public void testCreateDraftArticleByANonPublisherGetsTheSpaceAudience() throws Exception {
+    assertEquals(NewsUtils.SPACE_NEWS_AUDIENCE, audienceOfCreatedDraft(false));
+  }
+
+  @Test
+  public void testCreateDraftArticleByAPublisherKeepsItsAudience() throws Exception {
+    assertEquals(NewsUtils.ALL_NEWS_AUDIENCE, audienceOfCreatedDraft(true));
+  }
+
+  @Test
+  public void testCreateDraftForAnExistingPageByANonPublisherGetsTheSpaceAudience() throws Exception {
+    assertEquals(NewsUtils.SPACE_NEWS_AUDIENCE, audienceOfDraftForExistingPage(false));
+  }
+
+  @Test
+  public void testCreateDraftForAnExistingPageByAPublisherKeepsItsAudience() throws Exception {
+    assertEquals(NewsUtils.ALL_NEWS_AUDIENCE, audienceOfDraftForExistingPage(true));
+  }
+
+  private String audienceOfCreatedPostedNews(boolean canPublish, String requestedAudience) throws Exception {
+    Space space = mockSpace();
+    Identity identity = mockIdentity();
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(any(), any())).thenReturn(canPublish);
+    when(spaceService.canRedactOnSpace(any(Space.class), any(Identity.class))).thenReturn(true);
+    mockNewArticlePage(space);
+    News article = new News();
+    article.setAuthor("john");
+    article.setTitle("news article");
+    article.setBody("news body");
+    article.setPublicationState(POSTED);
+    article.setId("1");
+    article.setSpaceId("1");
+    article.setAudience(requestedAudience);
+
+    newsService.createNews(article, identity);
+
+    return storedAudience();
+  }
+
+  private String audienceOfScheduledNews(boolean canPublish, String newsObjectType) throws Exception {
+    Space space = mockSpace();
+    Identity identity = mockIdentity();
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(any(), any())).thenReturn(canPublish);
+    when(spaceService.isRedactor(any(Space.class), anyString())).thenReturn(true);
+    mockNewArticlePage(space);
+    Page existingPage = mock(Page.class);
+    when(existingPage.getId()).thenReturn("1");
+    when(noteService.getNoteById("1")).thenReturn(existingPage);
+    News article = new News();
+    article.setAuthor("john");
+    article.setTitle("news article");
+    article.setBody("news body");
+    article.setPublicationState("staged");
+    article.setId("1");
+    article.setSpaceId("1");
+    article.setAudience(NewsUtils.ALL_NEWS_AUDIENCE);
+    article.setSchedulePostDate("2030-05-30T08:00:00Z");
+
+    newsService.scheduleNews(article, identity, newsObjectType);
+
+    return storedAudience();
+  }
+
+  private String audienceOfCreatedDraft(boolean canPublish) throws Exception {
+    Space space = mockSpace();
+    mockIdentity();
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(any(), any())).thenReturn(canPublish);
+    mockNewArticlePage(space);
+    DraftPage draftPage = new DraftPage();
+    draftPage.setId("1");
+    draftPage.setContent("body");
+    draftPage.setAuthor("john");
+    when(noteService.createDraftForNewPage(any(DraftPage.class), anyLong(), anyLong())).thenReturn(draftPage);
+    News draft = new News();
+    draft.setAuthor("john");
+    draft.setTitle("draft");
+    draft.setBody("body");
+    draft.setPublicationState("draft");
+    draft.setAudience(NewsUtils.ALL_NEWS_AUDIENCE);
+
+    NEWS_UTILS.clearInvocations();
+    newsService.createDraftArticleForNewPage(draft, space.getGroupId(), "john", System.currentTimeMillis());
+
+    return permissionsAudience();
+  }
+
+  private String audienceOfDraftForExistingPage(boolean canPublish) throws Exception {
+    Space space = mockSpace();
+    mockIdentity();
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(any(), any())).thenReturn(canPublish);
+    org.exoplatform.social.core.identity.model.Identity creator = mock(org.exoplatform.social.core.identity.model.Identity.class);
+    when(creator.getId()).thenReturn("1");
+    when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(creator);
+    Page existingPage = mock(Page.class);
+    when(existingPage.getId()).thenReturn("1");
+    DraftPage draftPage = new DraftPage();
+    draftPage.setId("2");
+    draftPage.setContent("body");
+    draftPage.setAuthor("john");
+    when(noteService.createDraftForExistPage(any(DraftPage.class),
+                                             any(Page.class),
+                                             nullable(String.class),
+                                             anyLong(),
+                                             anyString())).thenReturn(draftPage);
+    News draft = new News();
+    draft.setAuthor("john");
+    draft.setTitle("draft");
+    draft.setBody("body");
+    draft.setSpaceId("1");
+    draft.setPublicationState("draft");
+    draft.setAudience(NewsUtils.ALL_NEWS_AUDIENCE);
+
+    NEWS_UTILS.clearInvocations();
+    newsService.createDraftForExistingPage(draft, "john", existingPage, System.currentTimeMillis(), space);
+
+    return permissionsAudience();
+  }
+
+  private void mockNewArticlePage(Space space) throws Exception {
+    Wiki wiki = mock(Wiki.class);
+    when(wikiService.getWikiByTypeAndOwner(anyString(), anyString())).thenReturn(wiki);
+    org.exoplatform.wiki.model.Page rootPage = mock(org.exoplatform.wiki.model.Page.class);
+    when(rootPage.getName()).thenReturn(NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME);
+    when(rootPage.getId()).thenReturn("1");
+    when(noteService.getNoteOfNoteBookByName("group",
+                                             space.getGroupId(),
+                                             NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME)).thenReturn(rootPage);
+    Page createdPage = mock(Page.class);
+    when(createdPage.getId()).thenReturn("1");
+    when(noteService.createNote(any(Wiki.class), anyString(), any(Page.class), any(Identity.class), anyBoolean())).thenReturn(createdPage);
+    PageVersion pageVersion = mock(PageVersion.class);
+    when(pageVersion.getId()).thenReturn("5");
+    when(noteService.getPublishedVersionByPageIdAndLang(1L, null)).thenReturn(pageVersion);
+    when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(new org.exoplatform.social.core.identity.model.Identity("1"));
+  }
+
+  private String storedAudience() throws Exception {
+    ArgumentCaptor<MetadataObject> object = ArgumentCaptor.forClass(MetadataObject.class);
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<Map<String, String>> properties = ArgumentCaptor.forClass(Map.class);
+    verify(metadataService, atLeast(1)).createMetadataItem(object.capture(),
+                                                           any(MetadataKey.class),
+                                                           properties.capture(),
+                                                           anyLong(),
+                                                           anyBoolean());
+    for (int i = 0; i < object.getAllValues().size(); i++) {
+      if (object.getAllValues().get(i) instanceof NewsPageObject) {
+        return properties.getAllValues().get(i).get("audience");
+      }
+    }
+    throw new AssertionError("The article page metadata is not created");
+  }
+
+  private String permissionsAudience() {
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<Map<String, Object>> eventData = ArgumentCaptor.forClass(Map.class);
+    NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.UPDATE_CONTENT_PERMISSIONS), any(), eventData.capture()));
+    return (String) eventData.getValue().get("audience");
+  }
+
+  @Test
+  public void testScheduleNewsChecksTheStoredSpaceOfTheArticleNotTheRequestOne() throws Exception {
+    mockSpace();
+    Identity identity = mockIdentity();
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(any(), any())).thenAnswer(invocation -> "2".equals(invocation.getArgument(0)));
+    News stored = new News();
+    stored.setId("1");
+    stored.setSpaceId("1");
+    stored.setPublicationState(POSTED);
+    NewsService service = spy(newsService);
+    doReturn(stored).when(service).getNewsArticleById("1");
+    News request = new News();
+    request.setId("1");
+    request.setSpaceId("2");
+    request.setPublicationState(POSTED);
+    NEWS_UTILS.clearInvocations();
+
+    assertThrows(IllegalAccessException.class, () -> service.scheduleNews(request, identity, ARTICLE.name()));
+
+    assertEquals("1", request.getSpaceId());
+    NEWS_UTILS.verify(() -> NewsUtils.canPublishNews(eq("2"), any()), never());
+    NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.UPDATE_PUBLISH_CONTENT), any(), any()), never());
+  }
+}
