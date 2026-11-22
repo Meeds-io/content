@@ -142,6 +142,20 @@ public class NewsService {
   public static final String       NEWS_METADATA_DRAFT_OBJECT_TYPE        = "newsDraftPage";
 
   /** The Constant PUBLISHED. */
+  private static final Set<String> COMPUTED_PAGE_PROPERTIES               = Set.of("audience",
+                                                                                   "published",
+                                                                                   "publicationState",
+                                                                                   "activityPosted",
+                                                                                   "activityCategories",
+                                                                                   "deleted",
+                                                                                   "publisher",
+                                                                                   "externalPage",
+                                                                                   "schedulePostDate",
+                                                                                   "unpublishScheduled",
+                                                                                   "unpublishScheduledDate",
+                                                                                   "pageReferred",
+                                                                                   "deReferPageId");
+
   public static final String       PUBLISHED                              = "published";
 
   /** The Constant PUBLISHER. */
@@ -2102,14 +2116,23 @@ public class NewsService {
     newsPageProperties.put(PUBLISHER, creatorIdentity.getProfile().getFullName());
 
     if (MapUtils.isNotEmpty(article.getParameters())) {
-      newsPageProperties.putAll(article.getParameters());
+      // The caller's parameters add their own keys; the keys computed above
+      // are never replaced by them
+      article.getParameters()
+             .entrySet()
+             .stream()
+             .filter(parameter -> !COMPUTED_PAGE_PROPERTIES.contains(parameter.getKey()))
+             .forEach(parameter -> newsPageProperties.put(parameter.getKey(), parameter.getValue()));
     }
-    // The article publication state is the stored one; an unknown state is
-    // never stored
+    // The article publication state is the stored one; when the article
+    // carries none, a known state of its parameters is kept, and an unknown
+    // state is never stored
+    String parametersState = MapUtils.isEmpty(article.getParameters()) ? null
+                                                                       : article.getParameters().get(NEWS_PUBLICATION_STATE);
     if (StringUtils.isNotEmpty(article.getPublicationState())) {
       newsPageProperties.put(NEWS_PUBLICATION_STATE, article.getPublicationState());
-    } else if (isUnknownPublicationState(newsPageProperties.get(NEWS_PUBLICATION_STATE))) {
-      newsPageProperties.remove(NEWS_PUBLICATION_STATE);
+    } else if (StringUtils.isNotEmpty(parametersState) && !isUnknownPublicationState(parametersState)) {
+      newsPageProperties.put(NEWS_PUBLICATION_STATE, parametersState);
     }
     // Every created article stores a state: posted, or staged when scheduled
     if (StringUtils.isEmpty(newsPageProperties.get(NEWS_PUBLICATION_STATE))) {

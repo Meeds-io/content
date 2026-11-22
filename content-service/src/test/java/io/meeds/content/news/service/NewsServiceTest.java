@@ -3707,6 +3707,52 @@ public class NewsServiceTest {
     when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(new org.exoplatform.social.core.identity.model.Identity("1"));
   }
 
+  private Map<String, String> storedPageProperties() throws Exception {
+    ArgumentCaptor<MetadataObject> object = ArgumentCaptor.forClass(MetadataObject.class);
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<Map<String, String>> properties = ArgumentCaptor.forClass(Map.class);
+    verify(metadataService, atLeast(1)).createMetadataItem(object.capture(),
+                                                           any(MetadataKey.class),
+                                                           properties.capture(),
+                                                           anyLong(),
+                                                           anyBoolean());
+    for (int i = 0; i < object.getAllValues().size(); i++) {
+      if (object.getAllValues().get(i) instanceof NewsPageObject) {
+        return properties.getAllValues().get(i);
+      }
+    }
+    throw new AssertionError("The article page metadata is not created");
+  }
+
+  @Test
+  public void testCreateNewsKeepsTheComputedMetadataWhateverTheParametersCarry() throws Exception {
+    Space space = mockSpace();
+    Identity identity = mockIdentity();
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(any(), any())).thenReturn(false);
+    when(spaceService.canRedactOnSpace(any(Space.class), any(Identity.class))).thenReturn(true);
+    mockNewArticlePage(space);
+    News article = new News();
+    article.setAuthor("john");
+    article.setTitle("news article");
+    article.setBody("news body");
+    article.setPublicationState(POSTED);
+    article.setId("1");
+    article.setSpaceId("1");
+    article.setAudience(NewsUtils.SPACE_NEWS_AUDIENCE);
+    article.setParameters(new HashMap<>(Map.of("audience", NewsUtils.ALL_NEWS_AUDIENCE,
+                                               "published", "true",
+                                               "publicationState", "draft",
+                                               "eventId", "12")));
+
+    newsService.createNews(article, identity);
+
+    Map<String, String> stored = storedPageProperties();
+    assertEquals(NewsUtils.SPACE_NEWS_AUDIENCE, stored.get("audience"));
+    assertEquals("false", stored.get("published"));
+    assertEquals(POSTED, stored.get("publicationState"));
+    assertEquals("12", stored.get("eventId"));
+  }
+
   private String storedAudience() throws Exception {
     ArgumentCaptor<MetadataObject> object = ArgumentCaptor.forClass(MetadataObject.class);
     @SuppressWarnings("unchecked")
