@@ -310,6 +310,12 @@ public class ContentServiceTest {
   }
 
   @Test
+  public void testDeleteContentKeepingItsNoteDelegatesTheChoice() throws Exception {
+    contentService.deleteContent("1", "news", "published", true, currentIdentity);
+    verify(newsPlugin).delete("1", "published", true, currentIdentity);
+  }
+
+  @Test
   public void testDeleteContentThrowsWhenTypeUnknown() {
     try {
       contentService.deleteContent("1", "unknown-type", "published", currentIdentity);
