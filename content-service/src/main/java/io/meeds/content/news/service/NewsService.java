@@ -1174,6 +1174,11 @@ public class NewsService {
     News originalArticle = null;
     News storedArticle = null;
     if (newsObjectType.equalsIgnoreCase(ARTICLE.name()) || newsObjectType.equalsIgnoreCase(LATEST_DRAFT.name())) {
+      if (newsObjectType.equalsIgnoreCase(ARTICLE.name())) {
+        // The schedule of an article is written to the article the request
+        // names, the one whose rights are checked below
+        news.setTargetPageId(null);
+      }
       // The right is evaluated on the stored article that is written, resolved
       // the way updateArticle resolves it, not on the request
       String storedId = news.getTargetPageId() != null ? news.getTargetPageId() : news.getId();

@@ -1845,7 +1845,8 @@ public class NewsServiceTest {
     other.setSpaceId("5");
     doReturn(other).when(service).getNewsArticleById("99");
     News request = existingArticle(NewsService.STAGED, true);
-    request.setTargetPageId("99");
+    request.setId("99");
+    request.setTargetPageId("12");
 
     assertThrows(IllegalAccessException.class, () -> service.scheduleNews(request, identity, ARTICLE.name().toLowerCase()));
 
@@ -4084,6 +4085,30 @@ public class NewsServiceTest {
     assertEquals("1", request.getSpaceId());
     NEWS_UTILS.verify(() -> NewsUtils.canPublishNews(eq("2"), any()), never());
     NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.UPDATE_PUBLISH_CONTENT), any(), any()), never());
+  }
+
+  @Test
+  public void testScheduleNewsWritesTheScheduleToTheArticleTheRequestNames() throws Exception {
+    News news = mockUpdatableArticle();
+    mockUpdaterProfile();
+    Identity identity = mockIdentity();
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(any(), any())).thenReturn(false);
+    News stored = new News();
+    stored.setId("1");
+    stored.setSpaceId("1");
+    stored.setPublicationState(POSTED);
+    stored.setAudience(NewsUtils.SPACE_NEWS_AUDIENCE);
+    NewsService service = spy(newsService);
+    doReturn(stored).when(service).getNewsArticleById("1");
+    news.setTargetPageId("9");
+    news.setAudience(NewsUtils.ALL_NEWS_AUDIENCE);
+    news.setSchedulePostDate("2030-05-30T08:00:00Z");
+
+    service.scheduleNews(news, identity, ARTICLE.name());
+
+    verify(noteService).getNoteById("1");
+    verify(noteService, never()).getNoteById("9");
+    assertEquals(NewsUtils.SPACE_NEWS_AUDIENCE, storedItemAudience());
   }
 
   @Test
