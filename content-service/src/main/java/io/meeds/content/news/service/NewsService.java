@@ -48,6 +48,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.LocaleUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -257,12 +258,16 @@ public class NewsService {
    *
    * @param news the news to create
    * @throws IllegalArgumentException when the draft id of a posted article is
-   *           missing or is not a number
+   *           missing, is not a number or does not fit in a long
    */
   public static void validateNewsToCreate(News news) {
-    if (POSTED.equals(news.getPublicationState()) && news.getProperties() == null && !StringUtils.isNumeric(news.getId())) {
+    if (POSTED.equals(news.getPublicationState()) && news.getProperties() == null && !isDraftId(news.getId())) {
       throw new IllegalArgumentException(MISSING_DRAFT_ID_MESSAGE);
     }
+  }
+
+  private static boolean isDraftId(String id) {
+    return StringUtils.isNumeric(id) && NumberUtils.toLong(id, -1L) >= 0;
   }
 
   /**
