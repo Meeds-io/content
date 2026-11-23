@@ -66,7 +66,7 @@ public class NewsFavoriteACLPlugin extends FavoriteACLPlugin {
       return false;
     }
     News news = newsService.getNewsArticleById(newsId);
-    return news != null && newsService.canViewNews(news, userIdentity.getUserId());
+    return news != null && !news.isDeleted() && newsService.canViewNews(news, userIdentity.getUserId());
   }
 
 }

@@ -21,6 +21,7 @@ package io.meeds.content.news.plugin;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -92,6 +93,14 @@ class NewsFavoriteACLPluginTest {
     when(newsService.getNewsArticleById("12")).thenReturn(news);
     when(newsService.canViewNews(news, USER)).thenReturn(false);
     assertFalse(plugin.canCreateFavorite(identity, "12"));
+  }
+
+  @Test
+  void testDeletedNews() {
+    when(newsService.getNewsArticleById("12")).thenReturn(news);
+    when(news.isDeleted()).thenReturn(true);
+    assertFalse(plugin.canCreateFavorite(identity, "12"));
+    verify(newsService, never()).canViewNews(any(News.class), nullable(String.class));
   }
 
   @Test
