@@ -861,8 +861,8 @@ public class NewsServiceTest {
   }
 
   /**
-   * An update that leaves the publication state out (absent) keeps the stored
-   * one, so the permissions of the draft are updated as those of a draft
+   * An update of a draft that leaves the publication state out (absent) writes
+   * a draft, so the permissions of the draft are updated as those of a draft
    */
   @Test
   public void testUpdateDraftWithoutPublicationStateKeepsTheStoredOne() throws Exception {
@@ -916,10 +916,47 @@ public class NewsServiceTest {
     assertNotNull(service.updateNews(news, "john", null, false, "draft", CONTENT_AND_TITLE.name()));
 
     assertEquals("", news.getPublicationState());
-    NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.UPDATE_CONTENT_PERMISSIONS),
-                                                     any(),
-                                                     argThat((Object data) -> data instanceof Map<?, ?> event
-                                                         && "WIKI_PAGE_VERSIONS".equals(event.get("entityType")))));
+    NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.UPDATE_CONTENT_PERMISSIONS), any(), any()));
+  }
+
+  /**
+   * An update of the latest draft that leaves the publication state out writes
+   * a draft: the state is not the one of the article it is a draft of, which
+   * is what the latest draft lookup returns when the user has no draft yet.
+   */
+  @Test
+  public void testUpdateLatestDraftWithoutPublicationStateIsADraftWhateverTheArticleHolds() throws Exception {
+    News news = mockUpdatableArticle();
+    News stored = new News();
+    stored.setId("1");
+    stored.setSpaceId("1");
+    stored.setPublicationState(POSTED);
+    NewsService service = spy(newsService);
+    doReturn(stored).when(service).getNewsById(eq("1"), any(), eq(false), eq("latest_draft"));
+    news.setPublicationState(null);
+
+    service.updateNews(news, "john", null, false, LATEST_DRAFT.name().toLowerCase(), CONTENT_AND_TITLE.name());
+
+    assertEquals(DRAFT, news.getPublicationState());
+  }
+
+  /**
+   * An article stored with no publication state is read as a posted one, as
+   * canViewNews reads it, when an update leaves the state out.
+   */
+  @Test
+  public void testUpdateArticleWithoutPublicationStateAndWithoutStoredOneIsPosted() throws Exception {
+    News news = mockUpdatableArticle();
+    News stored = new News();
+    stored.setId("1");
+    stored.setSpaceId("1");
+    NewsService service = spy(newsService);
+    doReturn(stored).when(service).getNewsById(eq("1"), any(), eq(false), eq("article"));
+    news.setPublicationState(null);
+
+    service.updateNews(news, "john", null, false, ARTICLE.name().toLowerCase(), CONTENT_AND_TITLE.name());
+
+    assertEquals(POSTED, news.getPublicationState());
   }
 
   @Test

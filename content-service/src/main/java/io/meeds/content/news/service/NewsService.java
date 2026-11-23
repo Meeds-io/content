@@ -385,10 +385,17 @@ public class NewsService {
     if (PAGE_REFERENCE.name().equalsIgnoreCase(newsUpdateType) && !canReferToNote(news, updaterIdentity)) {
       throw new IllegalAccessException("User " + updater + " is not authorized to refer or derefer news");
     }
-    // A state the request leaves out (absent) is the stored one; a blank one
+    // A state the request leaves out (absent) is the state of what gets
+    // written: a draft for the draft object types, the stored one for an
+    // article (posted when it has none, as canViewNews reads it); a blank one
     // keeps its own path
     if (news.getPublicationState() == null) {
-      news.setPublicationState(originalNews.getPublicationState());
+      if (NewsObjectType.DRAFT.name().equalsIgnoreCase(newsObjectType)
+          || LATEST_DRAFT.name().equalsIgnoreCase(newsObjectType)) {
+        news.setPublicationState(DRAFT);
+      } else {
+        news.setPublicationState(StringUtils.defaultIfEmpty(originalNews.getPublicationState(), POSTED));
+      }
     }
     // An unchanged stored state sent back by the client is accepted
     checkPublicationState(news.getPublicationState(), originalNews.getPublicationState());
