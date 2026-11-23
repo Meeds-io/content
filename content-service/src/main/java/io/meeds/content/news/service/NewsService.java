@@ -387,14 +387,14 @@ public class NewsService {
     }
     // A state the request leaves out (absent) is the state of what gets
     // written: a draft for the draft object types, the stored one for an
-    // article (posted when it has none, as canViewNews reads it); a blank one
-    // keeps its own path
+    // article (blank when it has none, so that nothing is stored and
+    // canViewNews keeps reading it as it does); a blank one keeps its own path
     if (news.getPublicationState() == null) {
       if (NewsObjectType.DRAFT.name().equalsIgnoreCase(newsObjectType)
           || LATEST_DRAFT.name().equalsIgnoreCase(newsObjectType)) {
         news.setPublicationState(DRAFT);
       } else {
-        news.setPublicationState(StringUtils.defaultIfEmpty(originalNews.getPublicationState(), POSTED));
+        news.setPublicationState(StringUtils.defaultString(originalNews.getPublicationState()));
       }
     }
     // An unchanged stored state sent back by the client is accepted

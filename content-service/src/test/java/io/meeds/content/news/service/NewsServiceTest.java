@@ -865,7 +865,7 @@ public class NewsServiceTest {
    * a draft, so the permissions of the draft are updated as those of a draft
    */
   @Test
-  public void testUpdateDraftWithoutPublicationStateKeepsTheStoredOne() throws Exception {
+  public void testUpdateDraftWithoutPublicationStateIsADraft() throws Exception {
     News news = mockUpdatableArticle();
     DraftPage draftPage = new DraftPage();
     draftPage.setId("1");
@@ -941,12 +941,18 @@ public class NewsServiceTest {
   }
 
   /**
-   * An article stored with no publication state is read as a posted one, as
-   * canViewNews reads it, when an update leaves the state out.
+   * An article stored with no publication state keeps none when an update
+   * leaves the state out: the update completes and stores no state, so
+   * canViewNews reads the article as it did before the update.
    */
   @Test
-  public void testUpdateArticleWithoutPublicationStateAndWithoutStoredOneIsPosted() throws Exception {
+  public void testUpdateArticleWithoutPublicationStateAndWithoutStoredOneStoresNoState() throws Exception {
     News news = mockUpdatableArticle();
+    Map<String, String> storedProperties = new HashMap<>();
+    MetadataItem metadataItem = mock(MetadataItem.class);
+    when(metadataItem.getProperties()).thenReturn(storedProperties);
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+                                                             any(MetadataObject.class))).thenReturn(List.of(metadataItem));
     News stored = new News();
     stored.setId("1");
     stored.setSpaceId("1");
@@ -954,9 +960,10 @@ public class NewsServiceTest {
     doReturn(stored).when(service).getNewsById(eq("1"), any(), eq(false), eq("article"));
     news.setPublicationState(null);
 
-    service.updateNews(news, "john", null, false, ARTICLE.name().toLowerCase(), CONTENT_AND_TITLE.name());
+    assertNotNull(service.updateNews(news, "john", null, false, ARTICLE.name().toLowerCase(), CONTENT_AND_TITLE.name()));
 
-    assertEquals(POSTED, news.getPublicationState());
+    assertEquals("", news.getPublicationState());
+    assertFalse(storedProperties.containsKey(NEWS_PUBLICATION_STATE));
   }
 
   @Test
