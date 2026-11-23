@@ -265,7 +265,7 @@ public class NewsContentTypePluginTest {
    * marked, whatever the status filter.
    */
   @Test
-  public void testScheduledFlagComesFromTheStagedState() throws Exception {
+  public void testScheduledFlagComesFromTheScheduledState() throws Exception {
     ContentFilter filter = new ContentFilter();
     filter.setStatus(ContentUtils.STATUS_SCHEDULED);
     News staged = new News();
@@ -311,7 +311,7 @@ public class NewsContentTypePluginTest {
    * the scheduled news, and marks scheduled only the scheduled articles.
    */
   @Test
-  public void testSearchScheduledWithTextMarksOnlyStagedArticles() throws Exception {
+  public void testSearchScheduledWithTextMarksOnlyScheduledArticles() throws Exception {
     ContentFilter filter = new ContentFilter();
     filter.setStatus(ContentUtils.STATUS_SCHEDULED);
     filter.setSearchText("article");

@@ -2482,6 +2482,7 @@ public class NewsServiceTest {
 
   @Test
   public void testGetScheduledArticles() throws Exception {
+    mockUserWhoCanSchedule();
     NewsFilter newsFilter = new NewsFilter();
     newsFilter.setScheduledNews(true);
     Map<String, String> properties = new HashMap<>();
@@ -2534,7 +2535,8 @@ public class NewsServiceTest {
    * articles (staged, or with a scheduled unpublish); without it a posted article stays listed.
    */
   @Test
-  public void searchNewsUnderScheduledFilterKeepsOnlyStagedArticles() throws Exception {
+  public void searchNewsUnderScheduledFilterKeepsOnlyScheduledArticles() throws Exception {
+    mockUserWhoCanSchedule();
     NewsESSearchResult result = new NewsESSearchResult();
     result.setId("1");
     when(newsSearchConnector.search(any(), any())).thenReturn(List.of(result));
@@ -2553,6 +2555,7 @@ public class NewsServiceTest {
 
   @Test
   public void searchNewsUnderScheduledFilterListsPostedArticleWithScheduledUnpublish() throws Exception {
+    mockUserWhoCanSchedule();
     NewsESSearchResult result = new NewsESSearchResult();
     result.setId("1");
     when(newsSearchConnector.search(any(), any())).thenReturn(List.of(result));
@@ -2575,6 +2578,7 @@ public class NewsServiceTest {
 
   @Test
   public void searchNewsUnderScheduledFilterListsStagedArticle() throws Exception {
+    mockUserWhoCanSchedule();
     NewsESSearchResult result = new NewsESSearchResult();
     result.setId("1");
     when(newsSearchConnector.search(any(), any())).thenReturn(List.of(result));
@@ -2588,6 +2592,26 @@ public class NewsServiceTest {
     NewsFilter scheduledFilter = new NewsFilter();
     scheduledFilter.setScheduledNews(true);
     assertEquals(1, newsService.searchNews(scheduledFilter, currentIdentity).size());
+  }
+
+  @Test
+  public void searchNewsUnderScheduledFilterDropsArticlesTheUserCannotSchedule() throws Exception {
+    NewsESSearchResult result = new NewsESSearchResult();
+    result.setId("1");
+    when(newsSearchConnector.search(any(), any())).thenReturn(List.of(result));
+    MetadataItem metadataItem = mock(MetadataItem.class);
+    when(metadataItem.getObjectId()).thenReturn("1");
+    when(metadataItem.getProperties()).thenReturn(Map.of(NEWS_PUBLICATION_STATE, "staged", NEWS_DELETED, String.valueOf(false)));
+    mockBuildArticle(List.of(metadataItem));
+    when(spaceService.isSuperManager(anyString())).thenReturn(false);
+    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity(nullable(String.class))).thenReturn(mock(Identity.class));
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(nullable(String.class), any(Identity.class))).thenReturn(false);
+    org.exoplatform.social.core.identity.model.Identity currentIdentity =
+                                                                        mock(org.exoplatform.social.core.identity.model.Identity.class);
+
+    NewsFilter scheduledFilter = new NewsFilter();
+    scheduledFilter.setScheduledNews(true);
+    assertEquals(0, newsService.searchNews(scheduledFilter, currentIdentity).size());
   }
 
   @Test
@@ -2891,6 +2915,11 @@ public class NewsServiceTest {
     verify(metadataService, times(1)).updateMetadataItem(eq(pageMetadataItem), eq(1L), eq(false));
     assertFalse(props.containsKey("key1"));
     assertEquals("value2", props.get("key2"));
+  }
+
+  private void mockUserWhoCanSchedule() {
+    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity(nullable(String.class))).thenReturn(mock(Identity.class));
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(nullable(String.class), any(Identity.class))).thenReturn(true);
   }
 
   private void mockBuildArticle(List<MetadataItem> metadataItems) throws WikiException {
