@@ -548,7 +548,7 @@ export default {
         return;
       }
       if (data && typeof data === 'object' && data.method === 'open-href' && this.isWebUrl(data.href)) {
-        window.open(data.href, '_blank');
+        window.open(data.href, '_blank', 'noopener,noreferrer');
       }
     },
     isWebUrl(href) {
