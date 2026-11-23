@@ -2056,6 +2056,8 @@ public class NewsServiceTest {
         && NewsService.NEWS_METADATA_PAGE_VERSION_OBJECT_TYPE.equals(object.getType()) && "10".equals(object.getId())));
     verify(indexingService).unindex(NewsIndexingServiceConnector.TYPE, "1");
     verify(indexingService).reindex(WikiPageIndexingServiceConnector.TYPE, "1");
+    verify(newsTargetingService).deleteNewsTargets(org.mockito.ArgumentMatchers.argThat((News news) -> news != null
+        && "1".equals(news.getId())));
   }
 
   private void assertNoteDeletedWithArticle() {

@@ -505,6 +505,9 @@ public class NewsService {
       boolean noteKept = keepNote && isLinkedToNote(news);
       if (noteKept) {
         deleteArticleVersionsMetadata(news);
+        // Targets are keyed on the page id: the kept note must leave the news
+        // lists the article was published to
+        newsTargetingService.deleteNewsTargets(news);
       } else {
         deleteArticle(news, currentIdentity.getUserId());
       }
