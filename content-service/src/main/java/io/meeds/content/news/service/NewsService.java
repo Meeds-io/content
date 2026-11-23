@@ -344,18 +344,18 @@ public class NewsService {
                          String newsObjectType,
                          String newsUpdateType) throws Exception {
 
-    // Whatever the update type, only a user who can edit the news updates it
-    // (the right to edit includes the right to publish and to refer)
-    if (!canEditNews(news, updater)) {
+    Identity updaterIdentity = NewsUtils.getUserIdentity(updater);
+    String newsId = news.getTargetPageId() != null ? news.getTargetPageId() : news.getId();
+    News originalNews = getNewsById(newsId, updaterIdentity, false, newsObjectType);
+    // Whatever the update type, only a user who can edit the stored news
+    // updates it (the right to edit includes the right to publish and to
+    // refer); the request's own flags play no part in that right
+    if (originalNews == null || !canEditNews(originalNews, updater)) {
       throw new IllegalAccessException("User " + updater + " is not authorized to update news");
     }
-    Identity updaterIdentity = NewsUtils.getUserIdentity(updater);
     if (PAGE_REFERENCE.name().equalsIgnoreCase(newsUpdateType) && !canReferToNote(news, updaterIdentity)) {
       throw new IllegalAccessException("User " + updater + " is not authorized to refer or derefer news");
     }
-
-    String newsId = news.getTargetPageId() != null ? news.getTargetPageId() : news.getId();
-    News originalNews = getNewsById(newsId, updaterIdentity, false, newsObjectType);
     // An unchanged stored state sent back by the client is accepted
     checkPublicationState(news.getPublicationState(), originalNews.getPublicationState());
     List<ArticleTarget> oldTargets = newsTargetingService.getTargetsByNews(news);
@@ -1130,9 +1130,9 @@ public class NewsService {
       } else if (spaceService.isSuperManager(space, authenticatedUser)) {
         return true;
       }
-      if (isUnknownPublicationState(news.getPublicationState())) {
-        // Fail closed: only those who can edit the article see an article
-        // whose state is none of the known ones
+      if (isUnknownPublicationState(news.getPublicationState()) || DRAFT.equals(news.getPublicationState())) {
+        // Fail closed: only those who can edit the article see a draft or an
+        // article whose state is none of the known ones
         return canEditNews(news, authenticatedUser);
       }
       if (StringUtils.isEmpty(news.getPublicationState())
@@ -2250,6 +2250,9 @@ public class NewsService {
   }
 
   private boolean canViewSharedInSpaces(News news, String username) {
+    if (CollectionUtils.isEmpty(news.getSharedInSpacesList())) {
+      return false;
+    }
     for (String sharedInSpaceId : news.getSharedInSpacesList()) {
       Space sharedInSpace = spaceService.getSpaceById(sharedInSpaceId);
       if (sharedInSpace != null && spaceService.canViewSpace(sharedInSpace, username)) {
