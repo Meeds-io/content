@@ -289,9 +289,12 @@ public class NewsServiceTest {
     draftPage.setTitle("draft article for new page");
     draftPage.setId("1");
     draftPage.setAuthor("john");
+    draftPage.setOwner("john");
     draftPage.setWikiOwner("/space/groupId");
 
     Space space = mockSpace();
+    // the author of a draft edits it: that is the right to view it
+    when(spaceService.canRedactOnSpace(any(Space.class), any(Identity.class))).thenReturn(true);
 
     when(noteService.getDraftNoteById(anyString(), anyString())).thenReturn(draftPage);
     MetadataItem metadataItem = mock(MetadataItem.class);
@@ -305,6 +308,7 @@ public class NewsServiceTest {
     COMMONS_UTILS.when(CommonsUtils::getCurrentPortalOwner).thenReturn("dw");
     Identity identity = mock(Identity.class);
     when(identity.getUserId()).thenReturn("john");
+    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity(anyString())).thenReturn(identity);
     when(activityManager.getActivity(nullable(String.class))).thenReturn(null);
     when(newsTargetingService.getTargetsByNews(any(News.class))).thenReturn(null);
     NEWS_UTILS.when(() -> NewsUtils.buildDraftUrl(any())).thenReturn("url");
@@ -1027,6 +1031,49 @@ public class NewsServiceTest {
   }
 
   @Test
+  public void testUpdateNewsIsRefusedToAMemberWhoCannotEditTheStoredArticleWhateverTheRequestCarries() throws Exception {
+    for (String updateType : new String[] { "content", "SCHEDULE", "other", CONTENT_AND_TITLE.name(),
+        NewsUtils.NewsUpdateType.POSTING_AND_PUBLISHING.name(), CATEGORIES.name(),
+        NewsUtils.NewsUpdateType.PAGE_REFERENCE.name() }) {
+      News news = mockUpdatableArticle();
+      when(spaceService.isSuperManager(any(Space.class), anyString())).thenReturn(false);
+      when(spaceService.canViewSpace(any(Space.class), anyString())).thenReturn(true);
+      when(spaceService.canRedactOnSpace(any(Space.class), any(Identity.class))).thenReturn(true);
+      news.setReferred(true);
+
+      assertThrows("update type " + updateType,
+                   IllegalAccessException.class,
+                   () -> newsService.updateNews(news, "mary", false, false, ARTICLE.name().toLowerCase(), updateType));
+    }
+
+    verify(noteService, never()).updateNote(any(Page.class), any(), any(), anyBoolean());
+    verify(metadataService, never()).updateMetadataItem(any(), anyLong(), anyBoolean());
+  }
+
+  @Test
+  public void testUpdateNewsPostingAndPublishingIsAllowedToAPublisherOnly() throws Exception {
+    News news = mockUpdatableArticle();
+    when(spaceService.isSuperManager(any(Space.class), anyString())).thenReturn(false);
+    when(spaceService.canViewSpace(any(Space.class), anyString())).thenReturn(true);
+    when(spaceService.canPublishOnSpace(any(Space.class), eq("mary"))).thenReturn(true);
+    org.exoplatform.social.core.identity.model.Identity publisherIdentity =
+                                                                         mock(org.exoplatform.social.core.identity.model.Identity.class);
+    org.exoplatform.social.core.identity.model.Profile publisherProfile =
+                                                                       mock(org.exoplatform.social.core.identity.model.Profile.class);
+    when(publisherIdentity.getId()).thenReturn("1");
+    when(publisherIdentity.getProfile()).thenReturn(publisherProfile);
+    when(publisherProfile.getFullName()).thenReturn("Mary");
+    when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(publisherIdentity);
+
+    assertNotNull(newsService.updateNews(news,
+                                         "mary",
+                                         false,
+                                         false,
+                                         ARTICLE.name().toLowerCase(),
+                                         NewsUtils.NewsUpdateType.POSTING_AND_PUBLISHING.name()));
+  }
+
+  @Test
   public void testUpdateNewsOfAnyUpdateTypeIsAllowedToAnEditor() throws Exception {
     for (String updateType : new String[] { "content", "SCHEDULE", "other", CATEGORIES.name() }) {
       News news = mockUpdatableArticle();
@@ -1199,7 +1246,7 @@ public class NewsServiceTest {
   }
 
   @Test
-  public void testCreateDraftWithoutStateStoresDraft() throws Exception {
+  public void testCreateDraftArticleForNewPageStoresDraft() throws Exception {
     News draftArticle = new News();
     draftArticle.setAuthor("john");
     draftArticle.setTitle("draft article for new page");
@@ -1221,7 +1268,7 @@ public class NewsServiceTest {
     when(noteService.createDraftForNewPage(any(DraftPage.class), anyLong(), anyLong())).thenReturn(draftPage);
     when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(new org.exoplatform.social.core.identity.model.Identity("1"));
 
-    News created = newsService.createNews(draftArticle, identity);
+    News created = newsService.createDraftArticleForNewPage(draftArticle, space.getGroupId(), identity.getUserId(), 1L);
 
     assertEquals(DRAFT, created.getPublicationState());
     ArgumentCaptor<Map<String, String>> properties = ArgumentCaptor.forClass(Map.class);
@@ -1394,6 +1441,48 @@ public class NewsServiceTest {
     assertFalse(newsService.canViewNews(existingArticle(null, false), "outsider"));
     assertFalse(newsService.canViewNews(existingArticle("", false), "outsider"));
     assertFalse(newsService.canViewNews(existingArticle(null, true), "outsider"));
+  }
+
+  @Test
+  public void testCanViewNewsWithoutPublicationStateIsRefusedWhenPublishedForAllUsers() {
+    Space space = space();
+    when(spaceService.getSpaceById("3")).thenReturn(space);
+    News article = existingArticle(null, false);
+    article.setPublished(true);
+    article.setAudience(NewsUtils.ALL_NEWS_AUDIENCE);
+
+    assertFalse(newsService.canViewNews(article, "outsider"));
+  }
+
+  @Test
+  public void testCanViewNewsWithNoSharedSpacesListDoesNotFail() {
+    Space space = space();
+    when(spaceService.getSpaceById("3")).thenReturn(space);
+    News article = existingArticle(null, false);
+    article.setSharedInSpacesList(null);
+
+    assertFalse(newsService.canViewNews(article, "outsider"));
+  }
+
+  @Test
+  public void testCanViewNewsOfAnArticlePageInDraftStateIsRefusedToANonEditor() {
+    Space space = space();
+    when(spaceService.getSpaceById("3")).thenReturn(space);
+    when(spaceService.canViewSpace(space, "mary")).thenReturn(true);
+    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity(anyString())).thenReturn(mock(Identity.class));
+
+    assertFalse(newsService.canViewNews(existingArticle(DRAFT, false), "outsider"));
+    assertFalse(newsService.canViewNews(existingArticle(DRAFT, false), "mary"));
+  }
+
+  @Test
+  public void testCanViewNewsOfAnArticlePageInDraftStateIsAllowedToAnEditor() {
+    Space space = space();
+    when(spaceService.getSpaceById("3")).thenReturn(space);
+    when(spaceService.isManager(space, "mary")).thenReturn(true);
+    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity(anyString())).thenReturn(mock(Identity.class));
+
+    assertTrue(newsService.canViewNews(existingArticle(DRAFT, false), "mary"));
   }
 
   @Test
@@ -2246,6 +2335,7 @@ public class NewsServiceTest {
     article.setSpaceId("3");
     article.setPublicationState(publicationState);
     article.setActivityPosted(activityPosted);
+    article.setSharedInSpacesList(new ArrayList<>());
     return article;
   }
 
