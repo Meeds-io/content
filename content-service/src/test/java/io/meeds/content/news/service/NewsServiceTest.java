@@ -4112,6 +4112,45 @@ public class NewsServiceTest {
   }
 
   @Test
+  public void testAnUpdaterWhoCannotPublishKeepsTheStoredAudienceWhenSavingALatestDraftWithADraft() throws Exception {
+    assertEquals(NewsUtils.ALL_NEWS_AUDIENCE, saveLatestDraftWithAnAudience(true, false));
+  }
+
+  @Test
+  public void testAnUpdaterWhoCanPublishSetsTheAudienceWhenSavingALatestDraft() throws Exception {
+    assertEquals(NewsUtils.SPACE_NEWS_AUDIENCE, saveLatestDraftWithAnAudience(false, true));
+  }
+
+  private String saveLatestDraftWithAnAudience(boolean existingDraft, boolean canPublish) throws Exception {
+    News news = mockUpdatableArticle();
+    mockUpdaterProfile();
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(any(), any())).thenReturn(canPublish);
+    news.setAudience(NewsUtils.SPACE_NEWS_AUDIENCE);
+    news.setBody("corps");
+    News stored = new News();
+    stored.setId("1");
+    stored.setSpaceId("1");
+    stored.setOriginalBody("body");
+    stored.setAudience(NewsUtils.ALL_NEWS_AUDIENCE);
+    DraftPage draft = mock(DraftPage.class);
+    when(draft.getId()).thenReturn("5");
+    when(draft.getTargetPageId()).thenReturn("1");
+    when(draft.getContent()).thenReturn("corps");
+    when(noteService.getLatestDraftPageByUserAndTargetPageAndLang(anyLong(),
+                                                                  anyString(),
+                                                                  nullable(String.class))).thenReturn(existingDraft ? draft : null);
+    when(noteService.updateDraftForExistPage(any(DraftPage.class), any(Page.class), any(), anyLong(), anyString())).thenReturn(draft);
+    when(noteService.createDraftForExistPage(any(DraftPage.class), any(Page.class), any(), anyLong(), anyString())).thenReturn(draft);
+    NewsService service = spy(newsService);
+    doReturn(stored).when(service).getNewsById(eq("1"), any(), eq(false), eq(LATEST_DRAFT.name().toLowerCase()));
+    NEWS_UTILS.clearInvocations();
+
+    service.updateNews(news, "john", false, false, LATEST_DRAFT.name().toLowerCase(), CONTENT_AND_TITLE.name());
+
+    return permissionsAudience();
+  }
+
+  @Test
   public void testUpdateNewsChecksAndUpdatesTheStoredSpace() throws Exception {
     mockSpace();
     mockIdentity();
