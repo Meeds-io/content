@@ -1795,6 +1795,9 @@ public class NewsServiceTest {
       MetadataItem item = metadataItemWithState(POSTED);
       item.getProperties().put("activityPosted", "true");
       item.getProperties().put("publisher", "Mary");
+      item.getProperties().put("activities", "1:2");
+      item.getProperties().put("viewers", "mary");
+      item.getProperties().put("viewsCount", "1");
       doReturn(existingArticle(POSTED, true)).when(service).getNewsArticleById("12");
       when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
                                                                any(MetadataObject.class))).thenReturn(List.of(item));
@@ -1802,7 +1805,7 @@ public class NewsServiceTest {
       Map<String, String> properties = new HashMap<>();
       properties.put("other", "value");
       for (String key : List.of("activityPosted", "activityCategories", EXTERNAL_PAGE, NEWS_DELETED, "publisher",
-                                "pageReferred", "deReferPageId")) {
+                                "pageReferred", "deReferPageId", "activities", "viewers", "viewsCount")) {
         properties.put(key, "forged");
       }
       Map<String, String> result = service.updateMetadataProperties("12", properties, 1L);
@@ -1810,6 +1813,9 @@ public class NewsServiceTest {
       assertEquals("value", result.get("other"));
       assertEquals("true", result.get("activityPosted"));
       assertEquals("Mary", result.get("publisher"));
+      assertEquals("1:2", result.get("activities"));
+      assertEquals("mary", result.get("viewers"));
+      assertEquals("1", result.get("viewsCount"));
       for (String key : List.of("activityCategories", EXTERNAL_PAGE, NEWS_DELETED, "pageReferred", "deReferPageId")) {
         assertFalse(key, result.containsKey(key));
       }

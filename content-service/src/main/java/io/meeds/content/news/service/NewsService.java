@@ -222,7 +222,10 @@ public class NewsService {
                                                                  NEWS_DELETED,
                                                                  PUBLISHER,
                                                                  PAGE_REFERRED,
-                                                                 DE_REFER_PAGE_ID);
+                                                                 DE_REFER_PAGE_ID,
+                                                                 NEWS_ACTIVITIES,
+                                                                 NEWS_VIEWERS,
+                                                                 NEWS_VIEWS);
 
   /**
    * Metadata keys that change the publication of an article: the metadata
