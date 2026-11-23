@@ -3953,6 +3953,38 @@ public class NewsServiceTest {
     assertEquals("12", stored.get("eventId"));
   }
 
+  @Test
+  public void testCreateNewsStoresNoneOfTheKeysTheServiceOwnsFromTheParameters() throws Exception {
+    Space space = mockSpace();
+    Identity identity = mockIdentity();
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(any(), any())).thenReturn(true);
+    when(spaceService.canRedactOnSpace(any(Space.class), any(Identity.class))).thenReturn(true);
+    mockNewArticlePage(space);
+    News article = new News();
+    article.setAuthor("john");
+    article.setTitle("news article");
+    article.setBody("news body");
+    article.setPublicationState(POSTED);
+    article.setId("1");
+    article.setSpaceId("1");
+    article.setAudience(NewsUtils.SPACE_NEWS_AUDIENCE);
+    Map<String, String> parameters = new HashMap<>();
+    for (String key : List.of(NewsService.NEWS_AUDIENCE, NewsService.PUBLISHED, NewsService.NEWS_PUBLICATION_STATE,
+                              NewsService.NEWS_ACTIVITY_POSTED, NewsService.NEWS_ACTIVITY_CATEGORIES, NewsService.NEWS_DELETED,
+                              NewsService.PUBLISHER, NewsService.EXTERNAL_PAGE, NewsService.SCHEDULE_POST_DATE,
+                              NewsService.UNPUBLISH_SCHEDULED, NewsService.UNPUBLISH_SCHEDULED_DATE, NewsService.PAGE_REFERRED,
+                              NewsService.DE_REFER_PAGE_ID, NewsService.NEWS_ACTIVITIES, NewsService.NEWS_VIEWERS,
+                              NewsService.NEWS_VIEWS)) {
+      parameters.put(key, "injected");
+    }
+    article.setParameters(parameters);
+
+    newsService.createNews(article, identity);
+
+    Map<String, String> stored = storedPageProperties();
+    parameters.keySet().forEach(key -> assertNotEquals(key, "injected", stored.get(key)));
+  }
+
   private String storedItemAudience() {
     return metadataService.getMetadataItemsByMetadataAndObject(mock(MetadataKey.class), mock(MetadataObject.class))
                           .get(0)
@@ -4085,8 +4117,13 @@ public class NewsServiceTest {
     NEWS_UTILS.verify(() -> NewsUtils.canPublishNews(eq("2"), any()), never());
   }
 
+  /**
+   * Regression guard of the capability gate the update already had: an article
+   * the viewer has no capability to publish stays published, whatever the
+   * right on its stored space.
+   */
   @Test
-  public void testUpdateNewsWithoutPublishIntentLeavesAPublishedArticlePublished() throws Exception {
+  public void testUpdateNewsOfAnArticleThatCannotBePublishedLeavesAPublishedArticlePublished() throws Exception {
     News news = mockUpdatableArticle();
     mockUpdaterProfile();
     news.setPublished(true);

@@ -141,24 +141,6 @@ public class NewsService {
 
   public static final String       NEWS_METADATA_DRAFT_OBJECT_TYPE        = "newsDraftPage";
 
-  /** The Constant PUBLISHED. */
-  private static final Set<String> COMPUTED_PAGE_PROPERTIES               = Set.of("audience",
-                                                                                   "published",
-                                                                                   "publicationState",
-                                                                                   "activityPosted",
-                                                                                   "activityCategories",
-                                                                                   "deleted",
-                                                                                   "publisher",
-                                                                                   "externalPage",
-                                                                                   "schedulePostDate",
-                                                                                   "unpublishScheduled",
-                                                                                   "unpublishScheduledDate",
-                                                                                   "pageReferred",
-                                                                                   "deReferPageId",
-                                                                                   "activities",
-                                                                                   "viewers",
-                                                                                   "viewsCount");
-
   public static final String       PUBLISHED                              = "published";
 
   /** The Constant PUBLISHER. */
@@ -260,6 +242,27 @@ public class NewsService {
                                                      new MetadataKey(NEWS_METADATA_TYPE.getName(), NEWS_METADATA_NAME, 0);
 
   private static final Log         LOG                                    = ExoLogger.getLogger(NewsService.class);
+
+  /**
+   * The keys of the page properties the service owns or computes: a new
+   * article never takes them from the free-form parameters of its caller.
+   */
+  private static final Set<String> COMPUTED_PAGE_PROPERTIES               = Set.of(NEWS_AUDIENCE,
+                                                                                   PUBLISHED,
+                                                                                   NEWS_PUBLICATION_STATE,
+                                                                                   NEWS_ACTIVITY_POSTED,
+                                                                                   NEWS_ACTIVITY_CATEGORIES,
+                                                                                   NEWS_DELETED,
+                                                                                   PUBLISHER,
+                                                                                   EXTERNAL_PAGE,
+                                                                                   SCHEDULE_POST_DATE,
+                                                                                   UNPUBLISH_SCHEDULED,
+                                                                                   UNPUBLISH_SCHEDULED_DATE,
+                                                                                   PAGE_REFERRED,
+                                                                                   DE_REFER_PAGE_ID,
+                                                                                   NEWS_ACTIVITIES,
+                                                                                   NEWS_VIEWERS,
+                                                                                   NEWS_VIEWS);
 
   @Autowired
   private SpaceService             spaceService;
@@ -478,8 +481,8 @@ public class NewsService {
     }
     boolean published = false;
     boolean unpublish = false;
-    // The caller asks for the publication change (canPublish) and the right on
-    // the stored space allows it
+    // A publication change needs the capability to publish the article
+    // (isCanPublish) and, on top of it, the right to publish on the stored space
     if (publish != news.isPublished() && news.isCanPublish() && canPublish) {
       news.setPublished(publish);
       if (news.isPublished()) {
