@@ -20,7 +20,6 @@ package io.meeds.content.news.service;
 
 import static io.meeds.content.news.utils.NewsUtils.NewsObjectType.ARTICLE;
 import static io.meeds.content.news.utils.NewsUtils.NewsObjectType.LATEST_DRAFT;
-import static io.meeds.content.news.utils.NewsUtils.NewsUpdateType.CATEGORIES;
 import static io.meeds.content.news.utils.NewsUtils.NewsUpdateType.CONTENT_AND_TITLE;
 import static io.meeds.content.news.utils.NewsUtils.NewsUpdateType.PAGE_REFERENCE;
 import static io.meeds.content.news.utils.NewsUtils.NewsUpdateType.POSTING_AND_PUBLISHING;
@@ -345,19 +344,14 @@ public class NewsService {
                          String newsObjectType,
                          String newsUpdateType) throws Exception {
 
-    if (CONTENT_AND_TITLE.name().equalsIgnoreCase(newsUpdateType) && !canEditNews(news, updater)) {
+    // Whatever the update type, only a user who can edit the news updates it
+    // (the right to edit includes the right to publish and to refer)
+    if (!canEditNews(news, updater)) {
       throw new IllegalAccessException("User " + updater + " is not authorized to update news");
     }
     Identity updaterIdentity = NewsUtils.getUserIdentity(updater);
-    if (POSTING_AND_PUBLISHING.name().equalsIgnoreCase(newsUpdateType)
-        && (!canEditNews(news, updater) && !NewsUtils.canPublishNews(news.getSpaceId(), updaterIdentity))) {
-      throw new IllegalAccessException("User " + updater + " is not authorized to update news");
-    }
     if (PAGE_REFERENCE.name().equalsIgnoreCase(newsUpdateType) && !canReferToNote(news, updaterIdentity)) {
       throw new IllegalAccessException("User " + updater + " is not authorized to refer or derefer news");
-    }
-    if (CATEGORIES.name().equalsIgnoreCase(newsUpdateType) && !canEditNews(news, updater)) {
-      throw new IllegalAccessException("User " + updater + " is not authorized to update news categories");
     }
 
     String newsId = news.getTargetPageId() != null ? news.getTargetPageId() : news.getId();
