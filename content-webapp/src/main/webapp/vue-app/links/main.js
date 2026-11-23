@@ -46,7 +46,7 @@ export function init(appId, name, canEdit) {
         },
         computed: {
           links() {
-            return this.settings?.links || null;
+            return this.settings?.links?.filter?.(link => !link.unavailable) || null;
           },
           hasLinks() {
             return this.links?.length;

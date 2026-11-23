@@ -180,7 +180,10 @@ public class LinkRest {
 
   private LinkSettingRestEntity getLinkSettingEntity(LinkSetting linkSetting, String lang) {
     List<Link> links = linkService.getLinks(linkSetting.getName(), lang, true);
-    return LinkEntityBuilder.build(linkSetting, links);
+    LinkSettingRestEntity linkSettingEntity = LinkEntityBuilder.build(linkSetting, links);
+    linkSettingEntity.getLinks()
+                     .forEach(link -> link.setUnavailable(!linkService.isLinkTargetAvailable(linkSetting, link.getUrl())));
+    return linkSettingEntity;
   }
 
 }

@@ -42,6 +42,14 @@ import org.exoplatform.commons.file.model.FileItem;
 import org.exoplatform.commons.file.services.FileService;
 import org.exoplatform.portal.config.UserACL;
 import org.exoplatform.portal.config.model.PortalConfig;
+import org.exoplatform.portal.mop.SiteKey;
+import org.exoplatform.portal.mop.navigation.NavigationContext;
+import org.exoplatform.portal.mop.navigation.NavigationState;
+import org.exoplatform.portal.mop.navigation.NodeContext;
+import org.exoplatform.portal.mop.navigation.NodeModel;
+import org.exoplatform.portal.mop.navigation.NodeState;
+import org.exoplatform.portal.mop.navigation.Scope;
+import org.exoplatform.portal.mop.service.NavigationService;
 import org.exoplatform.portal.mop.page.PageContext;
 import org.exoplatform.portal.mop.page.PageKey;
 import org.exoplatform.portal.mop.page.PageState;
@@ -118,6 +126,55 @@ public class LinkServiceTest extends AbstractSpringConfigurationTest { // NOSONA
     assertEquals(LINK_SETTING_NAME, linkSetting.getName());
     assertEquals(pageReference, linkSetting.getPageReference());
     assertEquals(SPACE_ID, linkSetting.getSpaceId());
+  }
+
+  @Test
+  public void testIsLinkTargetAvailable() {
+    String homePage = createPage("availabilityHome", UserACL.EVERYONE, ADMINISTRATORS_GROUP);
+    String settingsPage = createPage("availabilitySettings", UserACL.EVERYONE, ADMINISTRATORS_GROUP);
+    String otherPage = createPage("availabilityOther", UserACL.EVERYONE, ADMINISTRATORS_GROUP);
+    NavigationService navigationService = getContainer().getComponentInstanceOfType(NavigationService.class);
+    SiteKey siteKey = SiteKey.portal("test");
+    if (navigationService.loadNavigation(siteKey) == null) {
+      navigationService.saveNavigation(new NavigationContext(siteKey, new NavigationState(0)));
+    }
+    NodeContext<NodeContext<?>> root = navigationService.loadNode(NodeModel.SELF_MODEL,
+                                                                  navigationService.loadNavigation(siteKey),
+                                                                  Scope.ALL,
+                                                                  null);
+    NodeContext<NodeContext<?>> home = root.add(null, "availabilityhome");
+    home.setState(new NodeState.Builder().pageRef(PageKey.parse(homePage)).build());
+    home.add(null, "settings").setState(new NodeState.Builder().pageRef(PageKey.parse(settingsPage)).build());
+    home.add(null, "other").setState(new NodeState.Builder().pageRef(PageKey.parse(otherPage)).build());
+    home.add(null, "addon")
+        .setState(new NodeState.Builder().pageRef(new PageKey(SiteKey.portal("test"), "notImportedPage")).build());
+    home.add(null, "category");
+    navigationService.saveNode(root, null);
+
+    LinkSetting linkSetting = linkService.initLinkSetting("linkAvailabilitySetting", homePage, 0);
+
+    assertTrue(linkService.isLinkTargetAvailable(linkSetting, null));
+    assertTrue(linkService.isLinkTargetAvailable(linkSetting, "https://meeds.io/test/availabilityhome/addon"));
+    assertTrue(linkService.isLinkTargetAvailable(linkSetting, "/portal/test"));
+    assertTrue(linkService.isLinkTargetAvailable(linkSetting, "/portal/notASite/availabilityhome/addon"));
+    assertTrue(linkService.isLinkTargetAvailable(linkSetting, "/portal/test/availabilityhome/settings"));
+    assertTrue("A link to the links page itself is available",
+               linkService.isLinkTargetAvailable(linkSetting, "/portal/test/availabilityhome"));
+    assertTrue(linkService.isLinkTargetAvailable(linkSetting, "/portal/test/availabilityhome/settings#display"));
+    assertTrue(linkService.isLinkTargetAvailable(linkSetting, "/portal/test/availabilityhome/settings?tab=1"));
+    assertTrue("A path parameter after a node that isn't the links page is kept",
+               linkService.isLinkTargetAvailable(linkSetting, "/portal/test/availabilityhome/other/123"));
+
+    assertFalse("A node whose page isn't imported is unavailable",
+                linkService.isLinkTargetAvailable(linkSetting, "/portal/test/availabilityhome/addon"));
+    assertFalse("A node without page is unavailable",
+                linkService.isLinkTargetAvailable(linkSetting, "/portal/test/availabilityhome/category"));
+    assertFalse("A path parameter after a node whose page isn't imported is unavailable",
+                linkService.isLinkTargetAvailable(linkSetting, "/portal/test/availabilityhome/addon/123"));
+    assertFalse("A path matching no node is unavailable",
+                linkService.isLinkTargetAvailable(linkSetting, "/portal/test/missing/models"));
+    assertFalse("A path leading back to the links page is unavailable",
+                linkService.isLinkTargetAvailable(linkSetting, "/portal/test/availabilityhome/ai/models"));
   }
 
   @Test

@@ -24,6 +24,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -43,7 +44,16 @@ import org.exoplatform.commons.exception.ObjectNotFoundException;
 import org.exoplatform.commons.file.model.FileItem;
 import org.exoplatform.commons.file.services.FileService;
 import org.exoplatform.commons.file.services.FileStorageException;
+import org.exoplatform.container.PortalContainer;
 import org.exoplatform.portal.config.model.Page;
+import org.exoplatform.portal.mop.SiteKey;
+import org.exoplatform.portal.mop.navigation.GenericScope;
+import org.exoplatform.portal.mop.navigation.NavigationContext;
+import org.exoplatform.portal.mop.navigation.NodeContext;
+import org.exoplatform.portal.mop.navigation.NodeModel;
+import org.exoplatform.portal.mop.page.PageKey;
+import org.exoplatform.portal.mop.service.LayoutService;
+import org.exoplatform.portal.mop.service.NavigationService;
 import org.exoplatform.services.listener.ListenerService;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
@@ -120,6 +130,12 @@ public class LinkService {
 
   @Autowired
   protected LinkStorage         linkStorage;
+
+  @Autowired
+  protected LayoutService       layoutService;
+
+  @Autowired
+  protected NavigationService   navigationService;
 
   /**
    * @param linkSettingName {@link LinkSetting} unique name
@@ -495,6 +511,66 @@ public class LinkService {
       return false;
     }
     return cmsService.hasEditPermission(identity, linkSetting.getPageReference(), linkSetting.getSpaceId());
+  }
+
+  /**
+   * Tells whether a link leads to a page that exists on this instance. Only a
+   * link to a page of a portal site of this platform, as
+   * /portal/siteName/node/path, can be unavailable: when no node of the site
+   * matches its path, when the node it designates has no page (typically a node
+   * whose page belongs to an add-on that isn't installed), or when only
+   * the beginning of its path matches and the deepest matching node is the page
+   * that displays the links itself, so that the link would lead back to it.
+   * Any other link (external, relative, to a group site...) is considered
+   * available.
+   *
+   * @param linkSetting {@link LinkSetting} displaying the link
+   * @param url link target url
+   * @return false if the link leads to a page that doesn't exist, else true
+   */
+  public boolean isLinkTargetAvailable(LinkSetting linkSetting, String url) {
+    String path = StringUtils.substringBefore(StringUtils.substringBefore(StringUtils.trim(url), "#"), "?");
+    String prefix = "/" + PortalContainer.getCurrentPortalContainerName() + "/";
+    if (StringUtils.isBlank(path) || !path.startsWith(prefix)) {
+      return true;
+    }
+    String[] pathParts = StringUtils.split(path.substring(prefix.length()), '/');
+    if (pathParts.length < 2) {
+      return true;
+    }
+    SiteKey siteKey = SiteKey.portal(pathParts[0]);
+    if (layoutService.getPortalConfig(siteKey) == null) {
+      return true;
+    }
+    NavigationContext navigation = navigationService.loadNavigation(siteKey);
+    if (navigation == null) {
+      return true;
+    }
+    String[] nodePath = Arrays.copyOfRange(pathParts, 1, pathParts.length);
+    NodeContext<NodeContext<?>> node = navigationService.loadNode(NodeModel.SELF_MODEL,
+                                                                  navigation,
+                                                                  GenericScope.branchShape(nodePath),
+                                                                  null);
+    int matchedParts = 0;
+    while (node != null && matchedParts < nodePath.length) {
+      NodeContext<NodeContext<?>> child = node.get(nodePath[matchedParts]);
+      if (child == null) {
+        break;
+      }
+      node = child;
+      matchedParts++;
+    }
+    if (node == null || matchedParts == 0) {
+      return false;
+    }
+    // A node imported or saved with a reference to a page that doesn't exist is
+    // stored without page (NavigationStorageImpl#buildNodeEntity)
+    PageKey pageKey = node.getState() == null ? null : node.getState().getPageRef();
+    if (pageKey == null) {
+      return false;
+    } else {
+      return matchedParts == nodePath.length || !StringUtils.equals(pageKey.format(), linkSetting.getPageReference());
+    }
   }
 
   private void processNewLinks(String linkSettingName, List<Link> existingLinks, List<Link> links) {

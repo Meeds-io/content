@@ -57,7 +57,10 @@ export default {
       return this.$root.links?.length;
     },
     canView() {
-      return this.canEdit || (this.$root.initialized && this.$root.hasLinks);
+      // An editor always sees the application, to fill it or to fix links that
+      // lead to pages that don't exist on this instance; other users see it
+      // only while one of its links is available
+      return this.$root.initialized && (this.$root.hasLinks || this.canEdit);
     },
     canEdit() {
       return !this.previewMode && this.$root.canEdit;
@@ -66,7 +69,11 @@ export default {
   watch: {
     canView() {
       this.$root.$updateApplicationVisibility(this.canView);
-    }
+    },
+    '$root.initialized'() {
+      // canView stays false when every link is unavailable: apply it once loaded
+      this.$root.$updateApplicationVisibility(this.canView);
+    },
   },
   created() {
     document.addEventListener('cms-preview-mode', this.switchToPreview);
