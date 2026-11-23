@@ -1141,6 +1141,11 @@ public class NewsService {
         // whose state is none of the known ones
         return canEditNews(news, authenticatedUser);
       }
+      if (StringUtils.isEmpty(news.getPublicationState())
+          && !(spaceService.canViewSpace(space, authenticatedUser) || canViewSharedInSpaces(news, authenticatedUser))) {
+        // A missing state is treated as an unpublished posted article
+        return false;
+      }
       if (!news.isPublished() && StringUtils.equals(news.getPublicationState(), POSTED)
           && !(spaceService.canViewSpace(space, authenticatedUser) || canViewSharedInSpaces(news, authenticatedUser))) {
         return false;
@@ -1316,6 +1321,8 @@ public class NewsService {
                                                                        Long.parseLong(draftArticleSpace.getId()));
       String draftArticleMetadataItemCreatorIdentityId = identityManager.getOrCreateUserIdentity(draftArticleCreator).getId();
       Map<String, String> draftArticleMetadataItemProperties = new HashMap<>();
+      draftArticleMetadataItemProperties.put(NEWS_PUBLICATION_STATE, DRAFT);
+      draftArticle.setPublicationState(DRAFT);
       metadataService.createMetadataItem(draftArticleMetaDataObject,
                                          NEWS_METADATA_KEY,
                                          draftArticleMetadataItemProperties,
@@ -1520,6 +1527,7 @@ public class NewsService {
                                                                         Long.parseLong(draftArticle.getSpaceId()));
 
     Map<String, String> draftArticleMetadataItemProperties = new HashMap<>();
+    draftArticleMetadataItemProperties.put(NEWS_PUBLICATION_STATE, DRAFT);
     draftArticleMetadataItemProperties.put(NEWS_ACTIVITY_POSTED, String.valueOf(draftArticle.isActivityPosted()));
     draftArticleMetadataItemProperties.put(PUBLISHED, String.valueOf(draftArticle.isPublished()));
 
@@ -1809,6 +1817,11 @@ public class NewsService {
     } else if (isUnknownPublicationState(newsPageProperties.get(NEWS_PUBLICATION_STATE))) {
       newsPageProperties.remove(NEWS_PUBLICATION_STATE);
     }
+    // Every created article stores a state: posted, or staged when scheduled
+    if (StringUtils.isEmpty(newsPageProperties.get(NEWS_PUBLICATION_STATE))) {
+      newsPageProperties.put(NEWS_PUBLICATION_STATE, article.getSchedulePostDate() != null ? STAGED : POSTED);
+    }
+    article.setPublicationState(newsPageProperties.get(NEWS_PUBLICATION_STATE));
     // A brand-new article page is indexed into the notes index immediately
     // by PageIndexingListener.postAddPage - without this, it stays
     // duplicated (once as news, once as notes) until the article's first
@@ -2780,6 +2793,7 @@ public class NewsService {
   }
 
   private void setLatestDraftProperties(Map<String, String> properties, News news) {
+    properties.put(NEWS_PUBLICATION_STATE, DRAFT);
     properties.put(NEWS_ACTIVITY_POSTED, String.valueOf(news.isActivityPosted()));
     setScheduleProperties(news, properties);
   }
