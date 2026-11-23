@@ -101,7 +101,7 @@ public interface ContentTypePlugin {
 
   /**
    * Deletes the content item with the given id, keeping or not the note it is
-   * linked to ({@link ContentEntry#isLinkedToNote()}). A content type with no
+   * linked to ({@code ContentEntry.linkedToNote}). A content type with no
    * linked note deletes the item as {@link #delete(String, String, Identity)}
    * does.
    *
