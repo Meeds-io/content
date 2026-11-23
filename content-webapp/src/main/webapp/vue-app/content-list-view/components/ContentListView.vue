@@ -263,10 +263,11 @@ export default {
       this.load();
     },
     // Category ids are numbers in the category tree the filter compares them with (strict equality);
-    // the address gives a string.
+    // the address gives a string. Only a positive whole number is an id.
     toCategoryId(categoryId) {
-      const id = Number(categoryId);
-      return categoryId && Number.isFinite(id) && id || null;
+      const value = String(categoryId ?? '').trim();
+      const id = /^\d{1,15}$/.test(value) ? Number(value) : 0;
+      return id > 0 ? id : null;
     },
     selectCategory(categoryId) {
       this.activeCategoryId = this.toCategoryId(categoryId);
