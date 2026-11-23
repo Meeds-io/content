@@ -625,7 +625,7 @@ public class NewsRestTest {
   }
 
   @Test
-  public void shouldGetBadRequestNamingTheDraftIdWhenPostingNewsWithoutDraftId() throws Exception {
+  public void shouldGetBadRequestNamingTheDraftIdWhenPostingNewsWithoutDraftId() {
     // Given
     ConversationState.setCurrent(new ConversationState(new Identity(JOHN)));
     News news = new News();
