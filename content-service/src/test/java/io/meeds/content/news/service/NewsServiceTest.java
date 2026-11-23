@@ -1008,6 +1008,35 @@ public class NewsServiceTest {
   }
 
   @Test
+  public void testUpdateNewsOfAnyUpdateTypeIsRefusedToAUserWhoCannotEdit() throws Exception {
+    for (String updateType : new String[] { "content", "SCHEDULE", "other", null, CONTENT_AND_TITLE.name(),
+        NewsUtils.NewsUpdateType.POSTING_AND_PUBLISHING.name(), CATEGORIES.name(),
+        NewsUtils.NewsUpdateType.PAGE_REFERENCE.name() }) {
+      News news = mockUpdatableArticle();
+      when(spaceService.isSuperManager(any(Space.class), anyString())).thenReturn(false);
+      // a viewer of the article: only the edit right is missing
+      when(spaceService.canViewSpace(any(Space.class), anyString())).thenReturn(true);
+
+      assertThrows("update type " + updateType,
+                   IllegalAccessException.class,
+                   () -> newsService.updateNews(news, "john", false, false, ARTICLE.name().toLowerCase(), updateType));
+    }
+
+    verify(noteService, never()).updateNote(any(Page.class), any(), any(), anyBoolean());
+    verify(metadataService, never()).updateMetadataItem(any(), anyLong(), anyBoolean());
+  }
+
+  @Test
+  public void testUpdateNewsOfAnyUpdateTypeIsAllowedToAnEditor() throws Exception {
+    for (String updateType : new String[] { "content", "SCHEDULE", "other", CATEGORIES.name() }) {
+      News news = mockUpdatableArticle();
+
+      assertNotNull("update type " + updateType,
+                    newsService.updateNews(news, "john", false, false, ARTICLE.name().toLowerCase(), updateType));
+    }
+  }
+
+  @Test
   public void testUpdateNewsWithUnknownPublicationStateIsRefused() throws Exception {
     News news = mockUpdatableArticle();
     news.setPublicationState("archived");
