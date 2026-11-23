@@ -94,6 +94,7 @@ import org.exoplatform.wiki.service.PageUpdateType;
 import org.exoplatform.wiki.service.WikiService;
 import org.exoplatform.wiki.service.plugin.WikiDraftPageAttachmentPlugin;
 
+import io.meeds.content.news.exception.InvalidPublicationStateException;
 import io.meeds.content.news.model.ArticleTarget;
 import io.meeds.content.news.model.ContentPublishEvent;
 import io.meeds.content.news.model.News;
@@ -973,10 +974,17 @@ public class NewsService {
    */
   public News scheduleNews(News news, Identity currentIdentity, String newsObjectType) throws Exception {
     checkPublicationState(news);
-    if (!canScheduleNews(news.getSpaceId(), currentIdentity, news)) {
+    News originalArticle = null;
+    if (newsObjectType.equalsIgnoreCase(ARTICLE.name())) {
+      // The right is evaluated on the stored article, not on the request
+      originalArticle = getNewsArticleById(news.getId());
+      if (originalArticle == null
+          || !canScheduleNews(originalArticle.getSpaceId(), currentIdentity, originalArticle)) {
+        throw new IllegalArgumentException("User " + currentIdentity.getUserId() + " is not authorized to schedule news");
+      }
+    } else if (!canScheduleNews(news.getSpaceId(), currentIdentity, news)) {
       throw new IllegalArgumentException("User " + currentIdentity.getUserId() + " is not authorized to schedule news");
     }
-    News originalArticle = null;
     if (newsObjectType.equalsIgnoreCase(NewsObjectType.DRAFT.name())) {
       // Create news article with the publication state STAGED without posting
       // or publishing it ( displayed false news target)
@@ -986,7 +994,6 @@ public class NewsService {
     } else if (newsObjectType.equalsIgnoreCase(NewsObjectType.EXISTING_PAGE.name())) {
       news = createArticleFromExistingPage(news, currentIdentity.getUserId());
     } else if (newsObjectType.equalsIgnoreCase(ARTICLE.name())) {
-      originalArticle = getNewsArticleById(news.getId());
       news = updateArticle(news, currentIdentity, NewsUtils.NewsUpdateType.SCHEDULE.name().toLowerCase());
     }
     if (news != null) {
@@ -1109,7 +1116,7 @@ public class NewsService {
    */
   private static void checkPublicationState(String state, String storedState) {
     if (isUnknownPublicationState(state) && !state.equals(storedState)) {
-      throw new InvalidPublicationStateException("Unknown news publication state");
+      throw new InvalidPublicationStateException();
     }
   }
 
@@ -3048,16 +3055,4 @@ public class NewsService {
       }
     }
   }
-
-  /**
-   * Thrown when a news is submitted with an unknown publication state
-   */
-  public static class InvalidPublicationStateException extends IllegalArgumentException {
-    private static final long serialVersionUID = 6172440251965318545L;
-
-    public InvalidPublicationStateException(String message) {
-      super(message);
-    }
-  }
-
 }
