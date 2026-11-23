@@ -1702,6 +1702,7 @@ public class NewsServiceTest {
   public void testUpdateMetadataPropertiesWithUnknownPublicationStateIsRefused() throws Exception {
     NewsService service = spaceNoteService(List.of());
     allowMetadataEdit(service);
+    allowMetadataPublish(true);
     MetadataItem item = metadataItemWithState(POSTED);
     doReturn(existingArticle(POSTED, true)).when(service).getNewsArticleById("12");
     when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
