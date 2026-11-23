@@ -49,7 +49,11 @@ if (!Vue.prototype.$notePublishService) {
 const lang = eXo && eXo.env && eXo.env.portal.language || 'en';
 
 // should expose the locale resources as REST API
-const url = `/content/i18n/locale.portlet.content.Content?lang=${lang}`;
+const urls = [
+  `/content/i18n/locale.portlet.content.Content?lang=${lang}`,
+  // The labels of news-delete-note-dialog, shared with the news details
+  `/content/i18n/locale.portlet.news.News?lang=${lang}`,
+];
 
 export async function init(params) {
   const appId = params.appId;
@@ -70,7 +74,7 @@ export async function init(params) {
   // and mounting after these awaits means the dynamic page layout has
   // finished (re-)installing this application's container by the time the
   // app attaches to it.
-  const i18n = await exoi18n.loadLanguageAsync(lang, url);
+  const i18n = await exoi18n.loadLanguageAsync(lang, urls);
   const headerTranslations = await Vue.prototype.$translationService
     .getTranslations('contentListView', applicationId, 'headerTitleInput')
     .catch(() => null);

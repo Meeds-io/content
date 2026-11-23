@@ -27,6 +27,7 @@ import ExoNewsDetailsTime from './components/ExoNewsDetailsTime.vue';
 import ExoNewsFavoriteAction from './components/ExoNewsFavoriteAction.vue';
 import NewsActionMenuItems from './components/NewsActionMenuItems.vue';
 import NewsMobileActionMenu from './components/NewsMobileActionMenu.vue';
+import NewsDeleteNoteDialog from './components/NewsDeleteNoteDialog.vue';
 
 import * as  newsServices from '../services/newsServices.js';
 import * as newsConstants from '../services/newsConstants.js';
@@ -41,7 +42,8 @@ const components = {
   'exo-news-details-time': ExoNewsDetailsTime,
   'exo-news-favorite-action': ExoNewsFavoriteAction,
   'news-action-menu-items': NewsActionMenuItems,
-  'news-mobile-action-menu': NewsMobileActionMenu
+  'news-mobile-action-menu': NewsMobileActionMenu,
+  'news-delete-note-dialog': NewsDeleteNoteDialog,
 };
 
 for (const key in components) {

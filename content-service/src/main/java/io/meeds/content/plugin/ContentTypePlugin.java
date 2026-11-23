@@ -99,4 +99,19 @@ public interface ContentTypePlugin {
    */
   void delete(String id, String status, Identity currentIdentity) throws Exception;
 
+  /**
+   * Deletes the content item with the given id, keeping or not the note it is
+   * linked to ({@link ContentEntry#isLinkedToNote()}). A content type with no
+   * linked note deletes the item as {@link #delete(String, String, Identity)}
+   * does.
+   *
+   * @param id              the content id
+   * @param status          the content's status
+   * @param keepNote        true to keep the note the item is linked to
+   * @param currentIdentity the current user, for permission checks
+   */
+  default void delete(String id, String status, boolean keepNote, Identity currentIdentity) throws Exception {
+    delete(id, status, currentIdentity);
+  }
+
 }

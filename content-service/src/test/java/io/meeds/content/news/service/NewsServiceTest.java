@@ -117,6 +117,7 @@ import io.meeds.content.news.model.filter.NewsFilter;
 import io.meeds.content.news.plugin.NewsCategoryPlugin;
 import io.meeds.content.news.plugin.NewsPageAttachmentPlugin;
 import io.meeds.content.news.search.NewsESSearchResult;
+import io.meeds.content.news.search.NewsIndexingServiceConnector;
 import io.meeds.content.news.search.NewsSearchConnector;
 import io.meeds.content.news.utils.NewsUtils;
 import io.meeds.notes.model.NoteFeaturedImage;
@@ -2007,6 +2008,95 @@ public class NewsServiceTest {
     verify(noteService, times(0)).removeDraftById("1");
     verify(activityManager, times(1)).deleteActivity("1");
     verify(metadataService, times(1)).updateMetadataItem(any(MetadataItem.class), anyLong(), anyBoolean());
+  }
+
+  @Test
+  public void testDeleteArticlePublishedFromNoteKeepsTheNote() throws Exception {
+    Identity identity = mockDeletableArticle(Map.of(EXTERNAL_PAGE, "true"));
+
+    newsService.deleteNews("1", identity, ARTICLE.name(), true);
+
+    assertNoteKeptAndArticleDeleted();
+  }
+
+  @Test
+  public void testDeleteReferredArticleKeepsTheNote() throws Exception {
+    Identity identity = mockDeletableArticle(Map.of(NewsService.PAGE_REFERRED, "true"));
+
+    newsService.deleteNews("1", identity, ARTICLE.name(), true);
+
+    assertNoteKeptAndArticleDeleted();
+  }
+
+  @Test
+  public void testDeleteArticlePublishedFromNoteWithoutKeepNoteDeletesTheNote() throws Exception {
+    Identity identity = mockDeletableArticle(Map.of(EXTERNAL_PAGE, "true"));
+
+    newsService.deleteNews("1", identity, ARTICLE.name(), false);
+
+    assertNoteDeletedWithArticle();
+  }
+
+  @Test
+  public void testDeleteArticleLinkedToNoNoteIgnoresKeepNote() throws Exception {
+    Identity identity = mockDeletableArticle(Map.of());
+
+    newsService.deleteNews("1", identity, ARTICLE.name(), true);
+
+    assertNoteDeletedWithArticle();
+  }
+
+  private void assertNoteKeptAndArticleDeleted() {
+    verify(noteService, never()).deleteNote(anyString(), anyString(), anyString());
+    verify(noteService, never()).getLatestDraftOfPage(any(Page.class));
+    verify(activityManager).deleteActivity("1");
+    verify(metadataService).deleteMetadataItemsByObject(org.mockito.ArgumentMatchers.argThat(object -> object != null
+        && NewsService.NEWS_METADATA_PAGE_OBJECT_TYPE.equals(object.getType()) && "1".equals(object.getId())));
+    verify(metadataService).deleteMetadataItemsByObject(org.mockito.ArgumentMatchers.argThat(object -> object != null
+        && NewsService.NEWS_METADATA_PAGE_VERSION_OBJECT_TYPE.equals(object.getType()) && "10".equals(object.getId())));
+    verify(indexingService).unindex(NewsIndexingServiceConnector.TYPE, "1");
+    verify(indexingService).reindex(WikiPageIndexingServiceConnector.TYPE, "1");
+  }
+
+  private void assertNoteDeletedWithArticle() {
+    verify(noteService).deleteNote("group", "/space/groupId", "news");
+    verify(activityManager).deleteActivity("1");
+    verify(indexingService).unindex(NewsIndexingServiceConnector.TYPE, "1");
+    verify(indexingService, never()).reindex(eq(WikiPageIndexingServiceConnector.TYPE), anyString());
+  }
+
+  private Identity mockDeletableArticle(Map<String, String> linkProperties) throws Exception {
+    Page existingPage = mock(Page.class);
+    when(noteService.getNoteById(anyString())).thenReturn(existingPage);
+    when(existingPage.getId()).thenReturn("1");
+    when(existingPage.getWikiOwner()).thenReturn("/space/groupId");
+    when(existingPage.getWikiType()).thenReturn("group");
+    when(existingPage.getName()).thenReturn("news");
+    when(existingPage.getOwner()).thenReturn("john");
+    when(existingPage.isDeleted()).thenReturn(false);
+
+    MetadataItem metadataItem = mock(MetadataItem.class);
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+                                                             any(MetadataObject.class))).thenReturn(List.of(metadataItem));
+    Map<String, String> properties = new HashMap<>(linkProperties);
+    properties.put(NEWS_ACTIVITIES, "1:1;");
+    when(metadataItem.getProperties()).thenReturn(properties);
+    mockSpace();
+    Identity identity = mockIdentity();
+    when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(new org.exoplatform.social.core.identity.model.Identity("1"));
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(anyString(), any(Identity.class))).thenReturn(false);
+    when(newsTargetingService.getTargetsByNews(any(News.class))).thenReturn(null);
+    when(spaceService.isSuperManager(any(Space.class), anyString())).thenReturn(true);
+    when(spaceService.isMember(anyString(), anyString())).thenReturn(true);
+
+    PageVersion pageVersion = mock(PageVersion.class);
+    when(pageVersion.getId()).thenReturn("10");
+    when(pageVersion.getAuthor()).thenReturn("john");
+    when(pageVersion.getUpdatedDate()).thenReturn(new Date());
+    when(pageVersion.getAuthorFullName()).thenReturn("full name");
+    when(noteService.getPublishedVersionByPageIdAndLang(1L, null)).thenReturn(pageVersion);
+    when(noteService.deleteNote("group", "/space/groupId", "news")).thenReturn(true);
+    return identity;
   }
 
   @Test

@@ -128,7 +128,7 @@ public class NewsRest {
 
   private ScheduledExecutorService scheduledExecutor;
 
-  private record PendingDeletion(org.exoplatform.services.security.Identity identity, String newsObjectType) {
+  private record PendingDeletion(org.exoplatform.services.security.Identity identity, String newsObjectType, boolean keepNote) {
   }
 
   private enum FilterType {
@@ -300,7 +300,10 @@ public class NewsRest {
                              String newsObjectType,
                              @Parameter(description = "Time to effectively delete news")
                              @RequestParam(name = "delay", required = false)
-                             long delay) {
+                             long delay,
+                             @Parameter(description = "true to keep the note the article was published from, or referred in the notes tree. Ignored for an article linked to no note")
+                             @RequestParam(name = "keepNote", required = false)
+                             boolean keepNote) {
     org.exoplatform.services.security.Identity currentIdentity = ConversationState.getCurrent().getIdentity();
     try {
       if (StringUtils.isBlank(id)) {
@@ -315,11 +318,11 @@ public class NewsRest {
       }
 
       if (delay > 0) {// TODO Move to service layer
-        newsToDeleteQueue.put(id, new PendingDeletion(currentIdentity, newsObjectType));
+        newsToDeleteQueue.put(id, new PendingDeletion(currentIdentity, newsObjectType, keepNote));
         scheduledExecutor.schedule(() -> deletePendingNews(id), delay, TimeUnit.SECONDS);
       } else {
         newsToDeleteQueue.remove(id);
-        newsService.deleteNews(id, currentIdentity, newsObjectType);
+        newsService.deleteNews(id, currentIdentity, newsObjectType, keepNote);
       }
       return Response.ok().build();
     } catch (IllegalAccessException e) {
@@ -340,7 +343,7 @@ public class NewsRest {
     ExoContainerContext.setCurrentContainer(container);
     RequestLifeCycle.begin(container);
     try {
-      newsService.deleteNews(id, pendingDeletion.identity(), pendingDeletion.newsObjectType());
+      newsService.deleteNews(id, pendingDeletion.identity(), pendingDeletion.newsObjectType(), pendingDeletion.keepNote());
     } catch (IllegalAccessException e) {
       LOG.error("User '{}' attempts to delete a non authorized news", pendingDeletion.identity().getUserId(), e);
     } catch (Exception e) {

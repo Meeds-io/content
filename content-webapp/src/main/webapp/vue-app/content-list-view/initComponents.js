@@ -26,6 +26,7 @@ import ContentListSettingsDrawer from './components/ContentListSettingsDrawer.vu
 import ContentListCategoryPicker from './components/ContentListCategoryPicker.vue';
 import NotesPublishAction from './components/NotesPublishAction.vue';
 import NewsPublishAction from './components/NewsPublishAction.vue';
+import NewsDeleteNoteDialog from '../news-details/components/NewsDeleteNoteDialog.vue';
 
 const components = {
   'content-list-view': ContentListView,
@@ -37,6 +38,7 @@ const components = {
   'content-list-category-picker': ContentListCategoryPicker,
   'notes-content-list-publish-action': NotesPublishAction,
   'news-content-list-publish-action': NewsPublishAction,
+  'news-delete-note-dialog': NewsDeleteNoteDialog,
 };
 
 for (const key in components) {

@@ -478,6 +478,23 @@ public class NewsService {
    * @throws Exception when error
    */
   public void deleteNews(String newsId, Identity currentIdentity, String newsObjectType) throws Exception {
+    deleteNews(newsId, currentIdentity, newsObjectType, false);
+  }
+
+  /**
+   * Delete news, keeping or not the note the article is linked to. An article
+   * is linked to a note when it was published from that note, or when it was
+   * referred in the space's notes tree: in both cases its page is that note.
+   *
+   * @param newsId the news id to delete
+   * @param currentIdentity user attempting to delete news
+   * @param newsObjectType the News object type to be deleted
+   * @param keepNote true to delete the article and keep the note it is linked
+   *          to, with its content and its history. Ignored for a draft and for
+   *          an article linked to no note, whose page is always deleted.
+   * @throws Exception when error
+   */
+  public void deleteNews(String newsId, Identity currentIdentity, String newsObjectType, boolean keepNote) throws Exception {
     News news = getNewsById(newsId, currentIdentity, false, newsObjectType);
     if (!news.isCanDelete()) {
       throw new IllegalAccessException("User " + currentIdentity.getUserId() + " is not authorized to delete news");
@@ -485,7 +502,12 @@ public class NewsService {
     if (NewsObjectType.DRAFT.name().toLowerCase().equals(newsObjectType)) {
       deleteDraftArticle(newsId, currentIdentity.getUserId());
     } else {
-      deleteArticle(news, currentIdentity.getUserId());
+      boolean noteKept = keepNote && isLinkedToNote(news);
+      if (noteKept) {
+        deleteArticleVersionsMetadata(news);
+      } else {
+        deleteArticle(news, currentIdentity.getUserId());
+      }
       if (news.getActivities() != null) {
         String newsActivities = news.getActivities();
         Stream.of(newsActivities.split(";")).map(activity -> activity.split(":")[1]).forEach(activityManager::deleteActivity);
@@ -498,8 +520,22 @@ public class NewsService {
         articleLanguages.forEach(lang -> indexingService.unindex(NewsIndexingServiceConnector.TYPE,
                                                                  news.getId().concat("-").concat(lang)));
       }
+      if (noteKept) {
+        // Posting the note as an article took it out of the notes index
+        // (referOrDeReferArticlePage): the kept note is searchable again
+        indexingService.reindex(WikiPageIndexingServiceConnector.TYPE, news.getId());
+      }
       NewsUtils.broadcastEvent(NewsUtils.DELETE_NEWS, currentIdentity.getUserId(), news);
     }
+  }
+
+  /**
+   * @param news a news article
+   * @return true when the article's page is a note of the space's notes tree:
+   *         the article was published from that note, or referred in the tree
+   */
+  public boolean isLinkedToNote(News news) {
+    return news != null && (news.isFromExternalPage() || news.isReferred());
   }
 
   /**
@@ -1793,6 +1829,24 @@ public class NewsService {
         hasDraft = false;
       }
     }
+  }
+
+  private void deleteArticleVersionsMetadata(News news) {
+    long pageId = Long.parseLong(news.getId());
+    List<String> languages = new ArrayList<>();
+    languages.add(null);
+    List<String> translations = getArticleLanguages(news.getId(), false);
+    if (CollectionUtils.isNotEmpty(translations)) {
+      languages.addAll(translations);
+    }
+    languages.stream()
+             .map(lang -> noteService.getPublishedVersionByPageIdAndLang(pageId, lang))
+             .filter(Objects::nonNull)
+             .map(pageVersion -> new NewsPageVersionObject(NEWS_METADATA_PAGE_VERSION_OBJECT_TYPE,
+                                                           pageVersion.getId(),
+                                                           null,
+                                                           Long.parseLong(news.getSpaceId())))
+             .forEach(metadataService::deleteMetadataItemsByObject);
   }
 
   private void updateDeletedArticleMetadata(News news, String articleCreator) {

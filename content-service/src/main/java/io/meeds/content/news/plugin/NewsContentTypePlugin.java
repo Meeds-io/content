@@ -127,9 +127,14 @@ public class NewsContentTypePlugin implements ContentTypePlugin {
 
   @Override
   public void delete(String id, String status, Identity currentIdentity) throws Exception {
+    delete(id, status, false, currentIdentity);
+  }
+
+  @Override
+  public void delete(String id, String status, boolean keepNote, Identity currentIdentity) throws Exception {
     String newsObjectType = StringUtils.equals(status, ContentUtils.STATUS_DRAFT) ? NewsUtils.NewsObjectType.LATEST_DRAFT.name()
                                                                                    : NewsUtils.NewsObjectType.ARTICLE.name();
-    newsService.deleteNews(id, currentIdentity, newsObjectType);
+    newsService.deleteNews(id, currentIdentity, newsObjectType, keepNote);
   }
 
   private NewsFilter toNewsFilter(ContentFilter filter, int fetchLimit, String currentUser, Set<String> categoryLinkedIds) {
@@ -225,6 +230,8 @@ public class NewsContentTypePlugin implements ContentTypePlugin {
     entry.setCanPublish(news.isCanPublish());
     entry.setCanSchedule(news.isCanSchedule());
     entry.setFavorite(isFavorite(news.getId(), userIdentityId));
+    // A draft's deletion never deletes the note: only an article asks
+    entry.setLinkedToNote(!entry.isDraft() && newsService.isLinkedToNote(news));
     return entry;
   }
 
