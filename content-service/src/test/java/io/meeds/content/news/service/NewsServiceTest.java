@@ -810,6 +810,27 @@ public class NewsServiceTest {
   }
 
   @Test
+  public void testPostNewsWithADraftIdBeyondALongIsRefusedBeforeAnythingIsCreated() throws Exception {
+    News newsArticle = new News();
+    newsArticle.setAuthor("john");
+    newsArticle.setTitle("news article with a draft id too large");
+    newsArticle.setBody("news body");
+    newsArticle.setSpaceId("1");
+    newsArticle.setId("99999999999999999999");
+    newsArticle.setPublicationState(POSTED);
+    Identity identity = mockIdentity();
+    mockSpace();
+    when(spaceService.canRedactOnSpace(any(Space.class), any(Identity.class))).thenReturn(true);
+
+    IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                                                      () -> newsService.createNews(newsArticle, identity));
+    assertEquals("news.create.missingDraftId", exception.getMessage());
+
+    verify(noteService, never()).createNote(any(), anyString(), any(Page.class), any(), anyBoolean());
+    verify(wikiService, never()).createWiki(anyString(), anyString());
+  }
+
+  @Test
   public void testCreateDraftArticleForExistingPage() throws Exception {
     // Given
     Page existingPage = mock(Page.class);
