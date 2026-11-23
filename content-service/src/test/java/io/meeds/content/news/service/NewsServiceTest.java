@@ -2046,7 +2046,7 @@ public class NewsServiceTest {
     assertNoteDeletedWithArticle();
   }
 
-  private void assertNoteKeptAndArticleDeleted() {
+  private void assertNoteKeptAndArticleDeleted() throws Exception {
     verify(noteService, never()).deleteNote(anyString(), anyString(), anyString());
     verify(noteService, never()).getLatestDraftOfPage(any(Page.class));
     verify(activityManager).deleteActivity("1");
@@ -2058,6 +2058,11 @@ public class NewsServiceTest {
     verify(indexingService).reindex(WikiPageIndexingServiceConnector.TYPE, "1");
     verify(newsTargetingService).deleteNewsTargets(org.mockito.ArgumentMatchers.argThat((News news) -> news != null
         && "1".equals(news.getId())));
+    // The article's unsaved edits stay as the note's drafts, without their
+    // latest-draft items, which the Drafts list reads with the article
+    verify(metadataService).deleteMetadataItemsByParentObject(org.mockito.ArgumentMatchers.argThat(object -> object != null
+        && NewsService.NEWS_METADATA_LATEST_DRAFT_OBJECT_TYPE.equals(object.getType()) && "1".equals(object.getParentId())));
+    verify(noteService, never()).removeDraftById(anyString());
   }
 
   private void assertNoteDeletedWithArticle() {

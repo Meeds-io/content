@@ -508,6 +508,12 @@ public class NewsService {
         // Targets are keyed on the page id: the kept note must leave the news
         // lists the article was published to
         newsTargetingService.deleteNewsTargets(news);
+        // An unsaved article edit is a draft of the page, made the article's by
+        // a latest-draft item: without it, the draft stays the note's own
+        metadataService.deleteMetadataItemsByParentObject(new MetadataObject(NEWS_METADATA_LATEST_DRAFT_OBJECT_TYPE,
+                                                                             null,
+                                                                             news.getId(),
+                                                                             Long.parseLong(news.getSpaceId())));
       } else {
         deleteArticle(news, currentIdentity.getUserId());
       }

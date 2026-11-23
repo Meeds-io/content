@@ -386,7 +386,8 @@ export default {
     async deleteConfirmDialog() {
       this.keepNote = false;
       // The article's page is the note it was published from, or the note it
-      // is referred as: ask first what becomes of it, closing abandons
+      // is referred as: ask first what becomes of it, closing abandons. Same
+      // rule as NewsService#isLinkedToNote, which the content list reads
       if (this.localNews?.fromExternalPage || this.localNews?.referred) {
         const choice = await this.$refs.deleteNoteDialog.open();
         if (!choice) {
