@@ -256,10 +256,11 @@ public class NewsService {
    * anything is created.
    *
    * @param news the news to create
-   * @throws IllegalArgumentException when a required field is missing
+   * @throws IllegalArgumentException when the draft id of a posted article is
+   *           missing or is not a number
    */
   public static void validateNewsToCreate(News news) {
-    if (POSTED.equals(news.getPublicationState()) && news.getProperties() == null && StringUtils.isBlank(news.getId())) {
+    if (POSTED.equals(news.getPublicationState()) && news.getProperties() == null && !StringUtils.isNumeric(news.getId())) {
       throw new IllegalArgumentException(MISSING_DRAFT_ID_MESSAGE);
     }
   }
