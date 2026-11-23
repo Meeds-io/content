@@ -975,12 +975,17 @@ public class NewsService {
   public News scheduleNews(News news, Identity currentIdentity, String newsObjectType) throws Exception {
     checkPublicationState(news);
     News originalArticle = null;
-    if (newsObjectType.equalsIgnoreCase(ARTICLE.name())) {
-      // The right is evaluated on the stored article, not on the request
-      originalArticle = getNewsArticleById(news.getId());
-      if (originalArticle == null
-          || !canScheduleNews(originalArticle.getSpaceId(), currentIdentity, originalArticle)) {
+    News storedArticle = null;
+    if (newsObjectType.equalsIgnoreCase(ARTICLE.name()) || newsObjectType.equalsIgnoreCase(LATEST_DRAFT.name())) {
+      // The right is evaluated on the stored article that is written, resolved
+      // the way updateArticle resolves it, not on the request
+      String storedId = news.getTargetPageId() != null ? news.getTargetPageId() : news.getId();
+      storedArticle = getNewsArticleById(storedId);
+      if (storedArticle == null || !canScheduleNews(storedArticle.getSpaceId(), currentIdentity, storedArticle)) {
         throw new IllegalArgumentException("User " + currentIdentity.getUserId() + " is not authorized to schedule news");
+      }
+      if (newsObjectType.equalsIgnoreCase(ARTICLE.name())) {
+        originalArticle = storedArticle;
       }
     } else if (!canScheduleNews(news.getSpaceId(), currentIdentity, news)) {
       throw new IllegalArgumentException("User " + currentIdentity.getUserId() + " is not authorized to schedule news");
@@ -997,6 +1002,12 @@ public class NewsService {
       news = updateArticle(news, currentIdentity, NewsUtils.NewsUpdateType.SCHEDULE.name().toLowerCase());
     }
     if (news != null) {
+      if (storedArticle != null) {
+        // Publishing and unpublishing apply to the stored article, with the
+        // publish right read from its own space
+        news.setId(storedArticle.getId());
+        news.setSpaceId(storedArticle.getSpaceId());
+      }
       if (NewsUtils.canPublishNews(news.getSpaceId(), currentIdentity)) {
         if (news.isPublished()) {
           publishNews(news, currentIdentity.getUserId());
