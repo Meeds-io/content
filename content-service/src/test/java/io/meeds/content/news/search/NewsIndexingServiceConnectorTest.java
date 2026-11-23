@@ -39,6 +39,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.IntStream;
 
+import jakarta.persistence.LockTimeoutException;
 import jakarta.persistence.PersistenceException;
 import jakarta.persistence.QueryTimeoutException;
 
@@ -166,6 +167,22 @@ public class NewsIndexingServiceConnectorTest {
     when(metadataService.getMetadataItemsByFilter(any(MetadataFilter.class), eq(0L), eq(0L))).thenReturn(List.of(item("1"),
                                                                                                                   item("2")));
     when(newsService.getArticleLanguages("1", false)).thenThrow(new QueryTimeoutException("query timed out"));
+    when(newsService.getArticleLanguages("2", false)).thenReturn(List.of("en"));
+
+    assertEquals(List.of("1", "2", "2-en"), newsIndexingServiceConnector.getAllIds(0, 10));
+    verify(newsService).getArticleLanguages("2", false);
+  }
+
+  @Test
+  public void testGetAllIdsKeepsListingWhenTheTranslationsReadLocksOut() {
+    newsIndexingServiceConnector = new NewsIndexingServiceConnector(identityManager,
+                                                                    getParams(),
+                                                                    newsService,
+                                                                    activityManager,
+                                                                    metadataService);
+    when(metadataService.getMetadataItemsByFilter(any(MetadataFilter.class), eq(0L), eq(0L))).thenReturn(List.of(item("1"),
+                                                                                                                  item("2")));
+    when(newsService.getArticleLanguages("1", false)).thenThrow(new LockTimeoutException("lock timed out"));
     when(newsService.getArticleLanguages("2", false)).thenReturn(List.of("en"));
 
     assertEquals(List.of("1", "2", "2-en"), newsIndexingServiceConnector.getAllIds(0, 10));

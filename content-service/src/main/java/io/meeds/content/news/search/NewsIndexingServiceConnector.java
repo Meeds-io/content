@@ -153,7 +153,8 @@ public class NewsIndexingServiceConnector extends ElasticIndexingServiceConnecto
           languages.forEach(lang -> ids.add(articleId + "-" + lang));
         }
       } catch (QueryTimeoutException | LockTimeoutException e) {
-        // These do not mark the transaction rollback-only: the reindex goes on
+        // JPA does not mark the transaction rollback-only for these; where the
+        // database keeps the transaction open, the listing goes on
         logTranslationsError(articleId, e);
       } catch (PersistenceException e) {
         // A failed database read that marks the reindex transaction
