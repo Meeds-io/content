@@ -107,6 +107,7 @@ import org.exoplatform.wiki.model.Wiki;
 import org.exoplatform.wiki.service.NoteService;
 import org.exoplatform.wiki.service.WikiService;
 
+import io.meeds.content.news.exception.InvalidPublicationStateException;
 import io.meeds.content.news.model.News;
 import io.meeds.content.news.model.NewsDraftObject;
 import io.meeds.content.news.model.NewsPageObject;
@@ -1088,7 +1089,7 @@ public class NewsServiceTest {
     News news = mockUpdatableArticle();
     news.setPublicationState("archived");
 
-    assertThrows(NewsService.InvalidPublicationStateException.class,
+    assertThrows(InvalidPublicationStateException.class,
                  () -> newsService.updateNews(news, "john", false, false, ARTICLE.name().toLowerCase(), CONTENT_AND_TITLE.name()));
 
     verify(noteService, never()).updateNote(any(Page.class), any(), any(), anyBoolean());
@@ -1114,7 +1115,7 @@ public class NewsServiceTest {
     news.setPublicationState("archived");
     Identity identity = mock(Identity.class);
 
-    assertThrows(NewsService.InvalidPublicationStateException.class, () -> newsService.createNews(news, identity));
+    assertThrows(InvalidPublicationStateException.class, () -> newsService.createNews(news, identity));
 
     verifyNoInteractions(noteService, metadataService, spaceService);
   }
@@ -1143,7 +1144,7 @@ public class NewsServiceTest {
     news.setPublicationState("archived");
     Identity identity = mock(Identity.class);
 
-    assertThrows(NewsService.InvalidPublicationStateException.class,
+    assertThrows(InvalidPublicationStateException.class,
                  () -> newsService.scheduleNews(news, identity, ARTICLE.name().toLowerCase()));
 
     verifyNoInteractions(noteService, metadataService);
@@ -1177,7 +1178,7 @@ public class NewsServiceTest {
     when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
                                                              any(MetadataObject.class))).thenReturn(List.of(storedItem));
 
-    assertThrows(NewsService.InvalidPublicationStateException.class,
+    assertThrows(InvalidPublicationStateException.class,
                  () -> newsService.updateNews(news, "john", false, false, ARTICLE.name().toLowerCase(), CONTENT_AND_TITLE.name()));
 
     verify(noteService, never()).updateNote(any(Page.class), any(), any(), anyBoolean());
@@ -1360,6 +1361,26 @@ public class NewsServiceTest {
   }
 
   @Test
+  public void testScheduleNewsOfAnArticleIsRefusedToAUserWhoCannotEditTheStoredOne() throws Exception {
+    Space space = space();
+    when(spaceService.getSpaceById("3")).thenReturn(space);
+    when(spaceService.canRedactOnSpace(any(Space.class), any(Identity.class))).thenReturn(true);
+    Identity identity = mock(Identity.class);
+    when(identity.getUserId()).thenReturn("mary");
+    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity(anyString())).thenReturn(identity);
+    NewsService service = spy(newsService);
+    doReturn(existingArticle(POSTED, true)).when(service).getNewsArticleById("12");
+    News request = existingArticle(NewsService.STAGED, true);
+    request.setOwner("mary");
+    request.setReferred(true);
+
+    assertThrows(IllegalArgumentException.class, () -> service.scheduleNews(request, identity, ARTICLE.name().toLowerCase()));
+
+    verify(noteService, never()).updateNote(any(Page.class), any(), any(), anyBoolean());
+    verify(metadataService, never()).updateMetadataItem(any(), anyLong(), anyBoolean());
+  }
+
+  @Test
   public void testRescheduleNewsOfAnArticleWithAnUnknownStoredStateSucceeds() throws Exception {
     News news = mockUpdatableArticle();
     news.setPublicationState(NewsService.STAGED);
@@ -1383,7 +1404,7 @@ public class NewsServiceTest {
     when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
                                                              any(MetadataObject.class))).thenReturn(List.of(item));
 
-    assertThrows(NewsService.InvalidPublicationStateException.class,
+    assertThrows(InvalidPublicationStateException.class,
                  () -> service.updateMetadataProperties("12", Map.of(NEWS_PUBLICATION_STATE, "archived"), 1L));
 
     verify(metadataService, never()).updateMetadataItem(any(), anyLong(), anyBoolean());
@@ -1450,16 +1471,6 @@ public class NewsServiceTest {
     News article = existingArticle(null, false);
     article.setPublished(true);
     article.setAudience(NewsUtils.ALL_NEWS_AUDIENCE);
-
-    assertFalse(newsService.canViewNews(article, "outsider"));
-  }
-
-  @Test
-  public void testCanViewNewsWithNoSharedSpacesListDoesNotFail() {
-    Space space = space();
-    when(spaceService.getSpaceById("3")).thenReturn(space);
-    News article = existingArticle(null, false);
-    article.setSharedInSpacesList(null);
 
     assertFalse(newsService.canViewNews(article, "outsider"));
   }

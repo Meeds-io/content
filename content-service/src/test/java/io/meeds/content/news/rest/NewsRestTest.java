@@ -25,6 +25,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
 import static org.mockito.ArgumentMatchers.any;
@@ -67,6 +68,7 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.MockitoJUnitRunner;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.server.ResponseStatusException;
 
 import org.exoplatform.commons.exception.ObjectNotFoundException;
 import org.exoplatform.commons.utils.CommonsUtils;
@@ -83,6 +85,7 @@ import org.exoplatform.social.metadata.favorite.FavoriteService;
 import org.exoplatform.social.metadata.tag.TagService;
 import org.exoplatform.social.rest.api.RestUtils;
 
+import io.meeds.content.news.exception.InvalidPublicationStateException;
 import io.meeds.content.news.model.ArticleTarget;
 import io.meeds.content.news.model.News;
 import io.meeds.content.news.model.filter.NewsFilter;
@@ -399,11 +402,12 @@ public class NewsRestTest {
     news.setSpaceId("1");
     news.setPublicationState("archived");
     when(newsService.createNews(any(News.class), any()))
-        .thenThrow(new io.meeds.content.news.service.NewsService.InvalidPublicationStateException("unknown"));
+        .thenThrow(new InvalidPublicationStateException());
 
-    ResponseEntity response = newsRestController.createNews(news);
+    ResponseStatusException error = assertThrows(ResponseStatusException.class, () -> newsRestController.createNews(news));
 
-    assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatusCode().value());
+    assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), error.getStatusCode().value());
+    assertEquals("news.publicationState.unknown", error.getReason());
   }
 
   @Test
@@ -416,11 +420,12 @@ public class NewsRestTest {
     news.setSpaceId("1");
     lenient().when(newsService.getNewsById(anyString(), any(), anyBoolean(), anyString())).thenReturn(news);
     when(newsService.scheduleNews(any(News.class), any(), anyString()))
-        .thenThrow(new io.meeds.content.news.service.NewsService.InvalidPublicationStateException("unknown"));
+        .thenThrow(new InvalidPublicationStateException());
 
-    ResponseEntity response = newsRestController.scheduleNews(ARTICLE.name().toLowerCase(), news);
+    ResponseStatusException error = assertThrows(ResponseStatusException.class, () -> newsRestController.scheduleNews(ARTICLE.name().toLowerCase(), news));
 
-    assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatusCode().value());
+    assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), error.getStatusCode().value());
+    assertEquals("news.publicationState.unknown", error.getReason());
   }
 
   @Test
@@ -428,11 +433,12 @@ public class NewsRestTest {
     REST_UTILS.when(() -> RestUtils.getCurrentUserIdentityId()).thenReturn(1L);
     Map<String, String> properties = Map.of("publicationState", "archived");
     when(newsService.updateMetadataProperties("1", properties, 1L))
-        .thenThrow(new io.meeds.content.news.service.NewsService.InvalidPublicationStateException("unknown"));
+        .thenThrow(new InvalidPublicationStateException());
 
-    ResponseEntity<Map<String, String>> response = newsRestController.updateNewsMetadataProperties("1", properties);
+    ResponseStatusException error = assertThrows(ResponseStatusException.class, () -> newsRestController.updateNewsMetadataProperties("1", properties));
 
-    assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatusCode().value());
+    assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), error.getStatusCode().value());
+    assertEquals("news.publicationState.unknown", error.getReason());
   }
 
   @Test
@@ -445,11 +451,12 @@ public class NewsRestTest {
     News updatedNews = new News();
     updatedNews.setPublicationState("archived");
     when(newsService.updateNews(any(News.class), anyString(), anyBoolean(), anyBoolean(), eq(null), anyString()))
-        .thenThrow(new io.meeds.content.news.service.NewsService.InvalidPublicationStateException("unknown"));
+        .thenThrow(new InvalidPublicationStateException());
 
-    ResponseEntity response = newsRestController.updateNews("1", false, null, CONTENT_AND_TITLE.name(), updatedNews);
+    ResponseStatusException error = assertThrows(ResponseStatusException.class, () -> newsRestController.updateNews("1", false, null, CONTENT_AND_TITLE.name(), updatedNews));
 
-    assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatusCode().value());
+    assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), error.getStatusCode().value());
+    assertEquals("news.publicationState.unknown", error.getReason());
   }
 
   @Test
