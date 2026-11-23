@@ -59,6 +59,7 @@ import org.exoplatform.social.metadata.tag.model.TagFilter;
 import org.exoplatform.social.metadata.tag.model.TagName;
 import org.exoplatform.social.rest.api.RestUtils;
 
+import io.meeds.content.news.exception.InvalidPublicationStateException;
 import io.meeds.content.news.model.News;
 import io.meeds.content.news.model.filter.NewsFilter;
 import io.meeds.content.news.rest.model.NewsEntity;
@@ -88,6 +89,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 import io.swagger.v3.oas.annotations.Parameter;
 
 
@@ -176,8 +178,8 @@ public class NewsRest {
       News createdNews = newsService.createNews(news, currentIdentity);
 
       return ResponseEntity.ok(createdNews);
-    } catch (NewsService.InvalidPublicationStateException e) {
-      return ResponseEntity.badRequest().build();
+    } catch (InvalidPublicationStateException e) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
     } catch (IllegalAccessException e) {
       LOG.warn("User '{}' is not authorized to create news", currentIdentity.getUserId(), e);
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
@@ -266,8 +268,8 @@ public class NewsRest {
                                     newsUpdateType);
 
       return ResponseEntity.ok(news);
-    } catch (NewsService.InvalidPublicationStateException e) {
-      return ResponseEntity.badRequest().build();
+    } catch (InvalidPublicationStateException e) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
     } catch (IllegalAccessException e) {
       LOG.warn("User '{}' is not authorized to update news", currentIdentity.getUserId(), e);
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
@@ -709,8 +711,8 @@ public class NewsRest {
         }
       }
       return ResponseEntity.ok(newsService.scheduleNews(scheduledNews, currentIdentity, newsObjectType));
-    } catch (NewsService.InvalidPublicationStateException e) {
-      return ResponseEntity.badRequest().build();
+    } catch (InvalidPublicationStateException e) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
     } catch (IllegalAccessException e) {
       LOG.warn("User '{}' is not autorized to schedule news", currentIdentity.getUserId(), e);
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
@@ -941,8 +943,8 @@ public class NewsRest {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
       }
       return ResponseEntity.ok(newsService.updateMetadataProperties(articleId, properties, currentUserId));
-    } catch (NewsService.InvalidPublicationStateException e) {
-      return ResponseEntity.badRequest().build();
+    } catch (InvalidPublicationStateException e) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
     } catch (ObjectNotFoundException e) {
       return ResponseEntity.notFound().build();
     } catch (Exception e) {
