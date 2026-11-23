@@ -1368,6 +1368,7 @@ public class NewsServiceTest {
     Identity identity = mock(Identity.class);
     when(identity.getUserId()).thenReturn("mary");
     NEWS_UTILS.when(() -> NewsUtils.getUserIdentity(anyString())).thenReturn(identity);
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(anyString(), any(Identity.class))).thenReturn(false);
     NewsService service = spy(newsService);
     doReturn(existingArticle(POSTED, true)).when(service).getNewsArticleById("12");
     News request = existingArticle(NewsService.STAGED, true);
@@ -1391,6 +1392,7 @@ public class NewsServiceTest {
     Identity identity = mock(Identity.class);
     when(identity.getUserId()).thenReturn("mary");
     NEWS_UTILS.when(() -> NewsUtils.getUserIdentity(anyString())).thenReturn(identity);
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(anyString(), any(Identity.class))).thenReturn(false);
     NewsService service = spy(newsService);
     doReturn(existingArticle(POSTED, true)).when(service).getNewsArticleById("12");
     News other = existingArticle(POSTED, true);
@@ -1417,6 +1419,7 @@ public class NewsServiceTest {
     Identity identity = mock(Identity.class);
     when(identity.getUserId()).thenReturn("mary");
     NEWS_UTILS.when(() -> NewsUtils.getUserIdentity(anyString())).thenReturn(identity);
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(anyString(), any(Identity.class))).thenReturn(false);
     NEWS_UTILS.when(() -> NewsUtils.canPublishNews(eq("5"), any(Identity.class))).thenReturn(true);
     NewsService service = spy(newsService);
     doReturn(existingArticle(POSTED, true)).when(service).getNewsArticleById("12");
@@ -1440,6 +1443,7 @@ public class NewsServiceTest {
     Identity identity = mock(Identity.class);
     when(identity.getUserId()).thenReturn("mary");
     NEWS_UTILS.when(() -> NewsUtils.getUserIdentity(anyString())).thenReturn(identity);
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(anyString(), any(Identity.class))).thenReturn(false);
     NEWS_UTILS.when(() -> NewsUtils.canPublishNews(eq("3"), any(Identity.class))).thenReturn(true);
     NewsService service = spy(newsService);
     doReturn(existingArticle(POSTED, true)).when(service).getNewsArticleById("12");
