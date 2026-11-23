@@ -1718,6 +1718,7 @@ public class NewsServiceTest {
     NewsService service = spaceNoteService(List.of());
     allowMetadataEdit(service);
     MetadataItem item = metadataItemWithState(POSTED);
+    allowMetadataPublish(true);
     doReturn(existingArticle(POSTED, true)).when(service).getNewsArticleById("12");
     when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
                                                              any(MetadataObject.class))).thenReturn(List.of(item));
@@ -1728,6 +1729,96 @@ public class NewsServiceTest {
     assertEquals(DRAFT, result.get(NEWS_PUBLICATION_STATE));
 
     verify(metadataService, times(2)).updateMetadataItem(any(), anyLong(), anyBoolean());
+  }
+
+  @Test
+  public void testUpdateMetadataPropertiesRefusesPublicationKeysToAnEditorWhoCannotPublish() throws Exception {
+    NewsService service = spaceNoteService(List.of());
+    allowMetadataEdit(service);
+    allowMetadataPublish(false);
+    MetadataItem item = metadataItemWithState(POSTED);
+    doReturn(existingArticle(POSTED, true)).when(service).getNewsArticleById("12");
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+                                                             any(MetadataObject.class))).thenReturn(List.of(item));
+
+    for (String key : List.of(PUBLISHED, "audience", NEWS_PUBLICATION_STATE, SCHEDULE_POST_DATE, UNPUBLISH_SCHEDULED,
+                              "unpublishScheduledDate")) {
+      Map<String, String> properties = Map.of("other", "value", key, "changed");
+      assertThrows(key, IllegalAccessException.class, () -> service.updateMetadataProperties("12", properties, 1L));
+    }
+
+    verify(metadataService, never()).updateMetadataItem(any(), anyLong(), anyBoolean());
+  }
+
+  @Test
+  public void testUpdateMetadataPropertiesStoresPublicationKeysForAUserWhoCanPublish() throws Exception {
+    NewsService service = spaceNoteService(List.of());
+    allowMetadataEdit(service);
+    allowMetadataPublish(true);
+    MetadataItem item = metadataItemWithState(POSTED);
+    doReturn(existingArticle(POSTED, true)).when(service).getNewsArticleById("12");
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+                                                             any(MetadataObject.class))).thenReturn(List.of(item));
+
+    Map<String, String> result = service.updateMetadataProperties("12", Map.of(PUBLISHED, "true", "audience", "all"), 1L);
+
+    assertEquals("true", result.get(PUBLISHED));
+    assertEquals("all", result.get("audience"));
+    verify(metadataService, times(1)).updateMetadataItem(any(), anyLong(), anyBoolean());
+  }
+
+  @Test
+  public void testUpdateMetadataPropertiesAcceptsAnUnchangedPublicationKeyFromAnEditorWhoCannotPublish() throws Exception {
+    NewsService service = spaceNoteService(List.of());
+    allowMetadataEdit(service);
+    allowMetadataPublish(false);
+    MetadataItem item = metadataItemWithState(POSTED);
+    doReturn(existingArticle(POSTED, true)).when(service).getNewsArticleById("12");
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+                                                             any(MetadataObject.class))).thenReturn(List.of(item));
+
+    Map<String, String> result = service.updateMetadataProperties("12",
+                                                                  Map.of(NEWS_PUBLICATION_STATE, POSTED, "other", "value"),
+                                                                  1L);
+
+    assertEquals("value", result.get("other"));
+    verify(metadataService, times(1)).updateMetadataItem(any(), anyLong(), anyBoolean());
+  }
+
+  @Test
+  public void testUpdateMetadataPropertiesIgnoresTheComputedKeysWhateverTheRightsOfTheCaller() throws Exception {
+    for (boolean canPublish : new boolean[] { false, true }) {
+      NewsService service = spaceNoteService(List.of());
+      allowMetadataEdit(service);
+      allowMetadataPublish(canPublish);
+      MetadataItem item = metadataItemWithState(POSTED);
+      item.getProperties().put("activityPosted", "true");
+      item.getProperties().put("publisher", "Mary");
+      doReturn(existingArticle(POSTED, true)).when(service).getNewsArticleById("12");
+      when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+                                                               any(MetadataObject.class))).thenReturn(List.of(item));
+
+      Map<String, String> properties = new HashMap<>();
+      properties.put("other", "value");
+      for (String key : List.of("activityPosted", "activityCategories", EXTERNAL_PAGE, NEWS_DELETED, "publisher",
+                                "pageReferred", "deReferPageId")) {
+        properties.put(key, "forged");
+      }
+      Map<String, String> result = service.updateMetadataProperties("12", properties, 1L);
+
+      assertEquals("value", result.get("other"));
+      assertEquals("true", result.get("activityPosted"));
+      assertEquals("Mary", result.get("publisher"));
+      for (String key : List.of("activityCategories", EXTERNAL_PAGE, NEWS_DELETED, "pageReferred", "deReferPageId")) {
+        assertFalse(key, result.containsKey(key));
+      }
+    }
+  }
+
+  private void allowMetadataPublish(boolean canPublish) {
+    Identity publisherIdentity = mock(Identity.class);
+    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity("john")).thenReturn(publisherIdentity);
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(any(), eq(publisherIdentity))).thenReturn(canPublish);
   }
 
   @Test

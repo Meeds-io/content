@@ -211,6 +211,31 @@ public class NewsService {
 
   public static final String       UNPUBLISH_SCHEDULED_DATE               = "unpublishScheduledDate";
 
+  /**
+   * Metadata keys the service derives itself: a caller never writes them
+   * through the metadata properties update
+   */
+  private static final Set<String> COMPUTED_METADATA_KEYS                 =
+                                                          Set.of(NEWS_ACTIVITY_POSTED,
+                                                                 NEWS_ACTIVITY_CATEGORIES,
+                                                                 EXTERNAL_PAGE,
+                                                                 NEWS_DELETED,
+                                                                 PUBLISHER,
+                                                                 PAGE_REFERRED,
+                                                                 DE_REFER_PAGE_ID);
+
+  /**
+   * Metadata keys that change the publication of an article: the metadata
+   * properties update changes them only for a user who can publish
+   */
+  private static final Set<String> PUBLICATION_METADATA_KEYS              =
+                                                             Set.of(PUBLISHED,
+                                                                    NEWS_AUDIENCE,
+                                                                    NEWS_PUBLICATION_STATE,
+                                                                    SCHEDULE_POST_DATE,
+                                                                    UNPUBLISH_SCHEDULED,
+                                                                    UNPUBLISH_SCHEDULED_DATE);
+
   public static final MetadataKey  NEWS_METADATA_KEY                      =
                                                      new MetadataKey(NEWS_METADATA_TYPE.getName(), NEWS_METADATA_NAME, 0);
 
@@ -1783,13 +1808,25 @@ public class NewsService {
     }
 
     MetadataItem existingItem = getArticlePageMetadataItem(article);
+    Map<String, String> storedProperties = existingItem == null || existingItem.getProperties() == null ? Map.of()
+                                                                                                         : existingItem.getProperties();
+    // The keys the service computes are ignored, whoever the caller is
+    Map<String, String> acceptedProperties = new HashMap<>(properties);
+    acceptedProperties.keySet().removeAll(COMPUTED_METADATA_KEYS);
+    // A publication key changes only with the right to publish
+    if (acceptedProperties.entrySet()
+                          .stream()
+                          .anyMatch(e -> PUBLICATION_METADATA_KEYS.contains(e.getKey())
+                              && !Objects.equals(e.getValue(), storedProperties.get(e.getKey())))
+        && !NewsUtils.canPublishNews(article.getSpaceId(), NewsUtils.getUserIdentity(updaterUserId))) {
+      throw new IllegalAccessException("User " + updater + " is not authorized to update news publication metadata");
+    }
 
     if (existingItem != null) {
-      checkPublicationState(properties.get(NEWS_PUBLICATION_STATE),
-                            existingItem.getProperties() == null ? null
-                                                                 : existingItem.getProperties().get(NEWS_PUBLICATION_STATE));
-      Map<String, String> mergedProperties = new HashMap<>(existingItem.getProperties());
-      mergedProperties.putAll(properties);
+      checkPublicationState(acceptedProperties.get(NEWS_PUBLICATION_STATE),
+                            storedProperties.get(NEWS_PUBLICATION_STATE));
+      Map<String, String> mergedProperties = new HashMap<>(storedProperties);
+      mergedProperties.putAll(acceptedProperties);
       existingItem.setProperties(mergedProperties);
       metadataService.updateMetadataItem(existingItem, updater, false);
       updateNewsActivity(article, false, article.isActivityPosted(), false);
@@ -1797,7 +1834,7 @@ public class NewsService {
       NewsUtils.broadcastEvent(NewsUtils.UPDATE_NEWS, updater, article);
       return mergedProperties;
     } else {
-      return properties;
+      return acceptedProperties;
     }
   }
 
