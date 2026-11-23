@@ -260,7 +260,7 @@ public class NewsService {
    * @throws Exception when error
    */
   public News createNews(News news, Identity currentIdentity) throws Exception {
-    checkPublicationState(news);
+    checkPublicationState(news.getPublicationState(), null);
     Space space = spaceService.getSpaceById(news.getSpaceId());
     try {
       if (!canCreateNews(space, currentIdentity)) {
@@ -973,7 +973,7 @@ public class NewsService {
    * @throws Exception when error occurs
    */
   public News scheduleNews(News news, Identity currentIdentity, String newsObjectType) throws Exception {
-    checkPublicationState(news);
+    checkPublicationState(news.getPublicationState(), null);
     News originalArticle = null;
     News storedArticle = null;
     if (newsObjectType.equalsIgnoreCase(ARTICLE.name()) || newsObjectType.equalsIgnoreCase(LATEST_DRAFT.name())) {
@@ -982,13 +982,13 @@ public class NewsService {
       String storedId = news.getTargetPageId() != null ? news.getTargetPageId() : news.getId();
       storedArticle = getNewsArticleById(storedId);
       if (storedArticle == null || !canScheduleNews(storedArticle.getSpaceId(), currentIdentity, storedArticle)) {
-        throw new IllegalArgumentException("User " + currentIdentity.getUserId() + " is not authorized to schedule news");
+        throw new IllegalAccessException("User " + currentIdentity.getUserId() + " is not authorized to schedule news");
       }
       if (newsObjectType.equalsIgnoreCase(ARTICLE.name())) {
         originalArticle = storedArticle;
       }
     } else if (!canScheduleNews(news.getSpaceId(), currentIdentity, news)) {
-      throw new IllegalArgumentException("User " + currentIdentity.getUserId() + " is not authorized to schedule news");
+      throw new IllegalAccessException("User " + currentIdentity.getUserId() + " is not authorized to schedule news");
     }
     if (newsObjectType.equalsIgnoreCase(NewsObjectType.DRAFT.name())) {
       // Create news article with the publication state STAGED without posting
@@ -1102,18 +1102,6 @@ public class NewsService {
         && !POSTED.equals(state)
         && !STAGED.equals(state)
         && !DRAFT.equals(state);
-  }
-
-  /**
-   * Refuses a news whose publication state, when set, is none of the known ones
-   *
-   * @param news news coming from a client
-   * @throws InvalidPublicationStateException when the state is unknown
-   */
-  private static void checkPublicationState(News news) {
-    if (news != null) {
-      checkPublicationState(news.getPublicationState(), null);
-    }
   }
 
   /**

@@ -1375,7 +1375,7 @@ public class NewsServiceTest {
     request.setOwner("mary");
     request.setReferred(true);
 
-    assertThrows(IllegalArgumentException.class, () -> service.scheduleNews(request, identity, ARTICLE.name().toLowerCase()));
+    assertThrows(IllegalAccessException.class, () -> service.scheduleNews(request, identity, ARTICLE.name().toLowerCase()));
 
     verify(noteService, never()).updateNote(any(Page.class), any(), any(), anyBoolean());
     verify(metadataService, never()).updateMetadataItem(any(), anyLong(), anyBoolean());
@@ -1402,7 +1402,7 @@ public class NewsServiceTest {
     News request = existingArticle(NewsService.STAGED, true);
     request.setTargetPageId("99");
 
-    assertThrows(IllegalArgumentException.class, () -> service.scheduleNews(request, identity, ARTICLE.name().toLowerCase()));
+    assertThrows(IllegalAccessException.class, () -> service.scheduleNews(request, identity, ARTICLE.name().toLowerCase()));
 
     verify(noteService, never()).updateNote(any(Page.class), any(), any(), anyBoolean());
     verify(metadataService, never()).updateMetadataItem(any(), anyLong(), anyBoolean());
