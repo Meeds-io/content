@@ -38,6 +38,7 @@ import static org.mockito.Mockito.when;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -123,20 +124,11 @@ class ListViewPortletSettingsSaveTest {
         "showSeeAll", "showArticleTitle", "showArticleSummary", "showArticleImage", "showArticleAuthor", "showArticleSpace",
         "showArticleReactions", "showArticleDate", "seeAllUrl", "limit" };
     postDrawerSettingsAndOthers(drawerSettings);
-    parameters.put("newsTarget", "");
-    parameters.put("seeAllUrl", "/portal/news");
-    parameters.put("limit", "5");
 
     new NewsListViewPortlet().processAction(request, mock(ActionResponse.class));
 
     for (String setting : drawerSettings) {
-      String value = switch (setting) {
-        case "newsTarget" -> "";
-        case "seeAllUrl" -> "/portal/news";
-        case "limit" -> "5";
-        default -> setting + "-value";
-      };
-      verify(preferences).setValue(setting, value);
+      verify(preferences).setValue(setting, drawerValue(setting));
     }
     verifyOtherSettingsNeverStored();
     verify(preferences).store();
@@ -248,6 +240,57 @@ class ListViewPortletSettingsSaveTest {
   }
 
   @Test
+  void theNewsListSaveIsRefusedForEachSettingOfAnotherShape() throws Exception {
+    when(cmsService.hasEditPermission(any(), any(), eq(SETTING_NAME))).thenReturn(true);
+    NewsListViewPortlet portlet = new NewsListViewPortlet();
+    ActionResponse response = mock(ActionResponse.class);
+
+    List<String[]> refused = new ArrayList<>(List.of(new String[][] { { "viewTemplate", "News Cards<" },
+        { "articlesSourceOption", "everything" }, { "selectedArticleIds", "12,abc" }, { "selectedArticleIds", "12," } }));
+    for (String flag : List.of("showHeader", "showSeeAll", "showArticleTitle", "showArticleSummary", "showArticleImage",
+                               "showArticleAuthor", "showArticleSpace", "showArticleReactions", "showArticleDate")) {
+      refused.add(new String[] { flag, "yes" });
+    }
+    for (String[] setting : refused) {
+      parameters.clear();
+      parameters.put("limit", "5");
+      parameters.put(setting[0], setting[1]);
+      assertThrows(PortletException.class, () -> portlet.processAction(request, response), setting[0]);
+    }
+    verify(preferences, never()).setValue(nullable(String.class), nullable(String.class));
+    verify(preferences, never()).store();
+  }
+
+  @Test
+  void theContentListSaveIsRefusedForEachSettingOfAnotherShape() throws Exception {
+    when(cmsService.hasEditPermission(any(), any(), eq(SETTING_NAME))).thenReturn(true);
+    ContentListViewPortlet portlet = new ContentListViewPortlet();
+    ActionResponse response = mock(ActionResponse.class);
+
+    for (String[] setting : new String[][] { { "showHeader", "1" }, { "allowFilteringPerCategory", "maybe" },
+        { "categoryDepth", "-1" }, { "categoryDepth", "51" }, { "categoryDepth", "2.5" }, { "categoryIds", "1.5" },
+        { "categoryIds", "0x1A" }, { "excludeCategoryIds", "3,x" } }) {
+      parameters.clear();
+      parameters.put("headerTitle", "A title");
+      parameters.put(setting[0], setting[1]);
+      assertThrows(PortletException.class, () -> portlet.processAction(request, response), setting[0]);
+    }
+    verify(preferences, never()).setValue(nullable(String.class), nullable(String.class));
+    verify(preferences, never()).store();
+  }
+
+  @Test
+  void theContentListSaveKeepsAFreeHeaderTitle() throws Exception {
+    when(cmsService.hasEditPermission(any(), any(), eq(SETTING_NAME))).thenReturn(true);
+    parameters.put("headerTitle", "Our <b>news</b> & more");
+
+    new ContentListViewPortlet().processAction(request, mock(ActionResponse.class));
+
+    verify(preferences).setValue("headerTitle", "Our <b>news</b> & more");
+    verify(preferences).store();
+  }
+
+  @Test
   void theNewsListSaveAcceptsTheValuesTheDrawerPosts() throws Exception {
     when(cmsService.hasEditPermission(any(), any(), eq(SETTING_NAME))).thenReturn(true);
     NewsTargetingService targetingService = mock(NewsTargetingService.class);
@@ -287,7 +330,7 @@ class ListViewPortletSettingsSaveTest {
 
   private void postDrawerSettingsAndOthers(String... drawerSettings) {
     for (String setting : drawerSettings) {
-      parameters.put(setting, setting + "-value");
+      parameters.put(setting, drawerValue(setting));
     }
     parameters.put(NAME, "another-setting");
     parameters.put("applicationId", "4");
@@ -297,10 +340,25 @@ class ListViewPortletSettingsSaveTest {
 
   private void verifyOnlyDrawerSettingsStored(String... drawerSettings) throws Exception {
     for (String setting : drawerSettings) {
-      verify(preferences).setValue(setting, setting + "-value");
+      verify(preferences).setValue(setting, drawerValue(setting));
     }
     verifyOtherSettingsNeverStored();
     verify(preferences).store();
+  }
+
+  // a value of the shape the drawer posts for the setting
+  private static String drawerValue(String setting) {
+    return switch (setting) {
+      case "newsTarget" -> "";
+      case "seeAllUrl" -> "/portal/news";
+      case "limit" -> "5";
+      case "viewTemplate" -> "NewsCards";
+      case "articlesSourceOption" -> "posted";
+      case "selectedArticleIds", "categoryIds", "excludeCategoryIds" -> "12,34";
+      case "categoryDepth" -> "4";
+      case "headerTitle" -> "headerTitle-value";
+      default -> "true";
+    };
   }
 
   private void verifyOtherSettingsNeverStored() throws Exception {

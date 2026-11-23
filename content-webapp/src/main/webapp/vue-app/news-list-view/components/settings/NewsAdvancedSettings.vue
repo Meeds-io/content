@@ -46,6 +46,11 @@
           class="position-absolute b-0 l-0 ms-4 text-subtitle error--text text-caption">
           {{ $t('news.list.settings.drawer.advancedSettings.maxArticleError') }}
         </span>
+        <span
+          v-else-if="limitInvalid"
+          class="position-absolute b-0 l-0 ms-4 text-subtitle error--text text-caption">
+          {{ $t('news.list.settings.drawer.advancedSettings.limitInvalidError') }}
+        </span>
       </v-list-item-action>
     </v-list-item>
     <v-list-item>
@@ -243,6 +248,10 @@ export default {
       default: false,
     },
     seeAllUrlInvalid: {
+      type: Boolean,
+      default: false,
+    },
+    limitInvalid: {
       type: Boolean,
       default: false,
     },

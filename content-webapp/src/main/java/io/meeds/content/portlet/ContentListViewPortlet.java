@@ -43,6 +43,7 @@ import org.exoplatform.container.ExoContainerContext;
 import org.exoplatform.services.security.ConversationState;
 import org.exoplatform.services.security.Identity;
 
+import io.meeds.content.util.ListViewSettingValues;
 import io.meeds.content.utils.ContentUtils;
 import io.meeds.social.cms.service.CMSService;
 import io.meeds.social.portlet.CMSPortlet;
@@ -88,6 +89,9 @@ public class ContentListViewPortlet extends CMSPortlet {
       // and it gets no state change and no information either way.
       throw new PortletException("Current user is not authorized to edit this Content List instance");
     }
+    if (!areValidValues(request)) {
+      throw new PortletException("The Content List settings hold a value of an unexpected shape");
+    }
     for (String settingName : SETTING_NAMES) {
       String value = request.getParameter(settingName);
       if (value != null) {
@@ -121,6 +125,15 @@ public class ContentListViewPortlet extends CMSPortlet {
       savePreference(DATA_INIT_PREFERENCE_NAME, null);
     }
     initContentListHeaderTranslationSettings(applicationId, name);
+  }
+
+  // headerTitle is the free text of the header: it has no shape to check
+  private boolean areValidValues(ActionRequest request) {
+    return ListViewSettingValues.isValidFlag(request.getParameter("showHeader"))
+        && ListViewSettingValues.isValidFlag(request.getParameter("allowFilteringPerCategory"))
+        && ListViewSettingValues.isValidCategoryDepth(request.getParameter("categoryDepth"))
+        && ListViewSettingValues.isValidIdList(request.getParameter("categoryIds"))
+        && ListViewSettingValues.isValidIdList(request.getParameter("excludeCategoryIds"));
   }
 
   private boolean canEditCurrentInstance(PortletPreferences preferences) {

@@ -97,6 +97,7 @@
           :show-article-summary="showArticleSummary"
           :show-see-all="showSeeAll"
           :see-all-url-invalid="seeAllUrlInvalid"
+          :limit-invalid="limitInvalid"
           :show-header="showHeader"
           :show-article-author="showArticleAuthor"
           :view-template="viewTemplate"

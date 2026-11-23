@@ -45,6 +45,7 @@ import org.exoplatform.services.security.Identity;
 
 import io.meeds.content.news.service.NewsTargetingService;
 import io.meeds.content.news.utils.NewsUtils;
+import io.meeds.content.util.ListViewSettingValues;
 import io.meeds.content.util.NewsListSettingValues;
 import io.meeds.social.cms.service.CMSService;
 import io.meeds.social.portlet.CMSPortlet;
@@ -71,6 +72,17 @@ public class NewsListViewPortlet extends CMSPortlet {
                                                             "showArticleDate",
                                                             "seeAllUrl",
                                                             "limit");
+
+  // the settings whose value is true or false
+  private static final List<String> FLAG_NAMES    = List.of("showHeader",
+                                                            "showSeeAll",
+                                                            "showArticleTitle",
+                                                            "showArticleSummary",
+                                                            "showArticleImage",
+                                                            "showArticleAuthor",
+                                                            "showArticleSpace",
+                                                            "showArticleReactions",
+                                                            "showArticleDate");
 
   private SettingService settingService;
 
@@ -132,7 +144,11 @@ public class NewsListViewPortlet extends CMSPortlet {
   private boolean areValidValues(ActionRequest request) {
     return NewsListSettingValues.isValidLimit(request.getParameter("limit"))
         && NewsListSettingValues.isValidSeeAllUrl(request.getParameter("seeAllUrl"))
-        && NewsListSettingValues.isKnownTarget(request.getParameter("newsTarget"), getNewsTargetingService());
+        && NewsListSettingValues.isKnownTarget(request.getParameter("newsTarget"), getNewsTargetingService())
+        && ListViewSettingValues.isValidViewTemplate(request.getParameter("viewTemplate"))
+        && ListViewSettingValues.isValidSourceOption(request.getParameter("articlesSourceOption"))
+        && ListViewSettingValues.isValidIdList(request.getParameter("selectedArticleIds"))
+        && FLAG_NAMES.stream().allMatch(name -> ListViewSettingValues.isValidFlag(request.getParameter(name)));
   }
 
   // the instance's edit right of the current user
