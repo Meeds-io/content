@@ -40,6 +40,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.atLeast;
@@ -849,8 +850,76 @@ public class NewsServiceTest {
       assertEquals("news.create.missingPublicationState", exception.getMessage());
     }
 
-    verify(noteService, never()).createNote(any(), anyString(), any(Page.class), any(), anyBoolean());
-    verify(wikiService, never()).createWiki(anyString(), anyString());
+    verify(noteService, never()).createNote(any(), nullable(String.class), nullable(Page.class), any(), anyBoolean());
+    verify(noteService, never()).createDraftForNewPage(nullable(DraftPage.class), anyLong(), anyLong());
+    verify(metadataService, never()).createMetadataItem(nullable(MetadataObject.class),
+                                                        nullable(MetadataKey.class),
+                                                        nullable(Map.class),
+                                                        anyLong(),
+                                                        anyBoolean());
+    verify(wikiService, never()).createWiki(nullable(String.class), nullable(String.class));
+  }
+
+  /**
+   * An update that leaves the publication state out (absent) keeps the stored
+   * one, so the permissions of the draft are updated as those of a draft
+   */
+  @Test
+  public void testUpdateDraftWithoutPublicationStateKeepsTheStoredOne() throws Exception {
+    News news = mockUpdatableArticle();
+    DraftPage draftPage = new DraftPage();
+    draftPage.setId("1");
+    draftPage.setContent("body");
+    when(noteService.getDraftNoteById(anyString(), anyString())).thenReturn(draftPage);
+    when(noteService.updateDraftForNewPage(any(DraftPage.class), anyLong(), anyLong())).thenReturn(draftPage);
+    News stored = new News();
+    stored.setId("1");
+    stored.setSpaceId("1");
+    stored.setPublicationState(DRAFT);
+    NewsService service = spy(newsService);
+    doReturn(stored).when(service).getNewsById(eq("1"), any(), eq(false), eq("draft"));
+
+    news.setPublicationState(null);
+    NEWS_UTILS.clearInvocations();
+
+    assertNotNull(service.updateNews(news, "john", null, false, "draft", CONTENT_AND_TITLE.name()));
+
+    assertEquals(DRAFT, news.getPublicationState());
+    NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.UPDATE_CONTENT_PERMISSIONS),
+                                                     any(),
+                                                     argThat((Object data) -> data instanceof Map<?, ?> event
+                                                         && "WIKI_DRAFT_PAGES".equals(event.get("entityType"))
+                                                         && "1".equals(event.get("entityId")))));
+  }
+
+  /**
+   * A blank publication state, the one the composer's autosave sends, keeps
+   * its own path: it is not replaced by the stored state.
+   */
+  @Test
+  public void testUpdateDraftWithBlankPublicationStateKeepsItsOwnPath() throws Exception {
+    News news = mockUpdatableArticle();
+    DraftPage draftPage = new DraftPage();
+    draftPage.setId("1");
+    draftPage.setContent("body");
+    when(noteService.getDraftNoteById(anyString(), anyString())).thenReturn(draftPage);
+    when(noteService.updateDraftForNewPage(any(DraftPage.class), anyLong(), anyLong())).thenReturn(draftPage);
+    News stored = new News();
+    stored.setId("1");
+    stored.setSpaceId("1");
+    stored.setPublicationState(DRAFT);
+    NewsService service = spy(newsService);
+    doReturn(stored).when(service).getNewsById(eq("1"), any(), eq(false), eq("draft"));
+    news.setPublicationState("");
+    NEWS_UTILS.clearInvocations();
+
+    assertNotNull(service.updateNews(news, "john", null, false, "draft", CONTENT_AND_TITLE.name()));
+
+    assertEquals("", news.getPublicationState());
+    NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.UPDATE_CONTENT_PERMISSIONS),
+                                                     any(),
+                                                     argThat((Object data) -> data instanceof Map<?, ?> event
+                                                         && "WIKI_PAGE_VERSIONS".equals(event.get("entityType")))));
   }
 
   @Test

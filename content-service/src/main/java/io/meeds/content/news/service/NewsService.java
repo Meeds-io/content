@@ -385,6 +385,11 @@ public class NewsService {
     if (PAGE_REFERENCE.name().equalsIgnoreCase(newsUpdateType) && !canReferToNote(news, updaterIdentity)) {
       throw new IllegalAccessException("User " + updater + " is not authorized to refer or derefer news");
     }
+    // A state the request leaves out (absent) is the stored one; a blank one
+    // keeps its own path
+    if (news.getPublicationState() == null) {
+      news.setPublicationState(originalNews.getPublicationState());
+    }
     // An unchanged stored state sent back by the client is accepted
     checkPublicationState(news.getPublicationState(), originalNews.getPublicationState());
     List<ArticleTarget> oldTargets = newsTargetingService.getTargetsByNews(news);
