@@ -429,6 +429,22 @@ public class NewsRestTest {
   }
 
   @Test
+  public void shouldGetUnauthorizedWhenSchedulingNewsTheUserCannotSchedule() throws Exception {
+    Identity currentIdentity = new Identity(JOHN);
+    ConversationState.setCurrent(new ConversationState(currentIdentity));
+    News news = new News();
+    news.setId("1");
+    news.setPublicationState("staged");
+    news.setSpaceId("1");
+    lenient().when(newsService.getNewsById(anyString(), any(), anyBoolean(), anyString())).thenReturn(news);
+    when(newsService.scheduleNews(any(News.class), any(), anyString())).thenThrow(new IllegalAccessException("refused"));
+
+    ResponseEntity<News> response = newsRestController.scheduleNews(ARTICLE.name().toLowerCase(), news);
+
+    assertEquals(Response.Status.UNAUTHORIZED.getStatusCode(), response.getStatusCode().value());
+  }
+
+  @Test
   public void shouldGetBadRequestWhenUpdatingMetadataPropertiesWithAnUnknownPublicationState() throws Exception {
     REST_UTILS.when(() -> RestUtils.getCurrentUserIdentityId()).thenReturn(1L);
     Map<String, String> properties = Map.of("publicationState", "archived");
