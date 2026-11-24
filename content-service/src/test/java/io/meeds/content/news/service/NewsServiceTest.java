@@ -4121,8 +4121,29 @@ public class NewsServiceTest {
     assertEquals(NewsUtils.SPACE_NEWS_AUDIENCE, saveLatestDraftWithAnAudience(false, true));
   }
 
+  @Test
+  public void testAnUpdaterWhoCannotPublishKeepsTheStoredAudienceWhenSavingALatestDraftWithoutDraft() throws Exception {
+    News news = mockUpdatableArticle();
+    NewsService service = mockLatestDraftSave(news, false, false);
+
+    service.updateNews(news, "john", false, false, LATEST_DRAFT.name().toLowerCase(), CONTENT_AND_TITLE.name());
+
+    assertEquals(NewsUtils.ALL_NEWS_AUDIENCE, permissionsAudience());
+    assertFalse(news.isPublished());
+    verify(service, never()).publishNews(any(News.class), anyString());
+    verify(service, never()).unpublishNews(anyString(), anyString(), anyBoolean());
+  }
+
   private String saveLatestDraftWithAnAudience(boolean existingDraft, boolean canPublish) throws Exception {
     News news = mockUpdatableArticle();
+    NewsService service = mockLatestDraftSave(news, existingDraft, canPublish);
+
+    service.updateNews(news, "john", false, false, LATEST_DRAFT.name().toLowerCase(), CONTENT_AND_TITLE.name());
+
+    return permissionsAudience();
+  }
+
+  private NewsService mockLatestDraftSave(News news, boolean existingDraft, boolean canPublish) throws Exception {
     mockUpdaterProfile();
     NEWS_UTILS.when(() -> NewsUtils.canPublishNews(any(), any())).thenReturn(canPublish);
     news.setAudience(NewsUtils.SPACE_NEWS_AUDIENCE);
@@ -4144,10 +4165,7 @@ public class NewsServiceTest {
     NewsService service = spy(newsService);
     doReturn(stored).when(service).getNewsById(eq("1"), any(), eq(false), eq(LATEST_DRAFT.name().toLowerCase()));
     NEWS_UTILS.clearInvocations();
-
-    service.updateNews(news, "john", false, false, LATEST_DRAFT.name().toLowerCase(), CONTENT_AND_TITLE.name());
-
-    return permissionsAudience();
+    return service;
   }
 
   @Test

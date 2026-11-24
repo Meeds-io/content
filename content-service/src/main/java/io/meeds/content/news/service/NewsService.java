@@ -3088,7 +3088,6 @@ public class NewsService {
     DraftPage draftPage =
                         noteService.getLatestDraftPageByUserAndTargetPageAndLang(Long.parseLong(pageId), updater, news.getLang());
     if (draftPage == null) {
-      restrictNewArticleAudience(news, updater);
       news = createDraftForExistingPage(news, updater, existingPage, System.currentTimeMillis(), space);
     } else {
       news = updateDraftArticleForExistingPage(news, updater, existingPage, draftPage, space);
