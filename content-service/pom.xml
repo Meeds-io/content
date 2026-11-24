@@ -30,10 +30,6 @@
   <description>Content Service</description>
 
   <properties>
-    <rest.api.doc.title>Content Rest APIs</rest.api.doc.title>
-    <rest.api.doc.version>1.0</rest.api.doc.version>
-    <rest.api.doc.description>Content addon used Rest endpoints</rest.api.doc.description>
-
     <exo.test.coverage.ratio>0.60</exo.test.coverage.ratio>
 
     <!--
@@ -98,25 +94,6 @@
   </dependencies>
   <build>
     <plugins>
-      <plugin>
-        <groupId>io.openapitools.swagger</groupId>
-        <artifactId>swagger-maven-plugin</artifactId>
-        <configuration>
-          <applicationClass>io.meeds.content.news.rest.NewsRest</applicationClass>
-          <applicationClass>io.meeds.content.news.rest.NewsTargetingRest</applicationClass>
-          <swaggerConfig>
-            <info>
-              <title>${rest.api.doc.title}</title>
-              <version>${rest.api.doc.version}</version>
-              <description>${rest.api.doc.description}</description>
-              <license>
-                <url>https://www.gnu.org/licenses/agpl-3.0.en.html</url>
-                <name>AGPL</name>
-              </license>
-            </info>
-          </swaggerConfig>
-        </configuration>
-      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
