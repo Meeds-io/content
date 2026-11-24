@@ -1618,8 +1618,9 @@ public class NewsService {
         newsArticle.setIllustrationURL(NewsUtils.buildIllustrationUrl(newsArticlePage.getProperties(), newsArticle.getLang()));
 
         buildNewArticleProperties(newsArticle, newsArticlePage, newsArticleCreator, space.getId(), pageVersion.getId(), false);
-        // delete the draft
-        deleteDraftArticle(draftNewsId, poster.getUserId());
+        // delete the draft, only when it is a draft of the space the article
+        // is posted in that the poster may delete
+        deleteDraftOfPostedArticle(draftNewsId, space.getId(), poster.getUserId());
         return newsArticle;
       }
     }
@@ -1701,6 +1702,46 @@ public class NewsService {
         updateDeletedArticleMetadata(news, articleCreator);
       }
     }
+  }
+
+  /**
+   * Deletes the draft a news article is posted from, as the id comes from the
+   * request: it deletes it only when it belongs to the space the article is
+   * posted in and the poster passes {@code canEditNews}, the draft deletion
+   * endpoint's rule; any other draft is left untouched.
+   */
+  private void deleteDraftOfPostedArticle(String draftArticleId, String spaceId, String poster) throws Exception {
+    DraftPage draftArticlePage;
+    try {
+      draftArticlePage = noteService.getDraftNoteById(draftArticleId, poster);
+    } catch (IllegalAccessException e) {
+      LOG.warn("User {} posted a news article from the draft {} that the user cannot read, the draft is kept",
+               poster,
+               draftArticleId);
+      return;
+    }
+    if (draftArticlePage == null) {
+      return;
+    }
+    Space draftArticleSpace = spaceService.getSpaceByGroupId(draftArticlePage.getWikiOwner());
+    if (draftArticleSpace == null || !StringUtils.equals(draftArticleSpace.getId(), spaceId)) {
+      LOG.warn("User {} posted a news article from the draft {} that does not belong to the space {}, the draft is kept",
+               poster,
+               draftArticleId,
+               spaceId);
+      return;
+    }
+    News draftArticle = new News();
+    draftArticle.setId(draftArticlePage.getId());
+    draftArticle.setSpaceId(draftArticleSpace.getId());
+    draftArticle.setOwner(draftArticlePage.getOwner());
+    if (!canEditNews(draftArticle, poster)) {
+      LOG.warn("User {} posted a news article from the draft {} that the user is not allowed to delete, the draft is kept",
+               poster,
+               draftArticleId);
+      return;
+    }
+    deleteDraftArticle(draftArticleId, poster);
   }
 
   /**
