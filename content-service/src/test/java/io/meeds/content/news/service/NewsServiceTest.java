@@ -40,6 +40,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.atLeast;
@@ -831,6 +832,141 @@ public class NewsServiceTest {
   }
 
   @Test
+  public void testCreateNewsWithoutPublicationStateIsRefusedBeforeAnythingIsCreated() throws Exception {
+    News newsArticle = new News();
+    newsArticle.setAuthor("john");
+    newsArticle.setTitle("news article without state");
+    newsArticle.setBody("news body");
+    newsArticle.setSpaceId("1");
+    Identity identity = mockIdentity();
+    mockSpace();
+    when(spaceService.canRedactOnSpace(any(Space.class), any(Identity.class))).thenReturn(true);
+
+    // a blank state is refused with its own code, never as an unknown state
+    for (String state : new String[] { null, "" }) {
+      newsArticle.setPublicationState(state);
+      IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                                                        () -> newsService.createNews(newsArticle, identity));
+      assertEquals("news.create.missingPublicationState", exception.getMessage());
+    }
+
+    verify(noteService, never()).createNote(any(), nullable(String.class), nullable(Page.class), any(), anyBoolean());
+    verify(noteService, never()).createDraftForNewPage(nullable(DraftPage.class), anyLong(), anyLong());
+    verify(metadataService, never()).createMetadataItem(nullable(MetadataObject.class),
+                                                        nullable(MetadataKey.class),
+                                                        nullable(Map.class),
+                                                        anyLong(),
+                                                        anyBoolean());
+    verify(wikiService, never()).createWiki(nullable(String.class), nullable(String.class));
+  }
+
+  /**
+   * An update of a draft that leaves the publication state out (absent) writes
+   * a draft, so the permissions of the draft are updated as those of a draft
+   */
+  @Test
+  public void testUpdateDraftWithoutPublicationStateIsADraft() throws Exception {
+    News news = mockUpdatableArticle();
+    DraftPage draftPage = new DraftPage();
+    draftPage.setId("1");
+    draftPage.setContent("body");
+    when(noteService.getDraftNoteById(anyString(), anyString())).thenReturn(draftPage);
+    when(noteService.updateDraftForNewPage(any(DraftPage.class), anyLong(), anyLong())).thenReturn(draftPage);
+    News stored = new News();
+    stored.setId("1");
+    stored.setSpaceId("1");
+    stored.setPublicationState(DRAFT);
+    NewsService service = spy(newsService);
+    doReturn(stored).when(service).getNewsById(eq("1"), any(), eq(false), eq("draft"));
+
+    news.setPublicationState(null);
+    NEWS_UTILS.clearInvocations();
+
+    assertNotNull(service.updateNews(news, "john", null, false, "draft", CONTENT_AND_TITLE.name()));
+
+    assertEquals(DRAFT, news.getPublicationState());
+    NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.UPDATE_CONTENT_PERMISSIONS),
+                                                     any(),
+                                                     argThat((Object data) -> data instanceof Map<?, ?> event
+                                                         && "WIKI_DRAFT_PAGES".equals(event.get("entityType"))
+                                                         && "1".equals(event.get("entityId")))));
+  }
+
+  /**
+   * A blank publication state, the one the composer's autosave sends, keeps
+   * its own path: it is not replaced by the stored state.
+   */
+  @Test
+  public void testUpdateDraftWithBlankPublicationStateKeepsItsOwnPath() throws Exception {
+    News news = mockUpdatableArticle();
+    DraftPage draftPage = new DraftPage();
+    draftPage.setId("1");
+    draftPage.setContent("body");
+    when(noteService.getDraftNoteById(anyString(), anyString())).thenReturn(draftPage);
+    when(noteService.updateDraftForNewPage(any(DraftPage.class), anyLong(), anyLong())).thenReturn(draftPage);
+    News stored = new News();
+    stored.setId("1");
+    stored.setSpaceId("1");
+    stored.setPublicationState(DRAFT);
+    NewsService service = spy(newsService);
+    doReturn(stored).when(service).getNewsById(eq("1"), any(), eq(false), eq("draft"));
+    news.setPublicationState("");
+    NEWS_UTILS.clearInvocations();
+
+    assertNotNull(service.updateNews(news, "john", null, false, "draft", CONTENT_AND_TITLE.name()));
+
+    assertEquals("", news.getPublicationState());
+    NEWS_UTILS.verify(() -> NewsUtils.broadcastEvent(eq(NewsUtils.UPDATE_CONTENT_PERMISSIONS), any(), any()));
+  }
+
+  /**
+   * An update of the latest draft that leaves the publication state out writes
+   * a draft: the state is not the one of the article it is a draft of, which
+   * is what the latest draft lookup returns when the user has no draft yet.
+   */
+  @Test
+  public void testUpdateLatestDraftWithoutPublicationStateIsADraftWhateverTheArticleHolds() throws Exception {
+    News news = mockUpdatableArticle();
+    News stored = new News();
+    stored.setId("1");
+    stored.setSpaceId("1");
+    stored.setPublicationState(POSTED);
+    NewsService service = spy(newsService);
+    doReturn(stored).when(service).getNewsById(eq("1"), any(), eq(false), eq("latest_draft"));
+    news.setPublicationState(null);
+
+    service.updateNews(news, "john", null, false, LATEST_DRAFT.name().toLowerCase(), CONTENT_AND_TITLE.name());
+
+    assertEquals(DRAFT, news.getPublicationState());
+  }
+
+  /**
+   * An article stored with no publication state keeps none when an update
+   * leaves the state out: the update completes and stores no state, so
+   * canViewNews reads the article as it did before the update.
+   */
+  @Test
+  public void testUpdateArticleWithoutPublicationStateAndWithoutStoredOneStoresNoState() throws Exception {
+    News news = mockUpdatableArticle();
+    Map<String, String> storedProperties = new HashMap<>();
+    MetadataItem metadataItem = mock(MetadataItem.class);
+    when(metadataItem.getProperties()).thenReturn(storedProperties);
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+                                                             any(MetadataObject.class))).thenReturn(List.of(metadataItem));
+    News stored = new News();
+    stored.setId("1");
+    stored.setSpaceId("1");
+    NewsService service = spy(newsService);
+    doReturn(stored).when(service).getNewsById(eq("1"), any(), eq(false), eq("article"));
+    news.setPublicationState(null);
+
+    assertNotNull(service.updateNews(news, "john", null, false, ARTICLE.name().toLowerCase(), CONTENT_AND_TITLE.name()));
+
+    assertEquals("", news.getPublicationState());
+    assertFalse(storedProperties.containsKey(NEWS_PUBLICATION_STATE));
+  }
+
+  @Test
   public void testCreateDraftArticleForExistingPage() throws Exception {
     // Given
     Page existingPage = mock(Page.class);
@@ -1209,9 +1345,9 @@ public class NewsServiceTest {
   }
 
   @Test
-  public void testCreateNewsWithKnownOrNoPublicationStateIsAccepted() throws Exception {
+  public void testCreateNewsWithKnownPublicationStateIsAccepted() throws Exception {
     Identity identity = mock(Identity.class);
-    for (String state : new String[] { null, "", DRAFT, POSTED, NewsService.STAGED }) {
+    for (String state : new String[] { DRAFT, POSTED, NewsService.STAGED }) {
       News news = new News();
       news.setAuthor("john");
       news.setId("1");
@@ -1222,7 +1358,7 @@ public class NewsServiceTest {
       newsService.createNews(news, identity);
     }
 
-    verify(spaceService, times(5)).getSpaceById("1");
+    verify(spaceService, times(3)).getSpaceById("1");
   }
 
   @Test

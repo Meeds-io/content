@@ -152,6 +152,8 @@ public class NewsService {
 
   public static final String       MISSING_DRAFT_ID_MESSAGE               = "news.create.missingDraftId";
 
+  public static final String       MISSING_PUBLICATION_STATE_MESSAGE      = "news.create.missingPublicationState";
+
   /** The Constant DRAFT. */
   public static final String       DRAFT                                  = "draft";
 
@@ -257,10 +259,14 @@ public class NewsService {
    * anything is created.
    *
    * @param news the news to create
-   * @throws IllegalArgumentException when the draft id of a posted article is
-   *           missing, is not a number or does not fit in a long
+   * @throws IllegalArgumentException when the publication state is missing,
+   *           or the draft id of a posted article is missing, is not a number
+   *           or does not fit in a long
    */
   public static void validateNewsToCreate(News news) {
+    if (StringUtils.isBlank(news.getPublicationState())) {
+      throw new IllegalArgumentException(MISSING_PUBLICATION_STATE_MESSAGE);
+    }
     if (POSTED.equals(news.getPublicationState()) && news.getProperties() == null && !isDraftId(news.getId())) {
       throw new IllegalArgumentException(MISSING_DRAFT_ID_MESSAGE);
     }
@@ -378,6 +384,18 @@ public class NewsService {
     }
     if (PAGE_REFERENCE.name().equalsIgnoreCase(newsUpdateType) && !canReferToNote(news, updaterIdentity)) {
       throw new IllegalAccessException("User " + updater + " is not authorized to refer or derefer news");
+    }
+    // A state the request leaves out (absent) is the state of what gets
+    // written: a draft for the draft object types, the stored one for an
+    // article (blank when it has none, so that nothing is stored and
+    // canViewNews keeps reading it as it does); a blank one keeps its own path
+    if (news.getPublicationState() == null) {
+      if (NewsObjectType.DRAFT.name().equalsIgnoreCase(newsObjectType)
+          || LATEST_DRAFT.name().equalsIgnoreCase(newsObjectType)) {
+        news.setPublicationState(DRAFT);
+      } else {
+        news.setPublicationState(StringUtils.defaultString(originalNews.getPublicationState()));
+      }
     }
     // An unchanged stored state sent back by the client is accepted
     checkPublicationState(news.getPublicationState(), originalNews.getPublicationState());

@@ -550,6 +550,7 @@ public class NewsRestTest {
     ConversationState.setCurrent(new ConversationState(currentIdentity));
     News news = new News();
     news.setId("1");
+    news.setPublicationState("draft");
     news.setSpaceId("1");
 
     lenient().when(newsService.getNewsById(anyString(), any(), anyBoolean(), anyString())).thenReturn(news);
@@ -638,6 +639,23 @@ public class NewsRestTest {
     // Then
     assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), exception.getStatusCode().value());
     assertEquals("news.create.missingDraftId", exception.getReason());
+    verifyNoInteractions(newsService);
+  }
+
+  @Test
+  public void shouldGetBadRequestNamingPublicationStateWhenCreatingNewsWithoutIt() throws Exception {
+    // Given
+    ConversationState.setCurrent(new ConversationState(new Identity(JOHN)));
+    News news = new News();
+    news.setSpaceId("1");
+    news.setId("1");
+
+    // When
+    ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> newsRestController.createNews(news));
+
+    // Then
+    assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), exception.getStatusCode().value());
+    assertEquals("news.create.missingPublicationState", exception.getReason());
     verifyNoInteractions(newsService);
   }
 
