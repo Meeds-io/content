@@ -827,6 +827,11 @@ export default {
       });
     },
     getArticleLanguages(){
+      if (!this.article.targetPageId && this.article.publicationState === 'draft') {
+        // A draft that was never posted has no article page yet, so it has no translation to list
+        this.translations = [];
+        return Promise.resolve();
+      }
       const articleId= this.article.targetPageId ? this.article.targetPageId : this.article.id;
       return this.$newsServices.getArticleLanguages(articleId,true).then(data => {
         this.translations =  data || [];
@@ -845,6 +850,9 @@ export default {
             this.translations.unshift(lang);
           }
         }
+      }).catch(() => {
+        // The article is not found, or not visible to the user: it has no translation to list
+        this.translations = [];
       });
     },
     setEditorData(content) {
