@@ -1878,6 +1878,21 @@ public class NewsServiceTest {
   }
 
   @Test
+  public void testGetArticleLanguagesIsNotFoundForPageThatIsNotAnArticle() throws Exception {
+    Page notePage = new Page();
+    notePage.setId("7");
+    notePage.setWikiType(PortalConfig.USER_TYPE);
+    notePage.setWikiOwner("john");
+    when(noteService.getNoteById("7")).thenReturn(notePage);
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+                                                             any(MetadataObject.class))).thenReturn(Collections.emptyList());
+
+    assertThrows(ObjectNotFoundException.class, () -> newsService.getArticleLanguages("7", true, "john"));
+    verify(noteService).getNoteById("7");
+    verify(noteService, never()).getPageAvailableTranslationLanguages(anyLong(), anyBoolean());
+  }
+
+  @Test
   public void testGetArticleLanguagesIsNotFoundForMalformedId() throws Exception {
     assertThrows(ObjectNotFoundException.class, () -> newsService.getArticleLanguages("abc", false, "john"));
     verify(noteService, never()).getPageAvailableTranslationLanguages(anyLong(), anyBoolean());
