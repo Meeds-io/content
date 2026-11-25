@@ -67,8 +67,8 @@
       </div>
       <div
         v-if="displayDescription"
-        :class="!(showName && name) && 'pt-3'"
-        class="pt-1 pb-3 px-1 full-width text-wrap text-truncate-3 text-subtitle">
+        :class="showName && name && 'pt-1' || 'pt-3'"
+        class="pb-3 px-1 full-width text-wrap text-truncate-3 text-subtitle">
         {{ description }}
       </div>
     </v-card>
