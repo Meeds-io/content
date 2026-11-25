@@ -507,10 +507,15 @@ public class NewsService {
       if (noteKept) {
         deleteArticleVersionsMetadata(news);
         // Targets, favorites, tags and the categories of an article without an
-        // activity are keyed on the page id, which a new publication of the
-        // kept note reuses: the kept note must carry none of them
+        // activity are keyed on the page id, and a translation's favorites on
+        // <page id>-<lang>: a new publication of the kept note reuses both, so
+        // the kept note must carry none of them
         unlinkArticleCategories(news);
         metadataService.deleteMetadataItemsByObject(new MetadataObject(NewsUtils.NEWS_METADATA_OBJECT_TYPE, news.getId()));
+        getArticleLanguages(news.getId(), false).forEach(lang -> metadataService.deleteMetadataItemsByObject(new MetadataObject(NewsUtils.NEWS_METADATA_OBJECT_TYPE,
+                                                                                                                              news.getId()
+                                                                                                                                  .concat("-")
+                                                                                                                                  .concat(lang))));
         // An unsaved article edit is a draft of the page, made the article's by
         // a latest-draft item: without it, the draft stays the note's own
         metadataService.deleteMetadataItemsByParentObject(new MetadataObject(NEWS_METADATA_LATEST_DRAFT_OBJECT_TYPE,

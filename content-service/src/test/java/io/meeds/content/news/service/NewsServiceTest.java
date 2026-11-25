@@ -2084,6 +2084,9 @@ public class NewsServiceTest {
     verify(metadataService).deleteMetadataItemsByObject(org.mockito.ArgumentMatchers.argThat(object -> object != null
         && NewsService.NEWS_METADATA_PAGE_VERSION_OBJECT_TYPE.equals(object.getType()) && "11".equals(object.getId())));
     verify(indexingService).unindex(NewsIndexingServiceConnector.TYPE, "1-fr");
+    // A translation's favorites are items on ("news", <page id>-<lang>)
+    verify(metadataService).deleteMetadataItemsByObject(org.mockito.ArgumentMatchers.argThat(object -> object != null
+        && NewsUtils.NEWS_METADATA_OBJECT_TYPE.equals(object.getType()) && "1-fr".equals(object.getId())));
     verify(noteService, never()).deleteNote(anyString(), anyString(), anyString());
   }
 
