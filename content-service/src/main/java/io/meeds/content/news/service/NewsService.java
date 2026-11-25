@@ -1544,6 +1544,28 @@ public class NewsService {
     return noteService.getPageAvailableTranslationLanguages(Long.parseLong(articleId), withDrafts);
   }
 
+  /**
+   * Get the available languages of an article for a given user: only when the
+   * article exists and the user can view it. The drafts languages are
+   * included only when the user can edit the article.
+   *
+   * @param articleId article id
+   * @param withDrafts whether the drafts languages are requested
+   * @param username authenticated username
+   * @return the available languages
+   * @throws ObjectNotFoundException when the article doesn't exist, is deleted
+   *           or isn't viewable by the user
+   */
+  public List<String> getArticleLanguages(String articleId,
+                                          boolean withDrafts,
+                                          String username) throws ObjectNotFoundException {
+    News article = getNewsArticleByIdAndLang(articleId, null);
+    if (article == null || article.isDeleted() || !canViewNews(article, username)) {
+      throw new ObjectNotFoundException("Article with id " + articleId + " wasn't found");
+    }
+    return getArticleLanguages(articleId, withDrafts && canEditNews(article, username));
+  }
+
   public List<News> getNewsByIds(List<Long> ids, Identity currentUser, String lang, String expand) {
     if (CollectionUtils.isEmpty(ids)) {
       return Collections.emptyList();
