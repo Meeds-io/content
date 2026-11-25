@@ -490,8 +490,9 @@ public class NewsService {
    * @param currentIdentity user attempting to delete news
    * @param newsObjectType the News object type to be deleted
    * @param keepNote true to delete the article and keep the note it is linked
-   *          to, with its content and its history. Ignored for a draft and for
-   *          an article linked to no note, whose page is always deleted.
+   *          to, with its content and its history. Ignored unless
+   *          newsObjectType is ARTICLE (any case), and for an article linked to
+   *          no note, whose page is always deleted.
    * @throws Exception when error
    */
   public void deleteNews(String newsId, Identity currentIdentity, String newsObjectType, boolean keepNote) throws Exception {
@@ -502,12 +503,14 @@ public class NewsService {
     if (NewsObjectType.DRAFT.name().toLowerCase().equals(newsObjectType)) {
       deleteDraftArticle(newsId, currentIdentity.getUserId());
     } else {
-      boolean noteKept = keepNote && isLinkedToNote(news);
+      boolean noteKept = keepNote && NewsObjectType.ARTICLE.name().equalsIgnoreCase(newsObjectType) && isLinkedToNote(news);
       if (noteKept) {
         deleteArticleVersionsMetadata(news);
-        // Targets are keyed on the page id: the kept note must leave the news
-        // lists the article was published to
-        newsTargetingService.deleteNewsTargets(news);
+        // Targets, favorites, tags and the categories of an article without an
+        // activity are keyed on the page id, which a new publication of the
+        // kept note reuses: the kept note must carry none of them
+        unlinkArticleCategories(news);
+        metadataService.deleteMetadataItemsByObject(new MetadataObject(NewsUtils.NEWS_METADATA_OBJECT_TYPE, news.getId()));
         // An unsaved article edit is a draft of the page, made the article's by
         // a latest-draft item: without it, the draft stays the note's own
         metadataService.deleteMetadataItemsByParentObject(new MetadataObject(NEWS_METADATA_LATEST_DRAFT_OBJECT_TYPE,
@@ -1856,6 +1859,15 @@ public class NewsService {
                                                            null,
                                                            Long.parseLong(news.getSpaceId())))
              .forEach(metadataService::deleteMetadataItemsByObject);
+  }
+
+  private void unlinkArticleCategories(News news) {
+    CategoryObject articleCategoryObject = new CategoryObject(NewsCategoryPlugin.OBJECT_TYPE,
+                                                              news.getId(),
+                                                              Long.parseLong(news.getSpaceId()));
+    CategoryLinkService categoryLinkService = CommonsUtils.getService(CategoryLinkService.class);
+    categoryLinkService.getLinkedIds(articleCategoryObject)
+                       .forEach(categoryId -> categoryLinkService.unlink(categoryId, articleCategoryObject));
   }
 
   private void updateDeletedArticleMetadata(News news, String articleCreator) {

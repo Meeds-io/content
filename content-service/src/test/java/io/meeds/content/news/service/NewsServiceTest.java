@@ -2046,6 +2046,47 @@ public class NewsServiceTest {
     assertNoteDeletedWithArticle();
   }
 
+  @Test
+  public void testDeleteLatestDraftIgnoresKeepNote() throws Exception {
+    Identity identity = mockDeletableArticle(Map.of(EXTERNAL_PAGE, "true"));
+
+    newsService.deleteNews("1", identity, NewsUtils.NewsObjectType.LATEST_DRAFT.name(), true);
+
+    assertNoteDeletedWithArticle();
+  }
+
+  @Test
+  public void testDeleteArticleKeepingTheNoteRemovesItsItemsAndCategories() throws Exception {
+    Identity identity = mockDeletableArticle(Map.of(EXTERNAL_PAGE, "true"));
+    when(categoryLinkService.getLinkedIds(org.mockito.ArgumentMatchers.argThat((CategoryObject object) -> object != null
+        && NewsCategoryPlugin.OBJECT_TYPE.equals(object.getType()) && "1".equals(object.getId())))).thenReturn(List.of(3L));
+
+    newsService.deleteNews("1", identity, ARTICLE.name(), true);
+
+    verify(categoryLinkService).unlink(eq(3L),
+                                       org.mockito.ArgumentMatchers.argThat((CategoryObject object) -> object != null
+                                           && NewsCategoryPlugin.OBJECT_TYPE.equals(object.getType())
+                                           && "1".equals(object.getId())));
+    verify(metadataService).deleteMetadataItemsByObject(org.mockito.ArgumentMatchers.argThat(object -> object != null
+        && NewsUtils.NEWS_METADATA_OBJECT_TYPE.equals(object.getType()) && "1".equals(object.getId())));
+  }
+
+  @Test
+  public void testDeleteTranslatedArticleKeepingTheNoteRemovesTheTranslationMetadata() throws Exception {
+    Identity identity = mockDeletableArticle(Map.of(EXTERNAL_PAGE, "true"));
+    when(noteService.getPageAvailableTranslationLanguages(1L, false)).thenReturn(List.of("fr"));
+    PageVersion frenchVersion = mock(PageVersion.class);
+    when(frenchVersion.getId()).thenReturn("11");
+    when(noteService.getPublishedVersionByPageIdAndLang(1L, "fr")).thenReturn(frenchVersion);
+
+    newsService.deleteNews("1", identity, ARTICLE.name(), true);
+
+    verify(metadataService).deleteMetadataItemsByObject(org.mockito.ArgumentMatchers.argThat(object -> object != null
+        && NewsService.NEWS_METADATA_PAGE_VERSION_OBJECT_TYPE.equals(object.getType()) && "11".equals(object.getId())));
+    verify(indexingService).unindex(NewsIndexingServiceConnector.TYPE, "1-fr");
+    verify(noteService, never()).deleteNote(anyString(), anyString(), anyString());
+  }
+
   private void assertNoteKeptAndArticleDeleted() throws Exception {
     verify(noteService, never()).deleteNote(anyString(), anyString(), anyString());
     verify(noteService, never()).getLatestDraftOfPage(any(Page.class));
@@ -2056,8 +2097,9 @@ public class NewsServiceTest {
         && NewsService.NEWS_METADATA_PAGE_VERSION_OBJECT_TYPE.equals(object.getType()) && "10".equals(object.getId())));
     verify(indexingService).unindex(NewsIndexingServiceConnector.TYPE, "1");
     verify(indexingService).reindex(WikiPageIndexingServiceConnector.TYPE, "1");
-    verify(newsTargetingService).deleteNewsTargets(org.mockito.ArgumentMatchers.argThat((News news) -> news != null
-        && "1".equals(news.getId())));
+    // Targets, favorites and tags are all items on ("news", <page id>)
+    verify(metadataService).deleteMetadataItemsByObject(org.mockito.ArgumentMatchers.argThat(object -> object != null
+        && NewsUtils.NEWS_METADATA_OBJECT_TYPE.equals(object.getType()) && "1".equals(object.getId())));
     // The article's unsaved edits stay as the note's drafts, without their
     // latest-draft items, which the Drafts list reads with the article
     verify(metadataService).deleteMetadataItemsByParentObject(org.mockito.ArgumentMatchers.argThat(object -> object != null
