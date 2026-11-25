@@ -556,6 +556,20 @@ public class NewsService {
   }
 
   /**
+   * @param pageId a note page id
+   * @return true when the page carries its news article item. Any error
+   *         reading it propagates, so that a caller deciding a right on it
+   *         refuses
+   */
+  public boolean isArticlePage(String pageId) {
+    if (!StringUtils.isNumeric(pageId)) {
+      return false;
+    }
+    NewsPageObject newsPageObject = new NewsPageObject(NEWS_METADATA_PAGE_OBJECT_TYPE, pageId, null, 0);
+    return !metadataService.getMetadataItemsByMetadataAndObject(NEWS_METADATA_KEY, newsPageObject).isEmpty();
+  }
+
+  /**
    * Publish a news
    *
    * @param newsToPublish to be published

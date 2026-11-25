@@ -61,27 +61,33 @@ public class NewsPageAttachmentPlugin extends AttachmentPlugin {
 
   @Override
   public boolean hasAccessPermission(Identity identity, String articleId) throws ObjectNotFoundException {
-    News news = newsService.getNewsArticleById(articleId);
-    if (news == null) {
+    Boolean articlePage = isArticlePage(articleId);
+    if (articlePage == null) {
+      return false;
+    } else if (!articlePage.booleanValue()) {
       Page note = getKeptNote(articleId, identity);
       return note != null && note.isCanView();
     }
-    return newsService.canViewNews(news, identity.getUserId());
+    News news = newsService.getNewsArticleById(articleId);
+    return news != null && newsService.canViewNews(news, identity.getUserId());
   }
 
   @Override
   public boolean hasEditPermission(Identity identity, String articleId) throws ObjectNotFoundException {
+    Boolean articlePage = isArticlePage(articleId);
+    if (articlePage == null) {
+      return false;
+    } else if (!articlePage.booleanValue()) {
+      Page note = getKeptNote(articleId, identity);
+      return note != null && note.isCanManage();
+    }
     News news = null;
     try {
       news = newsService.getNewsById(articleId, identity, false, ARTICLE.name());
     } catch (IllegalAccessException e) {
       return false;
     }
-    if (news == null) {
-      Page note = getKeptNote(articleId, identity);
-      return note != null && note.isCanManage();
-    }
-    return news.isCanEdit();
+    return news != null && news.isCanEdit();
   }
 
   @Override
@@ -93,6 +99,19 @@ public class NewsPageAttachmentPlugin extends AttachmentPlugin {
   public long getSpaceId(String articleId) throws ObjectNotFoundException {
     News news = newsService.getNewsArticleById(articleId);
     return news != null ? Long.parseLong(news.getSpaceId()) : 0;
+  }
+
+  /**
+   * @return whether the page is still an article, or null when that cannot be
+   *         read: the caller then refuses, rather than granting the note's
+   *         rights to an article whose item could not be read
+   */
+  private Boolean isArticlePage(String pageId) {
+    try {
+      return newsService.isArticlePage(pageId);
+    } catch (Exception e) {
+      return null; // NOSONAR null means unknown, which the callers refuse
+    }
   }
 
   /**

@@ -2090,6 +2090,18 @@ public class NewsServiceTest {
     verify(noteService, never()).deleteNote(anyString(), anyString(), anyString());
   }
 
+  @Test
+  public void testIsArticlePage() {
+    when(metadataService.getMetadataItemsByMetadataAndObject(eq(NewsService.NEWS_METADATA_KEY),
+                                                             org.mockito.ArgumentMatchers.argThat(object -> object != null
+                                                                 && NewsService.NEWS_METADATA_PAGE_OBJECT_TYPE.equals(object.getType())
+                                                                 && "1".equals(object.getId()))))
+                                                                                                   .thenReturn(List.of(mock(MetadataItem.class)));
+    assertTrue(newsService.isArticlePage("1"));
+    assertFalse(newsService.isArticlePage("2"));
+    assertFalse(newsService.isArticlePage("draft"));
+  }
+
   private void assertNoteKeptAndArticleDeleted() throws Exception {
     verify(noteService, never()).deleteNote(anyString(), anyString(), anyString());
     verify(noteService, never()).getLatestDraftOfPage(any(Page.class));

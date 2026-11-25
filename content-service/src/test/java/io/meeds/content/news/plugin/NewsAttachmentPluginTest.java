@@ -73,6 +73,7 @@ public class NewsAttachmentPluginTest {
     org.exoplatform.services.security.Identity userIdentity = mock(org.exoplatform.services.security.Identity.class);
     News news = mock(News.class);
 
+    when(newsService.isArticlePage("1")).thenReturn(true);
     when(newsService.getNewsArticleById(anyString())).thenReturn(news);
     when(newsService.canViewNews(news, userIdentity.getUserId())).thenReturn(true);
 
@@ -84,6 +85,7 @@ public class NewsAttachmentPluginTest {
     org.exoplatform.services.security.Identity userIdentity = mock(org.exoplatform.services.security.Identity.class);
     News news = mock(News.class);
 
+    when(newsService.isArticlePage("1")).thenReturn(true);
     when(newsService.getNewsById("1", userIdentity, false, ARTICLE.name())).thenReturn(news);
     when(news.isCanEdit()).thenReturn(true);
 
@@ -94,10 +96,46 @@ public class NewsAttachmentPluginTest {
   public void testArticleAccessDoesNotFallBackToTheNote() throws Exception {
     Identity userIdentity = mock(Identity.class);
     News news = mock(News.class);
+    when(newsService.isArticlePage("1")).thenReturn(true);
     when(newsService.getNewsArticleById("1")).thenReturn(news);
 
     assertFalse(plugin.hasAccessPermission(userIdentity, "1"));
     verify(noteService, never()).getNoteById("1", userIdentity);
+  }
+
+  /**
+   * A live article whose build fails (the getters log it and answer null) is
+   * refused, never granted the note's rights
+   */
+  @Test
+  public void testArticleWhoseBuildFailsIsRefused() throws Exception {
+    Identity userIdentity = mock(Identity.class);
+    when(newsService.isArticlePage("1")).thenReturn(true);
+    Page note = viewableManageableNote();
+    org.mockito.Mockito.lenient().when(noteService.getNoteById("1", userIdentity)).thenReturn(note);
+
+    assertFalse(plugin.hasAccessPermission(userIdentity, "1"));
+    assertFalse(plugin.hasEditPermission(userIdentity, "1"));
+    verify(noteService, never()).getNoteById("1", userIdentity);
+  }
+
+  @Test
+  public void testUnreadableArticleItemIsRefused() throws Exception {
+    Identity userIdentity = mock(Identity.class);
+    when(newsService.isArticlePage("1")).thenThrow(new IllegalStateException("storage error"));
+    Page note = viewableManageableNote();
+    org.mockito.Mockito.lenient().when(noteService.getNoteById("1", userIdentity)).thenReturn(note);
+
+    assertFalse(plugin.hasAccessPermission(userIdentity, "1"));
+    assertFalse(plugin.hasEditPermission(userIdentity, "1"));
+    verify(noteService, never()).getNoteById("1", userIdentity);
+  }
+
+  private Page viewableManageableNote() {
+    Page note = mock(Page.class);
+    org.mockito.Mockito.lenient().when(note.isCanView()).thenReturn(true);
+    org.mockito.Mockito.lenient().when(note.isCanManage()).thenReturn(true);
+    return note;
   }
 
   @Test
