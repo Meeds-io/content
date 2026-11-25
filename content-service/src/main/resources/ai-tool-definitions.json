@@ -125,7 +125,7 @@
     {
       "name": "delete_news",
       "title": "Delete an article",
-      "description": "Delete a news article by its ID. When the article was published from a note or referred in the space's notes tree, that note is deleted too.",
+      "description": "Delete a news article by its ID. When the article was published from a note or referred in the space's notes tree, that note and the notes under it are deleted too.",
       "input_schema": {
         "type": "object",
         "properties": {
