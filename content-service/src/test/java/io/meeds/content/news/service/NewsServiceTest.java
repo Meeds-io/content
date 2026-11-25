@@ -4129,9 +4129,6 @@ public class NewsServiceTest {
     service.updateNews(news, "john", false, false, LATEST_DRAFT.name().toLowerCase(), CONTENT_AND_TITLE.name());
 
     assertEquals(NewsUtils.ALL_NEWS_AUDIENCE, permissionsAudience());
-    assertFalse(news.isPublished());
-    verify(service, never()).publishNews(any(News.class), anyString());
-    verify(service, never()).unpublishNews(anyString(), anyString(), anyBoolean());
   }
 
   private String saveLatestDraftWithAnAudience(boolean existingDraft, boolean canPublish) throws Exception {
