@@ -25,6 +25,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
 import static org.mockito.ArgumentMatchers.any;
@@ -48,6 +49,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -66,6 +68,7 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.MockitoJUnitRunner;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.server.ResponseStatusException;
 
 import org.exoplatform.commons.exception.ObjectNotFoundException;
 import org.exoplatform.commons.utils.CommonsUtils;
@@ -82,6 +85,7 @@ import org.exoplatform.social.metadata.favorite.FavoriteService;
 import org.exoplatform.social.metadata.tag.TagService;
 import org.exoplatform.social.rest.api.RestUtils;
 
+import io.meeds.content.news.exception.InvalidPublicationStateException;
 import io.meeds.content.news.model.ArticleTarget;
 import io.meeds.content.news.model.News;
 import io.meeds.content.news.model.filter.NewsFilter;
@@ -388,6 +392,87 @@ public class NewsRestTest {
 
     // Then
     assertEquals(Response.Status.UNAUTHORIZED.getStatusCode(), response.getStatusCode().value());
+  }
+
+  @Test
+  public void shouldGetBadRequestWhenCreatingNewsWithAnUnknownPublicationState() throws Exception {
+    Identity currentIdentity = new Identity(JOHN);
+    ConversationState.setCurrent(new ConversationState(currentIdentity));
+    News news = new News();
+    news.setSpaceId("1");
+    news.setPublicationState("archived");
+    when(newsService.createNews(any(News.class), any()))
+        .thenThrow(new InvalidPublicationStateException());
+
+    ResponseStatusException error = assertThrows(ResponseStatusException.class, () -> newsRestController.createNews(news));
+
+    assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), error.getStatusCode().value());
+    assertEquals("news.publicationState.unknown", error.getReason());
+  }
+
+  @Test
+  public void shouldGetBadRequestWhenSchedulingNewsWithAnUnknownPublicationState() throws Exception {
+    Identity currentIdentity = new Identity(JOHN);
+    ConversationState.setCurrent(new ConversationState(currentIdentity));
+    News news = new News();
+    news.setId("1");
+    news.setPublicationState("archived");
+    news.setSpaceId("1");
+    lenient().when(newsService.getNewsById(anyString(), any(), anyBoolean(), anyString())).thenReturn(news);
+    when(newsService.scheduleNews(any(News.class), any(), anyString()))
+        .thenThrow(new InvalidPublicationStateException());
+
+    ResponseStatusException error = assertThrows(ResponseStatusException.class, () -> newsRestController.scheduleNews(ARTICLE.name().toLowerCase(), news));
+
+    assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), error.getStatusCode().value());
+    assertEquals("news.publicationState.unknown", error.getReason());
+  }
+
+  @Test
+  public void shouldGetUnauthorizedWhenSchedulingNewsTheUserCannotSchedule() throws Exception {
+    Identity currentIdentity = new Identity(JOHN);
+    ConversationState.setCurrent(new ConversationState(currentIdentity));
+    News news = new News();
+    news.setId("1");
+    news.setPublicationState("staged");
+    news.setSpaceId("1");
+    lenient().when(newsService.getNewsById(anyString(), any(), anyBoolean(), anyString())).thenReturn(news);
+    when(newsService.scheduleNews(any(News.class), any(), anyString())).thenThrow(new IllegalAccessException("refused"));
+
+    ResponseEntity<News> response = newsRestController.scheduleNews(ARTICLE.name().toLowerCase(), news);
+
+    assertEquals(Response.Status.UNAUTHORIZED.getStatusCode(), response.getStatusCode().value());
+  }
+
+  @Test
+  public void shouldGetBadRequestWhenUpdatingMetadataPropertiesWithAnUnknownPublicationState() throws Exception {
+    REST_UTILS.when(() -> RestUtils.getCurrentUserIdentityId()).thenReturn(1L);
+    Map<String, String> properties = Map.of("publicationState", "archived");
+    when(newsService.updateMetadataProperties("1", properties, 1L))
+        .thenThrow(new InvalidPublicationStateException());
+
+    ResponseStatusException error = assertThrows(ResponseStatusException.class, () -> newsRestController.updateNewsMetadataProperties("1", properties));
+
+    assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), error.getStatusCode().value());
+    assertEquals("news.publicationState.unknown", error.getReason());
+  }
+
+  @Test
+  public void shouldGetBadRequestWhenUpdatingNewsWithAnUnknownPublicationState() throws Exception {
+    Identity currentIdentity = new Identity(JOHN);
+    ConversationState.setCurrent(new ConversationState(currentIdentity));
+    News existingNews = new News();
+    existingNews.setPublicationState("draft");
+    lenient().when(newsService.getNewsById(anyString(), any(), anyBoolean(), eq(null))).thenReturn(existingNews);
+    News updatedNews = new News();
+    updatedNews.setPublicationState("archived");
+    when(newsService.updateNews(any(News.class), anyString(), anyBoolean(), anyBoolean(), eq(null), anyString()))
+        .thenThrow(new InvalidPublicationStateException());
+
+    ResponseStatusException error = assertThrows(ResponseStatusException.class, () -> newsRestController.updateNews("1", false, null, CONTENT_AND_TITLE.name(), updatedNews));
+
+    assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), error.getStatusCode().value());
+    assertEquals("news.publicationState.unknown", error.getReason());
   }
 
   @Test

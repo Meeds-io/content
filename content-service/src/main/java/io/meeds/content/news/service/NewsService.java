@@ -20,7 +20,6 @@ package io.meeds.content.news.service;
 
 import static io.meeds.content.news.utils.NewsUtils.NewsObjectType.ARTICLE;
 import static io.meeds.content.news.utils.NewsUtils.NewsObjectType.LATEST_DRAFT;
-import static io.meeds.content.news.utils.NewsUtils.NewsUpdateType.CATEGORIES;
 import static io.meeds.content.news.utils.NewsUtils.NewsUpdateType.CONTENT_AND_TITLE;
 import static io.meeds.content.news.utils.NewsUtils.NewsUpdateType.PAGE_REFERENCE;
 import static io.meeds.content.news.utils.NewsUtils.NewsUpdateType.POSTING_AND_PUBLISHING;
@@ -95,6 +94,7 @@ import org.exoplatform.wiki.service.PageUpdateType;
 import org.exoplatform.wiki.service.WikiService;
 import org.exoplatform.wiki.service.plugin.WikiDraftPageAttachmentPlugin;
 
+import io.meeds.content.news.exception.InvalidPublicationStateException;
 import io.meeds.content.news.model.ArticleTarget;
 import io.meeds.content.news.model.ContentPublishEvent;
 import io.meeds.content.news.model.News;
@@ -260,6 +260,7 @@ public class NewsService {
    * @throws Exception when error
    */
   public News createNews(News news, Identity currentIdentity) throws Exception {
+    checkPublicationState(news.getPublicationState(), null);
     Space space = spaceService.getSpaceById(news.getSpaceId());
     try {
       if (!canCreateNews(space, currentIdentity)) {
@@ -344,23 +345,20 @@ public class NewsService {
                          String newsObjectType,
                          String newsUpdateType) throws Exception {
 
-    if (CONTENT_AND_TITLE.name().equalsIgnoreCase(newsUpdateType) && !canEditNews(news, updater)) {
-      throw new IllegalAccessException("User " + updater + " is not authorized to update news");
-    }
     Identity updaterIdentity = NewsUtils.getUserIdentity(updater);
-    if (POSTING_AND_PUBLISHING.name().equalsIgnoreCase(newsUpdateType)
-        && (!canEditNews(news, updater) && !NewsUtils.canPublishNews(news.getSpaceId(), updaterIdentity))) {
+    String newsId = news.getTargetPageId() != null ? news.getTargetPageId() : news.getId();
+    News originalNews = getNewsById(newsId, updaterIdentity, false, newsObjectType);
+    // Whatever the update type, only a user who can edit the stored news
+    // updates it (the right to edit includes the right to publish and to
+    // refer); the request's own flags play no part in that right
+    if (originalNews == null || !canEditNews(originalNews, updater)) {
       throw new IllegalAccessException("User " + updater + " is not authorized to update news");
     }
     if (PAGE_REFERENCE.name().equalsIgnoreCase(newsUpdateType) && !canReferToNote(news, updaterIdentity)) {
       throw new IllegalAccessException("User " + updater + " is not authorized to refer or derefer news");
     }
-    if (CATEGORIES.name().equalsIgnoreCase(newsUpdateType) && !canEditNews(news, updater)) {
-      throw new IllegalAccessException("User " + updater + " is not authorized to update news categories");
-    }
-
-    String newsId = news.getTargetPageId() != null ? news.getTargetPageId() : news.getId();
-    News originalNews = getNewsById(newsId, updaterIdentity, false, newsObjectType);
+    // An unchanged stored state sent back by the client is accepted
+    checkPublicationState(news.getPublicationState(), originalNews.getPublicationState());
     List<ArticleTarget> oldTargets = newsTargetingService.getTargetsByNews(news);
     boolean canPublish = NewsUtils.canPublishNews(news.getSpaceId(), updaterIdentity);
     Space space = spaceService.getSpaceById(news.getSpaceId());
@@ -975,10 +973,23 @@ public class NewsService {
    * @throws Exception when error occurs
    */
   public News scheduleNews(News news, Identity currentIdentity, String newsObjectType) throws Exception {
-    if (!canScheduleNews(news.getSpaceId(), currentIdentity, news)) {
-      throw new IllegalArgumentException("User " + currentIdentity.getUserId() + " is not authorized to schedule news");
-    }
+    checkPublicationState(news.getPublicationState(), null);
     News originalArticle = null;
+    News storedArticle = null;
+    if (newsObjectType.equalsIgnoreCase(ARTICLE.name()) || newsObjectType.equalsIgnoreCase(LATEST_DRAFT.name())) {
+      // The right is evaluated on the stored article that is written, resolved
+      // the way updateArticle resolves it, not on the request
+      String storedId = news.getTargetPageId() != null ? news.getTargetPageId() : news.getId();
+      storedArticle = getNewsArticleById(storedId);
+      if (storedArticle == null || !canScheduleNews(storedArticle.getSpaceId(), currentIdentity, storedArticle)) {
+        throw new IllegalAccessException("User " + currentIdentity.getUserId() + " is not authorized to schedule news");
+      }
+      if (newsObjectType.equalsIgnoreCase(ARTICLE.name())) {
+        originalArticle = storedArticle;
+      }
+    } else if (!canScheduleNews(news.getSpaceId(), currentIdentity, news)) {
+      throw new IllegalAccessException("User " + currentIdentity.getUserId() + " is not authorized to schedule news");
+    }
     if (newsObjectType.equalsIgnoreCase(NewsObjectType.DRAFT.name())) {
       // Create news article with the publication state STAGED without posting
       // or publishing it ( displayed false news target)
@@ -988,10 +999,15 @@ public class NewsService {
     } else if (newsObjectType.equalsIgnoreCase(NewsObjectType.EXISTING_PAGE.name())) {
       news = createArticleFromExistingPage(news, currentIdentity.getUserId());
     } else if (newsObjectType.equalsIgnoreCase(ARTICLE.name())) {
-      originalArticle = getNewsArticleById(news.getId());
       news = updateArticle(news, currentIdentity, NewsUtils.NewsUpdateType.SCHEDULE.name().toLowerCase());
     }
     if (news != null) {
+      if (storedArticle != null) {
+        // Publishing and unpublishing apply to the stored article, with the
+        // publish right read from its own space
+        news.setId(storedArticle.getId());
+        news.setSpaceId(storedArticle.getSpaceId());
+      }
       if (NewsUtils.canPublishNews(news.getSpaceId(), currentIdentity)) {
         if (news.isPublished()) {
           publishNews(news, currentIdentity.getUserId());
@@ -1077,6 +1093,33 @@ public class NewsService {
   }
 
   /**
+   * @param state publication state
+   * @return true when the state is not empty and is none of {@link #POSTED},
+   *         {@link #STAGED} and {@link #DRAFT}
+   */
+  private static boolean isUnknownPublicationState(String state) {
+    return StringUtils.isNotEmpty(state)
+        && !POSTED.equals(state)
+        && !STAGED.equals(state)
+        && !DRAFT.equals(state);
+  }
+
+  /**
+   * Refuses a publication state that is unknown, unless it is the one already
+   * stored (an unchanged state sent back by a client)
+   *
+   * @param state publication state about to be stored
+   * @param storedState publication state currently stored, if any
+   * @throws InvalidPublicationStateException when the state is unknown and
+   *           differs from the stored one
+   */
+  private static void checkPublicationState(String state, String storedState) {
+    if (isUnknownPublicationState(state) && !state.equals(storedState)) {
+      throw new InvalidPublicationStateException();
+    }
+  }
+
+  /**
    * Checks if the user can view the News
    *
    * @param news {@link News} to check
@@ -1092,6 +1135,16 @@ public class NewsService {
         return false;
       } else if (spaceService.isSuperManager(space, authenticatedUser)) {
         return true;
+      }
+      if (isUnknownPublicationState(news.getPublicationState()) || DRAFT.equals(news.getPublicationState())) {
+        // Fail closed: only those who can edit the article see a draft or an
+        // article whose state is none of the known ones
+        return canEditNews(news, authenticatedUser);
+      }
+      if (StringUtils.isEmpty(news.getPublicationState())
+          && !(spaceService.canViewSpace(space, authenticatedUser) || canViewSharedInSpaces(news, authenticatedUser))) {
+        // A missing state is treated as an unpublished posted article
+        return false;
       }
       if (!news.isPublished() && StringUtils.equals(news.getPublicationState(), POSTED)
           && !(spaceService.canViewSpace(space, authenticatedUser) || canViewSharedInSpaces(news, authenticatedUser))) {
@@ -1268,6 +1321,8 @@ public class NewsService {
                                                                        Long.parseLong(draftArticleSpace.getId()));
       String draftArticleMetadataItemCreatorIdentityId = identityManager.getOrCreateUserIdentity(draftArticleCreator).getId();
       Map<String, String> draftArticleMetadataItemProperties = new HashMap<>();
+      draftArticleMetadataItemProperties.put(NEWS_PUBLICATION_STATE, DRAFT);
+      draftArticle.setPublicationState(DRAFT);
       metadataService.createMetadataItem(draftArticleMetaDataObject,
                                          NEWS_METADATA_KEY,
                                          draftArticleMetadataItemProperties,
@@ -1472,6 +1527,7 @@ public class NewsService {
                                                                         Long.parseLong(draftArticle.getSpaceId()));
 
     Map<String, String> draftArticleMetadataItemProperties = new HashMap<>();
+    draftArticleMetadataItemProperties.put(NEWS_PUBLICATION_STATE, DRAFT);
     draftArticleMetadataItemProperties.put(NEWS_ACTIVITY_POSTED, String.valueOf(draftArticle.isActivityPosted()));
     draftArticleMetadataItemProperties.put(PUBLISHED, String.valueOf(draftArticle.isPublished()));
 
@@ -1606,6 +1662,9 @@ public class NewsService {
     MetadataItem existingItem = getArticlePageMetadataItem(article);
 
     if (existingItem != null) {
+      checkPublicationState(properties.get(NEWS_PUBLICATION_STATE),
+                            existingItem.getProperties() == null ? null
+                                                                 : existingItem.getProperties().get(NEWS_PUBLICATION_STATE));
       Map<String, String> mergedProperties = new HashMap<>(existingItem.getProperties());
       mergedProperties.putAll(properties);
       existingItem.setProperties(mergedProperties);
@@ -1760,9 +1819,6 @@ public class NewsService {
     }
     setScheduleProperties(article, newsPageProperties);
 
-    if (StringUtils.isNotEmpty(article.getPublicationState())) {
-      newsPageProperties.put(NEWS_PUBLICATION_STATE, article.getPublicationState());
-    }
     newsPageProperties.put(EXTERNAL_PAGE, String.valueOf(externalPage));
     newsPageProperties.put(NEWS_ACTIVITY_POSTED, String.valueOf(article.isActivityPosted()));
     if (article.getSchedulePostDate() != null && CollectionUtils.isNotEmpty(article.getCategories())) {
@@ -1776,6 +1832,18 @@ public class NewsService {
     if (MapUtils.isNotEmpty(article.getParameters())) {
       newsPageProperties.putAll(article.getParameters());
     }
+    // The article publication state is the stored one; an unknown state is
+    // never stored
+    if (StringUtils.isNotEmpty(article.getPublicationState())) {
+      newsPageProperties.put(NEWS_PUBLICATION_STATE, article.getPublicationState());
+    } else if (isUnknownPublicationState(newsPageProperties.get(NEWS_PUBLICATION_STATE))) {
+      newsPageProperties.remove(NEWS_PUBLICATION_STATE);
+    }
+    // Every created article stores a state: posted, or staged when scheduled
+    if (StringUtils.isEmpty(newsPageProperties.get(NEWS_PUBLICATION_STATE))) {
+      newsPageProperties.put(NEWS_PUBLICATION_STATE, article.getSchedulePostDate() != null ? STAGED : POSTED);
+    }
+    article.setPublicationState(newsPageProperties.get(NEWS_PUBLICATION_STATE));
     // A brand-new article page is indexed into the notes index immediately
     // by PageIndexingListener.postAddPage - without this, it stays
     // duplicated (once as news, once as notes) until the article's first
@@ -2210,6 +2278,9 @@ public class NewsService {
   }
 
   private boolean canViewSharedInSpaces(News news, String username) {
+    if (CollectionUtils.isEmpty(news.getSharedInSpacesList())) {
+      return false;
+    }
     for (String sharedInSpaceId : news.getSharedInSpacesList()) {
       Space sharedInSpace = spaceService.getSpaceById(sharedInSpaceId);
       if (sharedInSpace != null && spaceService.canViewSpace(sharedInSpace, username)) {
@@ -2747,6 +2818,7 @@ public class NewsService {
   }
 
   private void setLatestDraftProperties(Map<String, String> properties, News news) {
+    properties.put(NEWS_PUBLICATION_STATE, DRAFT);
     properties.put(NEWS_ACTIVITY_POSTED, String.valueOf(news.isActivityPosted()));
     setScheduleProperties(news, properties);
   }

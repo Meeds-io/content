@@ -53,6 +53,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
@@ -106,6 +107,7 @@ import org.exoplatform.wiki.model.Wiki;
 import org.exoplatform.wiki.service.NoteService;
 import org.exoplatform.wiki.service.WikiService;
 
+import io.meeds.content.news.exception.InvalidPublicationStateException;
 import io.meeds.content.news.model.News;
 import io.meeds.content.news.model.NewsDraftObject;
 import io.meeds.content.news.model.NewsPageObject;
@@ -288,9 +290,12 @@ public class NewsServiceTest {
     draftPage.setTitle("draft article for new page");
     draftPage.setId("1");
     draftPage.setAuthor("john");
+    draftPage.setOwner("john");
     draftPage.setWikiOwner("/space/groupId");
 
     Space space = mockSpace();
+    // the author of a draft edits it: that is the right to view it
+    when(spaceService.canRedactOnSpace(any(Space.class), any(Identity.class))).thenReturn(true);
 
     when(noteService.getDraftNoteById(anyString(), anyString())).thenReturn(draftPage);
     MetadataItem metadataItem = mock(MetadataItem.class);
@@ -304,6 +309,7 @@ public class NewsServiceTest {
     COMMONS_UTILS.when(CommonsUtils::getCurrentPortalOwner).thenReturn("dw");
     Identity identity = mock(Identity.class);
     when(identity.getUserId()).thenReturn("john");
+    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity(anyString())).thenReturn(identity);
     when(activityManager.getActivity(nullable(String.class))).thenReturn(null);
     when(newsTargetingService.getTargetsByNews(any(News.class))).thenReturn(null);
     NEWS_UTILS.when(() -> NewsUtils.buildDraftUrl(any())).thenReturn("url");
@@ -1004,6 +1010,589 @@ public class NewsServiceTest {
     newsService.updateNews(news, "john", false, false, ARTICLE.name().toLowerCase(), CATEGORIES.name());
 
     verify(activityReportService, never()).markReportsStale(any());
+  }
+
+  @Test
+  public void testUpdateNewsOfAnyUpdateTypeIsRefusedToAUserWhoCannotEdit() throws Exception {
+    for (String updateType : new String[] { "content", "SCHEDULE", "other", null, CONTENT_AND_TITLE.name(),
+        NewsUtils.NewsUpdateType.POSTING_AND_PUBLISHING.name(), CATEGORIES.name(),
+        NewsUtils.NewsUpdateType.PAGE_REFERENCE.name() }) {
+      News news = mockUpdatableArticle();
+      when(spaceService.isSuperManager(any(Space.class), anyString())).thenReturn(false);
+      // a viewer of the article: only the edit right is missing
+      when(spaceService.canViewSpace(any(Space.class), anyString())).thenReturn(true);
+
+      assertThrows("update type " + updateType,
+                   IllegalAccessException.class,
+                   () -> newsService.updateNews(news, "john", false, false, ARTICLE.name().toLowerCase(), updateType));
+    }
+
+    verify(noteService, never()).updateNote(any(Page.class), any(), any(), anyBoolean());
+    verify(metadataService, never()).updateMetadataItem(any(), anyLong(), anyBoolean());
+  }
+
+  @Test
+  public void testUpdateNewsIsRefusedToAMemberWhoCannotEditTheStoredArticleWhateverTheRequestCarries() throws Exception {
+    for (String updateType : new String[] { "content", "SCHEDULE", "other", CONTENT_AND_TITLE.name(),
+        NewsUtils.NewsUpdateType.POSTING_AND_PUBLISHING.name(), CATEGORIES.name(),
+        NewsUtils.NewsUpdateType.PAGE_REFERENCE.name() }) {
+      News news = mockUpdatableArticle();
+      when(spaceService.isSuperManager(any(Space.class), anyString())).thenReturn(false);
+      when(spaceService.canViewSpace(any(Space.class), anyString())).thenReturn(true);
+      when(spaceService.canRedactOnSpace(any(Space.class), any(Identity.class))).thenReturn(true);
+      news.setReferred(true);
+
+      assertThrows("update type " + updateType,
+                   IllegalAccessException.class,
+                   () -> newsService.updateNews(news, "mary", false, false, ARTICLE.name().toLowerCase(), updateType));
+    }
+
+    verify(noteService, never()).updateNote(any(Page.class), any(), any(), anyBoolean());
+    verify(metadataService, never()).updateMetadataItem(any(), anyLong(), anyBoolean());
+  }
+
+  @Test
+  public void testUpdateNewsPostingAndPublishingIsAllowedToAPublisherOnly() throws Exception {
+    News news = mockUpdatableArticle();
+    when(spaceService.isSuperManager(any(Space.class), anyString())).thenReturn(false);
+    when(spaceService.canViewSpace(any(Space.class), anyString())).thenReturn(true);
+    when(spaceService.canPublishOnSpace(any(Space.class), eq("mary"))).thenReturn(true);
+    org.exoplatform.social.core.identity.model.Identity publisherIdentity =
+                                                                         mock(org.exoplatform.social.core.identity.model.Identity.class);
+    org.exoplatform.social.core.identity.model.Profile publisherProfile =
+                                                                       mock(org.exoplatform.social.core.identity.model.Profile.class);
+    when(publisherIdentity.getId()).thenReturn("1");
+    when(publisherIdentity.getProfile()).thenReturn(publisherProfile);
+    when(publisherProfile.getFullName()).thenReturn("Mary");
+    when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(publisherIdentity);
+
+    assertNotNull(newsService.updateNews(news,
+                                         "mary",
+                                         false,
+                                         false,
+                                         ARTICLE.name().toLowerCase(),
+                                         NewsUtils.NewsUpdateType.POSTING_AND_PUBLISHING.name()));
+  }
+
+  @Test
+  public void testUpdateNewsOfAnyUpdateTypeIsAllowedToAnEditor() throws Exception {
+    for (String updateType : new String[] { "content", "SCHEDULE", "other", CATEGORIES.name() }) {
+      News news = mockUpdatableArticle();
+
+      assertNotNull("update type " + updateType,
+                    newsService.updateNews(news, "john", false, false, ARTICLE.name().toLowerCase(), updateType));
+    }
+  }
+
+  @Test
+  public void testUpdateNewsWithUnknownPublicationStateIsRefused() throws Exception {
+    News news = mockUpdatableArticle();
+    news.setPublicationState("archived");
+
+    assertThrows(InvalidPublicationStateException.class,
+                 () -> newsService.updateNews(news, "john", false, false, ARTICLE.name().toLowerCase(), CONTENT_AND_TITLE.name()));
+
+    verify(noteService, never()).updateNote(any(Page.class), any(), any(), anyBoolean());
+    verify(metadataService, never()).updateMetadataItem(any(), anyLong(), anyBoolean());
+  }
+
+  @Test
+  public void testUpdateNewsWithKnownPublicationStateIsAccepted() throws Exception {
+    News news = mockUpdatableArticle();
+    news.setPublicationState(DRAFT);
+
+    newsService.updateNews(news, "john", false, false, ARTICLE.name().toLowerCase(), CATEGORIES.name());
+
+    verify(noteService, atLeast(1)).getNoteById(anyString());
+  }
+
+  @Test
+  public void testCreateNewsWithUnknownPublicationStateIsRefused() throws Exception {
+    News news = new News();
+    news.setAuthor("john");
+    news.setTitle("title");
+    news.setSpaceId("1");
+    news.setPublicationState("archived");
+    Identity identity = mock(Identity.class);
+
+    assertThrows(InvalidPublicationStateException.class, () -> newsService.createNews(news, identity));
+
+    verifyNoInteractions(noteService, metadataService, spaceService);
+  }
+
+  @Test
+  public void testCreateNewsWithKnownOrNoPublicationStateIsAccepted() throws Exception {
+    Identity identity = mock(Identity.class);
+    for (String state : new String[] { null, "", DRAFT, POSTED, NewsService.STAGED }) {
+      News news = new News();
+      news.setAuthor("john");
+      news.setTitle("title");
+      news.setSpaceId("1");
+      news.setPublicationState(state);
+
+      newsService.createNews(news, identity);
+    }
+
+    verify(spaceService, times(5)).getSpaceById("1");
+  }
+
+  @Test
+  public void testScheduleNewsWithUnknownPublicationStateIsRefused() throws Exception {
+    News news = new News();
+    news.setId("1");
+    news.setSpaceId("1");
+    news.setPublicationState("archived");
+    Identity identity = mock(Identity.class);
+
+    assertThrows(InvalidPublicationStateException.class,
+                 () -> newsService.scheduleNews(news, identity, ARTICLE.name().toLowerCase()));
+
+    verifyNoInteractions(noteService, metadataService);
+  }
+
+  @Test
+  public void testUpdateNewsSendingBackTheStoredUnknownPublicationStateIsAccepted() throws Exception {
+    News news = mockUpdatableArticle();
+    news.setPublicationState("archived");
+    Map<String, String> storedProperties = new HashMap<>();
+    storedProperties.put(NEWS_PUBLICATION_STATE, "archived");
+    MetadataItem storedItem = mock(MetadataItem.class);
+    when(storedItem.getProperties()).thenReturn(storedProperties);
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+                                                             any(MetadataObject.class))).thenReturn(List.of(storedItem));
+
+    newsService.updateNews(news, "john", false, false, ARTICLE.name().toLowerCase(), CONTENT_AND_TITLE.name());
+
+    verify(noteService, times(1)).updateNote(any(Page.class), any(), any(), anyBoolean());
+    assertEquals("archived", storedProperties.get(NEWS_PUBLICATION_STATE));
+  }
+
+  @Test
+  public void testUpdateNewsChangingToAnUnknownPublicationStateIsRefusedWhenAnotherIsStored() throws Exception {
+    News news = mockUpdatableArticle();
+    news.setPublicationState("archived");
+    Map<String, String> storedProperties = new HashMap<>();
+    storedProperties.put(NEWS_PUBLICATION_STATE, "retired");
+    MetadataItem storedItem = mock(MetadataItem.class);
+    when(storedItem.getProperties()).thenReturn(storedProperties);
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+                                                             any(MetadataObject.class))).thenReturn(List.of(storedItem));
+
+    assertThrows(InvalidPublicationStateException.class,
+                 () -> newsService.updateNews(news, "john", false, false, ARTICLE.name().toLowerCase(), CONTENT_AND_TITLE.name()));
+
+    verify(noteService, never()).updateNote(any(Page.class), any(), any(), anyBoolean());
+  }
+
+  @Test
+  public void testPostNewsStoresTheArticlePublicationState() throws Exception {
+    Map<String, String> stored = postNewsAndGetStoredProperties(POSTED, "archived");
+
+    assertEquals(POSTED, stored.get(NEWS_PUBLICATION_STATE));
+  }
+
+  @Test
+  public void testPostNewsWithoutStateKeepsAKnownStoredState() throws Exception {
+    Map<String, String> stored = postNewsAndGetStoredProperties(null, DRAFT);
+
+    assertEquals(DRAFT, stored.get(NEWS_PUBLICATION_STATE));
+  }
+
+  @Test
+  public void testPostNewsWithoutStateStoresNoUnknownStateAndStoresPosted() throws Exception {
+    Map<String, String> stored = postNewsAndGetStoredProperties(null, "archived");
+
+    assertEquals(POSTED, stored.get(NEWS_PUBLICATION_STATE));
+  }
+
+  @Test
+  public void testPostNewsWithoutAnyStateStoresPosted() throws Exception {
+    Map<String, String> stored = postNewsAndGetStoredProperties(null, null);
+
+    assertEquals(POSTED, stored.get(NEWS_PUBLICATION_STATE));
+  }
+
+  @Test
+  public void testPostNewsWithoutStateAndWithASchedulePostDateStoresStaged() throws Exception {
+    Map<String, String> stored = postNewsAndGetStoredProperties(null, null, "2030-05-30T08:00:00.000Z");
+
+    assertEquals(NewsService.STAGED, stored.get(NEWS_PUBLICATION_STATE));
+  }
+
+  @Test
+  public void testCreateArticleFromExistingPageWithoutStateStoresPosted() throws Exception {
+    News news = new News();
+    news.setId("1");
+    news.setSpaceId("1");
+    mockSpace();
+    Page page = mock(Page.class);
+    when(page.getId()).thenReturn("1");
+    when(noteService.getNoteById("1")).thenReturn(page);
+    PageVersion pageVersion = mock(PageVersion.class);
+    when(pageVersion.getAuthor()).thenReturn("john");
+    when(pageVersion.getId()).thenReturn("5");
+    when(noteService.getPublishedVersionByPageIdAndLang(1L, null)).thenReturn(pageVersion);
+    when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(new org.exoplatform.social.core.identity.model.Identity("1"));
+
+    News created = newsService.createArticleFromExistingPage(news, "john");
+
+    assertEquals(POSTED, created.getPublicationState());
+    ArgumentCaptor<Map<String, String>> properties = ArgumentCaptor.forClass(Map.class);
+    verify(metadataService, atLeast(1)).createMetadataItem(any(MetadataObject.class),
+                                                           any(MetadataKey.class),
+                                                           properties.capture(),
+                                                           anyLong(),
+                                                           anyBoolean());
+    assertTrue(properties.getAllValues().stream().anyMatch(m -> POSTED.equals(m.get(NEWS_PUBLICATION_STATE))));
+  }
+
+  @Test
+  public void testCreateDraftArticleForNewPageStoresDraft() throws Exception {
+    News draftArticle = new News();
+    draftArticle.setAuthor("john");
+    draftArticle.setTitle("draft article for new page");
+    draftArticle.setBody("draft body");
+    Space space = mockSpace();
+    Identity identity = mockIdentity();
+    when(spaceService.canRedactOnSpace(any(Space.class), any(Identity.class))).thenReturn(true);
+    Wiki wiki = mock(Wiki.class);
+    when(wikiService.getWikiByTypeAndOwner(anyString(), anyString())).thenReturn(wiki);
+    org.exoplatform.wiki.model.Page rootPage = mock(org.exoplatform.wiki.model.Page.class);
+    when(rootPage.getName()).thenReturn(NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME);
+    when(rootPage.getId()).thenReturn("1");
+    when(noteService.getNoteOfNoteBookByName("group",
+                                             space.getGroupId(),
+                                             NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME)).thenReturn(rootPage);
+    DraftPage draftPage = new DraftPage();
+    draftPage.setId("1");
+    draftPage.setContent("draft body");
+    when(noteService.createDraftForNewPage(any(DraftPage.class), anyLong(), anyLong())).thenReturn(draftPage);
+    when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(new org.exoplatform.social.core.identity.model.Identity("1"));
+
+    News created = newsService.createDraftArticleForNewPage(draftArticle, space.getGroupId(), identity.getUserId(), 1L);
+
+    assertEquals(DRAFT, created.getPublicationState());
+    ArgumentCaptor<Map<String, String>> properties = ArgumentCaptor.forClass(Map.class);
+    verify(metadataService).createMetadataItem(any(NewsDraftObject.class),
+                                               any(MetadataKey.class),
+                                               properties.capture(),
+                                               anyLong(),
+                                               anyBoolean());
+    assertEquals(DRAFT, properties.getValue().get(NEWS_PUBLICATION_STATE));
+  }
+
+  @Test
+  public void testCreateLatestDraftStoresDraft() throws Exception {
+    News draftArticle = new News();
+    draftArticle.setSpaceId("1");
+    draftArticle.setBody("draft body");
+    draftArticle.setPublicationState(DRAFT);
+    Space space = mockSpace();
+    Page target = mock(Page.class);
+    when(target.getId()).thenReturn("2");
+    DraftPage draftPage = new DraftPage();
+    draftPage.setId("3");
+    draftPage.setContent("draft body");
+    draftPage.setAuthor("john");
+    when(noteService.createDraftForExistPage(any(DraftPage.class), any(Page.class), nullable(String.class), anyLong(), anyString()))
+        .thenReturn(draftPage);
+    when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(new org.exoplatform.social.core.identity.model.Identity("1"));
+
+    newsService.createDraftForExistingPage(draftArticle, "john", target, 1L, space);
+
+    ArgumentCaptor<Map<String, String>> properties = ArgumentCaptor.forClass(Map.class);
+    verify(metadataService).createMetadataItem(any(NewsLatestDraftObject.class),
+                                               any(MetadataKey.class),
+                                               properties.capture(),
+                                               anyLong(),
+                                               anyBoolean());
+    assertEquals(DRAFT, properties.getValue().get(NEWS_PUBLICATION_STATE));
+  }
+
+  private Map<String, String> postNewsAndGetStoredProperties(String articleState, String otherState) throws Exception {
+    return postNewsAndGetStoredProperties(articleState, otherState, null);
+  }
+
+  private Map<String, String> postNewsAndGetStoredProperties(String articleState,
+                                                             String otherState,
+                                                             String schedulePostDate) throws Exception {
+    News news = new News();
+    news.setSchedulePostDate(schedulePostDate);
+    news.setAuthor("john");
+    news.setTitle("title");
+    news.setBody("body");
+    news.setId("1");
+    news.setPublicationState(articleState);
+    if (otherState != null) {
+      news.setParameters(Map.of(NEWS_PUBLICATION_STATE, otherState));
+    }
+    Identity identity = mockIdentity();
+    Space space = mockSpace();
+    when(spaceService.canRedactOnSpace(any(Space.class), any(Identity.class))).thenReturn(true);
+    Wiki wiki = mock(Wiki.class);
+    when(wikiService.getWikiByTypeAndOwner(anyString(), anyString())).thenReturn(wiki);
+    org.exoplatform.wiki.model.Page rootPage = mock(org.exoplatform.wiki.model.Page.class);
+    when(rootPage.getName()).thenReturn(NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME);
+    when(rootPage.getId()).thenReturn("1");
+    when(noteService.getNoteOfNoteBookByName("group",
+                                             space.getGroupId(),
+                                             NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME)).thenReturn(rootPage);
+    Page createdPage = mock(Page.class);
+    when(createdPage.getId()).thenReturn("1");
+    when(noteService.createNote(any(), anyString(), any(Page.class), any(), anyBoolean())).thenReturn(createdPage);
+    PageVersion pageVersion = mock(PageVersion.class);
+    when(noteService.getPublishedVersionByPageIdAndLang(1L, null)).thenReturn(pageVersion);
+    when(pageVersion.getAuthor()).thenReturn("john");
+    when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(new org.exoplatform.social.core.identity.model.Identity("1"));
+
+    if (schedulePostDate == null) {
+      newsService.postNews(news, identity.getUserId());
+    } else {
+      newsService.createNewsArticlePage(news, identity.getUserId());
+    }
+
+    ArgumentCaptor<Map<String, String>> properties = ArgumentCaptor.forClass(Map.class);
+    verify(metadataService, atLeast(1)).createMetadataItem(any(MetadataObject.class),
+                                                           any(MetadataKey.class),
+                                                           properties.capture(),
+                                                           anyLong(),
+                                                           anyBoolean());
+    return properties.getAllValues().stream().filter(m -> m.containsKey(NEWS_ACTIVITY_POSTED)).findFirst().orElseThrow();
+  }
+
+  @Test
+  public void testScheduleNewsOfAnArticleIsRefusedToAUserWhoCannotEditTheStoredOne() throws Exception {
+    Space space = space();
+    when(spaceService.getSpaceById("3")).thenReturn(space);
+    when(spaceService.canRedactOnSpace(any(Space.class), any(Identity.class))).thenReturn(true);
+    Identity identity = mock(Identity.class);
+    when(identity.getUserId()).thenReturn("mary");
+    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity(anyString())).thenReturn(identity);
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(anyString(), any(Identity.class))).thenReturn(false);
+    NewsService service = spy(newsService);
+    doReturn(existingArticle(POSTED, true)).when(service).getNewsArticleById("12");
+    News request = existingArticle(NewsService.STAGED, true);
+    request.setOwner("mary");
+    request.setReferred(true);
+
+    assertThrows(IllegalAccessException.class, () -> service.scheduleNews(request, identity, ARTICLE.name().toLowerCase()));
+
+    verify(noteService, never()).updateNote(any(Page.class), any(), any(), anyBoolean());
+    verify(metadataService, never()).updateMetadataItem(any(), anyLong(), anyBoolean());
+  }
+
+  @Test
+  public void testScheduleNewsOfAnArticleIsRefusedWhenTheWrittenArticleIsNotTheOneTheUserCanEdit() throws Exception {
+    Space space = space();
+    Space otherSpace = new Space();
+    otherSpace.setId("5");
+    when(spaceService.getSpaceById("3")).thenReturn(space);
+    when(spaceService.getSpaceById("5")).thenReturn(otherSpace);
+    when(spaceService.isManager(space, "mary")).thenReturn(true);
+    Identity identity = mock(Identity.class);
+    when(identity.getUserId()).thenReturn("mary");
+    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity(anyString())).thenReturn(identity);
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(anyString(), any(Identity.class))).thenReturn(false);
+    NewsService service = spy(newsService);
+    doReturn(existingArticle(POSTED, true)).when(service).getNewsArticleById("12");
+    News other = existingArticle(POSTED, true);
+    other.setId("99");
+    other.setSpaceId("5");
+    doReturn(other).when(service).getNewsArticleById("99");
+    News request = existingArticle(NewsService.STAGED, true);
+    request.setTargetPageId("99");
+
+    assertThrows(IllegalAccessException.class, () -> service.scheduleNews(request, identity, ARTICLE.name().toLowerCase()));
+
+    verify(noteService, never()).updateNote(any(Page.class), any(), any(), anyBoolean());
+    verify(metadataService, never()).updateMetadataItem(any(), anyLong(), anyBoolean());
+  }
+
+  @Test
+  public void testScheduleNewsNeverPublishesOrUnpublishesOnThePublishRightOfAnotherSpace() throws Exception {
+    Space space = space();
+    Space otherSpace = new Space();
+    otherSpace.setId("5");
+    when(spaceService.getSpaceById("3")).thenReturn(space);
+    when(spaceService.getSpaceById("5")).thenReturn(otherSpace);
+    when(spaceService.isManager(space, "mary")).thenReturn(true);
+    Identity identity = mock(Identity.class);
+    when(identity.getUserId()).thenReturn("mary");
+    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity(anyString())).thenReturn(identity);
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(anyString(), any(Identity.class))).thenReturn(false);
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(eq("5"), any(Identity.class))).thenReturn(true);
+    NewsService service = spy(newsService);
+    doReturn(existingArticle(POSTED, true)).when(service).getNewsArticleById("12");
+    for (boolean published : new boolean[] { true, false }) {
+      News request = existingArticle(NewsService.STAGED, true);
+      request.setSpaceId("5");
+      request.setPublished(published);
+
+      service.scheduleNews(request, identity, LATEST_DRAFT.name().toLowerCase());
+    }
+
+    verify(service, never()).publishNews(any(News.class), anyString());
+    verify(service, never()).unpublishNews(anyString(), anyString(), anyBoolean());
+  }
+
+  @Test
+  public void testScheduleNewsPublishesWithThePublishRightOfTheStoredArticleSpace() throws Exception {
+    Space space = space();
+    when(spaceService.getSpaceById("3")).thenReturn(space);
+    when(spaceService.canPublishOnSpace(space, "mary")).thenReturn(true);
+    Identity identity = mock(Identity.class);
+    when(identity.getUserId()).thenReturn("mary");
+    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity(anyString())).thenReturn(identity);
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(anyString(), any(Identity.class))).thenReturn(false);
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(eq("3"), any(Identity.class))).thenReturn(true);
+    NewsService service = spy(newsService);
+    doReturn(existingArticle(POSTED, true)).when(service).getNewsArticleById("12");
+    doNothing().when(service).publishNews(any(News.class), anyString());
+    News request = existingArticle(NewsService.STAGED, true);
+    request.setPublished(true);
+
+    service.scheduleNews(request, identity, LATEST_DRAFT.name().toLowerCase());
+
+    verify(service).publishNews(request, "mary");
+  }
+
+  @Test
+  public void testRescheduleNewsOfAnArticleWithAnUnknownStoredStateSucceeds() throws Exception {
+    News news = mockUpdatableArticle();
+    news.setPublicationState(NewsService.STAGED);
+    news.setParameters(Map.of(NEWS_PUBLICATION_STATE, "archived"));
+    NewsService service = spy(newsService);
+    doReturn(true).when(service).canScheduleNews(anyString(), any(Identity.class), any(News.class));
+    doReturn(existingArticle("archived", true)).when(service).getNewsArticleById("1");
+    NEWS_UTILS.when(() -> NewsUtils.buildNewsArticleUrl(any(), any())).thenReturn("url");
+
+    News result = service.scheduleNews(news, mockIdentity(), ARTICLE.name().toLowerCase());
+
+    assertNotNull(result);
+    assertEquals(NewsService.STAGED, result.getPublicationState());
+  }
+
+  @Test
+  public void testUpdateMetadataPropertiesWithUnknownPublicationStateIsRefused() throws Exception {
+    NewsService service = spaceNoteService(List.of());
+    MetadataItem item = metadataItemWithState(POSTED);
+    doReturn(existingArticle(POSTED, true)).when(service).getNewsArticleById("12");
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+                                                             any(MetadataObject.class))).thenReturn(List.of(item));
+
+    assertThrows(InvalidPublicationStateException.class,
+                 () -> service.updateMetadataProperties("12", Map.of(NEWS_PUBLICATION_STATE, "archived"), 1L));
+
+    verify(metadataService, never()).updateMetadataItem(any(), anyLong(), anyBoolean());
+  }
+
+  @Test
+  public void testUpdateMetadataPropertiesWithoutOrWithKnownPublicationStateIsUnchanged() throws Exception {
+    NewsService service = spaceNoteService(List.of());
+    MetadataItem item = metadataItemWithState(POSTED);
+    doReturn(existingArticle(POSTED, true)).when(service).getNewsArticleById("12");
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+                                                             any(MetadataObject.class))).thenReturn(List.of(item));
+
+    Map<String, String> result = service.updateMetadataProperties("12", Map.of("other", "value"), 1L);
+    assertEquals("value", result.get("other"));
+    result = service.updateMetadataProperties("12", Map.of(NEWS_PUBLICATION_STATE, DRAFT), 1L);
+    assertEquals(DRAFT, result.get(NEWS_PUBLICATION_STATE));
+
+    verify(metadataService, times(2)).updateMetadataItem(any(), anyLong(), anyBoolean());
+  }
+
+  private MetadataItem metadataItemWithState(String state) {
+    MetadataItem item = mock(MetadataItem.class);
+    Map<String, String> properties = new HashMap<>();
+    properties.put(NEWS_PUBLICATION_STATE, state);
+    when(item.getProperties()).thenReturn(properties);
+    return item;
+  }
+
+  @Test
+  public void testCanViewNewsWithUnknownPublicationStateIsRefusedToANonEditor() {
+    Space space = space();
+    when(spaceService.getSpaceById("3")).thenReturn(space);
+    when(spaceService.canViewSpace(space, "mary")).thenReturn(true);
+    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity("mary")).thenReturn(mock(Identity.class));
+
+    assertFalse(newsService.canViewNews(existingArticle("archived", true), "mary"));
+  }
+
+  @Test
+  public void testCanViewNewsWithUnknownPublicationStateIsAllowedToAnEditor() {
+    Space space = space();
+    when(spaceService.getSpaceById("3")).thenReturn(space);
+    when(spaceService.isManager(space, "mary")).thenReturn(true);
+    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity("mary")).thenReturn(mock(Identity.class));
+
+    assertTrue(newsService.canViewNews(existingArticle("archived", true), "mary"));
+  }
+
+  @Test
+  public void testCanViewNewsWithoutPublicationStateIsRefusedToAnOutsider() {
+    Space space = space();
+    when(spaceService.getSpaceById("3")).thenReturn(space);
+
+    assertFalse(newsService.canViewNews(existingArticle(null, false), "outsider"));
+    assertFalse(newsService.canViewNews(existingArticle("", false), "outsider"));
+    assertFalse(newsService.canViewNews(existingArticle(null, true), "outsider"));
+  }
+
+  @Test
+  public void testCanViewNewsWithoutPublicationStateIsRefusedWhenPublishedForAllUsers() {
+    Space space = space();
+    when(spaceService.getSpaceById("3")).thenReturn(space);
+    News article = existingArticle(null, false);
+    article.setPublished(true);
+    article.setAudience(NewsUtils.ALL_NEWS_AUDIENCE);
+
+    assertFalse(newsService.canViewNews(article, "outsider"));
+  }
+
+  @Test
+  public void testCanViewNewsOfAnArticlePageInDraftStateIsRefusedToANonEditor() {
+    Space space = space();
+    when(spaceService.getSpaceById("3")).thenReturn(space);
+    when(spaceService.canViewSpace(space, "mary")).thenReturn(true);
+    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity(anyString())).thenReturn(mock(Identity.class));
+
+    assertFalse(newsService.canViewNews(existingArticle(DRAFT, false), "outsider"));
+    assertFalse(newsService.canViewNews(existingArticle(DRAFT, false), "mary"));
+  }
+
+  @Test
+  public void testCanViewNewsOfAnArticlePageInDraftStateIsAllowedToAnEditor() {
+    Space space = space();
+    when(spaceService.getSpaceById("3")).thenReturn(space);
+    when(spaceService.isManager(space, "mary")).thenReturn(true);
+    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity(anyString())).thenReturn(mock(Identity.class));
+
+    assertTrue(newsService.canViewNews(existingArticle(DRAFT, false), "mary"));
+  }
+
+  @Test
+  public void testCanViewNewsWithoutPublicationStateIsAllowedToASpaceViewer() {
+    Space space = space();
+    when(spaceService.getSpaceById("3")).thenReturn(space);
+    when(spaceService.canViewSpace(space, "mary")).thenReturn(true);
+
+    assertTrue(newsService.canViewNews(existingArticle(null, false), "mary"));
+  }
+
+  @Test
+  public void testCanViewNewsWithoutPublicationStateIsAllowedToAViewerOfASharedSpace() {
+    Space space = space();
+    Space sharedSpace = new Space();
+    sharedSpace.setId("4");
+    when(spaceService.getSpaceById("3")).thenReturn(space);
+    when(spaceService.getSpaceById("4")).thenReturn(sharedSpace);
+    when(spaceService.canViewSpace(sharedSpace, "mary")).thenReturn(true);
+    News article = existingArticle(null, false);
+    article.setSharedInSpacesList(List.of("4"));
+
+    assertTrue(newsService.canViewNews(article, "mary"));
   }
 
   private News mockUpdatableArticle() throws Exception {
@@ -1833,6 +2422,7 @@ public class NewsServiceTest {
     article.setSpaceId("3");
     article.setPublicationState(publicationState);
     article.setActivityPosted(activityPosted);
+    article.setSharedInSpacesList(new ArrayList<>());
     return article;
   }
 
