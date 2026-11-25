@@ -643,7 +643,7 @@ public class NewsRestTest {
   }
 
   @Test
-  public void shouldGetBadRequestNamingPublicationStateWhenCreatingNewsWithoutIt() throws Exception {
+  public void shouldGetBadRequestNamingPublicationStateWhenCreatingNewsWithoutIt() {
     // Given
     ConversationState.setCurrent(new ConversationState(new Identity(JOHN)));
     News news = new News();
