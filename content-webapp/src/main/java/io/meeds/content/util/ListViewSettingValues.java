@@ -36,7 +36,7 @@ public final class ListViewSettingValues {
   // checked for its shape
   private static final Pattern     VIEW_TEMPLATE_PATTERN = Pattern.compile("[A-Za-z][A-Za-z0-9_-]{0,63}");
 
-  private static final Pattern     ID_LIST_PATTERN       = Pattern.compile("\\d{1,18}(,\\d{1,18})*");
+  private static final Pattern     ID_LIST_PATTERN       = Pattern.compile("\\d{1,18}(?:,\\d{1,18})*+");
 
   private static final Pattern     DEPTH_PATTERN         = Pattern.compile("\\d{1,2}");
 

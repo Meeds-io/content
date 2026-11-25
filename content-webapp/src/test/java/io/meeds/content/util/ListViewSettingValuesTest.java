@@ -75,6 +75,13 @@ class ListViewSettingValuesTest {
   }
 
   @Test
+  void aLongIdListIsCheckedWithoutOverflowingTheStack() {
+    String ids = "1" + ",1".repeat(100_000);
+    assertTrue(ListViewSettingValues.isValidIdList(ids));
+    assertFalse(ListViewSettingValues.isValidIdList(ids + ",a"));
+  }
+
+  @Test
   void categoryDepthIsWithinWhatTheDrawerOffers() {
     assertTrue(ListViewSettingValues.isValidCategoryDepth(null));
     assertTrue(ListViewSettingValues.isValidCategoryDepth(""));
