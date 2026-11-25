@@ -74,6 +74,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -894,7 +895,7 @@ public class NewsRest {
   @Operation(summary = "Get article available translation languages", method = "GET", description = "Get article available translation languages")
   @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "Article available translation languages returned"),
     @ApiResponse(responseCode = "400", description = "Invalid query input"),
-    @ApiResponse(responseCode = "401", description = "User not authorized to get the article available translation languages "),
+    @ApiResponse(responseCode = "404", description = "Article not found or not viewable by the user"),
     @ApiResponse(responseCode = "500", description = "Internal server error") })
   public ResponseEntity<List<String>> getAvailableTranslationLanguages(@PathVariable("articleId")
   String articleId,
@@ -902,12 +903,17 @@ public class NewsRest {
                                                                        boolean withDrafts) {
     try {
       if (StringUtils.isBlank(articleId)) {
-        return ResponseEntity.badRequest().build();
+        return ResponseEntity.badRequest().cacheControl(CacheControl.noStore()).build();
       }
-      return ResponseEntity.ok(newsService.getArticleLanguages(articleId, withDrafts));
+      String authenticatedUser = ConversationState.getCurrent().getIdentity().getUserId();
+      return ResponseEntity.ok()
+                           .cacheControl(CacheControl.noStore())
+                           .body(newsService.getArticleLanguages(articleId, withDrafts, authenticatedUser));
+    } catch (ObjectNotFoundException e) {
+      return ResponseEntity.status(HttpStatus.NOT_FOUND).cacheControl(CacheControl.noStore()).build();
     } catch (Exception e) {
       LOG.error("Error when getting the article available translation languages with id " + articleId, e);
-      return ResponseEntity.internalServerError().build();
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).cacheControl(CacheControl.noStore()).build();
     }
   }
 

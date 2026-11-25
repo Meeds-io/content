@@ -1616,12 +1616,19 @@ public class NewsRestTest {
     ResponseEntity responseEntity = newsRestController.getAvailableTranslationLanguages("", false);
     assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), responseEntity.getStatusCode().value());
     //
-    when(newsService.getArticleLanguages(anyString(), anyBoolean())).thenReturn(Arrays.asList(new String[]{"fr"}));
+    ConversationState.setCurrent(new ConversationState(new Identity(JOHN)));
+    when(newsService.getArticleLanguages("1", false, JOHN)).thenReturn(Arrays.asList(new String[]{"fr"}));
     responseEntity = newsRestController.getAvailableTranslationLanguages("1", false);
     assertEquals(Response.Status.OK.getStatusCode(), responseEntity.getStatusCode().value());
+    assertEquals("no-store", responseEntity.getHeaders().getCacheControl());
     //
-    when(newsService.getArticleLanguages(anyString(), anyBoolean())).thenThrow(new IllegalStateException());
-    responseEntity = newsRestController.getAvailableTranslationLanguages("1", false);
+    when(newsService.getArticleLanguages("2", true, JOHN)).thenThrow(new ObjectNotFoundException("not found"));
+    responseEntity = newsRestController.getAvailableTranslationLanguages("2", true);
+    assertEquals(Response.Status.NOT_FOUND.getStatusCode(), responseEntity.getStatusCode().value());
+    assertEquals("no-store", responseEntity.getHeaders().getCacheControl());
+    //
+    when(newsService.getArticleLanguages("3", false, JOHN)).thenThrow(new IllegalStateException());
+    responseEntity = newsRestController.getAvailableTranslationLanguages("3", false);
     assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), responseEntity.getStatusCode().value());
 
   }
