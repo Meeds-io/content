@@ -96,6 +96,7 @@
           v-show="showAdvancedSettings"
           :show-article-summary="showArticleSummary"
           :show-see-all="showSeeAll"
+          :allow-hide="allowHide"
           :show-header="showHeader"
           :show-article-author="showArticleAuthor"
           :view-template="viewTemplate"
@@ -157,6 +158,7 @@ export default {
     showAdvancedSettings: false,
     showHeader: false,
     showSeeAll: false,
+    allowHide: false,
     showArticleTitle: false,
     showArticleSummary: false,
     showArticleImage: false,
@@ -316,6 +318,7 @@ export default {
       this.limit = this.maxArticlesLimit !== null && Number(this.$root.limit) > this.maxArticlesLimit ? this.maxArticlesLimit : this.$root.limit;
       this.showHeader = this.viewTemplate === 'NewsSlider' || this.viewTemplate === 'NewsMosaic' || this.viewTemplate === 'NewsStories' ? false : this.$root.showHeader;
       this.showSeeAll = this.$root.showSeeAll;
+      this.allowHide = !!this.$root.allowHide;
       this.showArticleTitle = this.$root.showArticleTitle;
       this.showArticleImage = this.viewTemplate === 'NewsAlert' ? false : this.$root.showArticleImage;
       this.showArticleSummary = this.viewTemplate === 'NewsAlert' || this.viewTemplate === 'NewsMosaic' || this.viewTemplate === 'NewsStories' ? false : this.$root.showArticleSummary;
@@ -347,6 +350,7 @@ export default {
         articlesSourceOption: this.articlesSourceOption,
         showHeader: this.showHeader,
         showSeeAll: this.showSeeAll,
+        allowHide: this.allowHide,
         showArticleTitle: this.showArticleTitle,
         showArticleSummary: this.showArticleSummary,
         showArticleImage: this.showArticleImage,
@@ -373,6 +377,11 @@ export default {
           this.$root.limit = this.limit;
           this.$root.showHeader = this.showHeader;
           this.$root.showSeeAll = this.showSeeAll;
+          if (this.$root.canEditNewsList) {
+            // Turned off, the option shows the application again to every user
+            this.$root.hidden = this.allowHide && this.$root.hidden;
+            this.$root.allowHide = this.allowHide;
+          }
           this.$root.showArticleTitle = this.showArticleTitle;
           this.$root.showArticleSummary = this.showArticleSummary;
           this.$root.showArticleAuthor = this.showArticleAuthor;
@@ -424,6 +433,9 @@ export default {
         break;
       case 'showSeeAll':
         this.showSeeAll = optionValue;
+        break;
+      case 'allowHide':
+        this.allowHide = optionValue;
         break;
       case 'showHeader':
         this.showHeader = optionValue;

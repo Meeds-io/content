@@ -101,10 +101,11 @@
       </v-btn>
     </template>
     <div
-      v-if="$root.canManageNewsList"
+      v-if="$root.canManageNewsList || $root.allowHide"
       :class="$vuetify.rtl && 'l-0' || 'r-0'"
       class="position-absolute t-0 mt-1 mx-1 z-index-two">
       <v-btn
+        v-if="$root.canManageNewsList"
         :aria-label="$t('news.latest.openSettings')"
         class="news-slider-settings hover-reveal"
         icon
@@ -112,6 +113,7 @@
         @click="openDrawer">
         <v-icon size="18">fas fa-cog</v-icon>
       </v-btn>
+      <news-hide-button dark />
     </div>
   </div>
 </template>

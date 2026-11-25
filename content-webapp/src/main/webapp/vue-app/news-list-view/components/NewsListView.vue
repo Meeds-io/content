@@ -19,7 +19,10 @@
 
 -->
 <template>
-  <v-app v-show="!hideEmptyNewsTemplate" class="news-list-view-app hover-reveal-parent hover-swap-trigger position-relative">
+  <v-app
+    v-if="!hiddenByUser"
+    v-show="!hideEmptyNewsTemplate"
+    class="news-list-view-app hover-reveal-parent hover-swap-trigger position-relative">
     <v-card
       :class="newsListViewClass"
       class="application-body application-layout-style"
@@ -121,6 +124,7 @@ export default {
     hasMore: false,
     offset: 0,
     language: eXo?.env?.portal?.language,
+    inLayoutEditor: false,
   }),
   computed: {
     displayHeader() {
@@ -189,6 +193,11 @@ export default {
         },
       };
     },
+    // The current user hid the application, which the page layout editor still
+    // displays
+    hiddenByUser() {
+      return this.$root.allowHide && this.$root.hidden && !this.inLayoutEditor;
+    },
     hideEmptyNewsTemplate() {
       return this.selectedViewExtension?.id === 'NewsEmptyTemplate' && !this.canManageNewsList && !this.canCreateNews;
     },
@@ -229,6 +238,9 @@ export default {
     viewExtensions() {
       this.$root.viewExtensions = this.viewExtensions;
     },
+    hiddenByUser() {
+      this.$root.$updateApplicationVisibility(!this.hiddenByUser);
+    },
   },
   created() {
     this.$root.$on('saved-news-settings', this.handleSaveSettingsEvent);
@@ -237,6 +249,13 @@ export default {
     this.retrieveNewsList().finally(() => this.$root.$applicationLoaded());
     document.addEventListener(`component-${this.extensionApp}-${this.extensionType}-updated`, this.refreshViewExtensions);
     this.refreshViewExtensions();
+  },
+  mounted() {
+    const element = this.$el?.closest ? this.$el : this.$el?.parentElement;
+    this.inLayoutEditor = !!element?.closest?.('.layout-application[data-storage-id]');
+    if (this.hiddenByUser) {
+      this.$root.$updateApplicationVisibility(false);
+    }
   },
   beforeDestroy() {
     document.removeEventListener(`component-${this.extensionApp}-${this.extensionType}-updated`, this.refreshViewExtensions);

@@ -103,6 +103,26 @@
       </v-list-item-content>
     </v-list-item>
 
+    <v-list-item v-if="$root.canEditNewsList">
+      <v-list-item-content>
+        <v-list-item-title class="advancedSettingsLabel font-weight-regular">
+          {{ $t('news.list.settings.drawer.advancedSettings.allowHide') }}
+        </v-list-item-title>
+        <v-list-item-subtitle class="advancedSettingsLabel">
+          {{ $t('news.list.settings.drawer.advancedSettings.allowHideDescription') }}
+        </v-list-item-subtitle>
+      </v-list-item-content>
+      <v-list-item-action>
+        <v-switch
+          id="newsListAllowHideSwitch"
+          v-model="allowHide"
+          :aria-label="$t('news.list.settings.drawer.advancedSettings.allowHide')"
+          dense
+          @change="selectedOption('allowHide', allowHide)"
+          class="my-auto" />
+      </v-list-item-action>
+    </v-list-item>
+
     <v-list-item>
       <v-list-item-content>
         <v-list-item-title class="advancedSettingsLabel font-weight-regular">
@@ -234,6 +254,10 @@ export default {
       type: Boolean,
       default: false,
     },
+    allowHide: {
+      type: Boolean,
+      default: false,
+    },
     viewTemplate: {
       type: String,
       default: '',
@@ -314,6 +338,7 @@ export default {
       this.limit = this.maxLimit !== null && Number(this.$root.limit) > this.maxLimit ? this.maxLimit : this.$root.limit;
       this.showHeader = this.viewTemplate === 'NewsSlider' || this.viewTemplate === 'NewsMosaic' || this.viewTemplate === 'NewsStories' ? false : this.$root.showHeader;
       this.showSeeAll = this.$root.showSeeAll;
+      this.allowHide = !!this.$root.allowHide;
       this.showArticleTitle = this.$root.showArticleTitle;
       this.showArticleImage = this.viewTemplate === 'NewsAlert' ? false : this.$root.showArticleImage;
       this.showArticleSummary = this.viewTemplate === 'NewsSlider' || this.viewTemplate === 'NewsLatest' || this.viewTemplate === 'NewsAlert' || this.viewTemplate === 'NewsMosaic' || this.viewTemplate === 'NewsStories' ? false : this.$root.showArticleSummary;

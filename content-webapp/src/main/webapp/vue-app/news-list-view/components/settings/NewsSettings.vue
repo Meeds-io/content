@@ -82,6 +82,7 @@
         </v-icon>
       </v-btn>
     </div>
+    <news-hide-button class="my-auto" />
   </v-sheet>
 </template>
 <script>
@@ -117,7 +118,7 @@ export default {
       return this.$root.headerTitle || '';
     },
     showSettingsContainer(){
-      return this.showHeader || this.showSeeAll || this.$root.canManageNewsList ;
+      return this.showHeader || this.showSeeAll || this.$root.canManageNewsList || this.$root.allowHide;
     },
     showSettingsIcon() {
       return !this.hideOpenSettingButton;
