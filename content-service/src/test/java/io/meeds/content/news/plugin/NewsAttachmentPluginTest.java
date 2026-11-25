@@ -19,9 +19,12 @@
 package io.meeds.content.news.plugin;
 
 import static io.meeds.content.news.utils.NewsUtils.NewsObjectType.ARTICLE;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import org.junit.Assert;
@@ -32,7 +35,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
+import org.exoplatform.services.security.Identity;
 import org.exoplatform.social.attachment.AttachmentService;
+import org.exoplatform.wiki.model.Page;
+import org.exoplatform.wiki.service.NoteService;
 
 import io.meeds.content.news.model.News;
 import io.meeds.content.news.service.NewsService;
@@ -45,6 +51,9 @@ public class NewsAttachmentPluginTest {
 
   @Mock
   private AttachmentService                  attachmentService;
+
+  @Mock
+  private NoteService                        noteService;
 
   @InjectMocks
   private NewsPageAttachmentPlugin plugin;
@@ -79,6 +88,64 @@ public class NewsAttachmentPluginTest {
     when(news.isCanEdit()).thenReturn(true);
 
     assertTrue(plugin.hasEditPermission(userIdentity, "1"));
+  }
+
+  @Test
+  public void testArticleAccessDoesNotFallBackToTheNote() throws Exception {
+    Identity userIdentity = mock(Identity.class);
+    News news = mock(News.class);
+    when(newsService.getNewsArticleById("1")).thenReturn(news);
+
+    assertFalse(plugin.hasAccessPermission(userIdentity, "1"));
+    verify(noteService, never()).getNoteById("1", userIdentity);
+  }
+
+  @Test
+  public void testKeptNoteAttachmentsFollowTheNoteViewRight() throws Exception {
+    Identity userIdentity = mock(Identity.class);
+    Page note = mock(Page.class);
+    when(noteService.getNoteById("1", userIdentity)).thenReturn(note);
+
+    when(note.isCanView()).thenReturn(true);
+    assertTrue(plugin.hasAccessPermission(userIdentity, "1"));
+
+    when(note.isCanView()).thenReturn(false);
+    assertFalse(plugin.hasAccessPermission(userIdentity, "1"));
+  }
+
+  @Test
+  public void testKeptNoteAttachmentsFollowTheNoteManageRight() throws Exception {
+    Identity userIdentity = mock(Identity.class);
+    Page note = mock(Page.class);
+    when(noteService.getNoteById("1", userIdentity)).thenReturn(note);
+
+    when(note.isCanManage()).thenReturn(true);
+    assertTrue(plugin.hasEditPermission(userIdentity, "1"));
+
+    when(note.isCanManage()).thenReturn(false);
+    assertFalse(plugin.hasEditPermission(userIdentity, "1"));
+  }
+
+  @Test
+  public void testDeletedNoteAttachmentsAreRefused() throws Exception {
+    Identity userIdentity = mock(Identity.class);
+    Page note = mock(Page.class);
+    when(noteService.getNoteById("1", userIdentity)).thenReturn(note);
+    org.mockito.Mockito.lenient().when(note.isCanView()).thenReturn(true);
+    org.mockito.Mockito.lenient().when(note.isCanManage()).thenReturn(true);
+    when(note.isDeleted()).thenReturn(true);
+
+    assertFalse(plugin.hasAccessPermission(userIdentity, "1"));
+    assertFalse(plugin.hasEditPermission(userIdentity, "1"));
+  }
+
+  @Test
+  public void testUnreadableNoteAttachmentsAreRefused() throws Exception {
+    Identity userIdentity = mock(Identity.class);
+    when(noteService.getNoteById("1", userIdentity)).thenThrow(new IllegalAccessException("refused"));
+
+    assertFalse(plugin.hasAccessPermission(userIdentity, "1"));
+    assertFalse(plugin.hasEditPermission(userIdentity, "1"));
   }
 
 }

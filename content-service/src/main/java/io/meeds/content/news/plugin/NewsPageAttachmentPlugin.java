@@ -27,6 +27,8 @@ import org.exoplatform.commons.exception.ObjectNotFoundException;
 import org.exoplatform.services.security.Identity;
 import org.exoplatform.social.attachment.AttachmentPlugin;
 import org.exoplatform.social.attachment.AttachmentService;
+import org.exoplatform.wiki.model.Page;
+import org.exoplatform.wiki.service.NoteService;
 
 import io.meeds.content.news.model.News;
 import io.meeds.content.news.service.NewsService;
@@ -41,6 +43,9 @@ public class NewsPageAttachmentPlugin extends AttachmentPlugin {
 
   @Autowired
   private NewsService        newsService;
+
+  @Autowired
+  private NoteService        noteService;
 
   public static final String OBJECT_TYPE = "articlePage";
 
@@ -57,7 +62,11 @@ public class NewsPageAttachmentPlugin extends AttachmentPlugin {
   @Override
   public boolean hasAccessPermission(Identity identity, String articleId) throws ObjectNotFoundException {
     News news = newsService.getNewsArticleById(articleId);
-    return news != null && newsService.canViewNews(news, identity.getUserId());
+    if (news == null) {
+      Page note = getKeptNote(articleId, identity);
+      return note != null && note.isCanView();
+    }
+    return newsService.canViewNews(news, identity.getUserId());
   }
 
   @Override
@@ -68,7 +77,11 @@ public class NewsPageAttachmentPlugin extends AttachmentPlugin {
     } catch (IllegalAccessException e) {
       return false;
     }
-    return news != null && news.isCanEdit();
+    if (news == null) {
+      Page note = getKeptNote(articleId, identity);
+      return note != null && note.isCanManage();
+    }
+    return news.isCanEdit();
   }
 
   @Override
@@ -80,5 +93,19 @@ public class NewsPageAttachmentPlugin extends AttachmentPlugin {
   public long getSpaceId(String articleId) throws ObjectNotFoundException {
     News news = newsService.getNewsArticleById(articleId);
     return news != null ? Long.parseLong(news.getSpaceId()) : 0;
+  }
+
+  /**
+   * An article deleted while keeping its note leaves its images and files
+   * under this object type and the page id: once the page is no longer an
+   * article, they follow the note's own rights.
+   */
+  private Page getKeptNote(String pageId, Identity identity) {
+    try {
+      Page note = noteService.getNoteById(pageId, identity);
+      return note == null || note.isDeleted() ? null : note;
+    } catch (Exception e) {
+      return null;
+    }
   }
 }
