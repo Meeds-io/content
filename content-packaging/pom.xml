@@ -29,6 +29,10 @@
   <name>Meeds - Content Addon - Packaging</name>
   <description>Content Packaging</description>
 
+  <properties>
+    <!-- Generate and publish the CycloneDX SBOM of the deliverable zip -->
+    <sbom.skip>false</sbom.skip>
+  </properties>
   <dependencies>
     <dependency>
       <groupId>io.meeds.content</groupId>
