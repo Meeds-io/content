@@ -35,15 +35,15 @@
     :width="itemWidth"
     :max-width="itemWidth"
     :min-height="itemHeight"
-    :height="itemHeight"
-    :max-height="itemHeight"
+    :height="displayDescription && 'auto' || itemHeight"
+    :max-height="!displayDescription && itemHeight || null"
     class="mx-2">
     <v-card
       :title="description || name"
       :min-width="itemWidth"
       :max-width="itemWidth"
       :min-height="itemHeight"
-      :max-height="itemHeight"
+      :max-height="!displayDescription && itemHeight || null"
       class="d-flex flex-column full-height full-width transparent border-box-sizing align-center justify-start overflow-hidden text-none"
       flat>
       <links-icon
@@ -51,11 +51,11 @@
         :icon-size="iconSize"
         :icon-url="iconUrl"
         :icon="icon"
-        :class="showName && 'pb-0 col-6 align-end' || 'col-12 align-center'"
+        :class="(showName || displayDescription) && 'pb-0 col-6 align-end' || 'col-12 align-center'"
         class="justify-center" />
       <div
         v-if="showName && name"
-        :class="!showIcon && 'pb-3 my-auto'"
+        :class="!showIcon && !displayDescription && 'pb-3 my-auto'"
         class="pt-3 px-1 full-width text-truncate-2 text-body">
         {{ showName && name || '' }}
         <v-icon
@@ -64,6 +64,12 @@
           class="icon-default-color">
           fa-external-link-alt
         </v-icon>
+      </div>
+      <div
+        v-if="displayDescription"
+        :class="!(showName && name) && 'pt-3'"
+        class="pt-1 pb-3 px-1 full-width text-wrap text-truncate-3 text-subtitle">
+        {{ description }}
       </div>
     </v-card>
   </component>
@@ -80,6 +86,10 @@ export default {
       default: null,
     },
     showName: {
+      type: Boolean,
+      default: false,
+    },
+    showDescription: {
       type: Boolean,
       default: false,
     },
@@ -137,6 +147,12 @@ export default {
     },
     isColumn() {
       return this.type === 'COLUMN';
+    },
+    isRow() {
+      return this.type === 'ROW';
+    },
+    displayDescription() {
+      return this.isRow && this.showDescription && !!this.description;
     },
   },
 };

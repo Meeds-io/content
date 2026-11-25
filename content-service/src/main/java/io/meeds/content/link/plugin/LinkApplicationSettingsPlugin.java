@@ -190,7 +190,7 @@ public class LinkApplicationSettingsPlugin implements ApplicationSettingsPlugin 
     Map<String, Object> link = new LinkedHashMap<>();
     link.put(LINK_ID, integerSchema(1, Integer.MAX_VALUE, "Id of a link the read returned, to keep it and its icon; omitted for a new link"));
     link.put(LINK_NAME, translationsSchema(MAX_TEXT_LENGTH, "Name per language tag, required in the default language"));
-    link.put(LINK_DESCRIPTION, translationsSchema(MAX_TEXT_LENGTH, "Description per language tag, shown in the COLUMN type"));
+    link.put(LINK_DESCRIPTION, translationsSchema(MAX_TEXT_LENGTH, "Description per language tag, shown in the COLUMN and ROW types"));
     link.put(LINK_URL, stringSchema("Target: an http(s) URL or a path of the platform; a stored target sent back unchanged is kept"));
     link.put(LINK_SAME_TAB, booleanSchema("Opens the link in the same tab"));
     Map<String, Object> properties = new LinkedHashMap<>();
@@ -200,7 +200,7 @@ public class LinkApplicationSettingsPlugin implements ApplicationSettingsPlugin 
     properties.put(ICON_SIZE,
                    integerSchema("Icon size in pixels, from 12 to 60; a stored size sent back unchanged is kept"));
     properties.put(SHOW_NAME, booleanSchema("Shows the link names"));
-    properties.put(SHOW_DESCRIPTION, booleanSchema("Shows the link descriptions, in the COLUMN type"));
+    properties.put(SHOW_DESCRIPTION, booleanSchema("Shows the link descriptions, in the COLUMN and ROW types"));
     properties.put(SEE_MORE, stringSchema("See more target: an http(s) URL or a path of the platform; an empty text removes it"));
     properties.put(H_ALIGN, enumSchema(enumNames(LinkAlignType.class), "Horizontal alignment"));
     properties.put(V_ALIGN, enumSchema(enumNames(LinkAlignType.class), "Vertical alignment"));
