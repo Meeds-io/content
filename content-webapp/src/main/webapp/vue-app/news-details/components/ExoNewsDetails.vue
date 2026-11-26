@@ -183,7 +183,7 @@ export default {
         hour: '2-digit',
         minute: '2-digit',
       },
-      iframelyOriginRegex: /^https?:\/\/if-cdn.com/,
+      iframelyOriginRegex: /^https?:\/\/if-cdn\.com$/,
       isPublishing: false,
       allowedTargets: [],
       articlePage: null,
@@ -538,11 +538,28 @@ export default {
       }
     },
     handleIframelyMessage(event) {
-      if (this.iframelyOriginRegex.exec(event.origin)) {
-        const data = JSON.parse(event.data);
-        if (data.method === 'open-href') {
-          window.open(data.href, '_blank');
-        }
+      if (!this.iframelyOriginRegex.test(event.origin)) {
+        return;
+      }
+      let data = null;
+      try {
+        data = JSON.parse(event.data);
+      } catch (e) {
+        return;
+      }
+      if (data && typeof data === 'object' && data.method === 'open-href' && this.isWebUrl(data.href)) {
+        window.open(data.href, '_blank', 'noopener,noreferrer');
+      }
+    },
+    isWebUrl(href) {
+      if (typeof href !== 'string') {
+        return false;
+      }
+      try {
+        const url = new URL(href, window.location.href);
+        return url.protocol === 'http:' || url.protocol === 'https:';
+      } catch (e) {
+        return false;
       }
     },
   }
