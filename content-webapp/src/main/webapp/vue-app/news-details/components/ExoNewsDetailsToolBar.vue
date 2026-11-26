@@ -63,6 +63,7 @@
         bottom>
         <template #activator="{ on }">
           <v-btn
+            id="newsOpenInNotesLink"
             v-on="on"
             :href="articlePageUrl"
             :aria-label="$t('content.article.open.in.notes')"
