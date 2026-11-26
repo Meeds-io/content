@@ -180,6 +180,13 @@ public class NewsListHiddenApplicationPluginTest {
     lenient().when(cmsService.hasAccessPermission(reader, SETTING_TYPE, NAME)).thenReturn(true);
 
     assertThrows(IllegalAccessException.class, () -> plugin.saveHideAllowed(NAME, true, reader));
+    verify(hiddenApplicationService, never()).setHideAllowed(anyString(), anyString(), anyBoolean());
+  }
+
+  @Test
+  public void saveHideAllowedIsRefusedWithoutAUser() {
+    lenient().when(cmsService.hasEditPermission(any(), eq(SETTING_TYPE), eq(NAME))).thenReturn(true);
+
     assertThrows(IllegalAccessException.class, () -> plugin.saveHideAllowed(NAME, false, null));
     verify(hiddenApplicationService, never()).setHideAllowed(anyString(), anyString(), anyBoolean());
   }
