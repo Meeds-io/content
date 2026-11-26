@@ -48,6 +48,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.LocaleUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -148,6 +149,10 @@ public class NewsService {
 
   /** The Constant POSTED. */
   public static final String       POSTED                                 = "posted";
+
+  public static final String       MISSING_DRAFT_ID_MESSAGE               = "news.create.missingDraftId";
+
+  public static final String       MISSING_PUBLICATION_STATE_MESSAGE      = "news.create.missingPublicationState";
 
   /** The Constant DRAFT. */
   public static final String       DRAFT                                  = "draft";
@@ -250,6 +255,28 @@ public class NewsService {
   private UserACL                  userAcl;
 
   /**
+   * Checks the fields a news creation request cannot do without, before
+   * anything is created.
+   *
+   * @param news the news to create
+   * @throws IllegalArgumentException when the publication state is missing,
+   *           or the draft id of a posted article is missing, is not a number
+   *           or does not fit in a long
+   */
+  public static void validateNewsToCreate(News news) {
+    if (StringUtils.isBlank(news.getPublicationState())) {
+      throw new IllegalArgumentException(MISSING_PUBLICATION_STATE_MESSAGE);
+    }
+    if (POSTED.equals(news.getPublicationState()) && news.getProperties() == null && !isDraftId(news.getId())) {
+      throw new IllegalArgumentException(MISSING_DRAFT_ID_MESSAGE);
+    }
+  }
+
+  private static boolean isDraftId(String id) {
+    return StringUtils.isNumeric(id) && NumberUtils.toLong(id, -1L) >= 0;
+  }
+
+  /**
    * Create and publish a News containing the data. If the given News has an id
    * and that a draft already exists with this id, the draft is updated and
    * published.
@@ -260,6 +287,7 @@ public class NewsService {
    * @throws Exception when error
    */
   public News createNews(News news, Identity currentIdentity) throws Exception {
+    validateNewsToCreate(news);
     checkPublicationState(news.getPublicationState(), null);
     Space space = spaceService.getSpaceById(news.getSpaceId());
     try {
@@ -356,6 +384,18 @@ public class NewsService {
     }
     if (PAGE_REFERENCE.name().equalsIgnoreCase(newsUpdateType) && !canReferToNote(news, updaterIdentity)) {
       throw new IllegalAccessException("User " + updater + " is not authorized to refer or derefer news");
+    }
+    // A state the request leaves out (absent) is the state of what gets
+    // written: a draft for the draft object types, the stored one for an
+    // article (blank when it has none, so that nothing is stored and
+    // canViewNews keeps reading it as it does); a blank one keeps its own path
+    if (news.getPublicationState() == null) {
+      if (NewsObjectType.DRAFT.name().equalsIgnoreCase(newsObjectType)
+          || LATEST_DRAFT.name().equalsIgnoreCase(newsObjectType)) {
+        news.setPublicationState(DRAFT);
+      } else {
+        news.setPublicationState(StringUtils.defaultString(originalNews.getPublicationState()));
+      }
     }
     // An unchanged stored state sent back by the client is accepted
     checkPublicationState(news.getPublicationState(), originalNews.getPublicationState());
