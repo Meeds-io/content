@@ -24,6 +24,7 @@ import java.util.List;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -61,6 +62,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @Tag(name = "/content/rest/links", description = "Managing links for Links Application")
 public class LinkRest {
 
+  // The response depends on the reader: a shared cache must not store it,
+  // while the reader's browser keeps revalidating it with its ETag
+  private static final CacheControl PRIVATE_REVALIDATED = CacheControl.noCache().cachePrivate();
+
   @Autowired
   private LinkService linkService;
 
@@ -86,9 +91,13 @@ public class LinkRest {
       LinkSettingRestEntity linkSettingEntity = getLinkSettingEntity(linkSetting, lang);
       String eTag = String.valueOf(linkSettingEntity.hashCode());
       if (request.checkNotModified(eTag)) {
-        return ResponseEntity.status(HttpStatus.NOT_MODIFIED).build();
+        return ResponseEntity.status(HttpStatus.NOT_MODIFIED)
+                             .cacheControl(PRIVATE_REVALIDATED)
+                             .eTag(eTag)
+                             .build();
       } else {
         return ResponseEntity.ok()
+                             .cacheControl(PRIVATE_REVALIDATED)
                              .eTag(eTag)
                              .body(linkSettingEntity);
       }

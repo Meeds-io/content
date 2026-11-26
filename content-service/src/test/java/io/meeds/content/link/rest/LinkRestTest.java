@@ -29,6 +29,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.io.File;
@@ -180,10 +181,12 @@ public class LinkRestTest extends AbstractSpringConfigurationTest { // NOSONAR
     registerInternalUser(USERNAME);
     response = getLink(true, false);
     response.andExpect(status().isOk());
+    response.andExpect(header().string("Cache-Control", "no-cache, private"));
 
     String eTagValue = getETagValue(response);
     response = getLinkWithETag(eTagValue, true, false);
     response.andExpect(status().isNotModified());
+    response.andExpect(header().string("Cache-Control", "no-cache, private"));
 
     Thread.sleep(2); // NOSONAR wait for 10 milliseconds to have a different
     // modification timestamp after saving the link setting
