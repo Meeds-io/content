@@ -152,29 +152,95 @@ public class LinkServiceTest extends AbstractSpringConfigurationTest { // NOSONA
     navigationService.saveNode(root, null);
 
     LinkSetting linkSetting = linkService.initLinkSetting("linkAvailabilitySetting", homePage, 0);
+    org.exoplatform.services.security.Identity administrator = registerAdministratorUser("availabilityAdmin");
 
-    assertTrue(linkService.isLinkTargetAvailable(linkSetting, null));
-    assertTrue(linkService.isLinkTargetAvailable(linkSetting, "https://meeds.io/test/availabilityhome/addon"));
-    assertTrue(linkService.isLinkTargetAvailable(linkSetting, "/portal/test"));
-    assertTrue(linkService.isLinkTargetAvailable(linkSetting, "/portal/notASite/availabilityhome/addon"));
-    assertTrue(linkService.isLinkTargetAvailable(linkSetting, "/portal/test/availabilityhome/settings"));
+    assertTrue(linkService.isLinkTargetAvailable(linkSetting, null, administrator));
+    assertTrue(linkService.isLinkTargetAvailable(linkSetting, "https://meeds.io/test/availabilityhome/addon", administrator));
+    assertTrue(linkService.isLinkTargetAvailable(linkSetting, "/portal/test", administrator));
+    assertTrue(linkService.isLinkTargetAvailable(linkSetting, "/portal/notASite/availabilityhome/addon", administrator));
+    assertTrue(linkService.isLinkTargetAvailable(linkSetting, "/portal/test/availabilityhome/settings", administrator));
     assertTrue("A link to the links page itself is available",
-               linkService.isLinkTargetAvailable(linkSetting, "/portal/test/availabilityhome"));
-    assertTrue(linkService.isLinkTargetAvailable(linkSetting, "/portal/test/availabilityhome/settings#display"));
-    assertTrue(linkService.isLinkTargetAvailable(linkSetting, "/portal/test/availabilityhome/settings?tab=1"));
+               linkService.isLinkTargetAvailable(linkSetting, "/portal/test/availabilityhome", administrator));
+    assertTrue(linkService.isLinkTargetAvailable(linkSetting, "/portal/test/availabilityhome/settings#display", administrator));
+    assertTrue(linkService.isLinkTargetAvailable(linkSetting, "/portal/test/availabilityhome/settings?tab=1", administrator));
     assertTrue("A path parameter after a node that isn't the links page is kept",
-               linkService.isLinkTargetAvailable(linkSetting, "/portal/test/availabilityhome/other/123"));
+               linkService.isLinkTargetAvailable(linkSetting, "/portal/test/availabilityhome/other/123", administrator));
 
     assertFalse("A node whose page isn't imported is unavailable",
-                linkService.isLinkTargetAvailable(linkSetting, "/portal/test/availabilityhome/addon"));
+                linkService.isLinkTargetAvailable(linkSetting, "/portal/test/availabilityhome/addon", administrator));
     assertFalse("A node without page is unavailable",
-                linkService.isLinkTargetAvailable(linkSetting, "/portal/test/availabilityhome/category"));
+                linkService.isLinkTargetAvailable(linkSetting, "/portal/test/availabilityhome/category", administrator));
     assertFalse("A path parameter after a node whose page isn't imported is unavailable",
-                linkService.isLinkTargetAvailable(linkSetting, "/portal/test/availabilityhome/addon/123"));
+                linkService.isLinkTargetAvailable(linkSetting, "/portal/test/availabilityhome/addon/123", administrator));
     assertFalse("A path matching no node is unavailable",
-                linkService.isLinkTargetAvailable(linkSetting, "/portal/test/missing/models"));
+                linkService.isLinkTargetAvailable(linkSetting, "/portal/test/missing/models", administrator));
     assertFalse("A path leading back to the links page is unavailable",
-                linkService.isLinkTargetAvailable(linkSetting, "/portal/test/availabilityhome/ai/models"));
+                linkService.isLinkTargetAvailable(linkSetting, "/portal/test/availabilityhome/ai/models", administrator));
+  }
+
+  @Test
+  public void testIsLinkTargetAvailableRevealsNothingOfASiteTheReaderCannotAccess() {
+    String homePage = createPage("restrictedAvailabilityHome", UserACL.EVERYONE, ADMINISTRATORS_GROUP);
+    SiteKey siteKey = SiteKey.portal("restrictedAvailability");
+    if (layoutService.getPortalConfig(siteKey) == null) {
+      PortalConfig portal = new PortalConfig();
+      portal.setType(siteKey.getTypeName());
+      portal.setName(siteKey.getName());
+      portal.setLocale("en");
+      portal.setLabel("Restricted");
+      portal.setAccessPermissions(new String[] { ADMINISTRATORS_GROUP });
+      layoutService.create(portal);
+    }
+    NavigationService navigationService = getContainer().getComponentInstanceOfType(NavigationService.class);
+    if (navigationService.loadNavigation(siteKey) == null) {
+      navigationService.saveNavigation(new NavigationContext(siteKey, new NavigationState(0)));
+    }
+    NodeContext<NodeContext<?>> root = navigationService.loadNode(NodeModel.SELF_MODEL,
+                                                                  navigationService.loadNavigation(siteKey),
+                                                                  Scope.ALL,
+                                                                  null);
+    root.add(null, "addon").setState(new NodeState.Builder().pageRef(new PageKey(siteKey, "notImportedPage")).build());
+    navigationService.saveNode(root, null);
+    LinkSetting linkSetting = linkService.initLinkSetting("linkRestrictedAvailabilitySetting", homePage, 0);
+
+    assertFalse("An administrator, who can access the site, learns that the page doesn't exist",
+                linkService.isLinkTargetAvailable(linkSetting,
+                                                  "/portal/restrictedAvailability/addon",
+                                                  registerAdministratorUser("restrictedAvailabilityAdmin")));
+    assertTrue("A user who can't access the site learns nothing of its nodes and pages",
+               linkService.isLinkTargetAvailable(linkSetting,
+                                                 "/portal/restrictedAvailability/addon",
+                                                 registerInternalUser("restrictedAvailabilityUser")));
+    assertTrue("A guest learns nothing of the site either",
+               linkService.isLinkTargetAvailable(linkSetting, "/portal/restrictedAvailability/addon", null));
+
+    String adminPage = createPage("restrictedAvailabilityAdminPage", ADMINISTRATORS_GROUP, ADMINISTRATORS_GROUP);
+    SiteKey openSiteKey = SiteKey.portal("test");
+    if (navigationService.loadNavigation(openSiteKey) == null) {
+      navigationService.saveNavigation(new NavigationContext(openSiteKey, new NavigationState(0)));
+    }
+    NodeContext<NodeContext<?>> openRoot = navigationService.loadNode(NodeModel.SELF_MODEL,
+                                                                      navigationService.loadNavigation(openSiteKey),
+                                                                      Scope.ALL,
+                                                                      null);
+    openRoot.add(null, "restrictedadmin").setState(new NodeState.Builder().pageRef(PageKey.parse(adminPage)).build());
+    navigationService.saveNode(openRoot, null);
+
+    assertTrue("An administrator, who can open the page, sees the link",
+               linkService.isLinkTargetAvailable(linkSetting,
+                                                 "/portal/test/restrictedadmin",
+                                                 registerAdministratorUser("restrictedAvailabilityAdmin")));
+    assertFalse("A page the reader can't open counts as a page that doesn't exist",
+                linkService.isLinkTargetAvailable(linkSetting,
+                                                  "/portal/test/restrictedadmin",
+                                                  registerInternalUser("restrictedAvailabilityUser")));
+    assertEquals("A node the reader can't open and a node that doesn't exist give the same answer",
+                 linkService.isLinkTargetAvailable(linkSetting,
+                                                   "/portal/test/restrictedmissing",
+                                                   registerInternalUser("restrictedAvailabilityUser")),
+                 linkService.isLinkTargetAvailable(linkSetting,
+                                                   "/portal/test/restrictedadmin",
+                                                   registerInternalUser("restrictedAvailabilityUser")));
   }
 
   @Test

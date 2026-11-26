@@ -45,7 +45,9 @@ import org.exoplatform.commons.file.model.FileItem;
 import org.exoplatform.commons.file.services.FileService;
 import org.exoplatform.commons.file.services.FileStorageException;
 import org.exoplatform.container.PortalContainer;
+import org.exoplatform.portal.config.UserACL;
 import org.exoplatform.portal.config.model.Page;
+import org.exoplatform.portal.config.model.PortalConfig;
 import org.exoplatform.portal.mop.SiteKey;
 import org.exoplatform.portal.mop.navigation.GenericScope;
 import org.exoplatform.portal.mop.navigation.NavigationContext;
@@ -136,6 +138,9 @@ public class LinkService {
 
   @Autowired
   protected NavigationService   navigationService;
+
+  @Autowired
+  protected UserACL             userACL;
 
   /**
    * @param linkSettingName {@link LinkSetting} unique name
@@ -522,13 +527,18 @@ public class LinkService {
    * the beginning of its path matches and the deepest matching node is the page
    * that displays the links itself, so that the link would lead back to it.
    * Any other link (external, relative, to a group site...) is considered
-   * available.
+   * available, and so is a link to a site the reader can't access, so that
+   * the answer reveals nothing of that site's nodes and pages. A node whose
+   * page the reader can't access counts as a node that doesn't exist, so that
+   * the answer reveals nothing of it either.
    *
    * @param linkSetting {@link LinkSetting} displaying the link
    * @param url link target url
+   * @param identity User Acl {@link Identity} reading the link, null for a
+   *          guest
    * @return false if the link leads to a page that doesn't exist, else true
    */
-  public boolean isLinkTargetAvailable(LinkSetting linkSetting, String url) {
+  public boolean isLinkTargetAvailable(LinkSetting linkSetting, String url, Identity identity) {
     String path = StringUtils.substringBefore(StringUtils.substringBefore(StringUtils.trim(url), "#"), "?");
     String prefix = "/" + PortalContainer.getCurrentPortalContainerName() + "/";
     if (StringUtils.isBlank(path) || !path.startsWith(prefix)) {
@@ -539,7 +549,8 @@ public class LinkService {
       return true;
     }
     SiteKey siteKey = SiteKey.portal(pathParts[0]);
-    if (layoutService.getPortalConfig(siteKey) == null) {
+    PortalConfig portalConfig = layoutService.getPortalConfig(siteKey);
+    if (portalConfig == null || !userACL.hasAccessPermission(portalConfig, identity)) {
       return true;
     }
     NavigationContext navigation = navigationService.loadNavigation(siteKey);
@@ -554,7 +565,7 @@ public class LinkService {
     int matchedParts = 0;
     while (node != null && matchedParts < nodePath.length) {
       NodeContext<NodeContext<?>> child = node.get(nodePath[matchedParts]);
-      if (child == null) {
+      if (child == null || !canAccessNodePage(child, identity)) {
         break;
       }
       node = child;
@@ -563,14 +574,24 @@ public class LinkService {
     if (node == null || matchedParts == 0) {
       return false;
     }
-    // A node imported or saved with a reference to a page that doesn't exist is
-    // stored without page (NavigationStorageImpl#buildNodeEntity)
+    // A node has no page when it was created or imported with a reference to a
+    // page that doesn't exist (NavigationStorageImpl#buildNodeEntity), or when
+    // none of its page's profiles is active (NavigationStorageImpl#buildNodeData)
     PageKey pageKey = node.getState() == null ? null : node.getState().getPageRef();
     if (pageKey == null) {
       return false;
     } else {
       return matchedParts == nodePath.length || !StringUtils.equals(pageKey.format(), linkSetting.getPageReference());
     }
+  }
+
+  private boolean canAccessNodePage(NodeContext<?> node, Identity identity) {
+    PageKey pageKey = node.getState() == null ? null : node.getState().getPageRef();
+    if (pageKey == null) {
+      return true;
+    }
+    Page page = layoutService.getPage(pageKey.format());
+    return page == null || userACL.hasAccessPermission(page, identity);
   }
 
   private void processNewLinks(String linkSettingName, List<Link> existingLinks, List<Link> links) {

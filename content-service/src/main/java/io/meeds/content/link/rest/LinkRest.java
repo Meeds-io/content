@@ -41,6 +41,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import org.exoplatform.commons.exception.ObjectNotFoundException;
 import org.exoplatform.commons.file.model.FileItem;
+import org.exoplatform.services.security.Identity;
 import org.exoplatform.social.rest.api.RestUtils;
 
 import io.meeds.content.link.model.Link;
@@ -181,8 +182,9 @@ public class LinkRest {
   private LinkSettingRestEntity getLinkSettingEntity(LinkSetting linkSetting, String lang) {
     List<Link> links = linkService.getLinks(linkSetting.getName(), lang, true);
     LinkSettingRestEntity linkSettingEntity = LinkEntityBuilder.build(linkSetting, links);
+    Identity identity = RestUtils.getCurrentUserAclIdentity();
     linkSettingEntity.getLinks()
-                     .forEach(link -> link.setUnavailable(!linkService.isLinkTargetAvailable(linkSetting, link.getUrl())));
+                     .forEach(link -> link.setUnavailable(!linkService.isLinkTargetAvailable(linkSetting, link.getUrl(), identity)));
     return linkSettingEntity;
   }
 

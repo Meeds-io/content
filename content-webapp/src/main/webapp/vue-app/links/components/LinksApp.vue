@@ -57,10 +57,15 @@ export default {
       return this.$root.links?.length;
     },
     canView() {
-      // An editor always sees the application, to fill it or to fix links that
-      // lead to pages that don't exist on this instance; other users see it
-      // only while one of its links is available
-      return this.$root.initialized && (this.$root.hasLinks || this.canEdit);
+      // On the page, the application shows while one of its links is
+      // available, to editors too. The page layout editor always shows it,
+      // with every link (main.js), so that an editor can fix the links that
+      // lead to pages that don't exist on this instance, and an editor also
+      // sees an application with no link yet, to fill it
+      return this.$root.initialized
+        && (this.$root.hasLinks
+          || this.$root.inLayoutEditor
+          || (this.canEdit && !this.$root.settings?.links?.length));
     },
     canEdit() {
       return !this.previewMode && this.$root.canEdit;
@@ -79,6 +84,10 @@ export default {
     document.addEventListener('cms-preview-mode', this.switchToPreview);
     document.addEventListener('cms-edit-mode', this.switchToEdit);
     this.$root.$on('links-refresh', this.retrieveSettings);
+  },
+  mounted() {
+    const element = this.$el?.closest ? this.$el : this.$el?.parentElement;
+    this.$root.inLayoutEditor = !!element?.closest?.('.layout-application[data-storage-id]');
   },
   beforeDestroy() {
     this.$root.$off('links-refresh', this.retrieveSettings);

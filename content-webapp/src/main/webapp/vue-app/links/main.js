@@ -43,10 +43,13 @@ export function init(appId, name, canEdit) {
           language: lang,
           defaultLanguage: eXo.env.portal.defaultLanguage,
           initialized: false,
+          inLayoutEditor: false,
         },
         computed: {
           links() {
-            return this.settings?.links?.filter?.(link => !link.unavailable) || null;
+            // The page layout editor lists every link, so that an editor can fix
+            // the ones that lead to pages that don't exist on this instance
+            return (this.inLayoutEditor ? this.settings?.links : this.settings?.links?.filter?.(link => !link.unavailable)) || null;
           },
           hasLinks() {
             return this.links?.length;
