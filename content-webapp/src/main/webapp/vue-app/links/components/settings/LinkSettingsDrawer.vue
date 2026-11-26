@@ -203,7 +203,7 @@
                         hide-details />
                     </div>
                     <div
-                      v-if="settings?.type === 'COLUMN'"
+                      v-if="settings?.type === 'COLUMN' || settings?.type === 'ROW'"
                       class="d-flex mb-4">
                       <div class="d-flex align-center flex-grow-1 flex-shrink-1 text-truncate text-color">
                         {{ $t('links.label.showDescription') }}
