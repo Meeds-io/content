@@ -58,6 +58,9 @@
       :ok-label="$t('news.button.ok')"
       :cancel-label="$t('news.button.cancel')"
       @ok="deleteNews" />
+    <news-delete-note-dialog
+      v-if="currentUser"
+      ref="deleteNoteDialog" />
     <note-publication-drawer
       ref="publicationDrawer"
       :is-publishing="isPublishing"
@@ -187,7 +190,8 @@ export default {
       isPublishing: false,
       allowedTargets: [],
       articlePage: null,
-      deleteInterceptors: []
+      deleteInterceptors: [],
+      keepNote: false,
     };
   },
   computed: {
@@ -380,6 +384,17 @@ export default {
       window.open(editUrl, '_target');
     },
     async deleteConfirmDialog() {
+      this.keepNote = false;
+      // The article's page is the note it was published from, or the note it
+      // is referred as: ask first what becomes of it, closing abandons. Same
+      // rule as NewsService#isLinkedToNote, which the content list reads
+      if (this.localNews?.fromExternalPage || this.localNews?.referred) {
+        const choice = await this.$refs.deleteNoteDialog.open();
+        if (!choice) {
+          return;
+        }
+        this.keepNote = choice === 'keep';
+      }
       const shouldContinue = await this.deleteInterceptors.reduce(
         (promise, interceptor) => promise.then(
           (canContinue) => (canContinue ? interceptor({ content: this.localNews }) : false)
@@ -394,7 +409,7 @@ export default {
     deleteNews() {
       const deleteDelay = 6;
       const redirectionTime = 6100;
-      this.$newsServices.deleteNews(this.newsId, this.$newsConstants.newsObjectType.ARTICLE, deleteDelay)
+      this.$newsServices.deleteNews(this.newsId, this.$newsConstants.newsObjectType.ARTICLE, deleteDelay, this.keepNote)
         .then(() => {
           this.$root.$emit('confirm-news-deletion', this.localNews);
           const clickMessage = this.$t('news.details.undoDelete');

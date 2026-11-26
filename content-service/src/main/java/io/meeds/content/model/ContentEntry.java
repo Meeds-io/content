@@ -108,4 +108,11 @@ public class ContentEntry {
 
   private boolean      favorite;
 
+  /**
+   * True for a news article whose page is a note of its space: published from
+   * that note, or referred in the notes tree. Its deletion asks whether to keep
+   * the note.
+   */
+  private boolean      linkedToNote;
+
 }

@@ -165,10 +165,13 @@ public class ContentRest {
                                             String contentType,
                                             @Parameter(description = "Content status, used to resolve which news object type to delete")
                                             @RequestParam(name = "status", required = false)
-                                            String status) {
+                                            String status,
+                                            @Parameter(description = "true to keep the note a news article is linked to (published from it, or referred in the notes tree)")
+                                            @RequestParam(name = "keepNote", required = false)
+                                            boolean keepNote) {
     Identity currentIdentity = ConversationState.getCurrent().getIdentity();
     try {
-      contentService.deleteContent(id, contentType, status, currentIdentity);
+      contentService.deleteContent(id, contentType, status, keepNote, currentIdentity);
       return ResponseEntity.ok().build();
     } catch (ObjectNotFoundException e) {
       return ResponseEntity.notFound().build();

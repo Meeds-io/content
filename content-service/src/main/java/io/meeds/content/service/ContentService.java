@@ -198,11 +198,19 @@ public class ContentService {
   }
 
   public void deleteContent(String id, String contentType, String status, Identity currentIdentity) throws Exception {
+    deleteContent(id, contentType, status, false, currentIdentity);
+  }
+
+  public void deleteContent(String id,
+                            String contentType,
+                            String status,
+                            boolean keepNote,
+                            Identity currentIdentity) throws Exception {
     ContentTypePlugin plugin = contentTypePluginsByType.get(contentType);
     if (plugin == null) {
       throw new ObjectNotFoundException("Content type '" + contentType + "' is not registered");
     }
-    plugin.delete(id, status, currentIdentity);
+    plugin.delete(id, status, keepNote, currentIdentity);
   }
 
   private Set<String> resolveCategoryLinkedIds(ContentFilter filter, List<Long> categoryIds) {

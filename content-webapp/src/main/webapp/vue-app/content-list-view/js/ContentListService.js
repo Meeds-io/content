@@ -95,11 +95,14 @@ export function saveSettings(saveSettingsURL, settings) {
   });
 }
 
-export function deleteContent(item) {
+export function deleteContent(item, keepNote) {
   const params = new URLSearchParams();
   params.set('contentType', item.contentType);
   if (item.draft) {
     params.set('status', 'draft');
+  }
+  if (keepNote) {
+    params.set('keepNote', 'true');
   }
   return fetch(`${CONTENT_LIST_API}/${item.id}?${params.toString()}`, {
     method: 'DELETE',

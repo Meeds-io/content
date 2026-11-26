@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
@@ -150,34 +151,42 @@ public class ContentRestTest {
 
   @Test
   public void testDeleteContentSuccess() throws Exception {
-    ResponseEntity<Void> response = contentRest.deleteContent("1", "news", "published");
+    ResponseEntity<Void> response = contentRest.deleteContent("1", "news", "published", false);
 
     assertTrue(response.getStatusCode().isSameCodeAs(HttpStatusCode.valueOf(200)));
   }
 
   @Test
-  public void testDeleteContentNotFound() throws Exception {
-    doThrow(new ObjectNotFoundException("not found")).when(contentService).deleteContent(eq("1"), eq("news"), eq("published"), any());
+  public void testDeleteContentKeepingItsNote() throws Exception {
+    ResponseEntity<Void> response = contentRest.deleteContent("1", "news", "published", true);
 
-    ResponseEntity<Void> response = contentRest.deleteContent("1", "news", "published");
+    assertTrue(response.getStatusCode().isSameCodeAs(HttpStatusCode.valueOf(200)));
+    verify(contentService).deleteContent(eq("1"), eq("news"), eq("published"), eq(true), any());
+  }
+
+  @Test
+  public void testDeleteContentNotFound() throws Exception {
+    doThrow(new ObjectNotFoundException("not found")).when(contentService).deleteContent(eq("1"), eq("news"), eq("published"), eq(false), any());
+
+    ResponseEntity<Void> response = contentRest.deleteContent("1", "news", "published", false);
 
     assertTrue(response.getStatusCode().isSameCodeAs(HttpStatusCode.valueOf(404)));
   }
 
   @Test
   public void testDeleteContentForbidden() throws Exception {
-    doThrow(new IllegalAccessException("denied")).when(contentService).deleteContent(eq("1"), eq("news"), eq("published"), any());
+    doThrow(new IllegalAccessException("denied")).when(contentService).deleteContent(eq("1"), eq("news"), eq("published"), eq(false), any());
 
-    ResponseEntity<Void> response = contentRest.deleteContent("1", "news", "published");
+    ResponseEntity<Void> response = contentRest.deleteContent("1", "news", "published", false);
 
     assertTrue(response.getStatusCode().isSameCodeAs(HttpStatusCode.valueOf(403)));
   }
 
   @Test
   public void testDeleteContentInternalError() throws Exception {
-    doThrow(new RuntimeException("boom")).when(contentService).deleteContent(eq("1"), eq("news"), eq("published"), any());
+    doThrow(new RuntimeException("boom")).when(contentService).deleteContent(eq("1"), eq("news"), eq("published"), eq(false), any());
 
-    ResponseEntity<Void> response = contentRest.deleteContent("1", "news", "published");
+    ResponseEntity<Void> response = contentRest.deleteContent("1", "news", "published", false);
 
     assertTrue(response.getStatusCode().isSameCodeAs(HttpStatusCode.valueOf(500)));
   }

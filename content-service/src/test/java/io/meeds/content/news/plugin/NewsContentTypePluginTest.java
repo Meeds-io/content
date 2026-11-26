@@ -28,6 +28,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
@@ -364,13 +365,66 @@ public class NewsContentTypePluginTest {
   @Test
   public void testDeleteArticle() throws Exception {
     plugin.delete("1", ContentUtils.STATUS_PUBLISHED, currentIdentity);
-    verify(newsService).deleteNews("1", currentIdentity, NewsUtils.NewsObjectType.ARTICLE.name());
+    verify(newsService).deleteNews("1", currentIdentity, NewsUtils.NewsObjectType.ARTICLE.name(), false);
+  }
+
+  @Test
+  public void testDeleteArticleKeepingItsNote() throws Exception {
+    plugin.delete("1", ContentUtils.STATUS_PUBLISHED, true, currentIdentity);
+    verify(newsService).deleteNews("1", currentIdentity, NewsUtils.NewsObjectType.ARTICLE.name(), true);
+  }
+
+  @Test
+  public void testSearchFlagsAnArticleLinkedToANote() throws Exception {
+    when(newsService.isLinkedToNote(any())).thenCallRealMethod();
+    ContentFilter filter = new ContentFilter();
+    filter.setStatus(ContentUtils.STATUS_PUBLISHED);
+    News publishedFromNote = new News();
+    publishedFromNote.setId("6");
+    publishedFromNote.setFromExternalPage(true);
+    News referred = new News();
+    referred.setId("7");
+    referred.setReferred(true);
+    News notLinked = new News();
+    notLinked.setId("8");
+    when(newsService.getNews(any(NewsFilter.class), eq(currentIdentity))).thenReturn(Arrays.asList(publishedFromNote,
+                                                                                                    referred,
+                                                                                                    notLinked));
+
+    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null);
+
+    assertEquals(3, entries.size());
+    assertTrue(entries.get(0).isLinkedToNote());
+    assertTrue(entries.get(1).isLinkedToNote());
+    assertFalse(entries.get(2).isLinkedToNote());
+  }
+
+  /**
+   * The stub answers as the service does, so that removing the draft guard
+   * flags this draft: unused while the guard holds, hence lenient.
+   */
+  @Test
+  public void testSearchNeverFlagsADraftAsLinkedToANote() throws Exception {
+    lenient().when(newsService.isLinkedToNote(any())).thenCallRealMethod();
+    ContentFilter filter = new ContentFilter();
+    filter.setStatus(ContentUtils.STATUS_DRAFT);
+    News draft = new News();
+    draft.setId("9");
+    draft.setPublicationState(NewsService.DRAFT);
+    draft.setFromExternalPage(true);
+    when(newsService.getNews(any(NewsFilter.class), eq(currentIdentity))).thenReturn(Arrays.asList(draft));
+
+    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null);
+
+    assertEquals(1, entries.size());
+    assertTrue(entries.get(0).isDraft());
+    assertFalse(entries.get(0).isLinkedToNote());
   }
 
   @Test
   public void testDeleteDraft() throws Exception {
     plugin.delete("1", ContentUtils.STATUS_DRAFT, currentIdentity);
-    verify(newsService).deleteNews("1", currentIdentity, NewsUtils.NewsObjectType.LATEST_DRAFT.name());
+    verify(newsService).deleteNews("1", currentIdentity, NewsUtils.NewsObjectType.LATEST_DRAFT.name(), false);
   }
 
 }

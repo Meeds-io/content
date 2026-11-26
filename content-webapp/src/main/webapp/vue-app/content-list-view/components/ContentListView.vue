@@ -110,6 +110,7 @@
           :ok-label="$t('content.list.item.delete.confirm.ok')"
           :cancel-label="$t('content.list.item.delete.confirm.cancel')"
           @ok="deleteConfirmed" />
+        <news-delete-note-dialog ref="deleteNoteDialog" />
       </v-main>
     </v-app>
   </v-hover>
@@ -173,6 +174,7 @@ export default {
       loading: true,
       loadingMore: false,
       itemToDelete: null,
+      keepNote: false,
       hover: false,
       filterExpanded: false,
       appliedSearchText: null,
@@ -294,7 +296,18 @@ export default {
         })
         .finally(() => this.loadingMore = false);
     },
-    confirmDelete(item) {
+    async confirmDelete(item) {
+      this.itemToDelete = null;
+      this.keepNote = false;
+      // A news article linked to a note: ask first what becomes of the note,
+      // closing abandons
+      if (item?.linkedToNote) {
+        const choice = await this.$refs.deleteNoteDialog.open();
+        if (!choice) {
+          return;
+        }
+        this.keepNote = choice === 'keep';
+      }
       this.itemToDelete = item;
       this.$refs.deleteConfirmDialog.open();
     },
@@ -303,7 +316,7 @@ export default {
       if (!item) {
         return;
       }
-      return this.$contentListService.deleteContent(item)
+      return this.$contentListService.deleteContent(item, this.keepNote)
         .then(() => this.items = this.items.filter(contentItem => contentItem.id !== item.id || contentItem.contentType !== item.contentType))
         .catch(() => document.dispatchEvent(new CustomEvent('alert-message', {
           detail: {

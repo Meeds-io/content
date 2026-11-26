@@ -33,6 +33,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.lenient;
@@ -835,11 +836,11 @@ public class NewsRestTest {
     lenient().when(spaceService.isSuperManager(JOHN)).thenReturn(true);
 
     // When
-    Response response = newsRestController.deleteNews("1", ARTICLE.name().toLowerCase(), 0L);
+    Response response = newsRestController.deleteNews("1", ARTICLE.name().toLowerCase(), 0L, false);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-    verify(newsService).deleteNews("1", currentIdentity, ARTICLE.name().toLowerCase());
+    verify(newsService).deleteNews("1", currentIdentity, ARTICLE.name().toLowerCase(), false);
   }
 
   @Test
@@ -851,8 +852,8 @@ public class NewsRestTest {
     lenient().when(newsService.getNewsById(anyString(), any(), anyBoolean(), anyString())).thenReturn(news);
 
     assertEquals(Response.Status.OK.getStatusCode(),
-                 newsRestController.deleteNews("1", ARTICLE.name().toLowerCase(), 3600L).getStatus());
-    verify(newsService, never()).deleteNews(anyString(), any(), anyString());
+                 newsRestController.deleteNews("1", ARTICLE.name().toLowerCase(), 3600L, false).getStatus());
+    verify(newsService, never()).deleteNews(anyString(), any(), anyString(), anyBoolean());
 
     long stopStart = System.nanoTime();
     newsRestController.destroy();
@@ -860,9 +861,27 @@ public class NewsRestTest {
     // The stop drops the waiting deletion from the executor rather than waiting
     // for its delay up to the stop's timeout
     assertTrue(TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - stopStart) < 5);
-    verify(newsService).deleteNews("1", currentIdentity, ARTICLE.name().toLowerCase());
+    verify(newsService).deleteNews("1", currentIdentity, ARTICLE.name().toLowerCase(), false);
     // Deleted already: the undo is refused
     assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), newsRestController.undoDeleteNews("1").getStatus());
+  }
+
+  @Test
+  public void aNewsDeletedKeepingItsNoteKeepsItNowAndAfterADelay() throws Exception {
+    Identity currentIdentity = new Identity(JOHN);
+    ConversationState.setCurrent(new ConversationState(currentIdentity));
+    News news = new News();
+    news.setId("1");
+    lenient().when(newsService.getNewsById(anyString(), any(), anyBoolean(), anyString())).thenReturn(news);
+
+    newsRestController.deleteNews("1", ARTICLE.name().toLowerCase(), 0L, true);
+    verify(newsService).deleteNews("1", currentIdentity, ARTICLE.name().toLowerCase(), true);
+
+    clearInvocations(newsService);
+    newsRestController.deleteNews("1", ARTICLE.name().toLowerCase(), 3600L, true);
+    newsRestController.destroy();
+    verify(newsService).deleteNews("1", currentIdentity, ARTICLE.name().toLowerCase(), true);
+    verify(newsService, never()).deleteNews(anyString(), any(), anyString(), eq(false));
   }
 
   @Test
@@ -879,14 +898,14 @@ public class NewsRestTest {
       Thread.sleep(500);
       ended.set(true);
       return null;
-    }).when(newsService).deleteNews("1", currentIdentity, ARTICLE.name().toLowerCase());
-    newsRestController.deleteNews("1", ARTICLE.name().toLowerCase(), 1L);
+    }).when(newsService).deleteNews("1", currentIdentity, ARTICLE.name().toLowerCase(), false);
+    newsRestController.deleteNews("1", ARTICLE.name().toLowerCase(), 1L, false);
     assertTrue(started.await(10, TimeUnit.SECONDS));
 
     newsRestController.destroy();
 
     assertTrue(ended.get());
-    verify(newsService).deleteNews("1", currentIdentity, ARTICLE.name().toLowerCase());
+    verify(newsService).deleteNews("1", currentIdentity, ARTICLE.name().toLowerCase(), false);
   }
 
   @Test
@@ -896,12 +915,12 @@ public class NewsRestTest {
     News news = new News();
     news.setId("1");
     lenient().when(newsService.getNewsById(anyString(), any(), anyBoolean(), anyString())).thenReturn(news);
-    newsRestController.deleteNews("1", ARTICLE.name().toLowerCase(), 3600L);
+    newsRestController.deleteNews("1", ARTICLE.name().toLowerCase(), 3600L, false);
 
     assertEquals(Response.Status.NO_CONTENT.getStatusCode(), newsRestController.undoDeleteNews("1").getStatus());
     newsRestController.destroy();
 
-    verify(newsService, never()).deleteNews(anyString(), any(), anyString());
+    verify(newsService, never()).deleteNews(anyString(), any(), anyString(), anyBoolean());
   }
 
   @Test
@@ -924,11 +943,11 @@ public class NewsRestTest {
     lenient().when(spaceService.isSuperManager(eq(JOHN))).thenReturn(true);
 
     // When
-    Response response = newsRestController.deleteNews("1", ARTICLE.name().toLowerCase(), 0L);
+    Response response = newsRestController.deleteNews("1", ARTICLE.name().toLowerCase(), 0L, false);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-    verify(newsService).deleteNews("1", currentIdentity, ARTICLE.name().toLowerCase());
+    verify(newsService).deleteNews("1", currentIdentity, ARTICLE.name().toLowerCase(), false);
   }
 
   @Test
@@ -945,11 +964,11 @@ public class NewsRestTest {
     lenient().when(spaceService.isSuperManager(eq(JOHN))).thenReturn(true);
 
     // When
-    Response response = newsRestController.deleteNews("1", ARTICLE.name().toLowerCase(), 0L);
+    Response response = newsRestController.deleteNews("1", ARTICLE.name().toLowerCase(), 0L, false);
 
     // Then
     assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatus());
-    verify(newsService, never()).deleteNews("1", currentIdentity, ARTICLE.name().toLowerCase());
+    verify(newsService, never()).deleteNews("1", currentIdentity, ARTICLE.name().toLowerCase(), false);
   }
 
   @Test
@@ -967,11 +986,11 @@ public class NewsRestTest {
     lenient().when(spaceService.isSuperManager(eq(JOHN))).thenReturn(true);
 
     // When
-    Response response = newsRestController.deleteNews(null, ARTICLE.name().toLowerCase(), 0L);
+    Response response = newsRestController.deleteNews(null, ARTICLE.name().toLowerCase(), 0L, false);
 
     // Then
     assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
-    verify(newsService, never()).deleteNews("1", currentIdentity, ARTICLE.name().toLowerCase());
+    verify(newsService, never()).deleteNews("1", currentIdentity, ARTICLE.name().toLowerCase(), false);
   }
 
   @Test
@@ -1534,7 +1553,7 @@ public class NewsRestTest {
     lenient().when(spaceService.isMember(any(Space.class), eq(JOHN))).thenReturn(true);
 
     // When
-    Response response = newsRestController.deleteNews(news.getId(), ARTICLE.name().toLowerCase(), 0);
+    Response response = newsRestController.deleteNews(news.getId(), ARTICLE.name().toLowerCase(), 0, false);
 
     // Then
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());

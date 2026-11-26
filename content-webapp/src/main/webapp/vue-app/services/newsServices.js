@@ -233,11 +233,11 @@ export function canScheduleNews(spaceId, articleId, fromExternalPge) {
   });
 }
 
-export function deleteNews(newsId, newsObjectType, delay) {
+export function deleteNews(newsId, newsObjectType, delay, keepNote) {
   if (delay > 0) {
     localStorage.setItem('deletedNews', newsId);
   }
-  return fetch(`${newsConstants.CONTENT_API}/contents/${newsId}?type=${newsObjectType || ''}&delay=${delay || 0}`, {
+  return fetch(`${newsConstants.CONTENT_API}/contents/${newsId}?type=${newsObjectType || ''}&delay=${delay || 0}&keepNote=${!!keepNote}`, {
     credentials: 'include',
     method: 'DELETE'
   }).then((resp) => {

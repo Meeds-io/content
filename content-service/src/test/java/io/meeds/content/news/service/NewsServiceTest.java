@@ -117,6 +117,7 @@ import io.meeds.content.news.model.filter.NewsFilter;
 import io.meeds.content.news.plugin.NewsCategoryPlugin;
 import io.meeds.content.news.plugin.NewsPageAttachmentPlugin;
 import io.meeds.content.news.search.NewsESSearchResult;
+import io.meeds.content.news.search.NewsIndexingServiceConnector;
 import io.meeds.content.news.search.NewsSearchConnector;
 import io.meeds.content.news.utils.NewsUtils;
 import io.meeds.notes.model.NoteFeaturedImage;
@@ -2010,6 +2011,159 @@ public class NewsServiceTest {
   }
 
   @Test
+  public void testDeleteArticlePublishedFromNoteKeepsTheNote() throws Exception {
+    Identity identity = mockDeletableArticle(Map.of(EXTERNAL_PAGE, "true"));
+
+    newsService.deleteNews("1", identity, ARTICLE.name(), true);
+
+    assertNoteKeptAndArticleDeleted();
+  }
+
+  @Test
+  public void testDeleteReferredArticleKeepsTheNote() throws Exception {
+    Identity identity = mockDeletableArticle(Map.of(NewsService.PAGE_REFERRED, "true"));
+
+    newsService.deleteNews("1", identity, ARTICLE.name(), true);
+
+    assertNoteKeptAndArticleDeleted();
+  }
+
+  @Test
+  public void testDeleteArticlePublishedFromNoteWithoutKeepNoteDeletesTheNote() throws Exception {
+    Identity identity = mockDeletableArticle(Map.of(EXTERNAL_PAGE, "true"));
+
+    newsService.deleteNews("1", identity, ARTICLE.name(), false);
+
+    assertNoteDeletedWithArticle();
+  }
+
+  @Test
+  public void testDeleteArticleLinkedToNoNoteIgnoresKeepNote() throws Exception {
+    Identity identity = mockDeletableArticle(Map.of());
+
+    newsService.deleteNews("1", identity, ARTICLE.name(), true);
+
+    assertNoteDeletedWithArticle();
+  }
+
+  @Test
+  public void testDeleteLatestDraftIgnoresKeepNote() throws Exception {
+    Identity identity = mockDeletableArticle(Map.of(EXTERNAL_PAGE, "true"));
+
+    newsService.deleteNews("1", identity, NewsUtils.NewsObjectType.LATEST_DRAFT.name(), true);
+
+    assertNoteDeletedWithArticle();
+  }
+
+  @Test
+  public void testDeleteArticleKeepingTheNoteRemovesItsItemsAndCategories() throws Exception {
+    Identity identity = mockDeletableArticle(Map.of(EXTERNAL_PAGE, "true"));
+    when(categoryLinkService.getLinkedIds(org.mockito.ArgumentMatchers.argThat((CategoryObject object) -> object != null
+        && NewsCategoryPlugin.OBJECT_TYPE.equals(object.getType()) && "1".equals(object.getId())))).thenReturn(List.of(3L));
+
+    newsService.deleteNews("1", identity, ARTICLE.name(), true);
+
+    verify(categoryLinkService).unlink(eq(3L),
+                                       org.mockito.ArgumentMatchers.argThat((CategoryObject object) -> object != null
+                                           && NewsCategoryPlugin.OBJECT_TYPE.equals(object.getType())
+                                           && "1".equals(object.getId())));
+    verify(metadataService).deleteMetadataItemsByObject(org.mockito.ArgumentMatchers.argThat(object -> object != null
+        && NewsUtils.NEWS_METADATA_OBJECT_TYPE.equals(object.getType()) && "1".equals(object.getId())));
+  }
+
+  @Test
+  public void testDeleteTranslatedArticleKeepingTheNoteRemovesTheTranslationMetadata() throws Exception {
+    Identity identity = mockDeletableArticle(Map.of(EXTERNAL_PAGE, "true"));
+    when(noteService.getPageAvailableTranslationLanguages(1L, false)).thenReturn(List.of("fr"));
+    PageVersion frenchVersion = mock(PageVersion.class);
+    when(frenchVersion.getId()).thenReturn("11");
+    when(noteService.getPublishedVersionByPageIdAndLang(1L, "fr")).thenReturn(frenchVersion);
+
+    newsService.deleteNews("1", identity, ARTICLE.name(), true);
+
+    verify(metadataService).deleteMetadataItemsByObject(org.mockito.ArgumentMatchers.argThat(object -> object != null
+        && NewsService.NEWS_METADATA_PAGE_VERSION_OBJECT_TYPE.equals(object.getType()) && "11".equals(object.getId())));
+    verify(indexingService).unindex(NewsIndexingServiceConnector.TYPE, "1-fr");
+    // A translation's favorites are items on ("news", <page id>-<lang>)
+    verify(metadataService).deleteMetadataItemsByObject(org.mockito.ArgumentMatchers.argThat(object -> object != null
+        && NewsUtils.NEWS_METADATA_OBJECT_TYPE.equals(object.getType()) && "1-fr".equals(object.getId())));
+    verify(noteService, never()).deleteNote(anyString(), anyString(), anyString());
+  }
+
+  @Test
+  public void testIsArticlePage() {
+    when(metadataService.getMetadataItemsByMetadataAndObject(eq(NewsService.NEWS_METADATA_KEY),
+                                                             org.mockito.ArgumentMatchers.argThat(object -> object != null
+                                                                 && NewsService.NEWS_METADATA_PAGE_OBJECT_TYPE.equals(object.getType())
+                                                                 && "1".equals(object.getId()))))
+                                                                                                   .thenReturn(List.of(mock(MetadataItem.class)));
+    assertTrue(newsService.isArticlePage("1"));
+    assertFalse(newsService.isArticlePage("2"));
+    assertFalse(newsService.isArticlePage("draft"));
+  }
+
+  private void assertNoteKeptAndArticleDeleted() throws Exception {
+    verify(noteService, never()).deleteNote(anyString(), anyString(), anyString());
+    verify(noteService, never()).getLatestDraftOfPage(any(Page.class));
+    verify(activityManager).deleteActivity("1");
+    verify(metadataService).deleteMetadataItemsByObject(org.mockito.ArgumentMatchers.argThat(object -> object != null
+        && NewsService.NEWS_METADATA_PAGE_OBJECT_TYPE.equals(object.getType()) && "1".equals(object.getId())));
+    verify(metadataService).deleteMetadataItemsByObject(org.mockito.ArgumentMatchers.argThat(object -> object != null
+        && NewsService.NEWS_METADATA_PAGE_VERSION_OBJECT_TYPE.equals(object.getType()) && "10".equals(object.getId())));
+    verify(indexingService).unindex(NewsIndexingServiceConnector.TYPE, "1");
+    verify(indexingService).reindex(WikiPageIndexingServiceConnector.TYPE, "1");
+    // Targets, favorites and tags are all items on ("news", <page id>)
+    verify(metadataService).deleteMetadataItemsByObject(org.mockito.ArgumentMatchers.argThat(object -> object != null
+        && NewsUtils.NEWS_METADATA_OBJECT_TYPE.equals(object.getType()) && "1".equals(object.getId())));
+    // The article's unsaved edits stay as the note's drafts, without their
+    // latest-draft items, which the Drafts list reads with the article
+    verify(metadataService).deleteMetadataItemsByParentObject(org.mockito.ArgumentMatchers.argThat(object -> object != null
+        && NewsService.NEWS_METADATA_LATEST_DRAFT_OBJECT_TYPE.equals(object.getType()) && "1".equals(object.getParentId())));
+    verify(noteService, never()).removeDraftById(anyString());
+  }
+
+  private void assertNoteDeletedWithArticle() {
+    verify(noteService).deleteNote("group", "/space/groupId", "news");
+    verify(activityManager).deleteActivity("1");
+    verify(indexingService).unindex(NewsIndexingServiceConnector.TYPE, "1");
+    verify(indexingService, never()).reindex(eq(WikiPageIndexingServiceConnector.TYPE), anyString());
+  }
+
+  private Identity mockDeletableArticle(Map<String, String> linkProperties) throws Exception {
+    Page existingPage = mock(Page.class);
+    when(noteService.getNoteById(anyString())).thenReturn(existingPage);
+    when(existingPage.getId()).thenReturn("1");
+    when(existingPage.getWikiOwner()).thenReturn("/space/groupId");
+    when(existingPage.getWikiType()).thenReturn("group");
+    when(existingPage.getName()).thenReturn("news");
+    when(existingPage.getOwner()).thenReturn("john");
+    when(existingPage.isDeleted()).thenReturn(false);
+
+    MetadataItem metadataItem = mock(MetadataItem.class);
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+                                                             any(MetadataObject.class))).thenReturn(List.of(metadataItem));
+    Map<String, String> properties = new HashMap<>(linkProperties);
+    properties.put(NEWS_ACTIVITIES, "1:1;");
+    when(metadataItem.getProperties()).thenReturn(properties);
+    mockSpace();
+    Identity identity = mockIdentity();
+    when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(new org.exoplatform.social.core.identity.model.Identity("1"));
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(anyString(), any(Identity.class))).thenReturn(false);
+    when(newsTargetingService.getTargetsByNews(any(News.class))).thenReturn(null);
+    when(spaceService.isSuperManager(any(Space.class), anyString())).thenReturn(true);
+    when(spaceService.isMember(anyString(), anyString())).thenReturn(true);
+
+    PageVersion pageVersion = mock(PageVersion.class);
+    when(pageVersion.getId()).thenReturn("10");
+    when(pageVersion.getAuthor()).thenReturn("john");
+    when(pageVersion.getUpdatedDate()).thenReturn(new Date());
+    when(pageVersion.getAuthorFullName()).thenReturn("full name");
+    when(noteService.getPublishedVersionByPageIdAndLang(1L, null)).thenReturn(pageVersion);
+    when(noteService.deleteNote("group", "/space/groupId", "news")).thenReturn(true);
+    return identity;
+  }
+
+  @Test
   public void testScheduleNews() throws Exception {
     Space space = mockSpace();
     Identity identity = mockIdentity();
@@ -2660,6 +2814,24 @@ public class NewsServiceTest {
     note.setContent("<p>Note content</p>");
     note.setActivityId(ACTIVITY_ID);
     return note;
+  }
+
+  @Test
+  public void testDeleteTranslationRemovesItsFavorites() throws Exception {
+    NewsService spiedService = spy(newsService);
+    News article = new News();
+    article.setId("1");
+    doReturn(article).when(spiedService).getNewsArticleByIdAndLang("1", "fr");
+
+    spiedService.deleteVersionsByArticleIdAndLang("1", "fr");
+
+    verify(noteService).deleteVersionsByNoteIdAndLang(1L, "fr");
+    verify(indexingService).unindex(NewsIndexingServiceConnector.TYPE, "1-fr");
+    // A translation's favorites are items on ("news", <page id>-<lang>)
+    verify(metadataService).deleteMetadataItemsByObject(org.mockito.ArgumentMatchers.argThat(object -> object != null
+        && NewsUtils.NEWS_METADATA_OBJECT_TYPE.equals(object.getType()) && "1-fr".equals(object.getId())));
+    verify(metadataService, never()).deleteMetadataItemsByObject(org.mockito.ArgumentMatchers.argThat(object -> object != null
+        && NewsUtils.NEWS_METADATA_OBJECT_TYPE.equals(object.getType()) && "1".equals(object.getId())));
   }
 
   @Test

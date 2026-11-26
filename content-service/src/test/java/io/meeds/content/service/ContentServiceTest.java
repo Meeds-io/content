@@ -306,7 +306,13 @@ public class ContentServiceTest {
   @Test
   public void testDeleteContentDelegatesToMatchingPlugin() throws Exception {
     contentService.deleteContent("1", "news", "published", currentIdentity);
-    verify(newsPlugin).delete("1", "published", currentIdentity);
+    verify(newsPlugin).delete("1", "published", false, currentIdentity);
+  }
+
+  @Test
+  public void testDeleteContentKeepingItsNoteDelegatesTheChoice() throws Exception {
+    contentService.deleteContent("1", "news", "published", true, currentIdentity);
+    verify(newsPlugin).delete("1", "published", true, currentIdentity);
   }
 
   @Test
