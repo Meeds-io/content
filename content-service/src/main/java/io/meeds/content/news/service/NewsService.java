@@ -245,7 +245,9 @@ public class NewsService {
 
   /**
    * The keys of the page properties the service owns or computes: a new
-   * article never takes them from the free-form parameters of its caller.
+   * article never takes them from the free-form parameters of its caller, but
+   * for the publication state, taken from them when the article carries none
+   * and it is a known one (posted, staged or draft).
    */
   private static final Set<String> COMPUTED_PAGE_PROPERTIES               = Set.of(NEWS_AUDIENCE,
                                                                                    PUBLISHED,
@@ -1200,7 +1202,8 @@ public class NewsService {
     } else if (!canScheduleNews(news.getSpaceId(), currentIdentity, news)) {
       throw new IllegalAccessException("User " + currentIdentity.getUserId() + " is not authorized to schedule news");
     }
-    if (!newsObjectType.equalsIgnoreCase(ARTICLE.name())) {
+    if (newsObjectType.equalsIgnoreCase(NewsObjectType.DRAFT.name())
+        || newsObjectType.equalsIgnoreCase(NewsObjectType.EXISTING_PAGE.name())) {
       restrictNewArticleAudience(news, currentIdentity.getUserId());
     }
     if (newsObjectType.equalsIgnoreCase(NewsObjectType.DRAFT.name())) {
@@ -2157,7 +2160,8 @@ public class NewsService {
     } else if (StringUtils.isNotEmpty(parametersState) && !isUnknownPublicationState(parametersState)) {
       newsPageProperties.put(NEWS_PUBLICATION_STATE, parametersState);
     }
-    // Every created article stores a state: posted, or staged when scheduled
+    // An article with no state of its own or from its parameters stores
+    // posted, or staged when scheduled
     if (StringUtils.isEmpty(newsPageProperties.get(NEWS_PUBLICATION_STATE))) {
       newsPageProperties.put(NEWS_PUBLICATION_STATE, article.getSchedulePostDate() != null ? STAGED : POSTED);
     }

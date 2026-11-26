@@ -2023,6 +2023,29 @@ public class NewsServiceTest {
   }
 
   @Test
+  public void testScheduleNewsOfALatestDraftPublishesWhateverSpaceTheRequestNames() throws Exception {
+    Space space = space();
+    when(spaceService.getSpaceById("3")).thenReturn(space);
+    when(spaceService.canPublishOnSpace(space, "mary")).thenReturn(true);
+    Identity identity = mock(Identity.class);
+    when(identity.getUserId()).thenReturn("mary");
+    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity(anyString())).thenReturn(identity);
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(anyString(), any(Identity.class))).thenReturn(false);
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(eq("3"), any(Identity.class))).thenReturn(true);
+    NewsService service = spy(newsService);
+    doReturn(existingArticle(POSTED, true)).when(service).getNewsArticleById("12");
+    doNothing().when(service).publishNews(any(News.class), anyString());
+    News request = existingArticle(NewsService.STAGED, true);
+    request.setSpaceId("5");
+    request.setPublished(true);
+
+    service.scheduleNews(request, identity, LATEST_DRAFT.name().toLowerCase());
+
+    verify(service).publishNews(request, "mary");
+    verify(service, never()).unpublishNews(anyString(), anyString(), anyBoolean());
+  }
+
+  @Test
   public void testRescheduleNewsOfAnArticleWithAnUnknownStoredStateSucceeds() throws Exception {
     News news = mockUpdatableArticle();
     news.setPublicationState(NewsService.STAGED);
