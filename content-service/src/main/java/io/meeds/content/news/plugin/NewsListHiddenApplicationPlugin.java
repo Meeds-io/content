@@ -95,6 +95,28 @@ public class NewsListHiddenApplicationPlugin implements HiddenApplicationPlugin 
     return cmsService.hasAccessPermission(identity, SETTING_TYPE, name);
   }
 
+  /**
+   * Allows each user to hide a news list window, or forbids it, which shows
+   * the window again to every user who hid it. Social's hidden applications
+   * check no right for it: only an editor of the window changes it.
+   *
+   * @param name window setting name
+   * @param allowed whether each user may hide the window
+   * @param identity the user changing the option
+   * @throws IllegalAccessException when the user can't edit the window
+   */
+  public void saveHideAllowed(String name, boolean allowed, Identity identity) throws IllegalAccessException {
+    if (StringUtils.isBlank(name)) {
+      throw new IllegalArgumentException("News list setting name is mandatory");
+    }
+    if (identity == null || !cmsService.hasEditPermission(identity, SETTING_TYPE, name)) {
+      throw new IllegalAccessException(String.format("User %s can't edit the news list %s",
+                                                     identity == null ? null : identity.getUserId(),
+                                                     name));
+    }
+    hiddenApplicationService.setHideAllowed(APPLICATION_TYPE, name, allowed);
+  }
+
   private String getTitle(String name, String language) {
     Locale locale = StringUtils.isBlank(language) ? Locale.ENGLISH : Locale.forLanguageTag(language);
     String applicationId = getApplicationId(name);
@@ -121,7 +143,10 @@ public class NewsListHiddenApplicationPlugin implements HiddenApplicationPlugin 
   /**
    * @param name window setting name
    * @return the identifier the header translations of the window are kept
-   *         with, which the news list maps to its setting name
+   *         with, which the news list maps to its setting name. The news list
+   *         stores that mapping one way only, identifier to name, so this
+   *         scans every news list's mapping; when a copied window re-pointed
+   *         an older identifier to the same name, either one is kept.
    */
   private String getApplicationId(String name) {
     Map<String, SettingValue> applications =

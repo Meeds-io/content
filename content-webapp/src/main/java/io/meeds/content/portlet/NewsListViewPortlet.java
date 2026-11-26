@@ -40,6 +40,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.exoplatform.commons.api.settings.SettingService;
 import org.exoplatform.commons.api.settings.SettingValue;
 import org.exoplatform.container.ExoContainerContext;
+import org.exoplatform.services.log.ExoLogger;
+import org.exoplatform.services.log.Log;
 import org.exoplatform.services.security.ConversationState;
 
 import io.meeds.content.news.plugin.NewsListHiddenApplicationPlugin;
@@ -48,6 +50,8 @@ import io.meeds.social.hidden.service.HiddenApplicationService;
 import io.meeds.social.portlet.CMSPortlet;
 
 public class NewsListViewPortlet extends CMSPortlet {
+
+  private static final Log    LOG            = ExoLogger.getLogger(NewsListViewPortlet.class);
 
   private static final String OBJECT_TYPE    = "newsListViewPortlet";
 
@@ -60,6 +64,8 @@ public class NewsListViewPortlet extends CMSPortlet {
   private TranslationService translationService;
 
   private HiddenApplicationService hiddenApplicationService;
+
+  private NewsListHiddenApplicationPlugin newsListHiddenApplicationPlugin;
 
   @Override
   public void init(PortletConfig config) throws PortletException {
@@ -120,12 +126,14 @@ public class NewsListViewPortlet extends CMSPortlet {
 
   private void saveHideAllowed(String name, boolean allowed) {
     ConversationState conversationState = ConversationState.getCurrent();
-    // The option is kept for the window, not for the page: only its editors
-    // change it, whoever else may save the other display options
-    if (StringUtils.isNotBlank(name)
-        && conversationState != null
-        && canEdit(name, conversationState.getIdentity())) {
-      getHiddenApplicationService().setHideAllowed(NewsListHiddenApplicationPlugin.APPLICATION_TYPE, name, allowed);
+    try {
+      getNewsListHiddenApplicationPlugin().saveHideAllowed(name,
+                                                           allowed,
+                                                           conversationState == null ? null : conversationState.getIdentity());
+    } catch (IllegalAccessException | IllegalArgumentException e) {
+      // The option is kept for the window, not for the page: only its editors
+      // change it, whoever else may save the other display options
+      LOG.debug("News list hiding option not saved", e);
     }
   }
 
@@ -164,6 +172,13 @@ public class NewsListViewPortlet extends CMSPortlet {
       hiddenApplicationService = ExoContainerContext.getService(HiddenApplicationService.class);
     }
     return hiddenApplicationService;
+  }
+
+  private NewsListHiddenApplicationPlugin getNewsListHiddenApplicationPlugin() {
+    if (newsListHiddenApplicationPlugin == null) {
+      newsListHiddenApplicationPlugin = ExoContainerContext.getService(NewsListHiddenApplicationPlugin.class);
+    }
+    return newsListHiddenApplicationPlugin;
   }
 
   private TranslationService getTranslationService() {

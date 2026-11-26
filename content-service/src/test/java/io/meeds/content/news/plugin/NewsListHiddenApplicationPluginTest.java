@@ -23,10 +23,15 @@ import static io.meeds.content.news.plugin.NewsListHiddenApplicationPlugin.SETTI
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.ListResourceBundle;
@@ -155,6 +160,38 @@ public class NewsListHiddenApplicationPluginTest {
     when(cmsService.hasAccessPermission(identity, SETTING_TYPE, NAME)).thenReturn(true);
     assertTrue(plugin.canView(NAME, identity));
     assertFalse(plugin.canView(NAME, new Identity("other")));
+  }
+
+  @Test
+  public void saveHideAllowedTurnsTheOptionOnAndOffForAnEditorOfTheWindow() throws Exception {
+    Identity editor = new Identity("editor");
+    when(cmsService.hasEditPermission(editor, SETTING_TYPE, NAME)).thenReturn(true);
+
+    plugin.saveHideAllowed(NAME, true, editor);
+    verify(hiddenApplicationService).setHideAllowed(APPLICATION_TYPE, NAME, true);
+
+    plugin.saveHideAllowed(NAME, false, editor);
+    verify(hiddenApplicationService).setHideAllowed(APPLICATION_TYPE, NAME, false);
+  }
+
+  @Test
+  public void saveHideAllowedIsRefusedToAUserWhoCantEditTheWindow() {
+    Identity reader = new Identity("reader");
+    lenient().when(cmsService.hasAccessPermission(reader, SETTING_TYPE, NAME)).thenReturn(true);
+
+    assertThrows(IllegalAccessException.class, () -> plugin.saveHideAllowed(NAME, true, reader));
+    assertThrows(IllegalAccessException.class, () -> plugin.saveHideAllowed(NAME, false, null));
+    verify(hiddenApplicationService, never()).setHideAllowed(anyString(), anyString(), anyBoolean());
+  }
+
+  @Test
+  public void saveHideAllowedRefusesABlankName() {
+    Identity editor = new Identity("editor");
+    lenient().when(cmsService.hasEditPermission(any(Identity.class), eq(SETTING_TYPE), any())).thenReturn(true);
+
+    assertThrows(IllegalArgumentException.class, () -> plugin.saveHideAllowed(" ", true, editor));
+    assertThrows(IllegalArgumentException.class, () -> plugin.saveHideAllowed(null, true, editor));
+    verify(hiddenApplicationService, never()).setHideAllowed(anyString(), anyString(), anyBoolean());
   }
 
   private void mockSetting() {
