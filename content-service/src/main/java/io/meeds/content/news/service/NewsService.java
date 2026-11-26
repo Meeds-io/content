@@ -1366,6 +1366,9 @@ public class NewsService {
     NewsUtils.broadcastEvent(NewsUtils.REMOVE_ARTICLE_TRANSLATION, article.getAuthor(), article);
     String newsTranslationId = articleId.concat("-").concat(lang);
     indexingService.unindex(NewsIndexingServiceConnector.TYPE, newsTranslationId);
+    // A translation's favorites are keyed on <page id>-<lang>: a translation
+    // added again later in the same language must not get them back
+    metadataService.deleteMetadataItemsByObject(new MetadataObject(NewsUtils.NEWS_METADATA_OBJECT_TYPE, newsTranslationId));
   }
 
   /**

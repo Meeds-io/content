@@ -24,6 +24,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import org.exoplatform.commons.exception.ObjectNotFoundException;
+import org.exoplatform.services.log.ExoLogger;
+import org.exoplatform.services.log.Log;
 import org.exoplatform.services.security.Identity;
 import org.exoplatform.social.attachment.AttachmentPlugin;
 import org.exoplatform.social.attachment.AttachmentService;
@@ -38,6 +40,10 @@ import jakarta.annotation.PostConstruct;
 @Component
 public class NewsPageAttachmentPlugin extends AttachmentPlugin {
 
+  public static final String OBJECT_TYPE = "articlePage";
+
+  private static final Log   LOG         = ExoLogger.getLogger(NewsPageAttachmentPlugin.class);
+
   @Autowired
   private AttachmentService  attachmentService;
 
@@ -46,8 +52,6 @@ public class NewsPageAttachmentPlugin extends AttachmentPlugin {
 
   @Autowired
   private NoteService        noteService;
-
-  public static final String OBJECT_TYPE = "articlePage";
 
   @PostConstruct
   public void init() {
@@ -110,6 +114,7 @@ public class NewsPageAttachmentPlugin extends AttachmentPlugin {
     try {
       return newsService.isArticlePage(pageId);
     } catch (Exception e) {
+      LOG.warn("Cannot read the article item of page {}", pageId, e);
       return null; // NOSONAR null means unknown, which the callers refuse
     }
   }

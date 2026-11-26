@@ -2817,6 +2817,24 @@ public class NewsServiceTest {
   }
 
   @Test
+  public void testDeleteTranslationRemovesItsFavorites() throws Exception {
+    NewsService spiedService = spy(newsService);
+    News article = new News();
+    article.setId("1");
+    doReturn(article).when(spiedService).getNewsArticleByIdAndLang("1", "fr");
+
+    spiedService.deleteVersionsByArticleIdAndLang("1", "fr");
+
+    verify(noteService).deleteVersionsByNoteIdAndLang(1L, "fr");
+    verify(indexingService).unindex(NewsIndexingServiceConnector.TYPE, "1-fr");
+    // A translation's favorites are items on ("news", <page id>-<lang>)
+    verify(metadataService).deleteMetadataItemsByObject(org.mockito.ArgumentMatchers.argThat(object -> object != null
+        && NewsUtils.NEWS_METADATA_OBJECT_TYPE.equals(object.getType()) && "1-fr".equals(object.getId())));
+    verify(metadataService, never()).deleteMetadataItemsByObject(org.mockito.ArgumentMatchers.argThat(object -> object != null
+        && NewsUtils.NEWS_METADATA_OBJECT_TYPE.equals(object.getType()) && "1".equals(object.getId())));
+  }
+
+  @Test
   public void testGetArticleLanguagesIsNotFoundForMissingOrHiddenArticle() throws Exception {
     NewsService spiedService = spy(newsService);
     News article = new News();
