@@ -32,48 +32,47 @@
     </div>
     <v-spacer />
     <div
-      v-if="hasLinks && (seeMoreUrl || hoverEdit)"
-      class="flex-grow-0 flex-shrink-0 text-end">
+      v-if="hasLinks && (seeMoreUrl || canEdit)"
+      class="hover-swap-parent flex-grow-0 flex-shrink-0 text-end">
       <v-btn
         v-if="seeMoreUrl"
         :href="seeMoreUrl"
         :title="$t('links.label.seeMore')"
+        :aria-label="$t('links.label.seeMore')"
         target="_blank"
-        :outlined="hoverEdit"
-        :icon="hoverEdit"
-        :class="!hoverEdit && 'pa-0'"
-        :color="!hoverEdit && 'primary'"
-        :text="!hoverEdit"
+        class="pa-0"
+        color="primary"
         rel="nofollow noreferrer noopener"
-        small>
-        <v-icon
-          v-if="hoverEdit"
-          size="18"
-          class="primary--text">
-          fa-external-link-alt
-        </v-icon>
+        small
+        text>
         <span
-          v-else-if="seeMoreUrl"
+          :class="canEdit && 'hover-swap-default'"
           class="text-none text-font-size">
           {{ $t('links.label.seeMore') }}
         </span>
+        <v-icon
+          v-if="canEdit"
+          size="18"
+          class="hover-swap-alt primary--text">
+          fa-external-link-alt
+        </v-icon>
       </v-btn>
-      <v-fab-transition hide-on-leave>
-        <v-btn
-          v-if="hoverEdit"
-          :title="$t('links.label.editSettings')"
-          :class="{
-            'position-absolute z-index-two t-0': !seeMoreUrl,
-            'r-0': !$vuetify.rtl,
-            'l-0': $vuetify.rtl,
-            'ma-1': !showHeader,
-          }"
-          small
-          icon
-          @click="$emit('edit')">
-          <v-icon size="18">fa-cog</v-icon>
-        </v-btn>
-      </v-fab-transition>
+      <v-btn
+        v-if="canEdit"
+        :title="$t('links.label.editSettings')"
+        :aria-label="$t('links.label.editSettings')"
+        class="hover-reveal"
+        :class="{
+          'position-absolute z-index-two t-0': !seeMoreUrl,
+          'r-0': !$vuetify.rtl,
+          'l-0': $vuetify.rtl,
+          'ma-1': !showHeader,
+        }"
+        small
+        icon
+        @click="$emit('edit')">
+        <v-icon size="18">fa-cog</v-icon>
+      </v-btn>
     </div>
   </div>
   <div v-else-if="!hasLinks && canEdit" class="d-flex align-center justify-center">
@@ -107,15 +106,8 @@ export default {
       type: Boolean,
       default: false,
     },
-    hover: {
-      type: Boolean,
-      default: false,
-    },
   },
   computed: {
-    hoverEdit() {
-      return this.canEdit && this.hover;
-    },
     showHeader() {
       return this.header?.length || this.seeMoreUrl?.length;
     },

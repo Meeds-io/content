@@ -21,29 +21,26 @@
 <template>
   <v-app
     v-if="canView">
-    <v-hover v-slot="{ hover }">
-      <v-card
-        :class="$root.isCard ? 'px-5 pt-5' : 'pa-5'"
-        min-width="100%"
-        max-width="100%"
-        class="d-flex flex-column align-center border-box-sizing position-relative application-body"
-        flat>
-        <links-header
-          v-if="$root.initialized"
-          :settings="$root.settings"
-          :has-links="$root.hasLinks"
-          :can-edit="canEdit"
-          :hover="hover"
-          class="full-width"
-          @edit="editSettings()"
-          @add="editSettings(true)" />
-        <links-list
-          v-if="hasLinks"
-          :settings="$root.settings"
-          :links="$root.links"
-          @edit="editSettings()" />
-      </v-card>
-    </v-hover>
+    <v-card
+      :class="$root.isCard ? 'px-5 pt-5' : 'pa-5'"
+      min-width="100%"
+      max-width="100%"
+      class="hover-reveal-parent hover-swap-trigger d-flex flex-column align-center border-box-sizing position-relative application-body"
+      flat>
+      <links-header
+        v-if="$root.initialized"
+        :settings="$root.settings"
+        :has-links="$root.hasLinks"
+        :can-edit="canEdit"
+        class="full-width"
+        @edit="editSettings()"
+        @add="editSettings(true)" />
+      <links-list
+        v-if="hasLinks"
+        :settings="$root.settings"
+        :links="$root.links"
+        @edit="editSettings()" />
+    </v-card>
     <links-settings-drawer
       v-if="canEdit && edit" />
   </v-app>

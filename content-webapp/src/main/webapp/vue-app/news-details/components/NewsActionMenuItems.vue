@@ -61,7 +61,7 @@
     </v-list-item>
     <v-list-item
       v-if="showEditButton"
-      class="ps-2 pe-4 action-menu-item d-flex align-center"
+      class="newsActionMenuEditItem ps-2 pe-4 action-menu-item d-flex align-center"
       @click="$emit('edit-article', news)">
       <v-icon
         size="16"
