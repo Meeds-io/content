@@ -18,10 +18,17 @@
  */
 package io.meeds.content.news.search;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+
+import jakarta.persistence.LockTimeoutException;
+import jakarta.persistence.PersistenceException;
+import jakarta.persistence.QueryTimeoutException;
 
 import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -39,6 +46,7 @@ import org.exoplatform.social.core.identity.provider.OrganizationIdentityProvide
 import org.exoplatform.social.core.manager.ActivityManager;
 import org.exoplatform.social.core.manager.IdentityManager;
 import org.exoplatform.social.core.search.DocumentWithMetadata;
+import org.exoplatform.social.metadata.MetadataFilter;
 import org.exoplatform.social.metadata.MetadataService;
 import org.exoplatform.social.metadata.model.MetadataItem;
 import org.exoplatform.social.metadata.model.MetadataObject;
@@ -62,6 +70,8 @@ public class NewsIndexingServiceConnector extends ElasticIndexingServiceConnecto
   private final ActivityManager activityManager;
 
   private final MetadataService metadataService;
+
+  private List<String>          allIds;
 
 
   public NewsIndexingServiceConnector(IdentityManager identityManager,
@@ -92,8 +102,74 @@ public class NewsIndexingServiceConnector extends ElasticIndexingServiceConnecto
   }
 
   @Override
-  public List<String> getAllIds(int offset, int limit) {
-    throw new UnsupportedOperationException();
+  public synchronized List<String> getAllIds(int offset, int limit) {
+    if (offset <= 0 || allIds == null) {
+      // The list is built once per full reindex, when its first page is requested
+      allIds = loadAllIds();
+    }
+    if (offset >= allIds.size()) {
+      // Answer to the call that follows a last page filled to the limit
+      allIds = null;
+      return Collections.emptyList();
+    }
+    int end = Math.min(allIds.size(), offset + Math.max(limit, 0));
+    List<String> page = new ArrayList<>(allIds.subList(offset, end));
+    if (page.size() < limit) {
+      // A short page ends the reindex: nothing carries over to the next one
+      allIds = null;
+    }
+    return page;
+  }
+
+  /**
+   * Lists the ids of the documents of the index: each posted article id, then
+   * the id of each of its translations, in the form
+   * <code>articleId-lang</code> used to index them.
+   */
+  private List<String> loadAllIds() {
+    Map<String, String> postedAndNotDeleted = Map.of(NewsService.NEWS_PUBLICATION_STATE,
+                                                     NewsService.POSTED,
+                                                     NewsService.NEWS_DELETED,
+                                                     "false");
+    MetadataFilter filter = new MetadataFilter();
+    filter.setMetadataName(NewsService.NEWS_METADATA_NAME);
+    filter.setMetadataTypeName(NewsService.NEWS_METADATA_TYPE.getName());
+    filter.setMetadataObjectTypes(List.of(NewsService.NEWS_METADATA_PAGE_OBJECT_TYPE));
+    // Without space ids, the DAO builds the properties clause from the combined
+    // properties only
+    filter.setMetadataProperties(postedAndNotDeleted);
+    filter.setCombinedMetadataProperties(postedAndNotDeleted);
+    // One query for the whole listing: a limit of 0 sets no maximum, while
+    // paging by offset over items that share their creation date can skip one
+    Set<String> articleIds = new LinkedHashSet<>();
+    for (MetadataItem item : metadataService.getMetadataItemsByFilter(filter, 0, 0)) {
+      articleIds.add(item.getObjectId());
+    }
+    Set<String> ids = new LinkedHashSet<>(articleIds);
+    for (String articleId : articleIds) {
+      try {
+        List<String> languages = newsService.getArticleLanguages(articleId, false);
+        if (languages != null) {
+          languages.forEach(lang -> ids.add(articleId + "-" + lang));
+        }
+      } catch (QueryTimeoutException | LockTimeoutException e) {
+        // JPA does not mark the transaction rollback-only for these; where the
+        // database keeps the transaction open, the listing goes on
+        logTranslationsError(articleId, e);
+      } catch (PersistenceException e) {
+        // A failed database read that marks the reindex transaction
+        // rollback-only ends the reindex anyway: end the listing at once
+        throw e;
+      } catch (Exception e) {
+        // Any other error leaves the article listed without its translations
+        logTranslationsError(articleId, e);
+      }
+    }
+    return new ArrayList<>(ids);
+  }
+
+  private void logTranslationsError(String articleId, Exception e) {
+    LOG.warn("Error listing the translations of news '{}', they are not indexed again", articleId, e);
   }
 
   private Document getDocument(String id) {

@@ -20,13 +20,33 @@ package io.meeds.content.news.search;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.IntStream;
 
+import jakarta.persistence.LockTimeoutException;
+import jakarta.persistence.PersistenceException;
+import jakarta.persistence.QueryTimeoutException;
+
+import org.apache.commons.collections4.CollectionUtils;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
@@ -41,7 +61,9 @@ import org.exoplatform.social.core.identity.model.Profile;
 import org.exoplatform.social.core.identity.provider.OrganizationIdentityProvider;
 import org.exoplatform.social.core.manager.ActivityManager;
 import org.exoplatform.social.core.manager.IdentityManager;
+import org.exoplatform.social.metadata.MetadataFilter;
 import org.exoplatform.social.metadata.MetadataService;
+import org.exoplatform.social.metadata.model.MetadataItem;
 
 import io.meeds.content.news.model.News;
 import io.meeds.content.news.service.NewsService;
@@ -64,18 +86,153 @@ public class NewsIndexingServiceConnectorTest {
   MetadataService              metadataService;
 
   @Test
-  public void testGetAllIds() {
+  public void testGetAllIdsListsArticlesThenTheirTranslationsByPage() {
     newsIndexingServiceConnector = new NewsIndexingServiceConnector(identityManager,
                                                                     getParams(),
                                                                     newsService,
                                                                     activityManager,
                                                                     metadataService);
-    try {
-      newsIndexingServiceConnector.getAllIds(0, 10);
-      fail("getAllIds shouldn't be supported");
-    } catch (UnsupportedOperationException e) {
-      // Expected
-    }
+    when(metadataService.getMetadataItemsByFilter(any(MetadataFilter.class), eq(0L), eq(0L))).thenReturn(List.of(item("1"),
+                                                                                                                  item("2"),
+                                                                                                                  item("3")));
+    when(newsService.getArticleLanguages("1", false)).thenReturn(List.of("fr", "en"));
+    when(newsService.getArticleLanguages("2", false)).thenReturn(List.of());
+    when(newsService.getArticleLanguages("3", false)).thenReturn(List.of("fr"));
+
+    assertEquals(List.of("1", "2"), newsIndexingServiceConnector.getAllIds(0, 2));
+    assertEquals(List.of("3", "1-fr"), newsIndexingServiceConnector.getAllIds(2, 2));
+    assertEquals(List.of("1-en", "3-fr"), newsIndexingServiceConnector.getAllIds(4, 2));
+    assertTrue(newsIndexingServiceConnector.getAllIds(6, 2).isEmpty());
+
+    ArgumentCaptor<MetadataFilter> filter = ArgumentCaptor.forClass(MetadataFilter.class);
+    // The empty answer after a last page filled to the limit reads nothing again
+    verify(metadataService, times(1)).getMetadataItemsByFilter(filter.capture(), eq(0L), eq(0L));
+    assertEquals(NewsService.NEWS_METADATA_NAME, filter.getValue().getMetadataName());
+    assertEquals(NewsService.NEWS_METADATA_TYPE.getName(), filter.getValue().getMetadataTypeName());
+    assertEquals(List.of(NewsService.NEWS_METADATA_PAGE_OBJECT_TYPE), filter.getValue().getMetadataObjectTypes());
+    assertNull(filter.getValue().getCreatorId());
+    assertEquals(Map.of(NewsService.NEWS_PUBLICATION_STATE, NewsService.POSTED, NewsService.NEWS_DELETED, "false"),
+                 filter.getValue().getMetadataProperties());
+    // Without space ids the DAO reads the combined properties only
+    assertEquals(filter.getValue().getMetadataProperties(), filter.getValue().getCombinedMetadataProperties());
+    assertTrue(CollectionUtils.isEmpty(filter.getValue().getMetadataSpaceIds()));
+
+    // A new reindex lists the articles again
+    assertEquals(List.of("1", "2"), newsIndexingServiceConnector.getAllIds(0, 2));
+    verify(metadataService, times(2)).getMetadataItemsByFilter(any(MetadataFilter.class), eq(0L), eq(0L));
+  }
+
+  @Test
+  public void testGetAllIdsKeepsListingWhenTheTranslationsOfOneArticleCannotBeRead() {
+    newsIndexingServiceConnector = new NewsIndexingServiceConnector(identityManager,
+                                                                    getParams(),
+                                                                    newsService,
+                                                                    activityManager,
+                                                                    metadataService);
+    when(metadataService.getMetadataItemsByFilter(any(MetadataFilter.class), eq(0L), eq(0L))).thenReturn(List.of(item("1"),
+                                                                                                                  item("2"),
+                                                                                                                  item("3")));
+    when(newsService.getArticleLanguages("1", false)).thenReturn(List.of("fr"));
+    when(newsService.getArticleLanguages("2", false)).thenThrow(new IllegalStateException("translations unreadable"));
+    when(newsService.getArticleLanguages("3", false)).thenReturn(List.of("en"));
+
+    assertEquals(List.of("1", "2", "3", "1-fr", "3-en"), newsIndexingServiceConnector.getAllIds(0, 10));
+  }
+
+  @Test
+  public void testGetAllIdsEndsAtTheFirstFailedDatabaseRead() {
+    newsIndexingServiceConnector = new NewsIndexingServiceConnector(identityManager,
+                                                                    getParams(),
+                                                                    newsService,
+                                                                    activityManager,
+                                                                    metadataService);
+    when(metadataService.getMetadataItemsByFilter(any(MetadataFilter.class), eq(0L), eq(0L))).thenReturn(List.of(item("1"),
+                                                                                                                  item("2")));
+    PersistenceException failure = new PersistenceException("database unreachable");
+    when(newsService.getArticleLanguages("1", false)).thenThrow(failure);
+
+    PersistenceException thrown = assertThrows(PersistenceException.class,
+                                               () -> newsIndexingServiceConnector.getAllIds(0, 10));
+    assertSame(failure, thrown);
+    verify(newsService, never()).getArticleLanguages("2", false);
+  }
+
+  @Test
+  public void testGetAllIdsKeepsListingWhenTheTranslationsReadTimesOut() {
+    newsIndexingServiceConnector = new NewsIndexingServiceConnector(identityManager,
+                                                                    getParams(),
+                                                                    newsService,
+                                                                    activityManager,
+                                                                    metadataService);
+    when(metadataService.getMetadataItemsByFilter(any(MetadataFilter.class), eq(0L), eq(0L))).thenReturn(List.of(item("1"),
+                                                                                                                  item("2")));
+    when(newsService.getArticleLanguages("1", false)).thenThrow(new QueryTimeoutException("query timed out"));
+    when(newsService.getArticleLanguages("2", false)).thenReturn(List.of("en"));
+
+    assertEquals(List.of("1", "2", "2-en"), newsIndexingServiceConnector.getAllIds(0, 10));
+    verify(newsService).getArticleLanguages("2", false);
+  }
+
+  @Test
+  public void testGetAllIdsKeepsListingWhenTheTranslationsReadLocksOut() {
+    newsIndexingServiceConnector = new NewsIndexingServiceConnector(identityManager,
+                                                                    getParams(),
+                                                                    newsService,
+                                                                    activityManager,
+                                                                    metadataService);
+    when(metadataService.getMetadataItemsByFilter(any(MetadataFilter.class), eq(0L), eq(0L))).thenReturn(List.of(item("1"),
+                                                                                                                  item("2")));
+    when(newsService.getArticleLanguages("1", false)).thenThrow(new LockTimeoutException("lock timed out"));
+    when(newsService.getArticleLanguages("2", false)).thenReturn(List.of("en"));
+
+    assertEquals(List.of("1", "2", "2-en"), newsIndexingServiceConnector.getAllIds(0, 10));
+    verify(newsService).getArticleLanguages("2", false);
+  }
+
+  @Test
+  public void testGetAllIdsListsAgainWhenAReindexStartsAfterAnInterruptedOne() {
+    newsIndexingServiceConnector = new NewsIndexingServiceConnector(identityManager,
+                                                                    getParams(),
+                                                                    newsService,
+                                                                    activityManager,
+                                                                    metadataService);
+    when(metadataService.getMetadataItemsByFilter(any(MetadataFilter.class), eq(0L), eq(0L))).thenReturn(List.of(item("1"),
+                                                                                                                  item("2"),
+                                                                                                                  item("3"),
+                                                                                                                  item("4")))
+                                                                                             .thenReturn(List.of(item("7"),
+                                                                                                                 item("8"),
+                                                                                                                 item("9")));
+
+    // The first reindex stops after two full pages, the listing still cached
+    assertEquals(List.of("1", "2"), newsIndexingServiceConnector.getAllIds(0, 2));
+    assertEquals(List.of("3", "4"), newsIndexingServiceConnector.getAllIds(2, 2));
+
+    assertEquals(List.of("7", "8"), newsIndexingServiceConnector.getAllIds(0, 2));
+    verify(metadataService, times(2)).getMetadataItemsByFilter(any(MetadataFilter.class), eq(0L), eq(0L));
+  }
+
+  @Test
+  public void testGetAllIdsReadsTheWholeListingInOneQueryWithoutDuplicates() {
+    newsIndexingServiceConnector = new NewsIndexingServiceConnector(identityManager,
+                                                                    getParams(),
+                                                                    newsService,
+                                                                    activityManager,
+                                                                    metadataService);
+    List<MetadataItem> items = new ArrayList<>(IntStream.range(0, 450).mapToObj(i -> item(String.valueOf(i))).toList());
+    items.add(item("0"));
+    when(metadataService.getMetadataItemsByFilter(any(MetadataFilter.class), eq(0L), eq(0L))).thenReturn(items);
+
+    List<String> ids = newsIndexingServiceConnector.getAllIds(0, 1000);
+
+    assertEquals(450, ids.size());
+    verify(metadataService, times(1)).getMetadataItemsByFilter(any(MetadataFilter.class), anyLong(), anyLong());
+  }
+
+  private MetadataItem item(String articleId) {
+    MetadataItem item = new MetadataItem();
+    item.setObjectId(articleId);
+    return item;
   }
 
   @Test

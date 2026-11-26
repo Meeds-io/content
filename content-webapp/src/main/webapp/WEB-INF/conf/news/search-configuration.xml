@@ -88,8 +88,9 @@
         <properties-param>
           <name>constructor.params</name>
           <property name="index_alias" value="news_alias" />
-          <property name="index_previous" value="news_v1" />
-          <property name="index_current" value="news_v2" />
+          <property name="index_previous" value="news_v2,news_v1" />
+          <property name="index_current" value="news_v3" />
+          <property name="reindexOnUpgrade" value="${exo.news.es.reindexOnUpgrade:true}" />
         </properties-param>
       </init-params>
     </component-plugin>

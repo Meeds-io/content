@@ -74,6 +74,8 @@ public class NewsSearchConnectorIT extends AbstractElasticsearchIT {
 
   private static final String     SLASH_BODY_ID   = "3";
 
+  private static final String     LONG_ARTICLE_ID = "4";
+
   private static final HttpClient HTTP_CLIENT     = HttpClient.newHttpClient();
 
   private NewsSearchConnector     newsSearchConnector;
@@ -149,6 +151,22 @@ public class NewsSearchConnectorIT extends AbstractElasticsearchIT {
   void testLongTextIsSearchedByItsFirstWords() {
     // 40000 words would exceed the engine's clause limit, 1024 in the harness
     assertEquals(List.of(WORD_TITLE_ID), search("roadmap items ".repeat(20000)));
+    assertEquals(200, lastStatus);
+  }
+
+  @Test
+  void testArticleLongerThanAnIndexTermIsIndexedAndFound() throws Exception {
+    // Above the engine's limit of 32766 bytes for one indexed term
+    String longText = "longform ".repeat(5000) + "zebracorn";
+    send("PUT",
+         "/" + INDEX + "/_doc/" + LONG_ARTICLE_ID,
+         """
+             {"id": "%s", "title": "Annual report", "body": "%s", "summary": "%s", "posterName": "Root Root",
+              "permissions": [%d], "lastUpdatedTime": 1}
+             """.formatted(LONG_ARTICLE_ID, longText, longText, STREAM_OWNER_ID));
+    send("POST", "/" + INDEX + "/_refresh", "");
+
+    assertEquals(List.of(LONG_ARTICLE_ID), search("zebracorn"));
     assertEquals(200, lastStatus);
   }
 
