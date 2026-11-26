@@ -182,7 +182,7 @@ export default {
         spaces: null,
         selectedSpaces: [],
       },
-      activeCategoryId: this.categoryId,
+      activeCategoryId: this.toCategoryId(this.categoryId),
     };
   },
   computed: {
@@ -221,7 +221,7 @@ export default {
         // actually active filter instead of appearing reset to defaults.
         this.$spaceService.getSpacesByIds(spaceIds).then(data => this.advancedFilter.selectedSpaces = data?.spaces || []);
       }
-      this.activeCategoryId = queryParamUtils.getQueryParam('categoryId') || this.categoryId;
+      this.activeCategoryId = this.toCategoryId(queryParamUtils.getQueryParam('categoryId') || this.categoryId);
     }
     this.load();
   },
@@ -262,8 +262,15 @@ export default {
       this.advancedFilter = filter;
       this.load();
     },
+    // Category ids are numbers in the category tree the filter compares them with (strict equality);
+    // the address gives a string. Only a positive whole number is an id.
+    toCategoryId(categoryId) {
+      const value = String(categoryId ?? '').trim();
+      const id = /^\d{1,15}$/.test(value) ? Number(value) : 0;
+      return id > 0 ? id : null;
+    },
     selectCategory(categoryId) {
-      this.activeCategoryId = categoryId || null;
+      this.activeCategoryId = this.toCategoryId(categoryId);
       this.load();
     },
     load() {
