@@ -81,6 +81,7 @@
           fas fa-cog
         </v-icon>
       </v-btn>
+      <news-hide-button class="white--text" dark />
       <div
         class="d-flex"
         v-if="news?.length > 1">

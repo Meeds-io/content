@@ -74,6 +74,9 @@
     Space currentSpace = getSpaceByContext();
     boolean canCreateNewsPublishTarget = NewsUtils.canCreateNewsPublishTargets(currentIdentity, currentSpace != null ? currentSpace.getSpaceId() : null);
     boolean canManageNewsPublishTargets = NewsUtils.canManageNewsPublishTargets(currentIdentity);
+    String settingName = (String) request.getAttribute("settingName");
+    boolean allowHide = Boolean.TRUE.equals(request.getAttribute("allowHide"));
+    boolean hidden = Boolean.TRUE.equals(request.getAttribute("hidden"));
   %>
   <div class="news-list-view-app" id="<%= appId %>">
     <script type="text/javascript">
@@ -96,6 +99,9 @@
         showArticleDate: <%= showArticleDate == null ? null : "'" + StringEscapeUtils.escapeEcmaScript(showArticleDate) + "'" %>,
         seeAllUrl: <%= seeAllUrl == null ? null : "'" + StringEscapeUtils.escapeEcmaScript(seeAllUrl) + "'" %>,
         canEdit: <%= hasEditPermission %>,
+        settingName: <%= settingName == null ? null : "'" + StringEscapeUtils.escapeEcmaScript(settingName) + "'" %>,
+        allowHide: <%= allowHide %>,
+        hidden: <%= hidden %>,
         canManageNewsPublishTargets: <%=canManageNewsPublishTargets%>,
         canCreateNewsTarget: <%=canCreateNewsPublishTarget%>,
         articlesSourceOption: <%= articlesSourceOption == null ? null : "'" + StringEscapeUtils.escapeEcmaScript(articlesSourceOption) + "'" %>,

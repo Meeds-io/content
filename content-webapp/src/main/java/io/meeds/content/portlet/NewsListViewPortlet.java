@@ -40,19 +40,32 @@ import org.apache.commons.lang3.StringUtils;
 import org.exoplatform.commons.api.settings.SettingService;
 import org.exoplatform.commons.api.settings.SettingValue;
 import org.exoplatform.container.ExoContainerContext;
+import org.exoplatform.services.log.ExoLogger;
+import org.exoplatform.services.log.Log;
+import org.exoplatform.services.security.ConversationState;
 
+import io.meeds.content.news.plugin.NewsListHiddenApplicationPlugin;
 import io.meeds.content.news.utils.NewsUtils;
+import io.meeds.social.hidden.service.HiddenApplicationService;
 import io.meeds.social.portlet.CMSPortlet;
 
 public class NewsListViewPortlet extends CMSPortlet {
+
+  private static final Log    LOG            = ExoLogger.getLogger(NewsListViewPortlet.class);
 
   private static final String OBJECT_TYPE    = "newsListViewPortlet";
 
   private static final String APPLICATION_ID = "applicationId";
 
+  private static final String ALLOW_HIDE_PARAMETER = "allowHide";
+
   private SettingService settingService;
 
   private TranslationService translationService;
+
+  private HiddenApplicationService hiddenApplicationService;
+
+  private NewsListHiddenApplicationPlugin newsListHiddenApplicationPlugin;
 
   @Override
   public void init(PortletConfig config) throws PortletException {
@@ -85,7 +98,11 @@ public class NewsListViewPortlet extends CMSPortlet {
         continue;
       }
       String value = request.getParameter(name);
-      preferences.setValue(name, value);
+      if (StringUtils.equals(name, ALLOW_HIDE_PARAMETER)) {
+        saveHideAllowed(preferences.getValue(NAME, null), Boolean.parseBoolean(value));
+      } else {
+        preferences.setValue(name, value);
+      }
     }
     preferences.store();
   }
@@ -95,6 +112,29 @@ public class NewsListViewPortlet extends CMSPortlet {
     String applicationId = getOrCreateApplicationId(request.getPreferences());
     request.getPreferences().setValue(APPLICATION_ID, applicationId);
     super.doView(request, response);
+  }
+
+  @Override
+  protected void setViewRequestAttributes(String name, RenderRequest request, RenderResponse response) {
+    boolean allowHide = getHiddenApplicationService().isHideAllowed(NewsListHiddenApplicationPlugin.APPLICATION_TYPE, name);
+    request.setAttribute(ALLOW_HIDE_PARAMETER, allowHide);
+    request.setAttribute("hidden",
+                         allowHide && getHiddenApplicationService().isHidden(NewsListHiddenApplicationPlugin.APPLICATION_TYPE,
+                                                                             name,
+                                                                             request.getRemoteUser()));
+  }
+
+  private void saveHideAllowed(String name, boolean allowed) {
+    ConversationState conversationState = ConversationState.getCurrent();
+    try {
+      getNewsListHiddenApplicationPlugin().saveHideAllowed(name,
+                                                           allowed,
+                                                           conversationState == null ? null : conversationState.getIdentity());
+    } catch (IllegalAccessException | IllegalArgumentException e) {
+      // The option is kept for the window, not for the page: only its editors
+      // change it, whoever else may save the other display options
+      LOG.debug("News list hiding option not saved", e);
+    }
   }
 
   private String getOrCreateApplicationId(PortletPreferences preferences) {
@@ -125,6 +165,20 @@ public class NewsListViewPortlet extends CMSPortlet {
       settingService = ExoContainerContext.getService(SettingService.class);
     }
     return settingService;
+  }
+
+  private HiddenApplicationService getHiddenApplicationService() {
+    if (hiddenApplicationService == null) {
+      hiddenApplicationService = ExoContainerContext.getService(HiddenApplicationService.class);
+    }
+    return hiddenApplicationService;
+  }
+
+  private NewsListHiddenApplicationPlugin getNewsListHiddenApplicationPlugin() {
+    if (newsListHiddenApplicationPlugin == null) {
+      newsListHiddenApplicationPlugin = ExoContainerContext.getService(NewsListHiddenApplicationPlugin.class);
+    }
+    return newsListHiddenApplicationPlugin;
   }
 
   private TranslationService getTranslationService() {
