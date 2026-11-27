@@ -62,6 +62,14 @@ public class LinkSettingRestEntity {
 
   private List<LinkRestEntity> links;
 
+  private boolean              allowHide;
+
+  /**
+   * True when the current user hid the application, which applies only while
+   * allowHide is on. Computed on read, never saved through this entity.
+   */
+  private boolean              hidden;
+
   @JsonProperty("vAlign")
   public LinkAlignType getVAlign() {
     return vAlign;

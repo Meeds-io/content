@@ -25,9 +25,12 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 
 import java.io.File;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -35,12 +38,16 @@ import java.util.Map;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import org.exoplatform.commons.exception.ObjectNotFoundException;
 import org.exoplatform.commons.file.model.FileInfo;
 import org.exoplatform.commons.file.model.FileItem;
 import org.exoplatform.commons.file.services.FileService;
 import org.exoplatform.portal.config.UserACL;
+import org.exoplatform.portal.config.model.Application;
+import org.exoplatform.portal.config.model.Container;
+import org.exoplatform.portal.config.model.Page;
 import org.exoplatform.portal.config.model.PortalConfig;
 import org.exoplatform.portal.mop.SiteKey;
 import org.exoplatform.portal.mop.navigation.NavigationContext;
@@ -50,10 +57,13 @@ import org.exoplatform.portal.mop.navigation.NodeModel;
 import org.exoplatform.portal.mop.navigation.NodeState;
 import org.exoplatform.portal.mop.navigation.Scope;
 import org.exoplatform.portal.mop.service.NavigationService;
+import org.exoplatform.portal.config.model.TransientApplicationState;
 import org.exoplatform.portal.mop.page.PageContext;
 import org.exoplatform.portal.mop.page.PageKey;
 import org.exoplatform.portal.mop.page.PageState;
 import org.exoplatform.portal.mop.service.LayoutService;
+import org.exoplatform.portal.pom.spi.portlet.Portlet;
+import org.exoplatform.portal.pom.spi.portlet.Preference;
 import org.exoplatform.services.resources.LocaleConfigService;
 import org.exoplatform.services.security.IdentityRegistry;
 import org.exoplatform.services.security.MembershipEntry;
@@ -64,8 +74,11 @@ import io.meeds.content.AbstractSpringConfigurationTest;
 import io.meeds.content.link.constant.LinkAlignType;
 import io.meeds.content.link.constant.LinkDisplayType;
 import io.meeds.content.link.model.Link;
+import io.meeds.content.link.model.LinkData;
 import io.meeds.content.link.model.LinkSetting;
 import io.meeds.content.link.model.LinkWithIconAttachment;
+import io.meeds.social.hidden.model.HiddenApplication;
+import io.meeds.social.hidden.service.HiddenApplicationService;
 
 import lombok.SneakyThrows;
 
@@ -101,6 +114,9 @@ public class LinkServiceTest extends AbstractSpringConfigurationTest { // NOSONA
   private FileService         fileService;
 
   private LocaleConfigService localeConfigService;
+
+  @Autowired
+  private HiddenApplicationService hiddenApplicationService;
 
   @Before
   @Override
@@ -408,6 +424,81 @@ public class LinkServiceTest extends AbstractSpringConfigurationTest { // NOSONA
 
   @Test
   @SneakyThrows
+  public void testHideLinkSetting() {
+    String settingName = "linkHideSetting";
+    String otherUser = "otherHideUser";
+    registerInternalUser(USERNAME);
+    registerInternalUser(otherUser);
+    assertThrows(ObjectNotFoundException.class,
+                 () -> hiddenApplicationService.hide(LinkService.LINK_APPLICATION_TYPE, "notExisting", USERNAME));
+
+    LinkSetting linkSetting = initLinkSetting(settingName, "testHideLinkSetting");
+    assertFalse("The option is off by default", linkService.getLinkSettingByName(settingName).isAllowHide());
+    assertThrows("Hiding is refused while the option is off",
+                 IllegalArgumentException.class,
+                 () -> hiddenApplicationService.hide(LinkService.LINK_APPLICATION_TYPE, settingName, USERNAME));
+
+    linkSetting.setAllowHide(true);
+    linkSetting.setHeader(Collections.singletonMap("en", "Hidden header"));
+    linkService.saveLinkSetting(linkSetting, null, registerAdministratorUser("hideAdmin"));
+    assertTrue("The option is stored", linkService.getLinkSettingByName(settingName).isAllowHide());
+
+    hiddenApplicationService.hide(LinkService.LINK_APPLICATION_TYPE, settingName, USERNAME);
+    LinkSetting storedLinkSetting = linkService.getLinkSettingByName(settingName);
+    assertTrue(linkService.isHidden(storedLinkSetting, USERNAME));
+    assertFalse("Another user still sees the application", linkService.isHidden(storedLinkSetting, otherUser));
+    List<HiddenApplication> hiddenApplications = hiddenApplicationService.getHiddenApplications(USERNAME, "en");
+    assertEquals(Collections.singletonList(settingName), hiddenApplications.stream().map(HiddenApplication::getName).toList());
+    assertEquals("A hidden application is listed with its header", "Hidden header", hiddenApplications.get(0).getTitle());
+    assertEquals("testHideLinkSetting", hiddenApplications.get(0).getPageTitle());
+    assertTrue(hiddenApplicationService.getHiddenApplications(otherUser, "en").isEmpty());
+
+    storedLinkSetting.setAllowHide(false);
+    linkService.saveLinkSetting(storedLinkSetting, null, registerAdministratorUser("hideAdmin"));
+    storedLinkSetting = linkService.getLinkSettingByName(settingName);
+    assertFalse("Turning the option off shows the application again", linkService.isHidden(storedLinkSetting, USERNAME));
+    assertTrue(hiddenApplicationService.getHiddenApplications(USERNAME, "en").isEmpty());
+
+    storedLinkSetting.setAllowHide(true);
+    linkService.saveLinkSetting(storedLinkSetting, null, registerAdministratorUser("hideAdmin"));
+    storedLinkSetting = linkService.getLinkSettingByName(settingName);
+    assertFalse("Turned on again, the option starts fresh: the earlier choice is gone",
+                linkService.isHidden(storedLinkSetting, USERNAME));
+
+    hiddenApplicationService.hide(LinkService.LINK_APPLICATION_TYPE, settingName, USERNAME);
+    linkService.saveLinkSetting(storedLinkSetting, null, registerAdministratorUser("hideAdmin"));
+    assertTrue("Saving the application with the option still on keeps the choice",
+               linkService.isHidden(linkService.getLinkSettingByName(settingName), USERNAME));
+    hiddenApplicationService.show(LinkService.LINK_APPLICATION_TYPE, settingName, USERNAME);
+    assertFalse(linkService.isHidden(storedLinkSetting, USERNAME));
+    assertTrue(hiddenApplicationService.getHiddenApplications(USERNAME, "en").isEmpty());
+  }
+
+  @Test
+  @SneakyThrows
+  public void testHideLinkSettingPermission() {
+    String settingName = "linkHideRestrictedSetting";
+    String pageReference = createPage("testHideLinkSettingPermission", ADMINISTRATORS_GROUP, ADMINISTRATORS_GROUP);
+    addLinksWindow(pageReference, settingName);
+    LinkSetting linkSetting = linkService.initLinkSetting(settingName, pageReference, 0);
+    linkSetting.setAllowHide(true);
+    linkService.saveLinkSetting(linkSetting, null, registerAdministratorUser("hideAdmin"));
+    registerInternalUser(USERNAME);
+
+    assertThrows("A user who can't see the application can't hide it",
+                 IllegalAccessException.class,
+                 () -> hiddenApplicationService.hide(LinkService.LINK_APPLICATION_TYPE, settingName, USERNAME));
+    hiddenApplicationService.hide(LinkService.LINK_APPLICATION_TYPE, settingName, "hideAdmin");
+    assertTrue(linkService.isHidden(linkService.getLinkSettingByName(settingName), "hideAdmin"));
+    assertEquals(1, hiddenApplicationService.getHiddenApplications("hideAdmin", "en").size());
+
+    layoutService.remove(PageKey.parse(pageReference));
+    assertTrue("An application whose page was deleted can't be shown again, even by a content manager",
+               hiddenApplicationService.getHiddenApplications("hideAdmin", "en").isEmpty());
+  }
+
+  @Test
+  @SneakyThrows
   public void testGetLinkIconStream() {
     assertNull(linkService.getLinkIconStream(LINK_SETTING_NAME, 2325l));
 
@@ -625,9 +716,234 @@ public class LinkServiceTest extends AbstractSpringConfigurationTest { // NOSONA
     assertNull(name.get("fr"));
   }
 
+  @Test
+  @SneakyThrows
+  public void testCopyLinkSettingKeepsTheCopyHiddenForTheUsersWhoHidTheSource() {
+    String sourceName = "linkCopyHiddenSource";
+    String copyName = "linkCopyHiddenCopy";
+    String otherUser = "otherCopyHideUser";
+    registerInternalUser(USERNAME);
+    registerInternalUser(otherUser);
+    LinkSetting source = initLinkSetting(sourceName, "testCopyHiddenSource");
+    source.setAllowHide(true);
+    linkService.saveLinkSetting(source, null, registerAdministratorUser("copyHideAdmin"));
+    hiddenApplicationService.hide(LinkService.LINK_APPLICATION_TYPE, sourceName, USERNAME);
+
+    String copyPage = createPage("testCopyHiddenCopy", UserACL.EVERYONE, ADMINISTRATORS_GROUP);
+    LinkSetting setting = linkService.getLinkSettingByName(sourceName).clone();
+    linkService.copyLinkSetting(copyName, copyPage, SPACE_ID, setting, new ArrayList<>(), registerAdministratorUser("copyHideAdmin"));
+
+    LinkSetting copy = linkService.getLinkSettingByName(copyName);
+    assertTrue("The window that takes the copy's name stays hidden for its user", linkService.isHidden(copy, USERNAME));
+    assertFalse(linkService.isHidden(copy, otherUser));
+    assertTrue("The source keeps its choices", linkService.isHidden(linkService.getLinkSettingByName(sourceName), USERNAME));
+  }
+
+  @Test
+  @SneakyThrows
+  public void testSaveLinkSettingKeepsTheOptionOnWhenClearingTheChoicesFails() {
+    String settingName = "linkClearFailsSetting";
+    LinkSetting linkSetting = initLinkSetting(settingName, "testClearFails");
+    linkSetting.setAllowHide(true);
+    linkService.saveLinkSetting(linkSetting, null, registerAdministratorUser("clearFailsAdmin"));
+
+    HiddenApplicationService service = linkService.hiddenApplicationService;
+    HiddenApplicationService failing = mock(HiddenApplicationService.class);
+    doThrow(new IllegalStateException("clear failed")).when(failing).clearHiddenChoices(LinkService.LINK_APPLICATION_TYPE, settingName);
+    linkService.hiddenApplicationService = failing;
+    try {
+      LinkSetting off = linkService.getLinkSettingByName(settingName);
+      off.setAllowHide(false);
+      assertThrows(IllegalStateException.class,
+                   () -> linkService.saveLinkSetting(off, null, registerAdministratorUser("clearFailsAdmin")));
+    } finally {
+      linkService.hiddenApplicationService = service;
+    }
+    assertTrue("A failed clear leaves the option on, so that saving it off again clears the remaining choices",
+               linkService.getLinkSettingByName(settingName).isAllowHide());
+  }
+
+  @Test
+  @SneakyThrows
+  public void testSiteLayoutWindowIsHiddenListedWithNoPageAndShownAgain() {
+    String settingName = "linkSiteLayoutHideSetting";
+    registerInternalUser(USERNAME);
+    String pageReference = createPage("testSiteLayoutHide", UserACL.EVERYONE, ADMINISTRATORS_GROUP);
+    // The window is in the site's layout: the page its setting records doesn't hold it
+    PortalConfig site = layoutService.getPortalConfig(PageKey.parse(pageReference).getSite());
+    Container siteLayout = new Container();
+    siteLayout.setChildren(new ArrayList<>(List.of(linksWindow(settingName))));
+    site.setPortalLayout(siteLayout);
+    layoutService.save(site);
+    LinkSetting linkSetting = linkService.initLinkSetting(settingName, pageReference, SPACE_ID);
+    linkSetting.setAllowHide(true);
+    linkService.saveLinkSetting(linkSetting, null, registerAdministratorUser("siteLayoutAdmin"));
+
+    hiddenApplicationService.hide(LinkService.LINK_APPLICATION_TYPE, settingName, USERNAME);
+    List<HiddenApplication> hiddenApplications = hiddenApplicationService.getHiddenApplications(USERNAME, "en");
+    assertEquals("A hidden site-layout window is listed, so that its user can show it again",
+                 Collections.singletonList(settingName),
+                 hiddenApplications.stream().map(HiddenApplication::getName).toList());
+    assertNull("It is listed with no page: it is on every page of its site", hiddenApplications.get(0).getPageReference());
+
+    hiddenApplicationService.show(LinkService.LINK_APPLICATION_TYPE, settingName, USERNAME);
+    assertFalse(linkService.isHidden(linkService.getLinkSettingByName(settingName), USERNAME));
+    site = layoutService.getPortalConfig(PageKey.parse(pageReference).getSite());
+    site.setPortalLayout(new Container());
+    layoutService.save(site);
+  }
+
+  @Test
+  @SneakyThrows
+  public void testSaveLinkDataKeepsTheImportedListHiddenForTheUsersWhoHidItsSource() {
+    String sourceName = "linkImportHiddenSource";
+    String targetName = "linkImportHiddenTarget";
+    org.exoplatform.services.security.Identity reader = registerInternalUser(USERNAME);
+    LinkSetting source = initLinkSetting(sourceName, "testImportHiddenSource");
+    source.setAllowHide(true);
+    linkService.saveLinkSetting(source, null, registerAdministratorUser("importHideAdmin"));
+    hiddenApplicationService.hide(LinkService.LINK_APPLICATION_TYPE, sourceName, USERNAME);
+    initLinkSetting(targetName, "testImportHiddenTarget");
+
+    linkService.saveLinkData(targetName, draftExportOf(sourceName), reader);
+
+    LinkSetting target = linkService.getLinkSettingByName(targetName);
+    assertTrue("The imported list allows hiding", target.isAllowHide());
+    assertTrue("The window that imports the data keeps it hidden for its user", linkService.isHidden(target, USERNAME));
+  }
+
+  @Test
+  @SneakyThrows
+  public void testSaveLinkDataCarriesNoChoiceFromASourceTheUserCannotRead() {
+    String sourceName = "linkImportUnreadableSource";
+    String targetName = "linkImportUnreadableTarget";
+    String reader = "importUnreadableUser";
+    registerInternalUser(USERNAME);
+    org.exoplatform.services.security.Identity readerIdentity = registerInternalUser(reader);
+    String sourcePage = createPage("testImportUnreadableSource", ADMINISTRATORS_GROUP, ADMINISTRATORS_GROUP);
+    addLinksWindow(sourcePage, sourceName);
+    LinkSetting source = linkService.initLinkSetting(sourceName, sourcePage, 0);
+    source.setAllowHide(true);
+    linkService.saveLinkSetting(source, null, registerAdministratorUser("importUnreadableAdmin"));
+    hiddenApplicationService.hide(LinkService.LINK_APPLICATION_TYPE, sourceName, "importUnreadableAdmin");
+    initLinkSetting(targetName, "testImportUnreadableTarget");
+
+    linkService.saveLinkData(targetName, draftExportOf(sourceName), readerIdentity);
+
+    assertFalse("A source named by a preference that the user can't read carries nothing",
+                linkService.isHidden(linkService.getLinkSettingByName(targetName), "importUnreadableAdmin"));
+  }
+
+  @Test
+  @SneakyThrows
+  public void testCopyLinkSettingCarriesNoChoiceFromASourceTheEditorCannotRead() {
+    String sourceName = "linkCopyUnreadableSource";
+    String copyName = "linkCopyUnreadableCopy";
+    String admin = "copyUnreadableAdmin";
+    org.exoplatform.services.security.Identity editor = registerInternalUser("copyUnreadableEditor");
+    String sourcePage = createPage("testCopyUnreadableSource", ADMINISTRATORS_GROUP, ADMINISTRATORS_GROUP);
+    addLinksWindow(sourcePage, sourceName);
+    LinkSetting source = linkService.initLinkSetting(sourceName, sourcePage, 0);
+    source.setAllowHide(true);
+    linkService.saveLinkSetting(source, null, registerAdministratorUser(admin));
+    hiddenApplicationService.hide(LinkService.LINK_APPLICATION_TYPE, sourceName, admin);
+
+    // The editor names, in the data of a window they may edit, a list on a page they cannot read
+    String copyPage = createPage("testCopyUnreadableCopy", UserACL.EVERYONE, USERS_GROUP);
+    LinkSetting setting = linkService.getLinkSettingByName(sourceName).clone();
+    linkService.copyLinkSetting(copyName, copyPage, 0, setting, new ArrayList<>(), editor);
+
+    LinkSetting copy = linkService.getLinkSettingByName(copyName);
+    assertTrue(copy.isAllowHide());
+    assertFalse("A source the editor can't read carries no choice", linkService.isHidden(copy, admin));
+  }
+
+  @Test
+  @SneakyThrows
+  public void testSaveLinkDataStoredBeforeTheSourceMarkerCarriesNoChoice() {
+    String sourceName = "linkImportOldShapeSource";
+    String targetName = "linkImportOldShapeTarget";
+    org.exoplatform.services.security.Identity reader = registerInternalUser(USERNAME);
+    LinkSetting source = initLinkSetting(sourceName, "testImportOldShapeSource");
+    source.setAllowHide(true);
+    linkService.saveLinkSetting(source, null, registerAdministratorUser("oldShapeAdmin"));
+    hiddenApplicationService.hide(LinkService.LINK_APPLICATION_TYPE, sourceName, USERNAME);
+    initLinkSetting(targetName, "testImportOldShapeTarget");
+
+    // A template saved before the marker stores its source's name in the setting only
+    LinkData oldShape = linkService.getLinkDataByName(sourceName);
+    assertEquals(sourceName, oldShape.getLinkSetting().getName());
+    linkService.saveLinkData(targetName, oldShape, reader);
+
+    LinkSetting target = linkService.getLinkSettingByName(targetName);
+    assertTrue(target.isAllowHide());
+    assertFalse("A list made from a template, however old, starts shown to all", linkService.isHidden(target, USERNAME));
+  }
+
+  @Test
+  @SneakyThrows
+  public void testACopyThatDoesNotAllowHidingCarriesNoChoice() {
+    String sourceName = "linkNoHideCopySource";
+    String copyName = "linkNoHideCopyCopy";
+    String importName = "linkNoHideImportTarget";
+    org.exoplatform.services.security.Identity user = registerInternalUser(USERNAME);
+    org.exoplatform.services.security.Identity admin = registerAdministratorUser("noHideCopyAdmin");
+    LinkSetting source = initLinkSetting(sourceName, "testNoHideCopySource");
+    source.setAllowHide(true);
+    linkService.saveLinkSetting(source, null, admin);
+    hiddenApplicationService.hide(LinkService.LINK_APPLICATION_TYPE, sourceName, USERNAME);
+
+    // Through the settings tool's copy, its option turned off
+    String copyPage = createPage("testNoHideCopyCopy", UserACL.EVERYONE, ADMINISTRATORS_GROUP);
+    LinkSetting setting = linkService.getLinkSettingByName(sourceName).clone();
+    setting.setAllowHide(false);
+    linkService.copyLinkSetting(copyName, copyPage, SPACE_ID, setting, new ArrayList<>(), admin);
+
+    // Through a site draft's import, its option turned off
+    initLinkSetting(importName, "testNoHideImportTarget");
+    LinkData draftExport = draftExportOf(sourceName);
+    draftExport.getLinkSetting().setAllowHide(false);
+    linkService.saveLinkData(importName, draftExport, user);
+
+    // Social's own record of the choice, which the option does not mask
+    assertFalse("A copy that does not allow hiding carries no choice",
+                hiddenApplicationService.isHidden(LinkService.LINK_APPLICATION_TYPE, copyName, USERNAME));
+    assertFalse("An import that does not allow hiding carries no choice",
+                hiddenApplicationService.isHidden(LinkService.LINK_APPLICATION_TYPE, importName, USERNAME));
+  }
+
+  /**
+   * @return the data a site draft's export writes for a window: its source
+   *         named by the marker only
+   */
+  private LinkData draftExportOf(String sourceName) throws Exception {
+    LinkData linkData = linkService.getLinkDataByName(sourceName);
+    LinkSetting linkSetting = linkData.getLinkSetting().clone();
+    linkSetting.setName(null);
+    return new LinkData(linkSetting, linkData.getLinks(), sourceName);
+  }
+
   private LinkSetting initLinkSetting(String linkSettingName, String pageName) {
     String pageReference = createPage(pageName, UserACL.EVERYONE, ADMINISTRATORS_GROUP);
+    addLinksWindow(pageReference, linkSettingName);
     return linkService.initLinkSetting(linkSettingName, pageReference, SPACE_ID);
+  }
+
+  /**
+   * Puts on the page a Links window carrying the setting's name: social's
+   * listing of hidden applications keeps a window only while its page holds it
+   */
+  private void addLinksWindow(String pageReference, String linkSettingName) {
+    Page page = layoutService.getPage(pageReference);
+    page.setChildren(new ArrayList<>(List.of(linksWindow(linkSettingName))));
+    layoutService.save(page);
+  }
+
+  private Application linksWindow(String linkSettingName) {
+    Application application = Application.createPortletApplication();
+    application.setState(new TransientApplicationState("content/LinkPortlet",
+                                                       new Portlet().putPreference(new Preference("name", linkSettingName, false))));
+    return application;
   }
 
   private String createPage(String pageName, String accessPermission, String editPermission) {

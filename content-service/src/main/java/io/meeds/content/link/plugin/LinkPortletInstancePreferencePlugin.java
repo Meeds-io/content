@@ -32,6 +32,7 @@ import org.exoplatform.portal.pom.spi.portlet.Portlet;
 import org.exoplatform.portal.pom.spi.portlet.Preference;
 
 import io.meeds.content.link.model.LinkData;
+import io.meeds.content.link.model.LinkSetting;
 import io.meeds.content.link.service.LinkService;
 import io.meeds.layout.model.PortletInstanceContext;
 import io.meeds.layout.model.PortletInstancePreference;
@@ -75,17 +76,56 @@ public class LinkPortletInstancePreferencePlugin implements PortletInstancePrefe
                                                              Portlet preferences,
                                                              PortletInstanceContext portletInstanceContext) {
     String settingName = getCmsSettingName(preferences);
+    boolean draft = isDraft(portletInstanceContext);
     if (StringUtils.isBlank(settingName)) {
       if (preferences != null && preferences.getPreference(DATA_INIT_PREFERENCE_NAME) != null) {
+        String data = preferences.getPreference(DATA_INIT_PREFERENCE_NAME).getValue();
+        LinkData linkData = parse(data);
         return Collections.singletonList(new PortletInstancePreference(DATA_INIT_PREFERENCE_NAME,
-                                                                       preferences.getPreference(DATA_INIT_PREFERENCE_NAME)
-                                                                                  .getValue()));
+                                                                       linkData == null ? data
+                                                                                        : JsonUtils.toJsonString(toExport(linkData,
+                                                                                                                          draft ? linkData.getSourceName()
+                                                                                                                                : null))));
       } else {
         return Collections.emptyList();
       }
     }
     LinkData linkData = linkService.getLinkDataByName(settingName);
-    return Collections.singletonList(new PortletInstancePreference(DATA_INIT_PREFERENCE_NAME, JsonUtils.toJsonString(linkData)));
+    return Collections.singletonList(new PortletInstancePreference(DATA_INIT_PREFERENCE_NAME,
+                                                                   JsonUtils.toJsonString(toExport(linkData,
+                                                                                                   draft ? settingName : null))));
+  }
+
+  /**
+   * Only a site draft's window replaces the window it is exported from, once
+   * published: its data names that source, so that the users who hid it keep
+   * it hidden. A duplicated section, or a page, site or space made from a
+   * template, sits next to its source or elsewhere, and starts shown to all.
+   */
+  private boolean isDraft(PortletInstanceContext portletInstanceContext) {
+    return portletInstanceContext != null
+           && portletInstanceContext.getProperties() != null
+           && Boolean.parseBoolean(portletInstanceContext.getProperties().get(PortletInstanceContext.DRAFT_PROPERTY));
+  }
+
+  /**
+   * The exported data never names a list in its setting: only the
+   * {@link LinkData#getSourceName()} a site draft's export sets does
+   */
+  private LinkData toExport(LinkData linkData, String sourceName) {
+    LinkSetting linkSetting = linkData.getLinkSetting() == null ? null : linkData.getLinkSetting().clone();
+    if (linkSetting != null) {
+      linkSetting.setName(null);
+    }
+    return new LinkData(linkSetting, linkData.getLinks(), sourceName);
+  }
+
+  private LinkData parse(String data) {
+    try {
+      return StringUtils.isBlank(data) ? null : JsonUtils.fromJsonString(data, LinkData.class);
+    } catch (RuntimeException e) {
+      return null;
+    }
   }
 
   private String getCmsSettingName(Portlet preferences) {

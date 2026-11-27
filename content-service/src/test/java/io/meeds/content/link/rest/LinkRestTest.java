@@ -46,6 +46,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.MockedStatic;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.ResultActions;
@@ -77,6 +78,7 @@ import io.meeds.content.link.model.LinkSetting;
 import io.meeds.content.link.rest.model.LinkRestEntity;
 import io.meeds.content.link.rest.model.LinkSettingRestEntity;
 import io.meeds.content.link.service.LinkService;
+import io.meeds.social.hidden.service.HiddenApplicationService;
 import io.meeds.social.util.JsonUtils;
 
 import jakarta.servlet.Filter;
@@ -119,6 +121,9 @@ public class LinkRestTest extends AbstractSpringConfigurationTest { // NOSONAR
 
   private MockUploadService              uploadService;
 
+  @Autowired
+  private HiddenApplicationService       hiddenApplicationService;
+
   @Before
   @Override
   public void setUp() {
@@ -139,6 +144,26 @@ public class LinkRestTest extends AbstractSpringConfigurationTest { // NOSONAR
   public void tearDown() {
     super.setUp();
     REST_UTILS.close(); // NOSONAR
+  }
+
+  @Test
+  @SneakyThrows
+  public void testGetLinkSettingReturnsTheChoiceOfTheCurrentUser() {
+    LinkSetting linkSetting = initLinkSetting(LINK_SETTING_NAME, "testHideLinkSettingRest", true);
+    registerInternalUser(USERNAME);
+    assertFalse(getLinkSetting(getLink(true, false)).isAllowHide());
+    assertFalse(getLinkSetting(getLink(true, false)).isHidden());
+
+    linkSetting.setAllowHide(true);
+    linkService.saveLinkSetting(linkSetting, null);
+    assertTrue(getLinkSetting(getLink(true, false)).isAllowHide());
+    assertFalse(getLinkSetting(getLink(true, false)).isHidden());
+
+    hiddenApplicationService.hide(LinkService.LINK_APPLICATION_TYPE, LINK_SETTING_NAME, USERNAME);
+    assertTrue("The current user's choice is returned", getLinkSetting(getLink(true, false)).isHidden());
+
+    hiddenApplicationService.show(LinkService.LINK_APPLICATION_TYPE, LINK_SETTING_NAME, USERNAME);
+    assertFalse(getLinkSetting(getLink(true, false)).isHidden());
   }
 
   @Test
@@ -460,7 +485,9 @@ public class LinkRestTest extends AbstractSpringConfigurationTest { // NOSONAR
                                      true,
                                      true,
                                      "#SeeMore",
-                                     links);
+                                     links,
+                                     false,
+                                     false);
   }
 
   @SneakyThrows
@@ -532,7 +559,9 @@ public class LinkRestTest extends AbstractSpringConfigurationTest { // NOSONAR
                                      true,
                                      true,
                                      "#SeeMore",
-                                     links);
+                                     links,
+                                     false,
+                                     false);
   }
 
   private void registerAnonymousUser() {

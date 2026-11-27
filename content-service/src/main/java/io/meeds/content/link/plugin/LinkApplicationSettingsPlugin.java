@@ -287,8 +287,18 @@ public class LinkApplicationSettingsPlugin implements ApplicationSettingsPlugin 
     return StringUtils.isBlank(data) ? null : JsonUtils.fromJsonString(data, LinkData.class);
   }
 
+  /**
+   * The window's data names its source list only through
+   * {@link LinkData#getSourceName()}, which a site draft's export sets: the
+   * name its setting carries, in data a template stored, names none
+   */
   private LinkSetting initialSetting(LinkData initial) {
-    return initial == null ? null : initial.getLinkSetting();
+    if (initial == null || initial.getLinkSetting() == null) {
+      return null;
+    }
+    LinkSetting linkSetting = initial.getLinkSetting().clone();
+    linkSetting.setName(initial.getSourceName());
+    return linkSetting;
   }
 
   private List<Link> initialLinks(LinkData initial) {

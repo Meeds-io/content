@@ -134,5 +134,10 @@
       UPDATE SOC_LINK_SETTINGS SET H_ALIGN = 1 WHERE TYPE = 2;
     </sql>
   </changeSet>
+  <changeSet author="links" id="1.0.0-exo-94860-01">
+    <addColumn tableName="SOC_LINK_SETTINGS">
+      <column name="ALLOW_HIDE" type="BOOLEAN" defaultValueBoolean="false" />
+    </addColumn>
+  </changeSet>
 
 </databaseChangeLog>

@@ -59,6 +59,7 @@ import io.meeds.spring.web.security.WebSecurityConfiguration;
   "io.meeds.social.space.service",
   "io.meeds.social.cms",
   "io.meeds.social.html",
+  "io.meeds.social.hidden",
   AvailableIntegration.KERNEL_TEST_MODULE,
   AvailableIntegration.JPA_MODULE,
   AvailableIntegration.LIQUIBASE_MODULE,

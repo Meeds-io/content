@@ -69,6 +69,12 @@ public class LinkSetting implements Serializable, Cloneable {
 
   private long                lastModified;
 
+  /**
+   * Whether each user may hide the links application from the page for
+   * themselves
+   */
+  private boolean             allowHide        = false;
+
   @Override
   public LinkSetting clone() { // NOSONAR
     return new LinkSetting(id,
@@ -85,7 +91,8 @@ public class LinkSetting implements Serializable, Cloneable {
                            showIcon,
                            showDescription,
                            seeMore,
-                           lastModified);
+                           lastModified,
+                           allowHide);
   }
 
 }

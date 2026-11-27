@@ -51,7 +51,8 @@ public class EntityMapper {
                            linkSettingEntity.isShowIcon(),
                            linkSettingEntity.isShowDescription(),
                            linkSettingEntity.getSeeMore(),
-                           linkSettingEntity.getLastModified().toEpochMilli());
+                           linkSettingEntity.getLastModified().toEpochMilli(),
+                           linkSettingEntity.isAllowHide());
   }
 
   public static LinkSettingEntity fromModel(LinkSetting linkSetting, LinkSettingEntity existingLinkSettingEntity) {
@@ -76,6 +77,7 @@ public class EntityMapper {
                                  linkSetting.isShowDescription(),
                                  linkSetting.getSeeMore(),
                                  Instant.now(),
+                                 linkSetting.isAllowHide(),
                                  null);
   }
 

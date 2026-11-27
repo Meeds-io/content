@@ -20,7 +20,7 @@
 -->
 <template>
   <div
-    v-if="hasLinks && (showHeader || canEdit)"
+    v-if="hasLinks && (showHeader || canEdit || canHide)"
     :class="{
       'position-relative': showHeader,
       'pb-2': $root.isCard,
@@ -32,7 +32,7 @@
     </div>
     <v-spacer />
     <div
-      v-if="hasLinks && (seeMoreUrl || canEdit)"
+      v-if="hasLinks && (seeMoreUrl || canEdit || canHide)"
       class="hover-swap-parent flex-grow-0 flex-shrink-0 text-end">
       <v-btn
         v-if="seeMoreUrl"
@@ -63,7 +63,7 @@
         :aria-label="$t('links.label.editSettings')"
         class="hover-reveal"
         :class="{
-          'position-absolute z-index-two t-0': !seeMoreUrl,
+          'position-absolute z-index-two t-0': !showHeader && !canHide,
           'r-0': !$vuetify.rtl,
           'l-0': $vuetify.rtl,
           'ma-1': !showHeader,
@@ -73,6 +73,14 @@
         @click="$emit('edit')">
         <v-icon size="18">fa-cog</v-icon>
       </v-btn>
+      <hide-application-button
+        v-if="canHide"
+        :name="$root.name"
+        :label="hideLabel"
+        :error-label="$t('links.label.hideError')"
+        type="links"
+        class="links-hide-button"
+        @hidden="$emit('hidden')" />
     </div>
   </div>
   <div v-else-if="!hasLinks && canEdit" class="d-flex align-center justify-center">
@@ -113,6 +121,16 @@ export default {
     },
     header() {
       return this.$t(this.settings?.header?.[this.$root.language] || this.settings?.header?.[this.$root.defaultLanguage]);
+    },
+    allowHide() {
+      return !!this.settings?.allowHide;
+    },
+    canHide() {
+      // A guest is never offered the hide button: its row stays out too
+      return this.allowHide && !!eXo.env.portal.userName;
+    },
+    hideLabel() {
+      return this.header?.length ? this.$t('links.label.hideList', {0: this.header}) : this.$t('links.label.hideListWithoutHeader');
     },
     seeMoreUrl() {
       return this.$utils.toLinkUrl(this.settings?.seeMore, {
