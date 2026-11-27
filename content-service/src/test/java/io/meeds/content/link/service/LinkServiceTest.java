@@ -485,8 +485,8 @@ public class LinkServiceTest extends AbstractSpringConfigurationTest { // NOSONA
     linkService.saveLinkSetting(linkSetting, null, registerAdministratorUser("hideAdmin"));
     registerInternalUser(USERNAME);
 
-    assertThrows("A user who can't see the application can't hide it",
-                 IllegalAccessException.class,
+    assertThrows("A user who can't see the application can't hide it: it is not found for this user",
+                 ObjectNotFoundException.class,
                  () -> hiddenApplicationService.hide(LinkService.LINK_APPLICATION_TYPE, settingName, USERNAME));
     hiddenApplicationService.hide(LinkService.LINK_APPLICATION_TYPE, settingName, "hideAdmin");
     assertTrue(linkService.isHidden(linkService.getLinkSettingByName(settingName), "hideAdmin"));
