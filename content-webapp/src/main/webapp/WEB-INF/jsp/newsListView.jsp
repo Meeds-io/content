@@ -8,7 +8,7 @@
 <%@ page import="org.exoplatform.portal.config.model.Page" %>
 <%@ page import="static org.exoplatform.social.core.space.SpaceUtils.getSpaceByContext" %>
 <%@ page import="org.exoplatform.social.core.space.model.Space" %>
-<%@ page import="org.apache.commons.text.StringEscapeUtils" %>
+<%@ page import="org.exoplatform.social.webui.Utils" %>
 <%@ taglib uri="http://java.sun.com/portlet_2_0" prefix="portlet" %>
 
 <portlet:defineObjects />
@@ -78,28 +78,28 @@
   <div class="news-list-view-app" id="<%= appId %>">
     <script type="text/javascript">
       require(['PORTLET/content/NewsListView'], app => app.init({
-        applicationId: '<%=applicationId%>',
-        appId: '<%=appId%>',
-        saveSettingsURL: <%= "'" + saveSettingsURL + "'" %>,
-        viewTemplate: <%= viewTemplate == null ? null : "'" + StringEscapeUtils.escapeEcmaScript(viewTemplate) + "'" %>,
-        newsTarget: <%= newsTarget == null ? null : "'" + StringEscapeUtils.escapeEcmaScript(newsTarget) + "'" %>,
-        headerTitle: <%= headerTitle == null ? null : "'" + StringEscapeUtils.escapeEcmaScript(headerTitle) + "'" %>,
-        showHeader: <%= showHeader == null ? null : "'" + StringEscapeUtils.escapeEcmaScript(showHeader) + "'" %>,
-        limit: <%= limit == null ? null : "'" + StringEscapeUtils.escapeEcmaScript(limit) + "'" %>,
-        showSeeAll: <%= showSeeAll == null ? null : "'" + StringEscapeUtils.escapeEcmaScript(showSeeAll) + "'" %>,
-        showArticleTitle: <%= showArticleTitle == null ? null : "'" + StringEscapeUtils.escapeEcmaScript(showArticleTitle) + "'" %>,
-        showArticleSummary: <%= showArticleSummary == null ? null : "'" + StringEscapeUtils.escapeEcmaScript(showArticleSummary) + "'" %>,
-        showArticleImage: <%= showArticleImage == null ? null : "'" + StringEscapeUtils.escapeEcmaScript(showArticleImage) + "'" %>,
-        showArticleAuthor: <%= showArticleAuthor == null ? null : "'" + StringEscapeUtils.escapeEcmaScript(showArticleAuthor) + "'" %>,
-        showArticleSpace: <%= showArticleSpace == null ? null : "'" + StringEscapeUtils.escapeEcmaScript(showArticleSpace) + "'" %>,
-        showArticleReactions: <%= showArticleReactions == null ? null : "'" + StringEscapeUtils.escapeEcmaScript(showArticleReactions) + "'" %>,
-        showArticleDate: <%= showArticleDate == null ? null : "'" + StringEscapeUtils.escapeEcmaScript(showArticleDate) + "'" %>,
-        seeAllUrl: <%= seeAllUrl == null ? null : "'" + StringEscapeUtils.escapeEcmaScript(seeAllUrl) + "'" %>,
+        applicationId: <%=Utils.toScriptString(applicationId)%>,
+        appId: <%=Utils.toScriptString(appId)%>,
+        saveSettingsURL: <%=Utils.toScriptString(saveSettingsURL)%>,
+        viewTemplate: <%=viewTemplate == null ? "null" : Utils.toScriptString(viewTemplate)%>,
+        newsTarget: <%=newsTarget == null ? "null" : Utils.toScriptString(newsTarget)%>,
+        headerTitle: <%=headerTitle == null ? "null" : Utils.toScriptString(headerTitle)%>,
+        showHeader: <%=showHeader == null ? "null" : Utils.toScriptString(showHeader)%>,
+        limit: <%=limit == null ? "null" : Utils.toScriptString(limit)%>,
+        showSeeAll: <%=showSeeAll == null ? "null" : Utils.toScriptString(showSeeAll)%>,
+        showArticleTitle: <%=showArticleTitle == null ? "null" : Utils.toScriptString(showArticleTitle)%>,
+        showArticleSummary: <%=showArticleSummary == null ? "null" : Utils.toScriptString(showArticleSummary)%>,
+        showArticleImage: <%=showArticleImage == null ? "null" : Utils.toScriptString(showArticleImage)%>,
+        showArticleAuthor: <%=showArticleAuthor == null ? "null" : Utils.toScriptString(showArticleAuthor)%>,
+        showArticleSpace: <%=showArticleSpace == null ? "null" : Utils.toScriptString(showArticleSpace)%>,
+        showArticleReactions: <%=showArticleReactions == null ? "null" : Utils.toScriptString(showArticleReactions)%>,
+        showArticleDate: <%=showArticleDate == null ? "null" : Utils.toScriptString(showArticleDate)%>,
+        seeAllUrl: <%=seeAllUrl == null ? "null" : Utils.toScriptString(seeAllUrl)%>,
         canEdit: <%= hasEditPermission %>,
         canManageNewsPublishTargets: <%=canManageNewsPublishTargets%>,
         canCreateNewsTarget: <%=canCreateNewsPublishTarget%>,
-        articlesSourceOption: <%= articlesSourceOption == null ? null : "'" + StringEscapeUtils.escapeEcmaScript(articlesSourceOption) + "'" %>,
-        selectedArticleIds: <%= selectedArticleIdsString == null ? null : "'" + StringEscapeUtils.escapeEcmaScript(selectedArticleIdsString) + "'" %>
+        articlesSourceOption: <%=articlesSourceOption == null ? "null" : Utils.toScriptString(articlesSourceOption)%>,
+        selectedArticleIds: <%=selectedArticleIdsString == null ? "null" : Utils.toScriptString(selectedArticleIdsString)%>
       }));
     </script>
   </div>
