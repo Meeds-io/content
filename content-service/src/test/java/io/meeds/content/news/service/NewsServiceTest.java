@@ -2601,12 +2601,16 @@ public class NewsServiceTest {
     when(metadataItem.getProperties()).thenReturn(Map.of(NEWS_PUBLICATION_STATE, "staged", NEWS_DELETED, String.valueOf(false)));
     mockBuildArticle(List.of(metadataItem));
     when(spaceService.isSuperManager(anyString())).thenReturn(false);
-    Identity scheduler = mock(Identity.class);
-    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity("john")).thenReturn(scheduler);
-    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(nullable(String.class), eq(scheduler))).thenReturn(false);
+    // the searcher, mary, cannot schedule, while the articles' author, john, can
+    Identity searcher = mock(Identity.class);
+    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity("mary")).thenReturn(searcher);
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(nullable(String.class), eq(searcher))).thenReturn(false);
+    Identity author = mock(Identity.class);
+    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity("john")).thenReturn(author);
+    mockUserWhoCanSchedule(author);
     org.exoplatform.social.core.identity.model.Identity currentIdentity =
                                                                         mock(org.exoplatform.social.core.identity.model.Identity.class);
-    when(currentIdentity.getRemoteId()).thenReturn("john");
+    when(currentIdentity.getRemoteId()).thenReturn("mary");
 
     NewsFilter scheduledFilter = new NewsFilter();
     scheduledFilter.setScheduledNews(true);
@@ -2921,16 +2925,17 @@ public class NewsServiceTest {
   }
 
   /**
-   * A searching user, john, whose right to schedule is checked: only the identity
-   * resolved from john's name may schedule, so a check made for another user fails.
+   * A searching user, mary, who is not the articles' author, john, and whose right
+   * to schedule is checked: only the identity resolved from mary's name may
+   * schedule, so a check made for another user, the author included, fails.
    */
   private org.exoplatform.social.core.identity.model.Identity mockSearcherWhoCanSchedule() {
     Identity scheduler = mock(Identity.class);
-    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity("john")).thenReturn(scheduler);
+    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity("mary")).thenReturn(scheduler);
     mockUserWhoCanSchedule(scheduler);
     org.exoplatform.social.core.identity.model.Identity currentIdentity =
                                                                         mock(org.exoplatform.social.core.identity.model.Identity.class);
-    when(currentIdentity.getRemoteId()).thenReturn("john");
+    when(currentIdentity.getRemoteId()).thenReturn("mary");
     return currentIdentity;
   }
 
