@@ -1683,6 +1683,126 @@ public class NewsServiceTest {
   }
 
   @Test
+  public void testPostNewsDeletesThePostersOwnDraftOfTheSpace() throws Exception {
+    DraftPage draft = draftOf("john", "/space/groupId");
+
+    postNewsFromDraft(draft);
+
+    verify(noteService, times(1)).removeDraftById("1");
+  }
+
+  @Test
+  public void testPostNewsKeepsTheDraftOfAnotherUser() throws Exception {
+    DraftPage draft = draftOf("mary", "/space/groupId");
+
+    postNewsFromDraft(draft);
+
+    verify(noteService, never()).removeDraftById(anyString());
+  }
+
+  @Test
+  public void testPostNewsKeepsTheDraftOfAnotherSpace() throws Exception {
+    DraftPage draft = draftOf("john", "/space/otherGroupId");
+    Space otherSpace = mock(Space.class);
+    when(otherSpace.getId()).thenReturn("2");
+    postNewsFromDraft(draft, otherSpace);
+
+    verify(noteService, never()).removeDraftById(anyString());
+  }
+
+  @Test
+  public void testPostNewsDeletesTheDraftOfAnotherUserWhenThePosterManagesTheSpace() throws Exception {
+    DraftPage draft = draftOf("mary", "/space/groupId");
+    when(spaceService.isManager(any(Space.class), eq("john"))).thenReturn(true);
+
+    postNewsFromDraft(draft);
+
+    verify(noteService, times(1)).removeDraftById("1");
+  }
+
+  @Test
+  public void testPostNewsCompletesAndKeepsTheDraftThePosterCannotRead() throws Exception {
+    DraftPage draft = draftOf("mary", "/space/groupId");
+
+    News posted = postNewsFromDraft(draft, null, true);
+
+    assertNotNull(posted);
+    verify(noteService, never()).removeDraftById(anyString());
+  }
+
+  @Test
+  public void testPostNewsKeepsADraftOutsideAnySpace() throws Exception {
+    DraftPage draft = draftOf("john", "john");
+
+    News posted = postNewsFromDraft(draft, null, false, () -> when(spaceService.getSpaceByGroupId("john")).thenReturn(null));
+
+    assertNotNull(posted);
+    verify(noteService, never()).removeDraftById(anyString());
+  }
+
+  private DraftPage draftOf(String owner, String wikiOwner) {
+    DraftPage draft = new DraftPage();
+    draft.setId("1");
+    draft.setOwner(owner);
+    draft.setAuthor(owner);
+    draft.setWikiOwner(wikiOwner);
+    return draft;
+  }
+
+  private void postNewsFromDraft(DraftPage draft) throws Exception {
+    postNewsFromDraft(draft, null, false);
+  }
+
+  private void postNewsFromDraft(DraftPage draft, Space draftSpace) throws Exception {
+    postNewsFromDraft(draft, draftSpace, false);
+  }
+
+  private News postNewsFromDraft(DraftPage draft, Space draftSpace, boolean unreadable) throws Exception {
+    return postNewsFromDraft(draft, draftSpace, unreadable, () -> {
+    });
+  }
+
+  private News postNewsFromDraft(DraftPage draft, Space draftSpace, boolean unreadable, Runnable extraStubs) throws Exception {
+    News news = new News();
+    news.setAuthor("john");
+    news.setTitle("title");
+    news.setBody("body");
+    news.setId("1");
+    Identity identity = mockIdentity();
+    Space space = mockSpace();
+    extraStubs.run();
+    if (draftSpace != null) {
+      when(spaceService.getSpaceByGroupId(draft.getWikiOwner())).thenReturn(draftSpace);
+    }
+    when(spaceService.canRedactOnSpace(any(Space.class), any(Identity.class))).thenReturn(true);
+    Wiki wiki = mock(Wiki.class);
+    when(wikiService.getWikiByTypeAndOwner(anyString(), anyString())).thenReturn(wiki);
+    org.exoplatform.wiki.model.Page rootPage = mock(org.exoplatform.wiki.model.Page.class);
+    when(rootPage.getName()).thenReturn(NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME);
+    when(rootPage.getId()).thenReturn("1");
+    when(noteService.getNoteOfNoteBookByName("group",
+                                             space.getGroupId(),
+                                             NEWS_ARTICLES_ROOT_NOTE_PAGE_NAME)).thenReturn(rootPage);
+    Page createdPage = mock(Page.class);
+    when(createdPage.getId()).thenReturn("1");
+    when(noteService.createNote(any(), anyString(), any(Page.class), any(), anyBoolean())).thenReturn(createdPage);
+    PageVersion pageVersion = mock(PageVersion.class);
+    when(noteService.getPublishedVersionByPageIdAndLang(1L, null)).thenReturn(pageVersion);
+    when(pageVersion.getAuthor()).thenReturn("john");
+    when(identityManager.getOrCreateUserIdentity(anyString())).thenReturn(new org.exoplatform.social.core.identity.model.Identity("1"));
+    if (unreadable) {
+      when(noteService.getDraftNoteById(anyString(), anyString())).thenThrow(new IllegalAccessException());
+    } else {
+      when(noteService.getDraftNoteById(anyString(), anyString())).thenReturn(draft);
+    }
+    MetadataItem draftItem = mock(MetadataItem.class);
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+                                                             any(MetadataObject.class))).thenReturn(List.of(draftItem));
+
+    return newsService.postNews(news, identity.getUserId());
+  }
+
+  @Test
   public void testRescheduleNewsOfAnArticleWithAnUnknownStoredStateSucceeds() throws Exception {
     News news = mockUpdatableArticle();
     news.setPublicationState(NewsService.STAGED);
@@ -1701,6 +1821,8 @@ public class NewsServiceTest {
   @Test
   public void testUpdateMetadataPropertiesWithUnknownPublicationStateIsRefused() throws Exception {
     NewsService service = spaceNoteService(List.of());
+    allowMetadataEdit(service);
+    allowMetadataPublish(true);
     MetadataItem item = metadataItemWithState(POSTED);
     doReturn(existingArticle(POSTED, true)).when(service).getNewsArticleById("12");
     when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
@@ -1715,7 +1837,9 @@ public class NewsServiceTest {
   @Test
   public void testUpdateMetadataPropertiesWithoutOrWithKnownPublicationStateIsUnchanged() throws Exception {
     NewsService service = spaceNoteService(List.of());
+    allowMetadataEdit(service);
     MetadataItem item = metadataItemWithState(POSTED);
+    allowMetadataPublish(true);
     doReturn(existingArticle(POSTED, true)).when(service).getNewsArticleById("12");
     when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
                                                              any(MetadataObject.class))).thenReturn(List.of(item));
@@ -1726,6 +1850,156 @@ public class NewsServiceTest {
     assertEquals(DRAFT, result.get(NEWS_PUBLICATION_STATE));
 
     verify(metadataService, times(2)).updateMetadataItem(any(), anyLong(), anyBoolean());
+  }
+
+  @Test
+  public void testUpdateMetadataPropertiesRefusesPublicationKeysToAnEditorWhoCannotPublish() throws Exception {
+    NewsService service = spaceNoteService(List.of());
+    allowMetadataEdit(service);
+    allowMetadataPublish(false);
+    MetadataItem item = metadataItemWithState(POSTED);
+    doReturn(existingArticle(POSTED, true)).when(service).getNewsArticleById("12");
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+                                                             any(MetadataObject.class))).thenReturn(List.of(item));
+
+    for (String key : List.of(PUBLISHED, "audience", NEWS_PUBLICATION_STATE, SCHEDULE_POST_DATE, UNPUBLISH_SCHEDULED,
+                              "unpublishScheduledDate")) {
+      Map<String, String> properties = Map.of("other", "value", key, "changed");
+      assertThrows(key, IllegalAccessException.class, () -> service.updateMetadataProperties("12", properties, 1L));
+    }
+
+    verify(metadataService, never()).updateMetadataItem(any(), anyLong(), anyBoolean());
+  }
+
+  @Test
+  public void testUpdateMetadataPropertiesStoresPublicationKeysForAUserWhoCanPublish() throws Exception {
+    NewsService service = spaceNoteService(List.of());
+    allowMetadataEdit(service);
+    allowMetadataPublish(true);
+    MetadataItem item = metadataItemWithState(POSTED);
+    doReturn(existingArticle(POSTED, true)).when(service).getNewsArticleById("12");
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+                                                             any(MetadataObject.class))).thenReturn(List.of(item));
+
+    Map<String, String> result = service.updateMetadataProperties("12", Map.of(PUBLISHED, "true", "audience", "all"), 1L);
+
+    assertEquals("true", result.get(PUBLISHED));
+    assertEquals("all", result.get("audience"));
+    verify(metadataService, times(1)).updateMetadataItem(any(), anyLong(), anyBoolean());
+  }
+
+  @Test
+  public void testUpdateMetadataPropertiesAcceptsAnUnchangedPublicationKeyFromAnEditorWhoCannotPublish() throws Exception {
+    NewsService service = spaceNoteService(List.of());
+    allowMetadataEdit(service);
+    allowMetadataPublish(false);
+    MetadataItem item = metadataItemWithState(POSTED);
+    doReturn(existingArticle(POSTED, true)).when(service).getNewsArticleById("12");
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+                                                             any(MetadataObject.class))).thenReturn(List.of(item));
+
+    Map<String, String> result = service.updateMetadataProperties("12",
+                                                                  Map.of(NEWS_PUBLICATION_STATE, POSTED, "other", "value"),
+                                                                  1L);
+
+    assertEquals("value", result.get("other"));
+    verify(metadataService, times(1)).updateMetadataItem(any(), anyLong(), anyBoolean());
+  }
+
+  @Test
+  public void testUpdateMetadataPropertiesIgnoresTheComputedKeysWhateverTheRightsOfTheCaller() throws Exception {
+    for (boolean canPublish : new boolean[] { false, true }) {
+      NewsService service = spaceNoteService(List.of());
+      allowMetadataEdit(service);
+      allowMetadataPublish(canPublish);
+      MetadataItem item = metadataItemWithState(POSTED);
+      item.getProperties().put("activityPosted", "true");
+      item.getProperties().put("publisher", "Mary");
+      item.getProperties().put("activities", "1:2");
+      item.getProperties().put("viewers", "mary");
+      item.getProperties().put("viewsCount", "1");
+      doReturn(existingArticle(POSTED, true)).when(service).getNewsArticleById("12");
+      when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+                                                               any(MetadataObject.class))).thenReturn(List.of(item));
+
+      Map<String, String> properties = new HashMap<>();
+      properties.put("other", "value");
+      for (String key : List.of("activityPosted", "activityCategories", EXTERNAL_PAGE, NEWS_DELETED, "publisher",
+                                "pageReferred", "deReferPageId", "activities", "viewers", "viewsCount")) {
+        properties.put(key, "forged");
+      }
+      Map<String, String> result = service.updateMetadataProperties("12", properties, 1L);
+
+      assertEquals("value", result.get("other"));
+      assertEquals("true", result.get("activityPosted"));
+      assertEquals("Mary", result.get("publisher"));
+      assertEquals("1:2", result.get("activities"));
+      assertEquals("mary", result.get("viewers"));
+      assertEquals("1", result.get("viewsCount"));
+      for (String key : List.of("activityCategories", EXTERNAL_PAGE, NEWS_DELETED, "pageReferred", "deReferPageId")) {
+        assertFalse(key, result.containsKey(key));
+      }
+    }
+  }
+
+  private void allowMetadataPublish(boolean canPublish) {
+    Identity publisherIdentity = mock(Identity.class);
+    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity("john")).thenReturn(publisherIdentity);
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(any(), eq(publisherIdentity))).thenReturn(canPublish);
+  }
+
+  @Test
+  public void testUpdateMetadataPropertiesIsRefusedWithoutTheRightToEditTheArticle() throws Exception {
+    NewsService service = spaceNoteService(List.of());
+    MetadataItem item = metadataItemWithState(POSTED);
+    doReturn(existingArticle(POSTED, true)).when(service).getNewsArticleById("12");
+    when(metadataService.getMetadataItemsByMetadataAndObject(any(MetadataKey.class),
+                                                             any(MetadataObject.class))).thenReturn(List.of(item));
+    org.exoplatform.social.core.identity.model.Identity updaterIdentity = mock(org.exoplatform.social.core.identity.model.Identity.class);
+    when(updaterIdentity.getRemoteId()).thenReturn("mary");
+    when(identityManager.getIdentity("1")).thenReturn(updaterIdentity);
+    doReturn(false).when(service).canEditNews(any(News.class), eq("mary"));
+    doReturn(true).when(service).canViewNews(any(News.class), eq("mary"));
+
+    Map<String, String> properties = Map.of("other", "value");
+    assertThrows(IllegalAccessException.class, () -> service.updateMetadataProperties("12", properties, 1L));
+
+    verify(metadataService, never()).updateMetadataItem(any(), anyLong(), anyBoolean());
+  }
+
+  @Test
+  public void testUpdateMetadataPropertiesAnswersNotFoundToACallerWhoCannotViewTheArticle() throws Exception {
+    NewsService service = spaceNoteService(List.of());
+    doReturn(existingArticle(POSTED, true)).when(service).getNewsArticleById("12");
+    org.exoplatform.social.core.identity.model.Identity updaterIdentity = mock(org.exoplatform.social.core.identity.model.Identity.class);
+    when(updaterIdentity.getRemoteId()).thenReturn("mary");
+    when(identityManager.getIdentity("1")).thenReturn(updaterIdentity);
+    doReturn(false).when(service).canEditNews(any(News.class), eq("mary"));
+    doReturn(false).when(service).canViewNews(any(News.class), eq("mary"));
+
+    Map<String, String> properties = Map.of("other", "value");
+    assertThrows(ObjectNotFoundException.class, () -> service.updateMetadataProperties("12", properties, 1L));
+
+    verify(metadataService, never()).updateMetadataItem(any(), anyLong(), anyBoolean());
+  }
+
+  @Test
+  public void testUpdateMetadataPropertiesIsRefusedWhenTheUpdaterIdentityIsUnknown() throws Exception {
+    NewsService service = spaceNoteService(List.of());
+    doReturn(existingArticle(POSTED, true)).when(service).getNewsArticleById("12");
+    when(identityManager.getIdentity("1")).thenReturn(null);
+
+    Map<String, String> properties = Map.of("other", "value");
+    assertThrows(IllegalAccessException.class, () -> service.updateMetadataProperties("12", properties, 1L));
+
+    verify(metadataService, never()).updateMetadataItem(any(), anyLong(), anyBoolean());
+  }
+
+  private void allowMetadataEdit(NewsService service) {
+    org.exoplatform.social.core.identity.model.Identity updaterIdentity = mock(org.exoplatform.social.core.identity.model.Identity.class);
+    when(updaterIdentity.getRemoteId()).thenReturn("john");
+    when(identityManager.getIdentity("1")).thenReturn(updaterIdentity);
+    doReturn(true).when(service).canEditNews(any(News.class), eq("john"));
   }
 
   private MetadataItem metadataItemWithState(String state) {
@@ -2437,10 +2711,12 @@ public class NewsServiceTest {
 
     Map<String, String> inputProperties = new HashMap<>();
     inputProperties.put("key1", "value1");
+    NewsService service = spy(newsService);
+    allowMetadataEdit(service);
 
     // When, Then
     assertThrows(ObjectNotFoundException.class,
-                 () -> newsService.updateMetadataProperties("99", inputProperties, 1L));
+                 () -> service.updateMetadataProperties("99", inputProperties, 1L));
 
     Page existingPage = mock(Page.class);
     when(existingPage.getId()).thenReturn("1");
@@ -2475,7 +2751,7 @@ public class NewsServiceTest {
         .thenReturn(new ArrayList<>());
 
     assertThrows(ObjectNotFoundException.class,
-                 () -> newsService.updateMetadataProperties("1", inputProperties, 1L));
+                 () -> service.updateMetadataProperties("1", inputProperties, 1L));
 
     MetadataItem existingMetadataItem = mock(MetadataItem.class);
     Map<String, String> existingProperties = new HashMap<>();
@@ -2493,7 +2769,7 @@ public class NewsServiceTest {
     newProperties.put("key2", "value2");
 
     // When
-    Map<String, String> mergedResult = newsService.updateMetadataProperties("1", newProperties, 1L);
+    Map<String, String> mergedResult = service.updateMetadataProperties("1", newProperties, 1L);
 
     // Then
     verify(metadataService, times(1)).updateMetadataItem(eq(existingMetadataItem), eq(1L), eq(false));

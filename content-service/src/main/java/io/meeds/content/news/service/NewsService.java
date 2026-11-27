@@ -211,6 +211,34 @@ public class NewsService {
 
   public static final String       UNPUBLISH_SCHEDULED_DATE               = "unpublishScheduledDate";
 
+  /**
+   * Metadata keys the service derives itself: a caller never writes them
+   * through the metadata properties update
+   */
+  private static final Set<String> COMPUTED_METADATA_KEYS                 =
+                                                          Set.of(NEWS_ACTIVITY_POSTED,
+                                                                 NEWS_ACTIVITY_CATEGORIES,
+                                                                 EXTERNAL_PAGE,
+                                                                 NEWS_DELETED,
+                                                                 PUBLISHER,
+                                                                 PAGE_REFERRED,
+                                                                 DE_REFER_PAGE_ID,
+                                                                 NEWS_ACTIVITIES,
+                                                                 NEWS_VIEWERS,
+                                                                 NEWS_VIEWS);
+
+  /**
+   * Metadata keys that change the publication of an article: the metadata
+   * properties update changes them only for a user who can publish
+   */
+  private static final Set<String> PUBLICATION_METADATA_KEYS              =
+                                                             Set.of(PUBLISHED,
+                                                                    NEWS_AUDIENCE,
+                                                                    NEWS_PUBLICATION_STATE,
+                                                                    SCHEDULE_POST_DATE,
+                                                                    UNPUBLISH_SCHEDULED,
+                                                                    UNPUBLISH_SCHEDULED_DATE);
+
   public static final MetadataKey  NEWS_METADATA_KEY                      =
                                                      new MetadataKey(NEWS_METADATA_TYPE.getName(), NEWS_METADATA_NAME, 0);
 
@@ -1590,8 +1618,9 @@ public class NewsService {
         newsArticle.setIllustrationURL(NewsUtils.buildIllustrationUrl(newsArticlePage.getProperties(), newsArticle.getLang()));
 
         buildNewArticleProperties(newsArticle, newsArticlePage, newsArticleCreator, space.getId(), pageVersion.getId(), false);
-        // delete the draft
-        deleteDraftArticle(draftNewsId, poster.getUserId());
+        // delete the draft, only when it is a draft of the space the article
+        // is posted in that the poster may delete
+        deleteDraftOfPostedArticle(draftNewsId, space.getId(), poster.getUserId());
         return newsArticle;
       }
     }
@@ -1673,6 +1702,46 @@ public class NewsService {
         updateDeletedArticleMetadata(news, articleCreator);
       }
     }
+  }
+
+  /**
+   * Deletes the draft a news article is posted from, as the id comes from the
+   * request: it deletes it only when it belongs to the space the article is
+   * posted in and the poster passes {@code canEditNews}, the draft deletion
+   * endpoint's rule; any other draft is left untouched.
+   */
+  private void deleteDraftOfPostedArticle(String draftArticleId, String spaceId, String poster) throws Exception {
+    DraftPage draftArticlePage;
+    try {
+      draftArticlePage = noteService.getDraftNoteById(draftArticleId, poster);
+    } catch (IllegalAccessException e) {
+      LOG.warn("User {} posted a news article from the draft {} that the user cannot read, the draft is kept",
+               poster,
+               draftArticleId);
+      return;
+    }
+    if (draftArticlePage == null) {
+      return;
+    }
+    Space draftArticleSpace = spaceService.getSpaceByGroupId(draftArticlePage.getWikiOwner());
+    if (draftArticleSpace == null || !StringUtils.equals(draftArticleSpace.getId(), spaceId)) {
+      LOG.warn("User {} posted a news article from the draft {} that does not belong to the space {}, the draft is kept",
+               poster,
+               draftArticleId,
+               spaceId);
+      return;
+    }
+    News draftArticle = new News();
+    draftArticle.setId(draftArticlePage.getId());
+    draftArticle.setSpaceId(draftArticleSpace.getId());
+    draftArticle.setOwner(draftArticlePage.getOwner());
+    if (!canEditNews(draftArticle, poster)) {
+      LOG.warn("User {} posted a news article from the draft {} that the user is not allowed to delete, the draft is kept",
+               poster,
+               draftArticleId);
+      return;
+    }
+    deleteDraftArticle(draftArticleId, poster);
   }
 
   /**
@@ -1762,21 +1831,46 @@ public class NewsService {
 
   public Map<String, String> updateMetadataProperties(String articleId,
                                                       Map<String, String> properties,
-                                                      Long updater) throws ObjectNotFoundException {
+                                                      Long updater) throws ObjectNotFoundException, IllegalAccessException {
 
     News article = getNewsArticleById(articleId);
     if (article == null) {
       throw new ObjectNotFoundException("Article not found");
     }
 
+    org.exoplatform.social.core.identity.model.Identity updaterIdentity =
+                                                                       identityManager.getIdentity(String.valueOf(updater));
+    if (updaterIdentity == null) {
+      throw new IllegalAccessException("User " + updater + " is not authorized to update news metadata");
+    }
+    String updaterUserId = updaterIdentity.getRemoteId();
+    if (!canEditNews(article, updaterUserId)) {
+      if (!canViewNews(article, updaterUserId)) {
+        throw new ObjectNotFoundException("Article not found");
+      }
+      throw new IllegalAccessException("User " + updater + " is not authorized to update news metadata");
+    }
+
     MetadataItem existingItem = getArticlePageMetadataItem(article);
+    Map<String, String> storedProperties = existingItem == null || existingItem.getProperties() == null ? Map.of()
+                                                                                                         : existingItem.getProperties();
+    // The keys the service computes are ignored, whoever the caller is
+    Map<String, String> acceptedProperties = new HashMap<>(properties);
+    acceptedProperties.keySet().removeAll(COMPUTED_METADATA_KEYS);
+    // A publication key changes only with the right to publish
+    if (acceptedProperties.entrySet()
+                          .stream()
+                          .anyMatch(e -> PUBLICATION_METADATA_KEYS.contains(e.getKey())
+                              && !Objects.equals(e.getValue(), storedProperties.get(e.getKey())))
+        && !NewsUtils.canPublishNews(article.getSpaceId(), NewsUtils.getUserIdentity(updaterUserId))) {
+      throw new IllegalAccessException("User " + updater + " is not authorized to update news publication metadata");
+    }
 
     if (existingItem != null) {
-      checkPublicationState(properties.get(NEWS_PUBLICATION_STATE),
-                            existingItem.getProperties() == null ? null
-                                                                 : existingItem.getProperties().get(NEWS_PUBLICATION_STATE));
-      Map<String, String> mergedProperties = new HashMap<>(existingItem.getProperties());
-      mergedProperties.putAll(properties);
+      checkPublicationState(acceptedProperties.get(NEWS_PUBLICATION_STATE),
+                            storedProperties.get(NEWS_PUBLICATION_STATE));
+      Map<String, String> mergedProperties = new HashMap<>(storedProperties);
+      mergedProperties.putAll(acceptedProperties);
       existingItem.setProperties(mergedProperties);
       metadataService.updateMetadataItem(existingItem, updater, false);
       updateNewsActivity(article, false, article.isActivityPosted(), false);
@@ -1784,7 +1878,7 @@ public class NewsService {
       NewsUtils.broadcastEvent(NewsUtils.UPDATE_NEWS, updater, article);
       return mergedProperties;
     } else {
-      return properties;
+      return acceptedProperties;
     }
   }
 
