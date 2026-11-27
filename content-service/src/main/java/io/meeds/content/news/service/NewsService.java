@@ -141,7 +141,6 @@ public class NewsService {
 
   public static final String       NEWS_METADATA_DRAFT_OBJECT_TYPE        = "newsDraftPage";
 
-  /** The Constant PUBLISHED. */
   public static final String       PUBLISHED                              = "published";
 
   /** The Constant PUBLISHER. */
@@ -244,6 +243,16 @@ public class NewsService {
 
   private static final Log         LOG                                    = ExoLogger.getLogger(NewsService.class);
 
+  /**
+   * The keys of the page properties the service owns or computes: a new
+   * article never takes them from the free-form parameters of its caller, but
+   * for the publication state, taken from them when the article carries none
+   * and it is a known one (posted, staged or draft).
+   */
+  private static final Set<String> COMPUTED_PAGE_PROPERTIES               = Stream.concat(COMPUTED_METADATA_KEYS.stream(),
+                                                                                         PUBLICATION_METADATA_KEYS.stream())
+                                                                                 .collect(Collectors.toUnmodifiableSet());
+
   @Autowired
   private SpaceService             spaceService;
 
@@ -322,6 +331,7 @@ public class NewsService {
       if (!canCreateNews(space, currentIdentity)) {
         throw new IllegalAccessException("User " + currentIdentity.getUserId() + " not authorized to create news");
       }
+      restrictNewArticleAudience(news, currentIdentity.getUserId());
       News createdNews;
       if (POSTED.equals(news.getPublicationState())) {
         createdNews = postNews(news, currentIdentity.getUserId());
@@ -357,10 +367,13 @@ public class NewsService {
 
     if (STAGED.equals(news.getPublicationState()) || news.getSchedulePostDate() != null) {
       news = postScheduledArticle(news);
-    } else if (!news.isFromDraft() && noteService.getNoteById(news.getId()) != null) {
-      news = createArticleFromExistingPage(news, poster);
     } else {
-      news = createNewsArticlePage(news, poster);
+      restrictNewArticleAudience(news, poster);
+      if (!news.isFromDraft() && noteService.getNoteById(news.getId()) != null) {
+        news = createArticleFromExistingPage(news, poster);
+      } else {
+        news = createNewsArticlePage(news, poster);
+      }
     }
 
     if (news != null) {
@@ -404,6 +417,11 @@ public class NewsService {
     Identity updaterIdentity = NewsUtils.getUserIdentity(updater);
     String newsId = news.getTargetPageId() != null ? news.getTargetPageId() : news.getId();
     News originalNews = getNewsById(newsId, updaterIdentity, false, newsObjectType);
+    if (originalNews != null && originalNews.getSpaceId() != null) {
+      // The rights are checked, and the article is updated, in the space it
+      // is stored in
+      news.setSpaceId(originalNews.getSpaceId());
+    }
     // Whatever the update type, only a user who can edit the stored news
     // updates it (the right to edit includes the right to publish and to
     // refer); the request's own flags play no part in that right
@@ -429,6 +447,15 @@ public class NewsService {
     checkPublicationState(news.getPublicationState(), originalNews.getPublicationState());
     List<ArticleTarget> oldTargets = newsTargetingService.getTargetsByNews(news);
     boolean canPublish = NewsUtils.canPublishNews(news.getSpaceId(), updaterIdentity);
+    if (!canPublish) {
+      // Only a publisher changes the audience, whatever the kind of update. A
+      // draft, or a new version in a language, has no stored audience of its
+      // own and takes the space one, which the permissions update requires
+      String storedAudience = originalNews.getAudience();
+      boolean takesSpaceAudience = NewsObjectType.DRAFT.name().equalsIgnoreCase(newsObjectType)
+          || LATEST_DRAFT.name().equalsIgnoreCase(newsObjectType) || StringUtils.isNotEmpty(news.getLang());
+      news.setAudience(storedAudience == null && takesSpaceAudience ? NewsUtils.SPACE_NEWS_AUDIENCE : storedAudience);
+    }
     Space space = spaceService.getSpaceById(news.getSpaceId());
     Set<String> previousMentions = NewsUtils.processMentions(originalNews.getOriginalBody(), space);
     if (NewsObjectType.DRAFT.name().toLowerCase().equals(newsObjectType)) {
@@ -441,14 +468,26 @@ public class NewsService {
     } else if (ARTICLE.name().equalsIgnoreCase(newsObjectType) && PAGE_REFERENCE.name().equalsIgnoreCase(newsUpdateType)) {
       return updateArticle(news, updaterIdentity, newsUpdateType);
     }
-    if (publish != news.isPublished() && news.isCanPublish()) {
+    boolean published = false;
+    boolean unpublish = false;
+    // A publication change needs the capability to publish the article
+    // (isCanPublish) and, on top of it, the right to publish on the stored space
+    if (publish != news.isPublished() && news.isCanPublish() && canPublish) {
       news.setPublished(publish);
       if (news.isPublished()) {
         publishNews(news, updater);
+        published = true;
       } else {
-        unpublishNews(newsId, updater, false);
+        unpublish = true;
+        // The article update below gives its images and attachments to its
+        // spaces only, and the unpublish after it removes the audience
+        news.setAudience(NewsUtils.SPACE_NEWS_AUDIENCE);
       }
     }
+    // A published article whose audience changes gives the images and
+    // attachments of its translations the same access as its own
+    boolean audienceChanged = !published && news.isPublished() && news.getAudience() != null
+        && !news.getAudience().equals(originalNews.getAudience());
     if (publish == news.isPublished() && news.isPublished() && canPublish) {
       if (news.getTargets() != null && (oldTargets == null || !oldTargets.equals(news.getTargets()))) {
         updateArticleTargets(news, oldTargets, updater);
@@ -464,6 +503,11 @@ public class NewsService {
     // members from notification.
     if (ARTICLE.name().toLowerCase().equals(newsObjectType)) {
       news = updateArticle(news, updaterIdentity, newsUpdateType);
+    }
+    if (unpublish) {
+      unpublishNews(newsId, updater, false);
+    } else if (audienceChanged) {
+      updateTranslationsPermissions(space, news);
     }
 
     if (POSTED.equals(news.getPublicationState())) {
@@ -638,6 +682,9 @@ public class NewsService {
     Space space = spaceService.getSpaceById(news.getSpaceId());
     // Update content permissions
     updateArticlePermissions(List.of(space), news);
+    if (news.getAudience() != null) {
+      updateTranslationsPermissions(space, news);
+    }
     try {
       sendNotification(publisher, news, NotificationConstants.NOTIFICATION_CONTEXT.PUBLISH_NEWS);
     } catch (Error | Exception e) {
@@ -687,8 +734,12 @@ public class NewsService {
         newsMetadataItem.setUpdatedDate(updatedDate.getTime());
         String publisherId = identityManager.getOrCreateUserIdentity(publisher).getId();
         metadataService.updateMetadataItem(newsMetadataItem, Long.parseLong(publisherId), false);
-        // Update content permissions
+        // An unpublished article's images and attachments are readable by its
+        // spaces only, as for an article published to its space
+        news.setAudience(NewsUtils.SPACE_NEWS_AUDIENCE);
         updateArticlePermissions(List.of(space), news);
+        // and so are those of its translations
+        updateTranslationsPermissions(space, news);
       }
     }
   }
@@ -1112,10 +1163,23 @@ public class NewsService {
     News originalArticle = null;
     News storedArticle = null;
     if (newsObjectType.equalsIgnoreCase(ARTICLE.name()) || newsObjectType.equalsIgnoreCase(LATEST_DRAFT.name())) {
+      if (newsObjectType.equalsIgnoreCase(ARTICLE.name())) {
+        // The schedule of an article is written to the article the request
+        // names, the one whose rights are checked below
+        news.setTargetPageId(null);
+      }
       // The right is evaluated on the stored article that is written, resolved
       // the way updateArticle resolves it, not on the request
       String storedId = news.getTargetPageId() != null ? news.getTargetPageId() : news.getId();
       storedArticle = getNewsArticleById(storedId);
+      if (storedArticle != null && newsObjectType.equalsIgnoreCase(ARTICLE.name())) {
+        // The article is written in the space it is stored in
+        news.setSpaceId(storedArticle.getSpaceId());
+        if (!NewsUtils.canPublishNews(news.getSpaceId(), currentIdentity)) {
+          // Only a publisher changes the audience of a stored article
+          news.setAudience(storedArticle.getAudience());
+        }
+      }
       if (storedArticle == null || !canScheduleNews(storedArticle.getSpaceId(), currentIdentity, storedArticle)) {
         throw new IllegalAccessException("User " + currentIdentity.getUserId() + " is not authorized to schedule news");
       }
@@ -1124,6 +1188,10 @@ public class NewsService {
       }
     } else if (!canScheduleNews(news.getSpaceId(), currentIdentity, news)) {
       throw new IllegalAccessException("User " + currentIdentity.getUserId() + " is not authorized to schedule news");
+    }
+    if (newsObjectType.equalsIgnoreCase(NewsObjectType.DRAFT.name())
+        || newsObjectType.equalsIgnoreCase(NewsObjectType.EXISTING_PAGE.name())) {
+      restrictNewArticleAudience(news, currentIdentity.getUserId());
     }
     if (newsObjectType.equalsIgnoreCase(NewsObjectType.DRAFT.name())) {
       // Create news article with the publication state STAGED without posting
@@ -2061,16 +2129,26 @@ public class NewsService {
     newsPageProperties.put(PUBLISHER, creatorIdentity.getProfile().getFullName());
 
     if (MapUtils.isNotEmpty(article.getParameters())) {
-      newsPageProperties.putAll(article.getParameters());
+      // The caller's parameters add their own keys; the keys computed above
+      // are never replaced by them
+      article.getParameters()
+             .entrySet()
+             .stream()
+             .filter(parameter -> !COMPUTED_PAGE_PROPERTIES.contains(parameter.getKey()))
+             .forEach(parameter -> newsPageProperties.put(parameter.getKey(), parameter.getValue()));
     }
-    // The article publication state is the stored one; an unknown state is
-    // never stored
+    // The article publication state is the stored one; when the article
+    // carries none, a known state of its parameters is kept, and an unknown
+    // state is never stored
+    String parametersState = MapUtils.isEmpty(article.getParameters()) ? null
+                                                                       : article.getParameters().get(NEWS_PUBLICATION_STATE);
     if (StringUtils.isNotEmpty(article.getPublicationState())) {
       newsPageProperties.put(NEWS_PUBLICATION_STATE, article.getPublicationState());
-    } else if (isUnknownPublicationState(newsPageProperties.get(NEWS_PUBLICATION_STATE))) {
-      newsPageProperties.remove(NEWS_PUBLICATION_STATE);
+    } else if (StringUtils.isNotEmpty(parametersState) && !isUnknownPublicationState(parametersState)) {
+      newsPageProperties.put(NEWS_PUBLICATION_STATE, parametersState);
     }
-    // Every created article stores a state: posted, or staged when scheduled
+    // An article with no state of its own or from its parameters stores
+    // posted, or staged when scheduled
     if (StringUtils.isEmpty(newsPageProperties.get(NEWS_PUBLICATION_STATE))) {
       newsPageProperties.put(NEWS_PUBLICATION_STATE, article.getSchedulePostDate() != null ? STAGED : POSTED);
     }
@@ -2086,6 +2164,21 @@ public class NewsService {
                                        newsPageProperties,
                                        Long.parseLong(creatorIdentity.getId()),
                                        false);
+  }
+
+  /**
+   * An article created by someone who can create but not publish gets the
+   * audience of its spaces, whatever the request says (an empty one included),
+   * and is never published. Only a publisher chooses the audience and the
+   * publication. It is applied where a user's request creates an
+   * article, never in the builders, which the data upgrade also uses to
+   * migrate articles unchanged.
+   */
+  private void restrictNewArticleAudience(News article, String creator) {
+    if (!NewsUtils.canPublishNews(article.getSpaceId(), NewsUtils.getUserIdentity(creator))) {
+      article.setAudience(NewsUtils.SPACE_NEWS_AUDIENCE);
+      article.setPublished(false);
+    }
   }
 
   private void referOrDeReferArticlePage(News article, Page articlePage, Map<String, String> properties) {
@@ -3195,6 +3288,22 @@ public class NewsService {
       return news;
     }
     return null;
+  }
+
+  private void updateTranslationsPermissions(Space space, News article) {
+    for (String lang : getArticleLanguages(article.getId(), false)) {
+      PageVersion translation = noteService.getPublishedVersionByPageIdAndLang(Long.valueOf(article.getId()), lang);
+      if (translation != null) {
+        News translatedArticle = new News();
+        translatedArticle.setId(article.getId());
+        translatedArticle.setSharedInSpacesList(article.getSharedInSpacesList());
+        translatedArticle.setPublicationState(article.getPublicationState());
+        translatedArticle.setAudience(article.getAudience());
+        translatedArticle.setLatestVersionId(translation.getId());
+        translatedArticle.setBody(translation.getContent());
+        updateArticlePermissions(List.of(space), translatedArticle);
+      }
+    }
   }
 
   private void updateArticlePermissions(List<Space> spaces, News article) {
