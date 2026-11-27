@@ -20,6 +20,7 @@ package io.meeds.content.link.rest;
 
 import static io.meeds.social.util.JsonUtils.toJsonString;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -28,6 +29,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.io.File;
@@ -53,6 +55,10 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import org.exoplatform.portal.config.UserACL;
 import org.exoplatform.portal.config.model.PortalConfig;
+import org.exoplatform.portal.mop.SiteKey;
+import org.exoplatform.portal.mop.navigation.NavigationContext;
+import org.exoplatform.portal.mop.navigation.NavigationState;
+import org.exoplatform.portal.mop.service.NavigationService;
 import org.exoplatform.portal.mop.page.PageContext;
 import org.exoplatform.portal.mop.page.PageKey;
 import org.exoplatform.portal.mop.page.PageState;
@@ -175,10 +181,12 @@ public class LinkRestTest extends AbstractSpringConfigurationTest { // NOSONAR
     registerInternalUser(USERNAME);
     response = getLink(true, false);
     response.andExpect(status().isOk());
+    response.andExpect(header().string("Cache-Control", "no-cache, private"));
 
     String eTagValue = getETagValue(response);
     response = getLinkWithETag(eTagValue, true, false);
     response.andExpect(status().isNotModified());
+    response.andExpect(header().string("Cache-Control", "no-cache, private"));
 
     Thread.sleep(2); // NOSONAR wait for 10 milliseconds to have a different
     // modification timestamp after saving the link setting
@@ -204,6 +212,10 @@ public class LinkRestTest extends AbstractSpringConfigurationTest { // NOSONAR
     String pageName = "testGetLinkResponseEntity";
     LinkSetting linkSetting = initLinkSetting(LINK_SETTING_NAME, pageName, true);
     assertNotNull(linkSetting);
+    NavigationService navigationService = getContainer().getComponentInstanceOfType(NavigationService.class);
+    if (navigationService.loadNavigation(SiteKey.portal("test")) == null) {
+      navigationService.saveNavigation(new NavigationContext(SiteKey.portal("test"), new NavigationState(0)));
+    }
 
     registerAdministratorUser(USERNAME);
     ResultActions response = saveLink(true, true);
@@ -242,6 +254,7 @@ public class LinkRestTest extends AbstractSpringConfigurationTest { // NOSONAR
     assertEquals(newLink1.getDescription(), savedLink1.getDescription());
     assertEquals(newLink1.getUrl(), savedLink1.getUrl());
     assertEquals(newLink1.isSameTab(), savedLink1.isSameTab());
+    assertTrue("A link to a node that doesn't exist is unavailable", savedLink1.isUnavailable());
 
     LinkRestEntity savedLink2 = links.get(1);
     assertNotNull(savedLink2);
@@ -254,6 +267,7 @@ public class LinkRestTest extends AbstractSpringConfigurationTest { // NOSONAR
     assertEquals(newLink2.getDescription(), savedLink2.getDescription());
     assertEquals(newLink2.getUrl(), savedLink2.getUrl());
     assertEquals(newLink2.isSameTab(), savedLink2.isSameTab());
+    assertFalse("A relative link is available", savedLink2.isUnavailable());
 
     response = getLinkWithLang("fr", true, false);
     response.andExpect(status().isOk());
@@ -429,7 +443,7 @@ public class LinkRestTest extends AbstractSpringConfigurationTest { // NOSONAR
     List<LinkRestEntity> links = new ArrayList<>();
     links.add(new LinkRestEntity(0, linkNames, linkDescriptions, "url1", "icon1", true, 2, null, 0, UPLOAD_ID));
     uploadResource();
-    links.add(new LinkRestEntity(0, linkNames, linkDescriptions, "url2", "icon2", false, 1, null, 0, null));
+    links.add(new LinkRestEntity(0, linkNames, linkDescriptions, "/portal/test/missingNode", "icon2", false, 1, null, 0, null));
 
     Map<String, String> linkHeaders = new HashMap<>();
     linkHeaders.put("en", "Header-en");

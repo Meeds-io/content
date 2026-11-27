@@ -49,4 +49,24 @@ public class LinkRestEntity {
 
   private String              iconUploadId;
 
+  /**
+   * True when the link leads to a page that doesn't exist on this instance,
+   * typically a page of an add-on that isn't installed. Computed on read,
+   * never stored.
+   */
+  private boolean             unavailable;
+
+  public LinkRestEntity(long id, // NOSONAR
+                        Map<String, String> name,
+                        Map<String, String> description,
+                        String url,
+                        String icon,
+                        boolean sameTab,
+                        int order,
+                        String iconUrl,
+                        long iconFileId,
+                        String iconUploadId) {
+    this(id, name, description, url, icon, sameTab, order, iconUrl, iconFileId, iconUploadId, false);
+  }
+
 }

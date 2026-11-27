@@ -24,6 +24,7 @@ import java.util.List;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -41,6 +42,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import org.exoplatform.commons.exception.ObjectNotFoundException;
 import org.exoplatform.commons.file.model.FileItem;
+import org.exoplatform.services.security.Identity;
 import org.exoplatform.social.rest.api.RestUtils;
 
 import io.meeds.content.link.model.Link;
@@ -59,6 +61,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @RequestMapping("links")
 @Tag(name = "/content/rest/links", description = "Managing links for Links Application")
 public class LinkRest {
+
+  // The response depends on the reader: a shared cache must not store it,
+  // while the reader's browser keeps revalidating it with its ETag
+  private static final CacheControl PRIVATE_REVALIDATED = CacheControl.noCache().cachePrivate();
 
   @Autowired
   private LinkService linkService;
@@ -85,9 +91,13 @@ public class LinkRest {
       LinkSettingRestEntity linkSettingEntity = getLinkSettingEntity(linkSetting, lang);
       String eTag = String.valueOf(linkSettingEntity.hashCode());
       if (request.checkNotModified(eTag)) {
-        return ResponseEntity.status(HttpStatus.NOT_MODIFIED).build();
+        return ResponseEntity.status(HttpStatus.NOT_MODIFIED)
+                             .cacheControl(PRIVATE_REVALIDATED)
+                             .eTag(eTag)
+                             .build();
       } else {
         return ResponseEntity.ok()
+                             .cacheControl(PRIVATE_REVALIDATED)
                              .eTag(eTag)
                              .body(linkSettingEntity);
       }
@@ -180,7 +190,11 @@ public class LinkRest {
 
   private LinkSettingRestEntity getLinkSettingEntity(LinkSetting linkSetting, String lang) {
     List<Link> links = linkService.getLinks(linkSetting.getName(), lang, true);
-    return LinkEntityBuilder.build(linkSetting, links);
+    LinkSettingRestEntity linkSettingEntity = LinkEntityBuilder.build(linkSetting, links);
+    Identity identity = RestUtils.getCurrentUserAclIdentity();
+    linkSettingEntity.getLinks()
+                     .forEach(link -> link.setUnavailable(!linkService.isLinkTargetAvailable(linkSetting, link.getUrl(), identity)));
+    return linkSettingEntity;
   }
 
 }
