@@ -2482,7 +2482,7 @@ public class NewsServiceTest {
 
   @Test
   public void testGetScheduledArticles() throws Exception {
-    mockUserWhoCanSchedule();
+    mockUserWhoCanSchedule(johnIdentity);
     NewsFilter newsFilter = new NewsFilter();
     newsFilter.setScheduledNews(true);
     Map<String, String> properties = new HashMap<>();
@@ -2536,7 +2536,6 @@ public class NewsServiceTest {
    */
   @Test
   public void searchNewsUnderScheduledFilterKeepsOnlyScheduledArticles() throws Exception {
-    mockUserWhoCanSchedule();
     NewsESSearchResult result = new NewsESSearchResult();
     result.setId("1");
     when(newsSearchConnector.search(any(), any())).thenReturn(List.of(result));
@@ -2544,8 +2543,8 @@ public class NewsServiceTest {
     when(metadataItem.getObjectId()).thenReturn("1");
     when(metadataItem.getProperties()).thenReturn(Map.of(NEWS_PUBLICATION_STATE, "posted", NEWS_DELETED, String.valueOf(false)));
     mockBuildArticle(List.of(metadataItem));
-    org.exoplatform.social.core.identity.model.Identity currentIdentity =
-                                                                        mock(org.exoplatform.social.core.identity.model.Identity.class);
+    // after mockBuildArticle, whose stub answers john for any name
+    org.exoplatform.social.core.identity.model.Identity currentIdentity = mockSearcherWhoCanSchedule();
 
     NewsFilter scheduledFilter = new NewsFilter();
     scheduledFilter.setScheduledNews(true);
@@ -2555,7 +2554,6 @@ public class NewsServiceTest {
 
   @Test
   public void searchNewsUnderScheduledFilterListsPostedArticleWithScheduledUnpublish() throws Exception {
-    mockUserWhoCanSchedule();
     NewsESSearchResult result = new NewsESSearchResult();
     result.setId("1");
     when(newsSearchConnector.search(any(), any())).thenReturn(List.of(result));
@@ -2568,8 +2566,8 @@ public class NewsServiceTest {
                                                          UNPUBLISH_SCHEDULED_DATE,
                                                          "2026-12-01 08:00:00"));
     mockBuildArticle(List.of(metadataItem));
-    org.exoplatform.social.core.identity.model.Identity currentIdentity =
-                                                                        mock(org.exoplatform.social.core.identity.model.Identity.class);
+    // after mockBuildArticle, whose stub answers john for any name
+    org.exoplatform.social.core.identity.model.Identity currentIdentity = mockSearcherWhoCanSchedule();
 
     NewsFilter scheduledFilter = new NewsFilter();
     scheduledFilter.setScheduledNews(true);
@@ -2578,7 +2576,6 @@ public class NewsServiceTest {
 
   @Test
   public void searchNewsUnderScheduledFilterListsStagedArticle() throws Exception {
-    mockUserWhoCanSchedule();
     NewsESSearchResult result = new NewsESSearchResult();
     result.setId("1");
     when(newsSearchConnector.search(any(), any())).thenReturn(List.of(result));
@@ -2586,8 +2583,8 @@ public class NewsServiceTest {
     when(metadataItem.getObjectId()).thenReturn("1");
     when(metadataItem.getProperties()).thenReturn(Map.of(NEWS_PUBLICATION_STATE, "staged", NEWS_DELETED, String.valueOf(false)));
     mockBuildArticle(List.of(metadataItem));
-    org.exoplatform.social.core.identity.model.Identity currentIdentity =
-                                                                        mock(org.exoplatform.social.core.identity.model.Identity.class);
+    // after mockBuildArticle, whose stub answers john for any name
+    org.exoplatform.social.core.identity.model.Identity currentIdentity = mockSearcherWhoCanSchedule();
 
     NewsFilter scheduledFilter = new NewsFilter();
     scheduledFilter.setScheduledNews(true);
@@ -2604,10 +2601,12 @@ public class NewsServiceTest {
     when(metadataItem.getProperties()).thenReturn(Map.of(NEWS_PUBLICATION_STATE, "staged", NEWS_DELETED, String.valueOf(false)));
     mockBuildArticle(List.of(metadataItem));
     when(spaceService.isSuperManager(anyString())).thenReturn(false);
-    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity(nullable(String.class))).thenReturn(mock(Identity.class));
-    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(nullable(String.class), any(Identity.class))).thenReturn(false);
+    Identity scheduler = mock(Identity.class);
+    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity("john")).thenReturn(scheduler);
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(nullable(String.class), eq(scheduler))).thenReturn(false);
     org.exoplatform.social.core.identity.model.Identity currentIdentity =
                                                                         mock(org.exoplatform.social.core.identity.model.Identity.class);
+    when(currentIdentity.getRemoteId()).thenReturn("john");
 
     NewsFilter scheduledFilter = new NewsFilter();
     scheduledFilter.setScheduledNews(true);
@@ -2917,9 +2916,22 @@ public class NewsServiceTest {
     assertEquals("value2", props.get("key2"));
   }
 
-  private void mockUserWhoCanSchedule() {
-    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity(nullable(String.class))).thenReturn(mock(Identity.class));
-    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(nullable(String.class), any(Identity.class))).thenReturn(true);
+  private void mockUserWhoCanSchedule(Identity scheduler) {
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(nullable(String.class), eq(scheduler))).thenReturn(true);
+  }
+
+  /**
+   * A searching user, john, whose right to schedule is checked: only the identity
+   * resolved from john's name may schedule, so a check made for another user fails.
+   */
+  private org.exoplatform.social.core.identity.model.Identity mockSearcherWhoCanSchedule() {
+    Identity scheduler = mock(Identity.class);
+    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity("john")).thenReturn(scheduler);
+    mockUserWhoCanSchedule(scheduler);
+    org.exoplatform.social.core.identity.model.Identity currentIdentity =
+                                                                        mock(org.exoplatform.social.core.identity.model.Identity.class);
+    when(currentIdentity.getRemoteId()).thenReturn("john");
+    return currentIdentity;
   }
 
   private void mockBuildArticle(List<MetadataItem> metadataItems) throws WikiException {
