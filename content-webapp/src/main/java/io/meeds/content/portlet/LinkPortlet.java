@@ -23,6 +23,7 @@ import javax.portlet.PortletPreferences;
 import org.apache.commons.lang3.StringUtils;
 
 import org.exoplatform.container.ExoContainerContext;
+import org.exoplatform.services.security.ConversationState;
 import org.exoplatform.services.security.Identity;
 
 import io.meeds.content.link.model.LinkData;
@@ -47,7 +48,8 @@ public class LinkPortlet extends CMSPortlet {
     String data = preferences.getValue(DATA_INIT_PREFERENCE_NAME, null);
     if (StringUtils.isNotBlank(data)) {
       LinkData linkData = JsonUtils.fromJsonString(data, LinkData.class);
-      getLinkService().saveLinkData(name, linkData);
+      ConversationState conversationState = ConversationState.getCurrent();
+      getLinkService().saveLinkData(name, linkData, conversationState == null ? null : conversationState.getIdentity());
       savePreference(DATA_INIT_PREFERENCE_NAME, null);
     }
   }

@@ -30,6 +30,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -527,6 +528,33 @@ class LinkApplicationSettingsPluginTest {
     when(linkService.hasAccessPermission(LIVE_SETTING, identity)).thenReturn(true);
     when(linkService.getLinkSettingByName(LIVE_SETTING, null, true)).thenReturn(liveSetting(pageReference));
     lenient().when(linkService.getLinks(LIVE_SETTING, null, true)).thenReturn(new ArrayList<>(Arrays.asList(links)));
+  }
+
+  /**
+   * The settings tool's first write on a window carrying data hands
+   * copyLinkSetting, as the list to carry the users' choices from, the
+   * source a site draft's export names, and never the name a template
+   * stored in the setting
+   */
+  @Test
+  void testFirstWriteNamesOnlyTheSourceASiteDraftExportMarked() throws Exception {
+    List<String> sourceNames = new ArrayList<>();
+    doAnswer(invocation -> {
+      sourceNames.add(invocation.<LinkSetting> getArgument(3).getName());
+      return null;
+    }).when(linkService).copyLinkSetting(anyString(), anyString(), anyLong(), any(), any(), any());
+
+    LinkSetting stored = liveSetting(LIVE_PAGE);
+    stored.setName("storedTemplateSource");
+    String oldShape = JsonUtils.toJsonString(new LinkData(stored, List.of()));
+    plugin.apply(context(true, Map.of("data.init", oldShape)), Map.of("show_name", true));
+
+    LinkSetting exported = liveSetting(LIVE_PAGE);
+    exported.setName(null);
+    String draftExport = JsonUtils.toJsonString(new LinkData(exported, List.of(), "draftSource"));
+    plugin.apply(context(true, Map.of("data.init", draftExport)), Map.of("show_name", true));
+
+    assertEquals(Arrays.asList(null, "draftSource"), sourceNames);
   }
 
   private String initialData() {

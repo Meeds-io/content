@@ -74,6 +74,7 @@ import io.meeds.content.link.plugin.LinkSettingTranslationPlugin;
 import io.meeds.content.link.plugin.LinkTranslationPlugin;
 import io.meeds.content.link.storage.LinkStorage;
 import io.meeds.social.cms.service.CMSService;
+import io.meeds.social.hidden.service.HiddenApplicationService;
 import io.meeds.social.translation.model.TranslationField;
 import io.meeds.social.translation.service.TranslationService;
 
@@ -110,6 +111,9 @@ public class LinkService {
 
   public static final String    LINK_DESCRIPTION_FIELD         = "description";
 
+  /** Application type of the links applications a user may hide */
+  public static final String    LINK_APPLICATION_TYPE          = "links";
+
   private static final Log      LOG                            = ExoLogger.getLogger(LinkService.class);
 
   @Autowired
@@ -141,6 +145,9 @@ public class LinkService {
 
   @Autowired
   protected UserACL             userACL;
+
+  @Autowired
+  protected HiddenApplicationService hiddenApplicationService;
 
   /**
    * @param linkSettingName {@link LinkSetting} unique name
@@ -284,6 +291,15 @@ public class LinkService {
     existingLinkSetting.setShowName(linkSetting.isShowName());
     existingLinkSetting.setShowIcon(linkSetting.isShowIcon());
     existingLinkSetting.setShowDescription(linkSetting.isShowDescription());
+    boolean hidingDisabled = existingLinkSetting.isAllowHide() && !linkSetting.isAllowHide();
+    existingLinkSetting.setAllowHide(linkSetting.isAllowHide());
+    if (hidingDisabled) {
+      // Turned off, the option clears every user's choice: turned on again, the
+      // application shows to everyone until they hide it again. The option is
+      // saved after, so that a failure in between leaves it on, and saving it
+      // off again clears the remaining choices
+      hiddenApplicationService.clearHiddenChoices(LINK_APPLICATION_TYPE, linkSettingName);
+    }
     existingLinkSetting = linkStorage.saveLinkSetting(existingLinkSetting);
 
     List<Link> existingLinks = getLinks(linkSettingName);
@@ -308,12 +324,20 @@ public class LinkService {
    * 
    * @param linkSettingName Target {@link LinkSetting} name
    * @param linkData {@link LinkData} containing {@link LinkSetting} and the
-   *          {@link List} of {@link Link}
+   *          {@link List} of {@link Link}. When it allows hiding and names
+   *          its source ({@link LinkData#getSourceName()}, which only a site
+   *          draft's export sets), the users who hid that source keep the
+   *          target hidden, provided the source still exists, allows hiding
+   *          and the user importing it may read it: the window that imports
+   *          it takes the target's name
+   * @param identity User Acl {@link Identity} rendering the window that
+   *          imports the data
    * @throws ObjectNotFoundException when target setting name doesn't exist
    */
-  public void saveLinkData(String linkSettingName, LinkData linkData) throws ObjectNotFoundException {
+  public void saveLinkData(String linkSettingName, LinkData linkData, Identity identity) throws ObjectNotFoundException {
     LinkSetting linkSetting = linkData.getLinkSetting();
     if (linkSetting != null) {
+      String sourceName = linkData.getSourceName();
       LinkSetting originalLinkSetting = getLinkSettingByName(linkSettingName);
       linkSetting.setId(originalLinkSetting.getId());
       linkSetting.setName(originalLinkSetting.getName());
@@ -338,13 +362,34 @@ public class LinkService {
         return (Link) linkWithIconAttachment;
       }).toList();
       saveLinkSetting(linkSetting, links);
+      if (linkSetting.isAllowHide() && isReadableHidableSource(sourceName, linkSettingName, identity)) {
+        hiddenApplicationService.copyHiddenChoices(LINK_APPLICATION_TYPE, sourceName, linkSettingName);
+      }
     }
+  }
+
+  /**
+   * The source a window's imported data names comes from a preference: it is
+   * trusted only when it exists, still allows hiding and the user may read it
+   */
+  private boolean isReadableHidableSource(String sourceName, String targetName, Identity identity) {
+    if (identity == null
+        || StringUtils.isBlank(sourceName)
+        || StringUtils.equals(sourceName, targetName)
+        || !hasLinkSetting(sourceName)) {
+      return false;
+    }
+    LinkSetting source = getLinkSettingByName(sourceName);
+    return source != null && source.isAllowHide() && hasAccessPermission(sourceName, identity);
   }
 
   /**
    * Creates a {@link LinkSetting} for a page from a copy of another one's
    * options and links: the links are created anew, ids reset, each with the
-   * icon its input stream carries
+   * icon its input stream carries. When the copy allows hiding, the users who
+   * hid the copied {@link LinkSetting}, the one {@code linkSetting} is named
+   * after, keep the copy hidden, provided it exists, allows hiding and the
+   * editor may read it: the window takes the copy's name
    * 
    * @param linkSettingName unique name of the {@link LinkSetting} to create
    * @param pageReference {@link Page} key composite reference
@@ -366,9 +411,15 @@ public class LinkService {
                                      List<Link> links,
                                      Identity identity) throws IllegalAccessException, ObjectNotFoundException {
     links.forEach(link -> link.setId(0));
+    String sourceName = linkSetting.getName();
     initLinkSetting(linkSettingName, pageReference, spaceId);
     linkSetting.setName(linkSettingName);
-    return saveLinkSetting(linkSetting, links, identity);
+    LinkSetting copy = saveLinkSetting(linkSetting, links, identity);
+    if (linkSetting.isAllowHide() && isReadableHidableSource(sourceName, linkSettingName, identity)) {
+      // The window takes the copy's name: the users who hid it keep it hidden
+      hiddenApplicationService.copyHiddenChoices(LINK_APPLICATION_TYPE, sourceName, linkSettingName);
+    }
+    return copy;
   }
 
   /**
@@ -592,6 +643,17 @@ public class LinkService {
     }
     Page page = layoutService.getPage(pageKey.format());
     return page == null || userACL.hasAccessPermission(page, identity);
+  }
+
+  /**
+   * @param linkSetting {@link LinkSetting}
+   * @param username user reading the application
+   * @return true when the application allows hiding and the user hid it
+   */
+  public boolean isHidden(LinkSetting linkSetting, String username) {
+    return linkSetting != null
+           && linkSetting.isAllowHide()
+           && hiddenApplicationService.isHidden(LINK_APPLICATION_TYPE, linkSetting.getName(), username);
   }
 
   private void processNewLinks(String linkSettingName, List<Link> existingLinks, List<Link> links) {

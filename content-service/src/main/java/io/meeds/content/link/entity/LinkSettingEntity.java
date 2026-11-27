@@ -98,6 +98,9 @@ public class LinkSettingEntity implements Serializable {
   @Column(name = "LAST_MODIFIED")
   private Instant           lastModified;
 
+  @Column(name = "ALLOW_HIDE")
+  private boolean           allowHide;
+
   @lombok.EqualsAndHashCode.Exclude
   @lombok.ToString.Exclude
   @OneToMany(mappedBy = "setting", fetch = FetchType.LAZY)

@@ -34,7 +34,8 @@
         :can-edit="canEdit"
         class="full-width"
         @edit="editSettings()"
-        @add="editSettings(true)" />
+        @add="editSettings(true)"
+        @hidden="markHidden" />
       <links-list
         v-if="hasLinks"
         :settings="$root.settings"
@@ -61,11 +62,18 @@ export default {
       // available, to editors too. The page layout editor always shows it,
       // with every link (main.js), so that an editor can fix the links that
       // lead to pages that don't exist on this instance, and an editor also
-      // sees an application with no link yet, to fill it
+      // sees an application with no link yet, to fill it. A user who hid it
+      // sees it in the page layout editor only
       return this.$root.initialized
         && (this.$root.hasLinks
           || this.$root.inLayoutEditor
-          || (this.canEdit && !this.$root.settings?.links?.length));
+          || (this.canEdit && !this.$root.settings?.links?.length))
+        && (!this.hiddenByUser || this.$root.inLayoutEditor);
+    },
+    // The current user hid the application, which the page layout editor still
+    // displays
+    hiddenByUser() {
+      return !!this.$root.settings?.allowHide && !!this.$root.settings?.hidden;
     },
     canEdit() {
       return !this.previewMode && this.$root.canEdit;
@@ -76,7 +84,8 @@ export default {
       this.$root.$updateApplicationVisibility(this.canView);
     },
     '$root.initialized'() {
-      // canView stays false when every link is unavailable: apply it once loaded
+      // canView stays false when every link is unavailable, or for a user who
+      // hid the application: apply it once loaded
       this.$root.$updateApplicationVisibility(this.canView);
     },
   },
@@ -95,6 +104,9 @@ export default {
     document.removeEventListener('cms-preview-mode', this.switchToPreview);
   },
   methods: {
+    markHidden() {
+      this.$root.settings = {...this.$root.settings, hidden: true};
+    },
     retrieveSettings(settings) {
       if (settings) {
         this.$root.settings = settings;

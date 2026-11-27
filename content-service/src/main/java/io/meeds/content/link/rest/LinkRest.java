@@ -194,6 +194,7 @@ public class LinkRest {
     Identity identity = RestUtils.getCurrentUserAclIdentity();
     linkSettingEntity.getLinks()
                      .forEach(link -> link.setUnavailable(!linkService.isLinkTargetAvailable(linkSetting, link.getUrl(), identity)));
+    linkSettingEntity.setHidden(linkService.isHidden(linkSetting, RestUtils.getCurrentUser()));
     return linkSettingEntity;
   }
 

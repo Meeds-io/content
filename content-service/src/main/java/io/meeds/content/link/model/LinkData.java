@@ -33,4 +33,16 @@ public class LinkData {
 
   private List<LinkWithImageContent> links;
 
+  /**
+   * The list a site draft's window was exported from, which that window
+   * replaces once published: its users keep it hidden. Only a site draft's
+   * export sets it; the data a template or a duplicated section stores, of
+   * any age, never names a source here.
+   */
+  private String                     sourceName;
+
+  public LinkData(LinkSetting linkSetting, List<LinkWithImageContent> links) {
+    this(linkSetting, links, null);
+  }
+
 }

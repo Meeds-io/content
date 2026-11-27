@@ -239,6 +239,18 @@
                           dense />
                       </div>
                     </div>
+                    <div class="d-flex mb-4">
+                      <div class="d-flex align-center flex-grow-1 flex-shrink-1 text-truncate text-color">
+                        {{ $t('links.label.allowHide') }}
+                      </div>
+                      <v-switch
+                        id="linksAllowHideSwitch"
+                        v-model="settings.allowHide"
+                        :aria-label="$t('links.label.allowHide')"
+                        class="my-0 me-n2"
+                        dense
+                        hide-details />
+                    </div>
                     <div class="d-flex flex-column mb-4">
                       <div class="d-flex align-center flex-grow-1 flex-shrink-1 text-truncate text-color mb-2">
                         {{ $t('links.label.align') }}

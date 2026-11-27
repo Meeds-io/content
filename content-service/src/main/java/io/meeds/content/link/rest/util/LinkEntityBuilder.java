@@ -51,7 +51,9 @@ public class LinkEntityBuilder {
                                      linkSetting.isShowDescription(),
                                      linkSetting.getSeeMore(),
                                      CollectionUtils.isEmpty(links) ? Collections.emptyList() :
-                                                                    links.stream().map(l -> build(linkSetting, l)).toList());
+                                                                    links.stream().map(l -> build(linkSetting, l)).toList(),
+                                     linkSetting.isAllowHide(),
+                                     false);
   }
 
   public static LinkRestEntity build(LinkSetting linkSetting, Link link) {
@@ -91,7 +93,8 @@ public class LinkEntityBuilder {
                            linkSettingEntity.isShowIcon(),
                            linkSettingEntity.isShowDescription(),
                            linkSettingEntity.getSeeMore(),
-                           0);
+                           0,
+                           linkSettingEntity.isAllowHide());
   }
 
   public static List<Link> toLinks(LinkSettingRestEntity linkSettingEntity) {
