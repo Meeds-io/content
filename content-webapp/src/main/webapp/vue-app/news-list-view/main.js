@@ -111,7 +111,6 @@ export function init(params) {
         canEditNewsList,
         canManageNewsList: false,
         canManageNewsTarget,
-        canPublishNews: false,
         articlesSourceOption,
         selectedArticleIds,
         newsList: [],
@@ -124,8 +123,7 @@ export function init(params) {
           this.headerTitle = translations?.[lang] || translations?.[this.defaultLanguage]
                                                   || params.headerTitle;
         });
-        this.canPublishNews = await  this.$newsServices.canPublishNews();
-        this.canManageNewsList = this.canEditNewsList || this.canPublishNews;
+        this.canManageNewsList = this.canEditNewsList;
         if (this.spaceId) {
           this.canCreateNews = await this.$newsServices.canUserCreateNews(this.spaceId);
         }

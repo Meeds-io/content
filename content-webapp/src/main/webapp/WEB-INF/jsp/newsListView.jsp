@@ -1,11 +1,11 @@
 <%@page import="org.exoplatform.services.security.ConversationState"%>
 <%@page import="org.exoplatform.services.security.Identity"%>
 <%@ page import="io.meeds.content.news.utils.NewsUtils" %>
+<%@ page import="io.meeds.content.news.service.NewsTargetingService" %>
+<%@ page import="io.meeds.content.util.NewsListSettingValues" %>
+<%@ page import="org.exoplatform.container.ExoContainerContext" %>
 <%@ page import="org.exoplatform.web.PortalHttpServletResponseWrapper" %>
 <%@ page import="org.exoplatform.portal.application.PortalRequestContext" %>
-<%@ page import="org.exoplatform.commons.utils.CommonsUtils" %>
-<%@ page import="org.exoplatform.portal.config.UserACL" %>
-<%@ page import="org.exoplatform.portal.config.model.Page" %>
 <%@ page import="static org.exoplatform.social.core.space.SpaceUtils.getSpaceByContext" %>
 <%@ page import="org.exoplatform.social.core.space.model.Space" %>
 <%@ page import="org.exoplatform.social.webui.Utils" %>
@@ -42,9 +42,11 @@
     String[] articlesSourceOptionParams = (String[]) request.getAttribute("articlesSourceOption");
     String[] selectedArticleIdsParams  = (String[]) request.getAttribute("selectedArticleIds");
     String viewTemplate = viewTemplateParams == null || viewTemplateParams.length == 0 ? "": viewTemplateParams[0];
-    String newsTarget = newsTargetParams == null || newsTargetParams.length == 0 ? "": newsTargetParams[0];
+    String storedNewsTarget = newsTargetParams == null || newsTargetParams.length == 0 ? "": newsTargetParams[0];
+    String newsTarget = NewsListSettingValues.targetOrDefault(storedNewsTarget,
+                                                              ExoContainerContext.getService(NewsTargetingService.class));
     String headerTitle = headerParams == null || headerParams.length == 0 ? "": headerParams[0];
-    String limit = limitParams == null || limitParams.length == 0 ? "4": limitParams[0];
+    String limit = NewsListSettingValues.limitOrDefault(limitParams == null || limitParams.length == 0 ? "4": limitParams[0]);
     String showHeader = showHeaderParams == null || showHeaderParams.length == 0 ? "true": showHeaderParams[0];
     String showSeeAll = showSeeAllParams == null || showSeeAllParams.length == 0 ? "true": showSeeAllParams[0];
     String showArticleTitle = showArticleTitleParams == null || showArticleTitleParams.length == 0 ? "true": showArticleTitleParams[0];
@@ -54,8 +56,9 @@
     String showArticleDate = showArticleDateParams == null || showArticleDateParams.length == 0 ? "true": showArticleDateParams[0];
     String showArticleSpace = showArticleSpaceParams == null || showArticleSpaceParams.length == 0 ? "true": showArticleSpaceParams[0];
     String showArticleReactions = showArticleReactionsParams == null || showArticleReactionsParams.length == 0 ? "true": showArticleReactionsParams[0];
-    String seeAllUrl = seeAllUrlParams == null || seeAllUrlParams.length == 0 ? "": seeAllUrlParams[0];
-    String articlesSourceOption = articlesSourceOptionParams == null || articlesSourceOptionParams.length == 0 ? "" : articlesSourceOptionParams[0];
+    String seeAllUrl = NewsListSettingValues.seeAllUrlOrDefault(seeAllUrlParams == null || seeAllUrlParams.length == 0 ? "": seeAllUrlParams[0]);
+    String articlesSourceOption = NewsListSettingValues.sourceOrDefault(storedNewsTarget,
+                                                                        articlesSourceOptionParams == null || articlesSourceOptionParams.length == 0 ? "" : articlesSourceOptionParams[0]);
     String selectedArticleIdsString = selectedArticleIdsParams == null || selectedArticleIdsParams.length == 0 ? null : String.join(",", selectedArticleIdsParams);
 
     ConversationState conversationState = ConversationState.getCurrent();
@@ -66,11 +69,13 @@
 
     PortalRequestContext rcontext = PortalRequestContext.getCurrentInstance();
     PortalHttpServletResponseWrapper responseWrapper = ( PortalHttpServletResponseWrapper ) rcontext.getResponse();
-    String newsListUrl = "/content/rest/contents/byTarget/" + newsTarget + "?offset=0&limit=" + limit + "&returnSize=true";
-    responseWrapper.addHeader("Link", "<" + newsListUrl + ">; rel=prefetch; as=fetch; crossorigin=use-credentials", false);
-    UserACL userACL = CommonsUtils.getService(UserACL.class);
-    Page currentPage = rcontext.getPage();
-    boolean hasEditPermission = currentIdentity != null && userACL.hasEditPermission(currentPage, currentIdentity);
+    // the prefetch carries the limit the view requests: none to prefetch while the view derives its own
+    if (newsTarget != null && !newsTarget.isBlank() && !limit.isEmpty()) {
+      String newsListUrl = "/content/rest/contents/byTarget/" + newsTarget + "?offset=0&limit=" + limit + "&returnSize=true";
+      responseWrapper.addHeader("Link", "<" + newsListUrl + ">; rel=prefetch; as=fetch; crossorigin=use-credentials", false);
+    }
+    // the instance's edit right, the one its settings save checks
+    boolean hasEditPermission = Boolean.TRUE.equals(request.getAttribute("canEdit"));
     Space currentSpace = getSpaceByContext();
     boolean canCreateNewsPublishTarget = NewsUtils.canCreateNewsPublishTargets(currentIdentity, currentSpace != null ? currentSpace.getSpaceId() : null);
     boolean canManageNewsPublishTargets = NewsUtils.canManageNewsPublishTargets(currentIdentity);

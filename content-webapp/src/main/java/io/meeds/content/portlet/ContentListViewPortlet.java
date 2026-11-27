@@ -19,7 +19,7 @@
 package io.meeds.content.portlet;
 
 import java.io.IOException;
-import java.util.Enumeration;
+import java.util.List;
 import java.util.Random;
 
 import javax.portlet.ActionRequest;
@@ -43,6 +43,7 @@ import org.exoplatform.container.ExoContainerContext;
 import org.exoplatform.services.security.ConversationState;
 import org.exoplatform.services.security.Identity;
 
+import io.meeds.content.util.ListViewSettingValues;
 import io.meeds.content.utils.ContentUtils;
 import io.meeds.social.cms.service.CMSService;
 import io.meeds.social.portlet.CMSPortlet;
@@ -52,6 +53,14 @@ public class ContentListViewPortlet extends CMSPortlet {
   private static final String OBJECT_TYPE    = "contentListViewPortlet";
 
   private static final String APPLICATION_ID = "applicationId";
+
+  // the settings the Content List settings drawer saves
+  private static final List<String> SETTING_NAMES = List.of("showHeader",
+                                                            "headerTitle",
+                                                            "allowFilteringPerCategory",
+                                                            "categoryDepth",
+                                                            "categoryIds",
+                                                            "excludeCategoryIds");
 
   private static final Random RANDOM         = new Random();
 
@@ -80,14 +89,14 @@ public class ContentListViewPortlet extends CMSPortlet {
       // and it gets no state change and no information either way.
       throw new PortletException("Current user is not authorized to edit this Content List instance");
     }
-    Enumeration<String> parameterNames = request.getParameterNames();
-    while (parameterNames.hasMoreElements()) {
-      String name = parameterNames.nextElement();
-      if (StringUtils.equals(name, "action") || StringUtils.contains(name, "portal:")) {
-        continue;
+    if (!areValidValues(request)) {
+      throw new PortletException("The Content List settings hold a value of an unexpected shape");
+    }
+    for (String settingName : SETTING_NAMES) {
+      String value = request.getParameter(settingName);
+      if (value != null) {
+        preferences.setValue(settingName, value);
       }
-      String value = request.getParameter(name);
-      preferences.setValue(name, value);
     }
     preferences.store();
   }
@@ -116,6 +125,15 @@ public class ContentListViewPortlet extends CMSPortlet {
       savePreference(DATA_INIT_PREFERENCE_NAME, null);
     }
     initContentListHeaderTranslationSettings(applicationId, name);
+  }
+
+  // headerTitle is the free text of the header: it has no shape to check
+  private boolean areValidValues(ActionRequest request) {
+    return ListViewSettingValues.isValidFlag(request.getParameter("showHeader"))
+        && ListViewSettingValues.isValidFlag(request.getParameter("allowFilteringPerCategory"))
+        && ListViewSettingValues.isValidCategoryDepth(request.getParameter("categoryDepth"))
+        && ListViewSettingValues.isValidIdList(request.getParameter("categoryIds"))
+        && ListViewSettingValues.isValidIdList(request.getParameter("excludeCategoryIds"));
   }
 
   private boolean canEditCurrentInstance(PortletPreferences preferences) {

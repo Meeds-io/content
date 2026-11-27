@@ -406,6 +406,17 @@ public class NewsTargetingService {
     return toEntity(targetMetadata);
   }
 
+  /**
+   * Checks that a target exists, by its cached key and with no conversion to
+   * an entity (which resolves the current user for a target with permissions)
+   *
+   * @param  targetName target name
+   * @return            true when a target of this name exists
+   */
+  public boolean isTarget(String targetName) {
+    return metadataService.getMetadataByKey(new MetadataKey(METADATA_TYPE.getName(), targetName, 0)) != null;
+  }
+
   private NewsTargetingEntity toEntity(Metadata metadata) { // NOSONAR
     NewsTargetingEntity newsTargetingEntity = new NewsTargetingEntity();
     newsTargetingEntity.setName(metadata.getName());

@@ -30,8 +30,8 @@
   <description>Content Webapp</description>
 
   <properties>
-    <!-- the module's tests read its JSP sources and run none of its classes -->
-    <exo.test.coverage.ratio>0.00</exo.test.coverage.ratio>
+    <!-- the ratio the module's tests measure -->
+    <exo.test.coverage.ratio>0.42</exo.test.coverage.ratio>
   </properties>
 
   <dependencies>

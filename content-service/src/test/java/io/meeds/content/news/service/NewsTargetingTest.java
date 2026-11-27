@@ -22,16 +22,19 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -127,6 +130,24 @@ public class NewsTargetingTest {
     COMMONS_UTILS.close();
     REST_UTILS.close();
     NEWS_UTILS.close();
+  }
+
+  @Test
+  public void testIsTargetChecksTheKeyWithoutConvertingAnEntity() {
+    // a target with permissions, and no signed-in user: no entity is built
+    Metadata sliderNews = new Metadata();
+    sliderNews.setName("sliderNews");
+    Map<String, String> properties = new HashMap<>();
+    properties.put(NewsUtils.TARGET_PERMISSIONS, "space:1");
+    sliderNews.setProperties(properties);
+    when(metadataService.getMetadataByKey(new MetadataKey(NewsTargetingService.METADATA_TYPE.getName(), "sliderNews", 0))).thenReturn(sliderNews);
+    when(metadataService.getMetadataByKey(new MetadataKey(NewsTargetingService.METADATA_TYPE.getName(), "unknown", 0))).thenReturn(null);
+
+    assertTrue(newsTargetingService.isTarget("sliderNews"));
+    assertFalse(newsTargetingService.isTarget("unknown"));
+
+    verify(metadataService, never()).getMetadatas(anyString(), anyLong());
+    NEWS_UTILS.verify(() -> NewsUtils.getUserIdentity(nullable(String.class)), never());
   }
 
   @Test

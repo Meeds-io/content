@@ -70,7 +70,6 @@ export default {
   },
   data: ()=> ({
     hasSmallWidthContainer: false,
-    canPublishNews: false,
   }),
   computed: {
     newsInfo() {
@@ -86,13 +85,8 @@ export default {
       return this.isSingleArticle ? 'article-container single-article-container d-block' : 'article-container';
     },
     extraClass() {
-      return (!this.selectedOption.showHeader && !this.selectedOption.showSeeAll && !this.canPublishNews ) && 'mt-5' || ' ';
+      return (!this.selectedOption.showHeader && !this.selectedOption.showSeeAll && !this.$root.canManageNewsList) && 'mt-5' || ' ';
     }
-  },
-  created() {
-    this.$newsServices.canPublishNews().then(canPublishNews => {
-      this.canPublishNews = canPublishNews;
-    });
   },
   mounted() {
     this.$nextTick().then(() => this.$root.$emit('application-loaded'));

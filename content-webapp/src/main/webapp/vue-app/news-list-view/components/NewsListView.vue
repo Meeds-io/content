@@ -212,7 +212,7 @@ export default {
       return newsListViewClass;
     },
     canManageNewsList() {
-      return this.$root.canManageNewsList || this.$root.canPublishNews;
+      return this.$root.canManageNewsList;
     },
     canCreateNews() {
       return this.$root.canCreateNews;
@@ -261,8 +261,12 @@ export default {
         this.newsList = newsList?.news?.filter(news => !!news) || [];
         break;
       case 'target':
-        newsList = await this.$newsListService.getNewsListByTarget(this.newsTarget, this.offset, this.limit, true);
-        this.newsList = newsList?.news?.filter(news => !!news) || [];
+        if (this.newsTarget?.trim()) {
+          newsList = await this.$newsListService.getNewsListByTarget(this.newsTarget, this.offset, this.limit, true);
+          this.newsList = newsList?.news?.filter(news => !!news) || [];
+        } else {
+          this.newsList = [];
+        }
         break;
       case 'selectedList':
         newsList = await this.$newsListService.getSelectedNewsList(this.selectedArticleIds, this.language);

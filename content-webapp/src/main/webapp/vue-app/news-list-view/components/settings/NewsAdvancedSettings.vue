@@ -46,6 +46,11 @@
           class="position-absolute b-0 l-0 ms-4 text-subtitle error--text text-caption">
           {{ $t('news.list.settings.drawer.advancedSettings.maxArticleError') }}
         </span>
+        <span
+          v-else-if="limitInvalid"
+          class="position-absolute b-0 l-0 ms-4 text-subtitle error--text text-caption">
+          {{ $t('news.list.settings.drawer.advancedSettings.limitInvalidError') }}
+        </span>
       </v-list-item-action>
     </v-list-item>
     <v-list-item>
@@ -100,6 +105,14 @@
             @change="$emit('see-all-url', seeAllUrl)"
             class="seeLink input-block-level ignore-vuetify-classes">
         </v-list-item-action>
+      </v-list-item-content>
+    </v-list-item>
+
+    <v-list-item v-if="seeAllUrlInvalid">
+      <v-list-item-content class="py-0">
+        <span class="error--text text-caption">
+          {{ $t('news.list.settings.drawer.advancedSettings.seeAllUrlError') }}
+        </span>
       </v-list-item-content>
     </v-list-item>
 
@@ -231,6 +244,14 @@ export default {
       default: false,
     },
     showSeeAll: {
+      type: Boolean,
+      default: false,
+    },
+    seeAllUrlInvalid: {
+      type: Boolean,
+      default: false,
+    },
+    limitInvalid: {
       type: Boolean,
       default: false,
     },
