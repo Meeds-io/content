@@ -249,22 +249,9 @@ public class NewsService {
    * for the publication state, taken from them when the article carries none
    * and it is a known one (posted, staged or draft).
    */
-  private static final Set<String> COMPUTED_PAGE_PROPERTIES               = Set.of(NEWS_AUDIENCE,
-                                                                                   PUBLISHED,
-                                                                                   NEWS_PUBLICATION_STATE,
-                                                                                   NEWS_ACTIVITY_POSTED,
-                                                                                   NEWS_ACTIVITY_CATEGORIES,
-                                                                                   NEWS_DELETED,
-                                                                                   PUBLISHER,
-                                                                                   EXTERNAL_PAGE,
-                                                                                   SCHEDULE_POST_DATE,
-                                                                                   UNPUBLISH_SCHEDULED,
-                                                                                   UNPUBLISH_SCHEDULED_DATE,
-                                                                                   PAGE_REFERRED,
-                                                                                   DE_REFER_PAGE_ID,
-                                                                                   NEWS_ACTIVITIES,
-                                                                                   NEWS_VIEWERS,
-                                                                                   NEWS_VIEWS);
+  private static final Set<String> COMPUTED_PAGE_PROPERTIES               = Stream.concat(COMPUTED_METADATA_KEYS.stream(),
+                                                                                         PUBLICATION_METADATA_KEYS.stream())
+                                                                                 .collect(Collectors.toUnmodifiableSet());
 
   @Autowired
   private SpaceService             spaceService;
