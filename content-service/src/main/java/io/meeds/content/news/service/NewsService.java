@@ -1018,6 +1018,7 @@ public class NewsService {
    */
   public List<News> searchNews(NewsFilter filter,
                                org.exoplatform.social.core.identity.model.Identity currentIdentity) throws Exception {
+    Identity scheduler = filter.isScheduledNews() ? NewsUtils.getUserIdentity(currentIdentity.getRemoteId()) : null;
     return newsSearchConnector.search(currentIdentity, filter)
                               .stream()
                               .filter(articleSearchResult -> filter.getNewsIds() == null
@@ -1031,7 +1032,26 @@ public class NewsService {
                                 }
                               })
                               .filter(Objects::nonNull)
+                              // The search index knows no publication state: a
+                              // scheduled listing keeps what getScheduledArticles
+                              // selects, a staged article or one with a scheduled
+                              // unpublish, that the user can schedule.
+                              .filter(news -> !filter.isScheduledNews()
+                                  || (isScheduled(news) && scheduler != null
+                                      && canScheduleNews(news.getSpaceId(), scheduler, news)))
                               .toList();
+  }
+
+  /**
+   * Whether an article belongs to the scheduled listing: it is staged, or it is
+   * posted with a scheduled unpublish (which keeps the posted state).
+   *
+   * @param news the article
+   * @return true when the article is one that {@code getScheduledArticles}
+   *         selects, before its check of the right to schedule
+   */
+  public static boolean isScheduled(News news) {
+    return StringUtils.equals(news.getPublicationState(), STAGED) || StringUtils.isNotBlank(news.getScheduleUnpublishDate());
   }
 
   /**

@@ -29,6 +29,7 @@ import static io.meeds.content.news.service.NewsService.POSTED;
 import static io.meeds.content.news.service.NewsService.PUBLISHED;
 import static io.meeds.content.news.service.NewsService.SCHEDULE_POST_DATE;
 import static io.meeds.content.news.service.NewsService.UNPUBLISH_SCHEDULED;
+import static io.meeds.content.news.service.NewsService.UNPUBLISH_SCHEDULED_DATE;
 import static io.meeds.content.news.utils.NewsUtils.NewsObjectType.ARTICLE;
 import static io.meeds.content.news.utils.NewsUtils.NewsObjectType.LATEST_DRAFT;
 import static io.meeds.content.news.utils.NewsUtils.NewsUpdateType.CATEGORIES;
@@ -2481,6 +2482,7 @@ public class NewsServiceTest {
 
   @Test
   public void testGetScheduledArticles() throws Exception {
+    mockUserWhoCanSchedule(johnIdentity);
     NewsFilter newsFilter = new NewsFilter();
     newsFilter.setScheduledNews(true);
     Map<String, String> properties = new HashMap<>();
@@ -2526,6 +2528,93 @@ public class NewsServiceTest {
     List<News> news = newsService.searchNews(new NewsFilter(), currentIdentity);
     assertNotNull(news);
     assertEquals(news.size(), 1);
+  }
+
+  /**
+   * EXO-93812: under the scheduled filter a text search lists only the scheduled
+   * articles (staged, or with a scheduled unpublish); without it a posted article stays listed.
+   */
+  @Test
+  public void searchNewsUnderScheduledFilterKeepsOnlyScheduledArticles() throws Exception {
+    NewsESSearchResult result = new NewsESSearchResult();
+    result.setId("1");
+    when(newsSearchConnector.search(any(), any())).thenReturn(List.of(result));
+    MetadataItem metadataItem = mock(MetadataItem.class);
+    when(metadataItem.getObjectId()).thenReturn("1");
+    when(metadataItem.getProperties()).thenReturn(Map.of(NEWS_PUBLICATION_STATE, "posted", NEWS_DELETED, String.valueOf(false)));
+    mockBuildArticle(List.of(metadataItem));
+    // after mockBuildArticle, whose stub answers john for any name
+    org.exoplatform.social.core.identity.model.Identity currentIdentity = mockSearcherWhoCanSchedule();
+
+    NewsFilter scheduledFilter = new NewsFilter();
+    scheduledFilter.setScheduledNews(true);
+    assertEquals(0, newsService.searchNews(scheduledFilter, currentIdentity).size());
+    assertEquals(1, newsService.searchNews(new NewsFilter(), currentIdentity).size());
+  }
+
+  @Test
+  public void searchNewsUnderScheduledFilterListsPostedArticleWithScheduledUnpublish() throws Exception {
+    NewsESSearchResult result = new NewsESSearchResult();
+    result.setId("1");
+    when(newsSearchConnector.search(any(), any())).thenReturn(List.of(result));
+    MetadataItem metadataItem = mock(MetadataItem.class);
+    when(metadataItem.getObjectId()).thenReturn("1");
+    when(metadataItem.getProperties()).thenReturn(Map.of(NEWS_PUBLICATION_STATE,
+                                                         "posted",
+                                                         NEWS_DELETED,
+                                                         String.valueOf(false),
+                                                         UNPUBLISH_SCHEDULED_DATE,
+                                                         "2026-12-01 08:00:00"));
+    mockBuildArticle(List.of(metadataItem));
+    // after mockBuildArticle, whose stub answers john for any name
+    org.exoplatform.social.core.identity.model.Identity currentIdentity = mockSearcherWhoCanSchedule();
+
+    NewsFilter scheduledFilter = new NewsFilter();
+    scheduledFilter.setScheduledNews(true);
+    assertEquals(1, newsService.searchNews(scheduledFilter, currentIdentity).size());
+  }
+
+  @Test
+  public void searchNewsUnderScheduledFilterListsStagedArticle() throws Exception {
+    NewsESSearchResult result = new NewsESSearchResult();
+    result.setId("1");
+    when(newsSearchConnector.search(any(), any())).thenReturn(List.of(result));
+    MetadataItem metadataItem = mock(MetadataItem.class);
+    when(metadataItem.getObjectId()).thenReturn("1");
+    when(metadataItem.getProperties()).thenReturn(Map.of(NEWS_PUBLICATION_STATE, "staged", NEWS_DELETED, String.valueOf(false)));
+    mockBuildArticle(List.of(metadataItem));
+    // after mockBuildArticle, whose stub answers john for any name
+    org.exoplatform.social.core.identity.model.Identity currentIdentity = mockSearcherWhoCanSchedule();
+
+    NewsFilter scheduledFilter = new NewsFilter();
+    scheduledFilter.setScheduledNews(true);
+    assertEquals(1, newsService.searchNews(scheduledFilter, currentIdentity).size());
+  }
+
+  @Test
+  public void searchNewsUnderScheduledFilterDropsArticlesTheUserCannotSchedule() throws Exception {
+    NewsESSearchResult result = new NewsESSearchResult();
+    result.setId("1");
+    when(newsSearchConnector.search(any(), any())).thenReturn(List.of(result));
+    MetadataItem metadataItem = mock(MetadataItem.class);
+    when(metadataItem.getObjectId()).thenReturn("1");
+    when(metadataItem.getProperties()).thenReturn(Map.of(NEWS_PUBLICATION_STATE, "staged", NEWS_DELETED, String.valueOf(false)));
+    mockBuildArticle(List.of(metadataItem));
+    when(spaceService.isSuperManager(anyString())).thenReturn(false);
+    // the searcher, mary, cannot schedule, while the articles' author, john, can
+    Identity searcher = mock(Identity.class);
+    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity("mary")).thenReturn(searcher);
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(nullable(String.class), eq(searcher))).thenReturn(false);
+    Identity author = mock(Identity.class);
+    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity("john")).thenReturn(author);
+    mockUserWhoCanSchedule(author);
+    org.exoplatform.social.core.identity.model.Identity currentIdentity =
+                                                                        mock(org.exoplatform.social.core.identity.model.Identity.class);
+    when(currentIdentity.getRemoteId()).thenReturn("mary");
+
+    NewsFilter scheduledFilter = new NewsFilter();
+    scheduledFilter.setScheduledNews(true);
+    assertEquals(0, newsService.searchNews(scheduledFilter, currentIdentity).size());
   }
 
   @Test
@@ -2829,6 +2918,25 @@ public class NewsServiceTest {
     verify(metadataService, times(1)).updateMetadataItem(eq(pageMetadataItem), eq(1L), eq(false));
     assertFalse(props.containsKey("key1"));
     assertEquals("value2", props.get("key2"));
+  }
+
+  private void mockUserWhoCanSchedule(Identity scheduler) {
+    NEWS_UTILS.when(() -> NewsUtils.canPublishNews(nullable(String.class), eq(scheduler))).thenReturn(true);
+  }
+
+  /**
+   * A searching user, mary, who is not the articles' author, john, and whose right
+   * to schedule is checked: only the identity resolved from mary's name may
+   * schedule, so a check made for another user, the author included, fails.
+   */
+  private org.exoplatform.social.core.identity.model.Identity mockSearcherWhoCanSchedule() {
+    Identity scheduler = mock(Identity.class);
+    NEWS_UTILS.when(() -> NewsUtils.getUserIdentity("mary")).thenReturn(scheduler);
+    mockUserWhoCanSchedule(scheduler);
+    org.exoplatform.social.core.identity.model.Identity currentIdentity =
+                                                                        mock(org.exoplatform.social.core.identity.model.Identity.class);
+    when(currentIdentity.getRemoteId()).thenReturn("mary");
+    return currentIdentity;
   }
 
   private void mockBuildArticle(List<MetadataItem> metadataItems) throws WikiException {

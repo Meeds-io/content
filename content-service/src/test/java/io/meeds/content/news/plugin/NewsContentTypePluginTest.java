@@ -259,6 +259,76 @@ public class NewsContentTypePluginTest {
     plugin.search(filter, 20, currentIdentity, null);
   }
 
+  /**
+   * EXO-93812: the plain Scheduled listing marks its scheduled articles (staged,
+   * or posted with a scheduled unpublish); an article with neither is never
+   * marked, whatever the status filter.
+   */
+  @Test
+  public void testScheduledFlagComesFromTheScheduledState() throws Exception {
+    ContentFilter filter = new ContentFilter();
+    filter.setStatus(ContentUtils.STATUS_SCHEDULED);
+    News staged = new News();
+    staged.setId("5");
+    staged.setPublicationState(NewsService.STAGED);
+    News posted = new News();
+    posted.setId("6");
+    posted.setPublicationState(NewsService.POSTED);
+    when(newsService.getNews(any(NewsFilter.class), eq(currentIdentity))).thenReturn(Arrays.asList(staged, posted));
+
+    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null);
+
+    assertEquals(2, entries.size());
+    assertTrue(entries.get(0).isScheduled());
+    assertFalse(entries.get(1).isScheduled());
+  }
+
+  /**
+   * EXO-93812: a posted article with a scheduled unpublish is in the
+   * Scheduled listing and stays flagged scheduled.
+   */
+  @Test
+  public void testScheduledFlagKeptForPostedArticleWithScheduledUnpublish() throws Exception {
+    ContentFilter filter = new ContentFilter();
+    filter.setStatus(ContentUtils.STATUS_SCHEDULED);
+    News unpublishScheduled = new News();
+    unpublishScheduled.setId("8");
+    unpublishScheduled.setPublicationState(NewsService.POSTED);
+    unpublishScheduled.setScheduleUnpublishDate("2026-12-01 08:00:00");
+    News posted = new News();
+    posted.setId("9");
+    posted.setPublicationState(NewsService.POSTED);
+    when(newsService.getNews(any(NewsFilter.class), eq(currentIdentity))).thenReturn(Arrays.asList(unpublishScheduled, posted));
+
+    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null);
+
+    assertTrue(entries.get(0).isScheduled());
+    assertFalse(entries.get(1).isScheduled());
+  }
+
+  /**
+   * EXO-93812: a text search under the Scheduled status asks the service for
+   * the scheduled news, and marks scheduled only the scheduled articles.
+   */
+  @Test
+  public void testSearchScheduledWithTextMarksOnlyScheduledArticles() throws Exception {
+    ContentFilter filter = new ContentFilter();
+    filter.setStatus(ContentUtils.STATUS_SCHEDULED);
+    filter.setSearchText("article");
+    News posted = new News();
+    posted.setId("7");
+    posted.setPublicationState(NewsService.POSTED);
+    when(newsService.searchNews(any(NewsFilter.class), any())).thenAnswer(invocation -> {
+      assertTrue(((NewsFilter) invocation.getArgument(0)).isScheduledNews());
+      return Arrays.asList(posted);
+    });
+
+    List<ContentEntry> entries = plugin.search(filter, 20, currentIdentity, null);
+
+    assertEquals(1, entries.size());
+    assertFalse(entries.get(0).isScheduled());
+  }
+
   @Test
   public void testSearchWithScheduledStatus() throws Exception {
     ContentFilter filter = new ContentFilter();

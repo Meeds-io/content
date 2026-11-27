@@ -224,7 +224,8 @@ public class NewsContentTypePlugin implements ContentTypePlugin {
     // only a news that is itself a draft is one.
     entry.setDraft(StringUtils.equals(status, ContentUtils.STATUS_DRAFT)
         && StringUtils.equals(news.getPublicationState(), NewsService.DRAFT));
-    entry.setScheduled(StringUtils.equals(status, ContentUtils.STATUS_SCHEDULED));
+    entry.setScheduled(StringUtils.equals(status, ContentUtils.STATUS_SCHEDULED)
+        && NewsService.isScheduled(news));
     entry.setCanEdit(news.isCanEdit());
     entry.setCanDelete(news.isCanDelete());
     entry.setCanPublish(news.isCanPublish());
